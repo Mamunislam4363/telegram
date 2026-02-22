@@ -72,7 +72,9 @@ var userData = {
     tokens: DEMO_MODE ? DEMO_BALANCE : 0,
     james: DEMO_MODE ? DEMO_BALANCE : 0,
     usd: DEMO_MODE ? 1000000000000.00 : 0.00,
-    verified: DEMO_MODE ? true : false
+    verified: DEMO_MODE ? true : false,
+    dailyStreak: 0,
+    lastDailyClaim: 0
 };
 
 // THEME MANAGEMENT
@@ -258,6 +260,12 @@ function showPage(targetId) {
         const title = PAGE_TITLES[targetId] || 'AUTOVERIFY';
         const ht = document.getElementById('headerTitle');
         if (ht) ht.textContent = title;
+    }
+
+    // Refresh Daily Rewards UI when entering daily page
+    if (targetId === 'daily') {
+        renderDailyGrid();
+        startDailyCountdown();
     }
     // Update Header Style based on page type
     const headerContainer = document.querySelector('.sticky-header-container');
@@ -704,14 +712,31 @@ function renderDailyGrid() {
     for (let i = 1; i <= 7; i++) {
         const isClaimed = i <= userClaimedDay;
         const isActive = i === userClaimedDay + 1 && canClaim;
+        const isDay7 = i === 7;
+
+        let iconHtml = `<i class="fas ${isClaimed ? 'fa-check-circle' : (i === 7 ? 'fa-crown' : 'fa-coins')}" style="${!isClaimed ? 'color: #fbbf24;' : ''}"></i>`;
+        let rewardText = `${rewards[i - 1]} tokens`;
+
+        if (i === 5 || i === 6) {
+            rewardText = `${rewards[i - 1]} tokens + <i class="fas fa-gem" style="color:#38bdf8;"></i> 1`;
+        } else if (i === 7) {
+            rewardText = `2 <i class="fas fa-gem" style="color:#38bdf8;"></i>`;
+            iconHtml = `
+                <i class="fas fa-crown" style="color: #fbbf24; font-size: 32px;"></i>
+                <div style="display: flex; flex-direction: column; align-items: flex-start;">
+                    <span style="font-size:18px; color: #fbbf24;">BIG REWARD</span>
+                    <span style="font-size:12px; color: #aaa;">100 Tokens + 2 James</span>
+                </div>
+            `;
+        }
 
         html += `
-        <div class="daily-day-card ${isClaimed ? 'claimed' : ''} ${isActive ? 'active' : ''}">
-            <div class="dd-label">Day ${i}</div>
-            <div class="dd-icon">
-                <i class="fas ${isClaimed ? 'fa-check' : (i === 7 ? 'fa-crown' : 'fa-coins')}"></i>
+        <div class="ds-day ${isClaimed ? 'claimed' : ''} ${isActive ? 'active' : ''} ${isDay7 ? 'day-7' : ''}">
+            <div class="ds-day-label">DAY ${i}</div>
+            <div class="ds-day-icon" style="${isDay7 ? 'flex-direction: row; gap: 10px;' : ''}">
+                ${iconHtml}
             </div>
-            <div class="dd-reward">${rewards[i - 1]} Tokens</div>
+            <div class="ds-day-reward" style="${isDay7 ? 'text-align: right;' : ''}">${rewardText}</div>
         </div>`;
     }
     grid.innerHTML = html;
@@ -762,6 +787,8 @@ function startDailyCountdown() {
 
         if (diff <= 0) {
             el.textContent = 'READY';
+            const textEl = document.getElementById('dailyCountdownText');
+            if (textEl) textEl.textContent = 'READY';
             renderDailyGrid(); // Re-render if state changes
             return;
         }
@@ -769,7 +796,10 @@ function startDailyCountdown() {
         const h = Math.floor(diff / 3600000);
         const m = Math.floor((diff % 3600000) / 60000);
         const s = Math.floor((diff % 60000) / 1000);
-        el.textContent = `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        const timeStr = `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        el.textContent = timeStr;
+        const textEl = document.getElementById('dailyCountdownText');
+        if (textEl) textEl.textContent = timeStr;
         dailyInterval = setTimeout(update, 1000);
     }
     update();
@@ -987,7 +1017,13 @@ function fetchUserData() {
                     tg.initDataUnsafe?.user?.first_name ||
                     tg.initDataUnsafe?.user?.username || 'User';
                 userData.usd = data.usd || (data.tokens / 100);
+                userData.dailyStreak = data.dailyStreak || 0;
+                userData.lastDailyClaim = data.lastClaim || 0;
                 renderBalances();
+                if (currentPage === 'daily') {
+                    renderDailyGrid();
+                    startDailyCountdown();
+                }
             } else {
                 // Server error but we can still show Telegram name
                 if (!userData.username || userData.username === 'User') {

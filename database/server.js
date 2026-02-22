@@ -153,7 +153,8 @@ app.get('/api/user/:userId', (req, res) => {
         tokens: user.balance_tokens !== undefined ? user.balance_tokens : (user.tokens || 0),
         james: user.balance_james !== undefined ? user.balance_james : (user.james || 0),
         invites: user.referralCount || user.invites || 0,
-        lastClaim: user.lastDaily || user.lastClaim || null,
+        lastClaim: user.lastDaily || 0,
+        dailyStreak: user.dailyStreak || 0,
         verified: user.successfulVerifications > 0 || user.verified || false
     });
 });

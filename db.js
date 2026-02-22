@@ -288,7 +288,9 @@ class Database {
                 cardsPurchased: 0,
                 blocked: false,
                 language: 'en',  // Default language
-                lastActive: Date.now() // New: Activity tracking
+                lastActive: Date.now(), // New: Activity tracking
+                dailyStreak: 0,
+                lastDaily: 0
             };
             this.save();
         }
@@ -506,18 +508,41 @@ class Database {
     // Daily
     claimDaily(userId) {
         const user = this.getUser(userId);
+        if (!user) return { success: false, message: "User not found" };
+
         const now = Date.now();
         const oneDay = 24 * 60 * 60 * 1000;
+        const lastClaim = user.lastDaily || 0;
 
-        if (user.lastDaily && (now - user.lastDaily < oneDay)) {
-            const timeLeft = Math.ceil((oneDay - (now - user.lastDaily)) / (1000 * 60 * 60));
-            return { success: false, msg: `Come back in ${timeLeft} hours` };
+        // Check if 24h passed
+        if (lastClaim > 0 && (now - lastClaim < oneDay)) {
+            return { success: false, message: "You already claimed your reward for today!" };
         }
 
+        // Streak Logic: Reset if missed a day (more than 48h)
+        if (lastClaim > 0 && (now - lastClaim > oneDay * 2)) {
+            user.dailyStreak = 0;
+        }
+
+        user.dailyStreak = (user.dailyStreak || 0) + 1;
+        if (user.dailyStreak > 7) user.dailyStreak = 1; // Reset to Day 1 after Day 7
+
         user.lastDaily = now;
-        user.balance += this.data.settings.dailyBonus;
+
+        // Reward Calculation
+        const rewards = [10, 20, 30, 40, 50, 60, 100];
+        const reward = rewards[user.dailyStreak - 1];
+
+        if (user.balance_tokens !== undefined) user.balance_tokens += reward;
+        else user.tokens = (user.tokens || 0) + reward;
+
         this.save();
-        return { success: true, amount: this.data.settings.dailyBonus };
+        return {
+            success: true,
+            reward: reward,
+            newStreak: user.dailyStreak,
+            newBalance: user.balance_tokens || user.tokens || 0
+        };
     }
 
     // Tasks
