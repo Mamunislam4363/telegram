@@ -388,9 +388,14 @@ class Database {
 
     addCredit(userId, amount) {
         const user = this.getUser(userId);
-        user.balance += amount;
+        if (!user) return 0;
+
+        if (user.balance !== undefined) user.balance += amount;
+        if (user.balance_tokens !== undefined) user.balance_tokens += amount;
+        if (user.tokens !== undefined) user.tokens += amount;
+
         this.save();
-        return user.balance;
+        return (user.balance_tokens || user.tokens || user.balance || 0);
     }
 
     setLanguage(userId, lang) {
@@ -433,8 +438,15 @@ class Database {
 
     deductCredit(userId, amount) {
         const user = this.getUser(userId);
-        if (user.balance < amount) return false;
-        user.balance -= amount;
+        if (!user) return false;
+
+        const currentBalance = (user.balance_tokens || user.tokens || user.balance || 0);
+        if (currentBalance < amount) return false;
+
+        if (user.balance !== undefined) user.balance -= amount;
+        if (user.balance_tokens !== undefined) user.balance_tokens -= amount;
+        if (user.tokens !== undefined) user.tokens -= amount;
+
         this.save();
         return true;
     }

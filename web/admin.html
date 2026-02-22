@@ -210,7 +210,7 @@
 
             <!-- 1. DASHBOARD -->
             <div id="page-dashboard" class="page active">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-6 mb-8">
                     <div class="glass-card p-6 rounded-2xl">
                         <div class="flex justify-between items-start mb-4">
                             <div class="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center"><i
@@ -229,11 +229,27 @@
                     </div>
                     <div class="glass-card p-6 rounded-2xl">
                         <div class="flex justify-between items-start mb-4">
-                            <div class="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center"><i
-                                    class="fas fa-user-slash text-red-400 text-xl"></i></div>
+                            <div class="w-12 h-12 rounded-xl bg-yellow-500/20 flex items-center justify-center"><i
+                                    class="fas fa-coins text-yellow-400 text-xl"></i></div>
                         </div>
-                        <h3 class="text-gray-400 text-xs font-bold uppercase">Offline Users</h3>
-                        <div class="text-2xl font-bold mt-1" id="dash-offline">...</div>
+                        <h3 class="text-gray-400 text-xs font-bold uppercase">Total Tokens</h3>
+                        <div class="text-2xl font-bold mt-1" id="dash-total-tokens">...</div>
+                    </div>
+                    <div class="glass-card p-6 rounded-2xl">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-pink-500/20 flex items-center justify-center"><i
+                                    class="fas fa-gem text-pink-400 text-xl"></i></div>
+                        </div>
+                        <h3 class="text-gray-400 text-xs font-bold uppercase">Total James</h3>
+                        <div class="text-2xl font-bold mt-1" id="dash-total-james">...</div>
+                    </div>
+                    <div class="glass-card p-6 rounded-2xl">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-indigo-500/20 flex items-center justify-center"><i
+                                    class="fas fa-user-shield text-indigo-400 text-xl"></i></div>
+                        </div>
+                        <h3 class="text-gray-400 text-xs font-bold uppercase">Verified</h3>
+                        <div class="text-2xl font-bold mt-1" id="dash-verified">...</div>
                     </div>
                     <div class="glass-card p-6 rounded-2xl">
                         <div class="flex justify-between items-start mb-4">
@@ -242,14 +258,6 @@
                         </div>
                         <h3 class="text-gray-400 text-xs font-bold uppercase">Groups</h3>
                         <div class="text-2xl font-bold mt-1" id="dash-groups">...</div>
-                    </div>
-                    <div class="glass-card p-6 rounded-2xl">
-                        <div class="flex justify-between items-start mb-4">
-                            <div class="w-12 h-12 rounded-xl bg-yellow-500/20 flex items-center justify-center"><i
-                                    class="fas fa-coins text-yellow-400 text-xl"></i></div>
-                        </div>
-                        <h3 class="text-gray-400 text-xs font-bold uppercase">Revenue (Tokens)</h3>
-                        <div class="text-2xl font-bold mt-1" id="dash-revenue">...</div>
                     </div>
                 </div>
                 <div class="glass-card p-6 rounded-2xl h-80">
@@ -353,35 +361,58 @@
                     </div>
                 </div>
 
-                <!-- Edit Tokens Modal -->
-                <div id="editTokensModal"
-                    style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:999;display:none;align-items:center;justify-content:center;">
-                    <div class="glass-card p-6 rounded-2xl w-80">
-                        <h3 class="font-bold mb-4">Edit User Tokens</h3>
+                <!-- Edit User Modal -->
+                <div id="editUserModal" class="modal-overlay"
+                    style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:100; align-items:center; justify-content:center;">
+                    <div class="glass-card p-6 rounded-2xl w-full max-w-md mx-4">
+                        <h3 class="text-xl font-bold mb-6 flex items-center gap-2">
+                            <i class="fas fa-user-edit text-blue-400"></i> Edit User Information
+                        </h3>
                         <input type="hidden" id="editUserId">
-                        <div class="mb-3">
-                            <label class="text-xs text-gray-400 uppercase block mb-1">User</label>
-                            <div id="editUserName" class="font-bold"></div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="text-xs text-gray-400 uppercase block mb-1">Action</label>
-                            <select id="editTokenAction"
-                                class="w-full bg-black/30 border border-white/10 p-2 rounded-lg text-white">
-                                <option value="set">Set to</option>
-                                <option value="add">Add</option>
-                                <option value="subtract">Subtract</option>
-                            </select>
-                        </div>
                         <div class="mb-4">
-                            <label class="text-xs text-gray-400 uppercase block mb-1">Amount</label>
-                            <input id="editTokenAmount" type="number" placeholder="100"
-                                class="w-full bg-black/30 border border-white/10 p-2 rounded-lg text-white">
+                            <label class="text-xs text-gray-400 uppercase font-bold block mb-1">User Name / ID</label>
+                            <div id="editUserName" class="text-lg font-bold text-white mb-2"></div>
                         </div>
-                        <div class="flex gap-2">
-                            <button onclick="saveUserTokens()"
-                                class="flex-1 gold-gradient py-2 rounded-xl font-bold text-black">SAVE</button>
-                            <button onclick="document.getElementById('editTokensModal').style.display='none'"
-                                class="flex-1 bg-white/5 border border-white/10 py-2 rounded-xl text-gray-400">Cancel</button>
+
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Tokens
+                                    Balance</label>
+                                <input id="editUserBalance" type="number"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-xl text-white">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400 uppercase font-bold block mb-1">James
+                                    (Payouts)</label>
+                                <input id="editUserJames" type="number"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-xl text-white">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4 mb-6">
+                            <div>
+                                <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Referral
+                                    Count</label>
+                                <input id="editUserRefs" type="number"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-xl text-white">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Verification
+                                    Status</label>
+                                <select id="editUserVerified"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-xl text-white outline-none">
+                                    <option value="false">Not Verified</option>
+                                    <option value="true">Verified</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-3">
+                            <button onclick="saveUserChanges()"
+                                class="flex-1 gold-gradient py-3 rounded-xl font-bold text-black shadow-lg shadow-orange-500/20">SAVE
+                                CHANGES</button>
+                            <button onclick="document.getElementById('editUserModal').style.display='none'"
+                                class="flex-1 bg-white/5 border border-white/10 py-3 rounded-xl text-gray-400">CANCEL</button>
                         </div>
                     </div>
                 </div>
@@ -435,7 +466,8 @@
             <div id="page-settings" class="page">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <div class="glass-card p-6 rounded-2xl">
-                        <h3 class="text-lg font-bold mb-6 text-orange-400"><i class="fas fa-gift"></i> Rewards</h3>
+                        <h3 class="text-lg font-bold mb-6 text-orange-400"><i class="fas fa-gift"></i> System Costs &
+                            Rewards</h3>
                         <div class="space-y-4">
                             <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Daily
                                     Reward</label><input type="number" id="conf-daily"
@@ -446,9 +478,17 @@
                             <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Welcome
                                     Bonus</label><input type="number" id="conf-welcome"
                                     class="w-full bg-black/30 border border-white/10 rounded-lg p-3"></div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Support
+                                        Cost</label><input type="number" id="conf-support"
+                                        class="w-full bg-black/30 border border-white/10 rounded-lg p-3"></div>
+                                <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Gmail
+                                        Cost</label><input type="number" id="conf-gmail"
+                                        class="w-full bg-black/30 border border-white/10 rounded-lg p-3"></div>
+                            </div>
                             <button onclick="saveConfig()"
-                                class="w-full bg-orange-500 text-black font-bold py-3 rounded-lg mt-2">Save
-                                Rewards</button>
+                                class="w-full bg-orange-500 text-black font-bold py-3 rounded-lg mt-2 shadow-lg shadow-orange-500/20">Save
+                                System Settings</button>
                         </div>
                     </div>
                     <div class="glass-card p-6 rounded-2xl">
@@ -934,11 +974,12 @@
                     .then(data => {
                         if (!data.success) return;
                         const map = {
-                            'statTotalUsers': data.totalUsers,
-                            'statTotalTokens': data.totalTokens,
-                            'statTotalJames': data.totalJames,
-                            'statVerified': data.verifiedUsers,
-                            'statActiveToday': data.activeToday
+                            'dash-total-users': data.totalUsers,
+                            'dash-active': data.activeToday,
+                            'dash-total-tokens': data.totalTokens,
+                            'dash-total-james': data.totalJames,
+                            'dash-verified': data.verifiedUsers,
+                            'dash-groups': data.stats.groups
                         };
                         Object.entries(map).forEach(([id, val]) => {
                             const el = document.getElementById(id);
@@ -990,7 +1031,7 @@
                     </td>
                     <td>
                         <div class="flex gap-1">
-                            <button onclick="openEditUser('${u.id}','${(u.firstName || u.username || 'User').replace(/'/g, '')}')" class="bg-blue-500/20 text-blue-400 px-2 py-1 rounded text-xs font-bold" title="Edit Tokens"><i class="fas fa-coins"></i></button>
+                            <button onclick="openEditUser('${u.id}')" class="bg-blue-500/20 text-blue-400 px-2 py-1 rounded text-xs font-bold" title="Edit User"><i class="fas fa-user-edit"></i></button>
                             <button onclick="toggleBanUser('${u.id}',${!u.banned})" class="bg-${u.banned ? 'green' : 'red'}-500/20 text-${u.banned ? 'green' : 'red'}-400 px-2 py-1 rounded text-xs" title="${u.banned ? 'Unban' : 'Ban'}"><i class="fas fa-${u.banned ? 'check' : 'ban'}"></i></button>
                             <button onclick="deleteUser('${u.id}')" class="bg-gray-500/20 text-gray-400 px-2 py-1 rounded text-xs" title="Delete"><i class="fas fa-trash"></i></button>
                         </div>
@@ -1008,29 +1049,46 @@
                 renderUsersTable(filtered);
             }
 
-            function openEditUser(userId, name) {
+            function openEditUser(userId) {
+                const u = allUsersData.find(user => user.id == userId);
+                if (!u) return;
+
                 document.getElementById('editUserId').value = userId;
-                document.getElementById('editUserName').textContent = name;
-                document.getElementById('editTokenAmount').value = '';
-                const modal = document.getElementById('editTokensModal');
-                modal.style.display = 'flex';
+                document.getElementById('editUserName').textContent = (u.firstName || u.username || 'User') + ' (@' + (u.username || 'N/A') + ')';
+                document.getElementById('editUserBalance').value = u.tokens || u.balance_tokens || 0;
+                document.getElementById('editUserJames').value = u.james || u.balance_james || 0;
+                document.getElementById('editUserRefs').value = u.referralCount || 0;
+                document.getElementById('editUserVerified').value = u.verified ? 'true' : 'false';
+
+                document.getElementById('editUserModal').style.display = 'flex';
             }
 
-            function saveUserTokens() {
+            function saveUserChanges() {
                 const userId = document.getElementById('editUserId').value;
-                const action = document.getElementById('editTokenAction').value;
-                const tokens = parseInt(document.getElementById('editTokenAmount').value);
-                if (!tokens || isNaN(tokens)) { alert('Enter a valid amount'); return; }
-                fetch(`/api/admin/users/${userId}/tokens`, {
+                const balance = document.getElementById('editUserBalance').value;
+                const james = document.getElementById('editUserJames').value;
+                const refs = document.getElementById('editUserRefs').value;
+                const verified = document.getElementById('editUserVerified').value === 'true';
+
+                fetch(`/api/admin/users/${userId}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ tokens, action })
+                    body: JSON.stringify({
+                        balance: parseInt(balance),
+                        james: parseInt(james),
+                        referralCount: parseInt(refs),
+                        verified: verified
+                    })
                 })
                     .then(r => r.json())
                     .then(data => {
-                        document.getElementById('editTokensModal').style.display = 'none';
-                        if (data.success) { alert(`✅ Done! New balance: ${data.newBalance} TC`); loadUsers(); }
-                        else alert('❌ Failed: ' + data.message);
+                        if (data.success) {
+                            document.getElementById('editUserModal').style.display = 'none';
+                            loadUsers();
+                            alert('User updated successfully!');
+                        } else {
+                            alert('Error: ' + data.message);
+                        }
                     });
             }
 
@@ -1308,9 +1366,17 @@
                     .then(data => {
                         if (data.settings) {
                             const s = data.settings;
+                            const adm = data.adminSettings || {};
                             if (document.getElementById('conf-daily')) document.getElementById('conf-daily').value = s.dailyBonus || 100;
                             if (document.getElementById('conf-invite')) document.getElementById('conf-invite').value = s.refBonus || 50;
-                            if (document.getElementById('conf-welcome')) document.getElementById('conf-welcome').value = s.welcomeCredits || 500;
+                            if (document.getElementById('conf-welcome')) document.getElementById('conf-welcome').value = adm.welcomeCredits || 500;
+                            if (document.getElementById('conf-support')) document.getElementById('conf-support').value = adm.supportCost || 5;
+                            if (document.getElementById('conf-gmail')) document.getElementById('conf-gmail').value = adm.gmailCost || 10;
+
+                            // Gems
+                            if (adm.gems) {
+                                if (document.getElementById('conf-gemprice')) document.getElementById('conf-gemprice').value = adm.gems.currentPrice || 100;
+                            }
                         }
                     });
             }
@@ -1319,6 +1385,8 @@
                 const daily = document.getElementById('conf-daily').value;
                 const invite = document.getElementById('conf-invite').value;
                 const welcome = document.getElementById('conf-welcome').value;
+                const support = document.getElementById('conf-support').value;
+                const gmail = document.getElementById('conf-gmail').value;
 
                 fetch('/api/admin/settings', {
                     method: 'POST',
@@ -1326,19 +1394,39 @@
                     body: JSON.stringify({
                         dailyBonus: daily,
                         refBonus: invite,
-                        welcomeBonus: welcome
+                        welcomeBonus: welcome,
+                        supportCost: support,
+                        gmailCost: gmail
                     })
                 })
                     .then(res => res.json())
                     .then(data => {
-                        alert('Server Settings Saved Successfully!');
+                        if (data.success) alert('System Settings Saved Successfully!');
+                        else alert('Failed to save: ' + (data.message || 'Unknown error'));
                     });
             }
+
             function saveGems() {
-                // Placeholder: Connect to Gems API similarly
-                localStorage.setItem('adm_gem_price', document.getElementById('conf-gemprice').value);
-                localStorage.setItem('adm_ad_reward', document.getElementById('conf-adreward').value);
-                alert('Gems Config Saved (Local Only for now)!');
+                const price = document.getElementById('conf-gemprice').value;
+                const reward = document.getElementById('conf-adreward').value;
+
+                if (!price) return alert('Enter gem price');
+
+                fetch('/api/admin/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        gems: {
+                            price: parseFloat(price),
+                            enabled: true
+                        }
+                    })
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) alert('Gems Configuration Saved!');
+                        else alert('Error: ' + data.message);
+                    });
             }
 
             // CODES (SERVER CONNECTED)

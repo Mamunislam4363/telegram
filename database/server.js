@@ -114,6 +114,28 @@ app.delete('/api/admin/codes/:code', (req, res) => {
     res.json({ success: true });
 });
 
+// API: Update User Data (Admin)
+app.post('/api/admin/users/:userId', (req, res) => {
+    const { userId } = req.params;
+    const { balance, referralCount, verified, james } = req.body;
+    const user = db.getUser(userId);
+    if (!user) return res.json({ success: false, message: 'User not found' });
+
+    if (balance !== undefined) {
+        if (user.tokens !== undefined) user.tokens = parseInt(balance);
+        else user.balance_tokens = parseInt(balance);
+    }
+    if (james !== undefined) {
+        if (user.james !== undefined) user.james = parseInt(james);
+        else user.balance_james = parseInt(james);
+    }
+    if (referralCount !== undefined) user.referralCount = parseInt(referralCount);
+    if (verified !== undefined) user.verified = (verified === true || verified === 'true');
+
+    db.updateUser(user);
+    res.json({ success: true });
+});
+
 // API: Get User Data (For Mini App)
 app.get('/api/user/:userId', (req, res) => {
     const userId = req.params.userId;
@@ -1127,14 +1149,30 @@ app.get('/api/admin/settings', (req, res) => {
 
 // API: Admin - Update Settings
 app.post('/api/admin/settings', (req, res) => {
-    const { dailyBonus, refBonus, welcomeBonus } = req.body;
+    const { dailyBonus, refBonus, welcomeBonus, supportCost, gmailCost, gems } = req.body;
     const s = db.getSettings();
 
     if (dailyBonus !== undefined) s.dailyBonus = parseInt(dailyBonus);
     if (refBonus !== undefined) s.refBonus = parseInt(refBonus);
+
     if (welcomeBonus !== undefined) {
-        if (!s.adminSettings) s.adminSettings = {};
-        s.adminSettings.welcomeCredits = parseInt(welcomeBonus);
+        if (!db.data.adminSettings) db.data.adminSettings = {};
+        db.data.adminSettings.welcomeCredits = parseInt(welcomeBonus);
+    }
+    if (supportCost !== undefined) {
+        if (!db.data.adminSettings) db.data.adminSettings = {};
+        db.data.adminSettings.supportCost = parseInt(supportCost);
+    }
+    if (gmailCost !== undefined) {
+        if (!db.data.adminSettings) db.data.adminSettings = {};
+        db.data.adminSettings.gmailCost = parseInt(gmailCost);
+    }
+
+    if (gems) {
+        if (!db.data.adminSettings) db.data.adminSettings = {};
+        if (!db.data.adminSettings.gems) db.data.adminSettings.gems = {};
+        if (gems.price !== undefined) db.data.adminSettings.gems.currentPrice = parseFloat(gems.price);
+        if (gems.enabled !== undefined) db.data.adminSettings.gems.enabled = (gems.enabled === true || gems.enabled === 'true');
     }
 
     db.save();
