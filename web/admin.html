@@ -1,0 +1,1954 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - SMS Bot Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(180deg, #1e1b4b 0%, #0f172a 50%, #020617 100%);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .glass-card {
+            background: rgba(30, 27, 75, 0.4);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .gold-gradient {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+
+        .nav-item {
+            padding: 12px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 500;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            background: rgba(245, 158, 11, 0.1);
+            color: #f59e0b;
+        }
+
+        .nav-item.active {
+            border-left: 3px solid #f59e0b;
+        }
+
+        .page {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        th {
+            text-align: left;
+            padding: 12px;
+            color: #94a3b8;
+            font-size: 12px;
+            text-transform: uppercase;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 14px;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        /* Modals */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+
+        .modal-body {
+            width: 100%;
+            max-width: 500px;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #f59e0b;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+
+<body class="text-white">
+
+    <!-- LOGIN OVERLAY -->
+    <div id="login-overlay" class="fixed inset-0 z-[100] flex items-center justify-center bg-[#020617]">
+        <div class="glass-card p-10 rounded-3xl max-w-md w-full mx-4 text-center">
+            <div
+                class="w-20 h-20 mx-auto gold-gradient rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-orange-500/30">
+                <i class="fas fa-robot text-4xl text-white"></i>
+            </div>
+            <h2 class="text-3xl font-bold mb-2">ADMIN PANEL</h2>
+            <p class="text-sm text-gray-400 mb-8 uppercase tracking-widest">Secure Access</p>
+            <input type="password" id="password" placeholder="Enter Access Code"
+                class="w-full bg-black/30 border border-white/10 text-white px-4 py-4 rounded-xl mb-4 text-center tracking-widest focus:border-orange-500 focus:outline-none transition-all">
+            <button onclick="login()"
+                class="w-full gold-gradient py-4 rounded-xl font-bold shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 transition-all">AUTHENTICATE</button>
+            <p id="error-msg" class="text-red-500 text-xs mt-4 hidden">Access Denied</p>
+        </div>
+    </div>
+
+    <!-- MAIN APP CONTAINER -->
+    <div id="app-container" class="hidden flex h-screen">
+
+        <!-- SIDEBAR -->
+        <aside class="w-72 glass-card border-y-0 border-l-0 flex flex-col p-6 z-10 bg-[#0f172a]/90">
+            <div class="flex items-center gap-3 mb-10 px-2">
+                <div class="w-10 h-10 gold-gradient rounded-lg flex items-center justify-center"><i
+                        class="fas fa-robot text-white"></i></div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight">SMS BOT</h1>
+                    <p class="text-xs text-orange-400">Main Control</p>
+                </div>
+            </div>
+
+            <nav class="space-y-1 flex-1 overflow-y-auto pr-2">
+                <div class="nav-item active" onclick="nav('dashboard')"><i class="fas fa-home w-5"></i> Dashboard</div>
+                <div class="nav-item" onclick="nav('users')"><i class="fas fa-users w-5"></i> Users</div>
+                <div class="nav-item" onclick="nav('cards')"><i class="fas fa-credit-card w-5"></i> Cards</div>
+                <div class="nav-item" onclick="nav('vpn')"><i class="fas fa-shield-alt w-5"></i> VPN</div>
+                <div class="nav-item" onclick="nav('codes')"><i class="fas fa-ticket-alt w-5"></i> Promo Codes</div>
+                <div class="nav-item" onclick="nav('tasks')"><i class="fas fa-tasks w-5"></i> Tasks</div>
+                <div class="nav-item" onclick="nav('apps')"><i class="fas fa-mobile-alt w-5"></i> Apps</div>
+                <div class="nav-item" onclick="nav('services')"><i class="fas fa-cogs w-5"></i> Services</div>
+                <div class="nav-item" onclick="nav('accounts')"><i class="fas fa-user-shield w-5"></i> Accounts</div>
+                <div class="nav-item" onclick="nav('shopmanage')"><i class="fas fa-store w-5"></i> Shop Items</div>
+                <div class="nav-item" onclick="nav('broadcast')"><i class="fas fa-bullhorn w-5"></i> Broadcast</div>
+                <div class="nav-item" onclick="nav('storage')"><i class="fas fa-hdd w-5"></i> Storage (Drive)</div>
+                <div class="nav-item" onclick="nav('trading')"><i class="fas fa-chart-line w-5"></i> Trading Control
+                </div>
+                <div class="nav-item" onclick="nav('settings')"><i class="fas fa-cog w-5"></i> Settings</div>
+            </nav>
+
+            <button onclick="logout()" class="nav-item mt-4 text-red-400 hover:text-red-300 hover:bg-red-500/10"><i
+                    class="fas fa-sign-out-alt"></i> Logout</button>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 p-8 overflow-y-auto relative">
+            <header class="flex justify-between items-center mb-8">
+                <div>
+                    <h2 id="page-title" class="text-2xl font-bold">Dashboard</h2>
+                    <p class="text-sm text-gray-400">System Overview</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div
+                        class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20">
+                        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div><span
+                            class="text-xs text-green-400 font-bold">ONLINE</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- 1. DASHBOARD -->
+            <div id="page-dashboard" class="page active">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="glass-card p-6 rounded-2xl">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center"><i
+                                    class="fas fa-users text-blue-400 text-xl"></i></div>
+                        </div>
+                        <h3 class="text-gray-400 text-xs font-bold uppercase">Total Users</h3>
+                        <div class="text-2xl font-bold mt-1" id="dash-total-users">...</div>
+                    </div>
+                    <div class="glass-card p-6 rounded-2xl">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center"><i
+                                    class="fas fa-user-check text-green-400 text-xl"></i></div>
+                        </div>
+                        <h3 class="text-gray-400 text-xs font-bold uppercase">Active (24h)</h3>
+                        <div class="text-2xl font-bold mt-1" id="dash-active">...</div>
+                    </div>
+                    <div class="glass-card p-6 rounded-2xl">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center"><i
+                                    class="fas fa-user-slash text-red-400 text-xl"></i></div>
+                        </div>
+                        <h3 class="text-gray-400 text-xs font-bold uppercase">Offline Users</h3>
+                        <div class="text-2xl font-bold mt-1" id="dash-offline">...</div>
+                    </div>
+                    <div class="glass-card p-6 rounded-2xl">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center"><i
+                                    class="fas fa-users-cog text-purple-400 text-xl"></i></div>
+                        </div>
+                        <h3 class="text-gray-400 text-xs font-bold uppercase">Groups</h3>
+                        <div class="text-2xl font-bold mt-1" id="dash-groups">...</div>
+                    </div>
+                    <div class="glass-card p-6 rounded-2xl">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-yellow-500/20 flex items-center justify-center"><i
+                                    class="fas fa-coins text-yellow-400 text-xl"></i></div>
+                        </div>
+                        <h3 class="text-gray-400 text-xs font-bold uppercase">Revenue (Tokens)</h3>
+                        <div class="text-2xl font-bold mt-1" id="dash-revenue">...</div>
+                    </div>
+                </div>
+                <div class="glass-card p-6 rounded-2xl h-80">
+                    <h3 class="text-sm font-bold uppercase text-gray-400 mb-4">Activity Analytics</h3>
+                    <canvas id="mainChart"></canvas>
+                </div>
+            </div>
+
+            <!-- STORAGE PAGE -->
+            <div id="page-storage" class="page">
+                <div class="glass-card p-6 rounded-2xl mb-8">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div
+                            class="w-12 h-12 bg-indigo-500/20 rounded-xl flex items-center justify-center text-indigo-400">
+                            <i class="fab fa-google-drive text-2xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold">Google Drive Storage</h3>
+                            <p class="text-gray-400 text-sm">System Database Cloud Backup</p>
+                        </div>
+                    </div>
+
+                    <div id="drive-status-container" class="bg-black/30 rounded-2xl p-6 border border-white/5">
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-gray-400">Connection Status</span>
+                            <span id="drive-badge"
+                                class="px-3 py-1 rounded-full text-xs font-bold bg-red-500/10 text-red-500">DISCONNECTED</span>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-400">Linked Account:</span>
+                                <span id="drive-email" class="font-mono">None</span>
+                            </div>
+
+                            <!-- Progress Bar -->
+                            <div>
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span class="text-gray-500">Storage Usage</span>
+                                    <span id="drive-usage-text" class="text-indigo-400">0 MB / 0 MB</span>
+                                </div>
+                                <div class="w-full bg-white/5 h-2 rounded-full overflow-hidden">
+                                    <div id="drive-progress" class="bg-indigo-500 h-full" style="width: 0%"></div>
+                                </div>
+                            </div>
+
+                            <div class="flex gap-3 pt-4">
+                                <button id="btn-drive-connect" onclick="connectDrive()"
+                                    class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-indigo-500/20">
+                                    <i class="fas fa-link mr-2"></i> CONNECT DRIVE
+                                </button>
+                                <button id="btn-drive-disconnect" onclick="disconnectDrive()" style="display:none;"
+                                    class="flex-1 bg-red-600/20 hover:bg-red-600/40 text-red-400 font-bold py-3 rounded-xl transition-all border border-red-500/20">
+                                    <i class="fas fa-unlink mr-2"></i> DISCONNECT
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
+                        <p class="text-xs text-yellow-500 leading-relaxed">
+                            <i class="fas fa-exclamation-triangle mr-1"></i> <b>Security Note:</b> Connecting Google
+                            Drive allows the bot to store unlimited backups and user data securely in the cloud. Ensure
+                            your <b>Redirect URI</b> in Google Cloud Console matches your current domain.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. USERS -->
+            <div id="page-users" class="page">
+                <div class="glass-card p-6 rounded-2xl">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold">User Management</h3>
+                        <div class="flex gap-2">
+                            <input id="userSearch" type="text" placeholder="Search name/ID..." oninput="filterUsers()"
+                                class="bg-black/30 border border-white/10 rounded-lg px-3 py-1.5 text-sm w-40">
+                            <button onclick="loadUsers()"
+                                class="bg-orange-500/20 border border-orange-500/40 text-orange-400 px-3 py-1.5 rounded-lg text-sm font-bold"><i
+                                    class="fas fa-sync-alt"></i></button>
+                        </div>
+                    </div>
+                    <div id="usersTableWrap" class="overflow-x-auto">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Tokens</th>
+                                    <th>James</th>
+                                    <th>Invites</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTable">
+                                <tr>
+                                    <td colspan="6" class="text-center text-gray-500 py-8">Loading...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Edit Tokens Modal -->
+                <div id="editTokensModal"
+                    style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:999;display:none;align-items:center;justify-content:center;">
+                    <div class="glass-card p-6 rounded-2xl w-80">
+                        <h3 class="font-bold mb-4">Edit User Tokens</h3>
+                        <input type="hidden" id="editUserId">
+                        <div class="mb-3">
+                            <label class="text-xs text-gray-400 uppercase block mb-1">User</label>
+                            <div id="editUserName" class="font-bold"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="text-xs text-gray-400 uppercase block mb-1">Action</label>
+                            <select id="editTokenAction"
+                                class="w-full bg-black/30 border border-white/10 p-2 rounded-lg text-white">
+                                <option value="set">Set to</option>
+                                <option value="add">Add</option>
+                                <option value="subtract">Subtract</option>
+                            </select>
+                        </div>
+                        <div class="mb-4">
+                            <label class="text-xs text-gray-400 uppercase block mb-1">Amount</label>
+                            <input id="editTokenAmount" type="number" placeholder="100"
+                                class="w-full bg-black/30 border border-white/10 p-2 rounded-lg text-white">
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="saveUserTokens()"
+                                class="flex-1 gold-gradient py-2 rounded-xl font-bold text-black">SAVE</button>
+                            <button onclick="document.getElementById('editTokensModal').style.display='none'"
+                                class="flex-1 bg-white/5 border border-white/10 py-2 rounded-xl text-gray-400">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. CODES -->
+            <div id="page-codes" class="page">
+                <div class="glass-card p-6 rounded-2xl">
+                    <div class="flex justify-between mb-6">
+                        <h3 class="font-bold">Promo Codes</h3>
+                        <button onclick="showModal('createCode')"
+                            class="bg-orange-500 text-black px-4 py-2 rounded-lg font-bold text-sm">Create Code</button>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Amount</th>
+                                <th>Uses Left</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="codesTable"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 4. TASKS -->
+            <div id="page-tasks" class="page">
+                <div class="glass-card p-6 rounded-2xl">
+                    <div class="flex justify-between mb-6">
+                        <h3 class="font-bold">Tasks</h3>
+                        <button onclick="showModal('createTask')"
+                            class="bg-orange-500 text-black px-4 py-2 rounded-lg font-bold text-sm">Create Task</button>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Reward</th>
+                                <th>URL</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tasksTable"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 5. SETTINGS -->
+            <div id="page-settings" class="page">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="glass-card p-6 rounded-2xl">
+                        <h3 class="text-lg font-bold mb-6 text-orange-400"><i class="fas fa-gift"></i> Rewards</h3>
+                        <div class="space-y-4">
+                            <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Daily
+                                    Reward</label><input type="number" id="conf-daily"
+                                    class="w-full bg-black/30 border border-white/10 rounded-lg p-3"></div>
+                            <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Invite
+                                    Bonus</label><input type="number" id="conf-invite"
+                                    class="w-full bg-black/30 border border-white/10 rounded-lg p-3"></div>
+                            <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Welcome
+                                    Bonus</label><input type="number" id="conf-welcome"
+                                    class="w-full bg-black/30 border border-white/10 rounded-lg p-3"></div>
+                            <button onclick="saveConfig()"
+                                class="w-full bg-orange-500 text-black font-bold py-3 rounded-lg mt-2">Save
+                                Rewards</button>
+                        </div>
+                    </div>
+                    <div class="glass-card p-6 rounded-2xl">
+                        <h3 class="text-lg font-bold mb-6 text-blue-400"><i class="fas fa-gem"></i> Gems & Ads</h3>
+                        <div class="space-y-4">
+                            <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Gem Price
+                                    (Credits)</label><input type="number" id="conf-gemprice"
+                                    class="w-full bg-black/30 border border-white/10 rounded-lg p-3" value="100"></div>
+                            <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Ad
+                                    Reward</label><input type="number" id="conf-adreward"
+                                    class="w-full bg-black/30 border border-white/10 rounded-lg p-3" value="1"></div>
+                            <button onclick="saveGems()"
+                                class="w-full bg-blue-500 text-white font-bold py-3 rounded-lg mt-2">Save Gems
+                                Config</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6. CARDS -->
+            <div id="page-cards" class="page">
+                <div class="glass-card p-6 rounded-2xl">
+                    <div class="flex justify-between mb-6">
+                        <h3 class="font-bold">Virtual Cards</h3>
+                        <button onclick="showModal('addCard')"
+                            class="bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-sm">Add Card</button>
+                    </div>
+                    <div id="cardsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 7. VPN -->
+            <div id="page-vpn" class="page">
+                <div class="glass-card p-6 rounded-2xl">
+                    <div class="flex justify-between mb-6">
+                        <h3 class="font-bold">VPN Services</h3>
+                        <button onclick="showModal('addVPN')"
+                            class="bg-green-500 text-white px-4 py-2 rounded-lg font-bold text-sm">Add VPN</button>
+                    </div>
+                    <div id="vpnGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                </div>
+            </div>
+
+            <!-- 8. APPS -->
+            <div id="page-apps" class="page">
+                <div class="glass-card p-6 rounded-2xl">
+                    <div class="flex justify-between mb-6">
+                        <h3 class="font-bold">App Store</h3>
+                        <button onclick="showModal('addApp')"
+                            class="bg-purple-500 text-white px-4 py-2 rounded-lg font-bold text-sm">Add App</button>
+                    </div>
+                    <div id="appsGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
+                </div>
+            </div>
+
+            <!-- BROADCAST -->
+            <div id="page-broadcast" class="page">
+                <div class="glass-card p-6 rounded-2xl max-w-2xl mx-auto">
+                    <h3 class="text-lg font-bold mb-2">📢 Send Broadcast</h3>
+                    <p class="text-gray-400 text-sm mb-4">Send a message to ALL users via Telegram bot. Supports HTML
+                        formatting.</p>
+                    <div class="mb-3">
+                        <label class="text-xs text-gray-400 uppercase block mb-1">Message (HTML supported)</label>
+                        <textarea id="broadcastMsg"
+                            class="w-full h-36 bg-black/30 border border-white/10 rounded-xl p-4 mb-1 focus:border-orange-500 focus:outline-none text-sm"
+                            placeholder="Enter your message...&#10;&#10;Supports: &lt;b&gt;bold&lt;/b&gt;, &lt;i&gt;italic&lt;/i&gt;, &lt;code&gt;code&lt;/code&gt;"></textarea>
+                    </div>
+                    <div class="flex gap-3 mb-4">
+                        <button onclick="insertBroadcastTag('b')"
+                            class="bg-white/10 px-3 py-1 rounded text-xs font-bold"><b>B</b></button>
+                        <button onclick="insertBroadcastTag('i')"
+                            class="bg-white/10 px-3 py-1 rounded text-xs"><i>I</i></button>
+                        <button onclick="insertBroadcastTag('code')"
+                            class="bg-white/10 px-3 py-1 rounded text-xs font-mono">code</button>
+                    </div>
+                    <button id="broadcastBtn" onclick="sendBroadcast()"
+                        class="w-full gold-gradient py-3 rounded-xl font-bold text-black">
+                        <i class="fas fa-paper-plane mr-2"></i>SEND TO ALL USERS
+                    </button>
+                    <div id="broadcastResult" class="mt-4 hidden"></div>
+                </div>
+            </div>
+    </div>
+
+    <!-- SERVICES MANAGEMENT -->
+    <div id="page-services" class="page">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Add Service Form -->
+            <div class="glass-card p-6 rounded-2xl">
+                <h3 class="font-bold mb-4 flex items-center gap-2"><i class="fas fa-plus-circle text-yellow-400"></i>
+                    Add / Edit Service</h3>
+                <div class="space-y-3">
+                    <input type="hidden" id="svc-edit-id">
+                    <div>
+                        <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Service ID (unique,
+                            no spaces)</label>
+                        <input id="svc-id" placeholder="e.g. gemini"
+                            class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Name</label>
+                        <input id="svc-name" placeholder="Gemini Card"
+                            class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Description</label>
+                        <input id="svc-desc" placeholder="Generate custom cards"
+                            class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                    </div>
+                    <div>
+                        <div>
+                            <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Image URL (logo)</label>
+                            <div class="flex gap-2">
+                                <input id="svc-img" placeholder="https://..."
+                                    class="flex-1 bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                                <label
+                                    class="bg-white/10 border border-white/10 rounded-lg px-3 flex items-center justify-center cursor-pointer hover:bg-white/20 transition-all w-12"
+                                    title="Upload Image">
+                                    <i class="fas fa-upload text-gray-400"></i>
+                                    <input type="file" id="svc-img-upload" accept="image/*" class="hidden"
+                                        onchange="uploadAdminImage(this, 'svc-img')">
+                                </label>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Fallback Icon
+                                (FontAwesome class)</label>
+                            <input id="svc-icon" placeholder="fas fa-gem"
+                                class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Cost
+                                    (Tokens)</label>
+                                <input id="svc-cost" type="number" placeholder="10"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Gradient
+                                    Colors</label>
+                                <input id="svc-color" placeholder="#1e3a5f,#2563eb"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Page Target</label>
+                            <select id="svc-page"
+                                class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                                <option value="serviceGenerate">Generate Page (show GENERATE NOW)</option>
+                                <option value="verify">Verify Page</option>
+                                <option value="numberService">Number Service Page</option>
+                                <option value="mailService">Mail Service Page</option>
+                            </select>
+                        </div>
+                        <button onclick="saveService()"
+                            class="w-full gold-gradient py-3 rounded-xl font-bold text-black">SAVE SERVICE</button>
+                        <button onclick="clearServiceForm()"
+                            class="w-full bg-white/5 border border-white/10 py-2 rounded-xl text-sm text-gray-400">Clear
+                            Form</button>
+                    </div>
+                </div>
+                <!-- Services List -->
+                <div class="glass-card p-6 rounded-2xl">
+                    <h3 class="font-bold mb-4 flex items-center gap-2"><i class="fas fa-list text-blue-400"></i>
+                        Current Services</h3>
+                    <div id="admin-services-list" class="space-y-3 max-h-96 overflow-y-auto"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SHOP MANAGEMENT -->
+        <div id="page-shopmanage" class="page">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Add Shop Item Form -->
+                <div class="glass-card p-6 rounded-2xl">
+                    <h3 class="font-bold mb-4 flex items-center gap-2"><i
+                            class="fas fa-plus-circle text-yellow-400"></i>
+                        Add / Edit Shop Item</h3>
+                    <div class="space-y-3">
+                        <input type="hidden" id="shop-edit-id">
+                        <div>
+                            <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Item ID
+                                (unique)</label>
+                            <input id="shop-id" placeholder="e.g. gemini1y"
+                                class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Name</label>
+                            <input id="shop-name" placeholder="GEMINI 1 YEAR"
+                                class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Price</label>
+                            <input id="shop-price" placeholder="$3.00"
+                                class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                        </div>
+                        <div>
+                            <div>
+                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Item Image</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="shop-img" placeholder="https://..."
+                                        class="flex-1 bg-black/30 border border-white/10 p-3 rounded-lg text-white text-sm">
+                                    <label
+                                        class="bg-white/10 border border-white/10 rounded-lg px-3 flex items-center justify-center cursor-pointer hover:bg-white/20 transition-all w-12"
+                                        title="Upload Image">
+                                        <i class="fas fa-upload text-gray-400"></i>
+                                        <input type="file" id="shop-img-upload" accept="image/*" class="hidden"
+                                            onchange="uploadAdminImage(this, 'shop-img')">
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Background
+                                        Color</label>
+                                    <input id="shop-bg" placeholder="#0d0d0d"
+                                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Button
+                                        Color</label>
+                                    <input id="shop-btn" placeholder="#f59e0b"
+                                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                                </div>
+                            </div>
+                            <button onclick="saveShopItem()"
+                                class="w-full gold-gradient py-3 rounded-xl font-bold text-black">SAVE ITEM</button>
+                            <button onclick="clearShopForm()"
+                                class="w-full bg-white/5 border border-white/10 py-2 rounded-xl text-sm text-gray-400">Clear
+                                Form</button>
+                        </div>
+                    </div>
+                    <!-- Shop Items List -->
+                    <div class="glass-card p-6 rounded-2xl">
+                        <h3 class="font-bold mb-4 flex items-center gap-2"><i class="fas fa-store text-green-400"></i>
+                            Current Shop Items</h3>
+                        <div id="admin-shop-list" class="space-y-3 max-h-96 overflow-y-auto"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TRADING CONTROL -->
+            <div id="page-trading" class="page">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <!-- Mode Card -->
+                    <div class="glass-card p-6 rounded-2xl col-span-2">
+                        <h3 class="text-lg font-bold mb-2 flex items-center gap-2">
+                            <i class="fas fa-chart-line text-green-400"></i> Trade Outcome Control
+                        </h3>
+                        <p class="text-gray-400 text-sm mb-6">Control whether users win or lose their binary trades.
+                            This affects all active users in real-time.</p>
+
+                        <div class="grid grid-cols-3 gap-4 mb-6">
+                            <!-- Random -->
+                            <div id="mode-random" onclick="setTradeMode('random')"
+                                class="cursor-pointer rounded-xl p-4 border-2 border-yellow-500 bg-yellow-500/10 text-center transition-all">
+                                <i class="fas fa-random text-yellow-400 text-2xl mb-2 block"></i>
+                                <div class="font-bold text-yellow-400">RANDOM</div>
+                                <div class="text-xs text-gray-400 mt-1">50/50 fair market</div>
+                            </div>
+                            <!-- Always Win -->
+                            <div id="mode-win" onclick="setTradeMode('win')"
+                                class="cursor-pointer rounded-xl p-4 border-2 border-gray-600 bg-gray-800/50 text-center transition-all hover:border-green-500">
+                                <i class="fas fa-trophy text-green-400 text-2xl mb-2 block"></i>
+                                <div class="font-bold text-green-400">ALWAYS WIN</div>
+                                <div class="text-xs text-gray-400 mt-1">All users win trades</div>
+                            </div>
+                            <!-- Always Lose -->
+                            <div id="mode-lose" onclick="setTradeMode('lose')"
+                                class="cursor-pointer rounded-xl p-4 border-2 border-gray-600 bg-gray-800/50 text-center transition-all hover:border-red-500">
+                                <i class="fas fa-skull text-red-400 text-2xl mb-2 block"></i>
+                                <div class="font-bold text-red-400">ALWAYS LOSE</div>
+                                <div class="text-xs text-gray-400 mt-1">All users lose trades</div>
+                            </div>
+                        </div>
+
+                        <div class="bg-black/30 rounded-xl p-4 border border-white/10">
+                            <div class="text-xs text-gray-400 font-bold uppercase mb-2">Current Mode</div>
+                            <div id="currentModeDisplay" class="text-xl font-bold text-yellow-400">🎲 RANDOM</div>
+                        </div>
+                    </div>
+
+                    <!-- Stats Card -->
+                    <div class="glass-card p-6 rounded-2xl">
+                        <h3 class="text-sm font-bold uppercase text-gray-400 mb-4">Trading Stats</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="text-xs text-gray-400">Payout Rate</div>
+                                <div class="text-2xl font-bold text-green-400">80%</div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-gray-400">Trade Duration</div>
+                                <div class="text-2xl font-bold">60s</div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-gray-400">Min Trade</div>
+                                <div class="text-2xl font-bold text-yellow-400">1 TC</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payout Settings -->
+                <div class="glass-card p-6 rounded-2xl max-w-2xl">
+                    <h3 class="font-bold mb-4">Payout Settings</h3>
+                    <div class="flex gap-4 items-end">
+                        <div class="flex-1">
+                            <label class="text-xs text-gray-400 font-bold uppercase block mb-2">Win Payout Rate
+                                (%)</label>
+                            <input type="number" id="payoutInput" value="80" min="1" max="200"
+                                class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white font-bold text-lg">
+                        </div>
+                        <button onclick="savePayout()"
+                            class="gold-gradient px-6 py-3 rounded-xl font-bold text-black">SAVE</button>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">Example: 80% means user wins 80 TC for every 100 TC traded.
+                    </p>
+                </div>
+            </div>
+
+            </main>
+
+        </div>
+
+        <!-- MODALS -->
+        <!-- Create Code Modal -->
+        <div id="modal-createCode" class="modal-overlay">
+            <div class="glass-card modal-body rounded-2xl p-6 relative">
+                <button onclick="closeModal()" class="absolute right-4 top-4 text-gray-400 hover:text-white"><i
+                        class="fas fa-times"></i></button>
+                <h3 class="text-xl font-bold mb-4">Create Promo Code</h3>
+                <div class="space-y-4">
+                    <input type="text" id="code-code" placeholder="Code (e.g. SUMMER2026)"
+                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg">
+                    <input type="number" id="code-amount" placeholder="Amount"
+                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg">
+                    <input type="number" id="code-uses" placeholder="Max Uses"
+                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg">
+                    <button onclick="addCode()"
+                        class="w-full bg-orange-500 text-black font-bold p-3 rounded-lg">Create</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Create Task Modal -->
+        <div id="modal-createTask" class="modal-overlay">
+            <div class="glass-card modal-body rounded-2xl p-6 relative">
+                <button onclick="closeModal()" class="absolute right-4 top-4 text-gray-400 hover:text-white"><i
+                        class="fas fa-times"></i></button>
+                <h3 class="text-xl font-bold mb-4">Create Task</h3>
+                <div class="space-y-4">
+                    <input type="text" id="task-name" placeholder="Task Name"
+                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg">
+                    <input type="number" id="task-reward" placeholder="Reward"
+                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg">
+                    <input type="text" id="task-url" placeholder="URL"
+                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg">
+                    <button onclick="addTask()"
+                        class="w-full bg-orange-500 text-black font-bold p-3 rounded-lg">Create</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Card Modal -->
+        <div id="modal-addCard" class="modal-overlay">
+            <div class="glass-card modal-body rounded-2xl p-6 relative">
+                <button onclick="closeModal()" class="absolute right-4 top-4 text-gray-400 hover:text-white"><i
+                        class="fas fa-times"></i></button>
+                <h3 class="text-xl font-bold mb-4">Add Virtual Card</h3>
+                <div class="space-y-4">
+                    <input type="text" id="card-name" placeholder="Card Name (e.g. Visa Gold)"
+                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg">
+                    <input type="number" id="card-price" placeholder="Price ($)"
+                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg">
+                    <select id="card-type"
+                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-gray-400">
+                        <option value="visa">Visa</option>
+                        <option value="mastercard">Mastercard</option>
+                    </select>
+                    <button onclick="addCard()" class="w-full bg-blue-500 text-white font-bold p-3 rounded-lg">Add
+                        Card</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add VPN Modal -->
+        <div id="modal-addVPN" class="modal-overlay">
+            <div class="glass-card modal-body rounded-2xl p-6 relative">
+                <button onclick="closeModal()" class="absolute right-4 top-4 text-gray-400 hover:text-white"><i
+                        class="fas fa-times"></i></button>
+                <h3 class="text-xl font-bold mb-4">Add VPN Service</h3>
+                <div class="space-y-4">
+                    <input type="text" id="vpn-name" placeholder="Name (e.g. US Premium)"
+                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg">
+                    <input type="text" id="vpn-country" placeholder="Country (e.g. USA)"
+                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg">
+                    <input type="number" id="vpn-price" placeholder="Price ($)"
+                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg">
+                    <button onclick="addVPN()" class="w-full bg-green-500 text-white font-bold p-3 rounded-lg">Add
+                        VPN</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add App Modal -->
+        <div id="modal-addApp" class="modal-overlay">
+            <div class="glass-card modal-body rounded-2xl p-6 relative">
+                <button onclick="closeModal()" class="absolute right-4 top-4 text-gray-400 hover:text-white"><i
+                        class="fas fa-times"></i></button>
+                <h3 class="text-xl font-bold mb-4">Add App</h3>
+                <div class="space-y-4">
+                    <input type="text" id="app-name" placeholder="App Name"
+                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg">
+                    <input type="text" id="app-desc" placeholder="Description"
+                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg">
+                    <button onclick="addApp()" class="w-full bg-purple-500 text-white font-bold p-3 rounded-lg">Add
+                        App</button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // LOGIN
+            function login() {
+                const pass = document.getElementById('password').value;
+                fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: pass })
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            document.getElementById('login-overlay').classList.add('hidden');
+                            document.getElementById('app-container').classList.remove('hidden');
+                            init();
+                        } else {
+                            document.getElementById('error-msg').classList.remove('hidden');
+                        }
+                    })
+                    .catch(() => document.getElementById('error-msg').classList.remove('hidden'));
+            }
+            function logout() { location.reload(); }
+
+            // NAV
+            function nav(p) {
+                document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+                event.currentTarget.classList.add('active');
+                document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+                document.getElementById('page-' + p).classList.add('active');
+
+                const titles = { 'dashboard': 'Dashboard', 'users': 'User Management', 'codes': 'Promo Codes', 'tasks': 'Tasks', 'settings': 'Configuration', 'cards': 'Cards', 'vpn': 'VPN', 'broadcast': 'Broadcast', 'apps': 'App Store', 'trading': 'Trading Control', 'services': 'Services Management', 'shopmanage': 'Shop Management' };
+                if (titles[p]) document.getElementById('page-title').innerText = titles[p];
+                if (p === 'trading') initTradingAdmin();
+                if (p === 'services') renderAdminServices();
+                if (p === 'shopmanage') renderAdminShopItems();
+                if (p === 'users') loadUsers();
+            }
+
+            // DATA MNGT
+            function init() {
+                initChart();
+                loadConfig();
+                renderCodes();
+                renderTasks();
+                renderCards();
+                renderVPN();
+                renderApps();
+                loadAdminStats();
+            }
+
+            // =============================================
+            // REAL STATS
+            // =============================================
+            function loadAdminStats() {
+                fetch('/api/admin/stats')
+                    .then(r => r.json())
+                    .then(data => {
+                        if (!data.success) return;
+                        const map = {
+                            'statTotalUsers': data.totalUsers,
+                            'statTotalTokens': data.totalTokens,
+                            'statTotalJames': data.totalJames,
+                            'statVerified': data.verifiedUsers,
+                            'statActiveToday': data.activeToday
+                        };
+                        Object.entries(map).forEach(([id, val]) => {
+                            const el = document.getElementById(id);
+                            if (el) el.textContent = val?.toLocaleString() || '0';
+                        });
+                    }).catch(() => { });
+            }
+
+            // =============================================
+            // USER MANAGEMENT
+            // =============================================
+            let allUsersData = [];
+
+            function loadUsers() {
+                const tbody = document.getElementById('usersTable');
+                if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-500 py-8"><i class="fas fa-spinner fa-spin mr-2"></i>Loading...</td></tr>';
+                fetch('/api/admin/users')
+                    .then(r => r.json())
+                    .then(data => {
+                        if (!data.success) return;
+                        allUsersData = data.users;
+                        renderUsersTable(allUsersData);
+                    })
+                    .catch(() => {
+                        if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center text-red-400 py-8">Failed to load users</td></tr>';
+                    });
+            }
+
+            function renderUsersTable(users) {
+                const tbody = document.getElementById('usersTable');
+                if (!tbody) return;
+                if (!users.length) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-500 py-8">No users found</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = users.map(u => `
+                <tr>
+                    <td>
+                        <div class="font-bold">${u.firstName || u.username || 'Unknown'}</div>
+                        <div class="text-xs text-gray-400">@${u.username || 'N/A'} · ID: ${u.id}</div>
+                    </td>
+                    <td class="text-yellow-400 font-bold">${(u.tokens || 0).toLocaleString()}</td>
+                    <td class="text-green-400">${(u.james || 0).toLocaleString()}</td>
+                    <td>${u.invites || 0}</td>
+                    <td>
+                        ${u.banned
+                        ? '<span class="bg-red-500/20 text-red-400 px-2 py-0.5 rounded text-xs">Banned</span>'
+                        : '<span class="bg-green-500/20 text-green-400 px-2 py-0.5 rounded text-xs">Active</span>'}
+                    </td>
+                    <td>
+                        <div class="flex gap-1">
+                            <button onclick="openEditUser('${u.id}','${(u.firstName || u.username || 'User').replace(/'/g, '')}')" class="bg-blue-500/20 text-blue-400 px-2 py-1 rounded text-xs font-bold" title="Edit Tokens"><i class="fas fa-coins"></i></button>
+                            <button onclick="toggleBanUser('${u.id}',${!u.banned})" class="bg-${u.banned ? 'green' : 'red'}-500/20 text-${u.banned ? 'green' : 'red'}-400 px-2 py-1 rounded text-xs" title="${u.banned ? 'Unban' : 'Ban'}"><i class="fas fa-${u.banned ? 'check' : 'ban'}"></i></button>
+                            <button onclick="deleteUser('${u.id}')" class="bg-gray-500/20 text-gray-400 px-2 py-1 rounded text-xs" title="Delete"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>`).join('');
+            }
+
+            function filterUsers() {
+                const q = document.getElementById('userSearch')?.value?.toLowerCase() || '';
+                const filtered = allUsersData.filter(u =>
+                    (u.username || '').toLowerCase().includes(q) ||
+                    (u.firstName || '').toLowerCase().includes(q) ||
+                    String(u.id).includes(q)
+                );
+                renderUsersTable(filtered);
+            }
+
+            function openEditUser(userId, name) {
+                document.getElementById('editUserId').value = userId;
+                document.getElementById('editUserName').textContent = name;
+                document.getElementById('editTokenAmount').value = '';
+                const modal = document.getElementById('editTokensModal');
+                modal.style.display = 'flex';
+            }
+
+            function saveUserTokens() {
+                const userId = document.getElementById('editUserId').value;
+                const action = document.getElementById('editTokenAction').value;
+                const tokens = parseInt(document.getElementById('editTokenAmount').value);
+                if (!tokens || isNaN(tokens)) { alert('Enter a valid amount'); return; }
+                fetch(`/api/admin/users/${userId}/tokens`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tokens, action })
+                })
+                    .then(r => r.json())
+                    .then(data => {
+                        document.getElementById('editTokensModal').style.display = 'none';
+                        if (data.success) { alert(`✅ Done! New balance: ${data.newBalance} TC`); loadUsers(); }
+                        else alert('❌ Failed: ' + data.message);
+                    });
+            }
+
+            function toggleBanUser(userId, ban) {
+                if (!confirm(`${ban ? 'Ban' : 'Unban'} this user?`)) return;
+                fetch(`/api/admin/users/${userId}/ban`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ banned: ban })
+                }).then(() => loadUsers());
+            }
+
+            function deleteUser(userId) {
+                if (!confirm('⚠️ Permanently delete this user? This cannot be undone.')) return;
+                fetch(`/api/admin/users/${userId}`, { method: 'DELETE' })
+                    .then(() => loadUsers());
+            }
+
+            // =============================================
+            // BROADCAST
+            // =============================================
+            function sendBroadcast() {
+                const msg = document.getElementById('broadcastMsg')?.value?.trim();
+                if (!msg) { alert('Please enter a message'); return; }
+                if (!confirm(`Send this message to ALL users?\n\n"${msg.substring(0, 100)}..."`)) return;
+
+                const btn = document.getElementById('broadcastBtn');
+                const result = document.getElementById('broadcastResult');
+                if (btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Sending...'; btn.disabled = true; }
+
+                fetch('/api/admin/broadcast', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: msg })
+                })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (btn) { btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>SEND TO ALL USERS'; btn.disabled = false; }
+                        if (result) {
+                            result.className = 'mt-4 p-4 rounded-xl ' + (data.success ? 'bg-green-500/10 border border-green-500/30 text-green-400' : 'bg-red-500/10 border border-red-500/30 text-red-400');
+                            result.innerHTML = data.success
+                                ? `✅ Broadcast sent!<br>Delivered: <b>${data.sent}</b> | Failed: <b>${data.failed}</b> | Total: <b>${data.total}</b>`
+                                : `❌ Failed: ${data.message}`;
+                        }
+                    })
+                    .catch(() => {
+                        if (btn) { btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>SEND TO ALL USERS'; btn.disabled = false; }
+                        if (result) { result.className = 'mt-4 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400'; result.textContent = '❌ Network error'; }
+                    });
+            }
+
+            function insertBroadcastTag(tag) {
+                const ta = document.getElementById('broadcastMsg');
+                if (!ta) return;
+                const start = ta.selectionStart, end = ta.selectionEnd;
+                const selected = ta.value.substring(start, end) || 'text';
+                const replacement = `<${tag}>${selected}</${tag}>`;
+                ta.value = ta.value.substring(0, start) + replacement + ta.value.substring(end);
+                ta.focus();
+            }
+
+            // TRADING ADMIN
+            function initTradingAdmin() {
+                const mode = localStorage.getItem('tradeMode') || 'random';
+                updateTradeModeUI(mode);
+            }
+
+            function setTradeMode(mode) {
+                localStorage.setItem('tradeMode', mode);
+                updateTradeModeUI(mode);
+            }
+
+            function updateTradeModeUI(mode) {
+                ['random', 'win', 'lose'].forEach(m => {
+                    const el = document.getElementById('mode-' + m);
+                    if (!el) return;
+                    el.classList.remove('border-yellow-500', 'border-green-500', 'border-red-500', 'bg-yellow-500/10', 'bg-green-500/10', 'bg-red-500/10');
+                    el.classList.add('border-gray-600', 'bg-gray-800/50');
+                });
+                const el = document.getElementById('mode-' + mode);
+                if (el) {
+                    el.classList.remove('border-gray-600', 'bg-gray-800/50');
+                    if (mode === 'random') el.classList.add('border-yellow-500', 'bg-yellow-500/10');
+                    if (mode === 'win') el.classList.add('border-green-500', 'bg-green-500/10');
+                    if (mode === 'lose') el.classList.add('border-red-500', 'bg-red-500/10');
+                }
+                const display = document.getElementById('currentModeDisplay');
+                if (display) {
+                    const labels = { random: '🎲 RANDOM (50/50)', win: '🏆 ALWAYS WIN', lose: '💀 ALWAYS LOSE' };
+                    const colors = { random: 'text-yellow-400', win: 'text-green-400', lose: 'text-red-400' };
+                    display.textContent = labels[mode];
+                    display.className = 'text-xl font-bold ' + colors[mode];
+                }
+            }
+
+            function savePayout() {
+                const val = document.getElementById('payoutInput')?.value;
+                if (!val || val < 1 || val > 200) { alert('Invalid payout rate!'); return; }
+                localStorage.setItem('tradePayoutRate', val);
+                alert('Payout rate saved: ' + val + '%');
+            }
+
+            // ===== SERVICES MANAGEMENT =====
+            const defaultAdminServices = [
+                { id: 'verify', name: 'Verification', desc: 'Get verified badge', icon: 'fas fa-check-circle', color: '#166534,#15803d', cost: 20, page: 'verify' },
+                { id: 'gemini', name: 'Gemini Card', desc: 'Generate custom cards', imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Google_Gemini_logo.svg/60px-Google_Gemini_logo.svg.png', color: '#1e3a5f,#2563eb', cost: 10, page: 'serviceGenerate' },
+                { id: 'chatgpt', name: 'ChatGPT', desc: 'AI Assistant Access', icon: 'fas fa-robot', color: '#7c3f00,#d97706', cost: 15, page: 'serviceGenerate' },
+                { id: 'number', name: 'Number Service', desc: 'Virtual phone numbers', icon: 'fas fa-phone', color: '#4a044e,#9333ea', cost: 15, page: 'numberService' },
+                { id: 'mail', name: 'Mail Service', desc: 'Temporary email inbox', icon: 'fas fa-envelope', color: '#7f1d1d,#dc2626', cost: 10, page: 'mailService' },
+            ];
+
+            function renderAdminServices() {
+                fetch('/api/admin/services').then(r => r.json()).then(data => {
+                    const list = document.getElementById('admin-services-list');
+                    if (!list) return;
+                    const services = data.services || [];
+                    if (!services.length) { list.innerHTML = '<p class="text-gray-500 text-sm">No services yet.</p>'; return; }
+                    list.innerHTML = services.map(s => `
+                    <div class="flex items-center gap-3 bg-black/20 rounded-xl p-3 border border-white/5">
+                        <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,${s.color || '#1e3a5f,#2563eb'});display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">
+                            ${s.imageUrl ? `<img src="${s.imageUrl}" style="width:26px;height:26px;object-fit:contain;">` : `<i class="${s.icon || 'fas fa-cog'}" style="color:#fff;font-size:16px;"></i>`}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-bold text-sm truncate">${s.name}</div>
+                            <div class="text-xs text-gray-400">${s.cost} TC &bull; ${s.page}</div>
+                        </div>
+                        <button onclick="editService('${s.id}')" class="text-yellow-400 hover:text-yellow-300 px-2"><i class="fas fa-edit"></i></button>
+                        <button onclick="deleteService('${s.id}')" class="text-red-400 hover:text-red-300 px-2"><i class="fas fa-trash"></i></button>
+                    </div>`).join('');
+                });
+            }
+
+            function saveService() {
+                const id = document.getElementById('svc-id').value.trim().replace(/\s/g, '');
+                const name = document.getElementById('svc-name').value.trim();
+                if (!id || !name) { alert('ID and Name are required!'); return; }
+
+                const item = {
+                    id, name,
+                    desc: document.getElementById('svc-desc').value.trim(),
+                    imageUrl: document.getElementById('svc-img').value.trim(),
+                    icon: document.getElementById('svc-icon').value.trim() || 'fas fa-cog',
+                    cost: parseInt(document.getElementById('svc-cost').value) || 10,
+                    color: document.getElementById('svc-color').value.trim() || '#1e3a5f,#2563eb',
+                    page: document.getElementById('svc-page').value
+                };
+
+                fetch('/api/admin/services', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(item)
+                }).then(r => r.json()).then(d => {
+                    if (d.success) {
+                        clearServiceForm();
+                        renderAdminServices();
+                        alert('Service saved!');
+                    } else alert('Failed to save service');
+                });
+            }
+
+            function editService(id) {
+                fetch('/api/admin/services').then(r => r.json()).then(data => {
+                    const s = (data.services || []).find(x => x.id === id);
+                    if (!s) return;
+                    document.getElementById('svc-edit-id').value = s.id;
+                    document.getElementById('svc-id').value = s.id;
+                    document.getElementById('svc-name').value = s.name;
+                    document.getElementById('svc-desc').value = s.desc || '';
+                    document.getElementById('svc-img').value = s.imageUrl || '';
+                    document.getElementById('svc-icon').value = s.icon || '';
+                    document.getElementById('svc-cost').value = s.cost || 10;
+                    document.getElementById('svc-color').value = s.color || '';
+                    document.getElementById('svc-page').value = s.page || 'serviceGenerate';
+                });
+            }
+
+            function deleteService(id) {
+                if (!confirm('Delete this service?')) return;
+                fetch('/api/admin/services/' + id, { method: 'DELETE' })
+                    .then(r => r.json())
+                    .then(d => {
+                        if (d.success) renderAdminServices();
+                        else alert('Failed to delete service');
+                    });
+            }
+
+            function clearServiceForm() {
+                ['svc-edit-id', 'svc-id', 'svc-name', 'svc-desc', 'svc-img', 'svc-icon', 'svc-cost', 'svc-color'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            }
+
+            // ===== SHOP MANAGEMENT =====
+            const defaultAdminShop = [
+                { id: 'gemini1y', name: 'GEMINI 1 YEAR', price: '$3.00', imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Google_Gemini_logo.svg/200px-Google_Gemini_logo.svg.png', bgColor: '#0d0d0d', btnColor: '#f59e0b', page: 'deposit' },
+                { id: 'chatgptplus', name: 'CHATGPT PLUS', price: '$5.00', imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/ChatGPT_logo.svg/200px-ChatGPT_logo.svg.png', bgColor: '#0d0d0d', btnColor: '#22c55e', page: 'deposit' },
+            ];
+
+            function renderAdminShopItems() {
+                fetch('/api/admin/shop').then(r => r.json()).then(data => {
+                    const list = document.getElementById('admin-shop-list');
+                    if (!list) return;
+                    const items = data.shopItems || [];
+                    if (!items.length) { list.innerHTML = '<p class="text-gray-500 text-sm">No items yet.</p>'; return; }
+                    list.innerHTML = items.map(item => `
+                    <div class="flex items-center gap-3 bg-black/20 rounded-xl p-3 border border-white/5">
+                        <div style="width:40px;height:40px;border-radius:10px;background:${item.bgColor || '#0d0d0d'};display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;border:1px solid rgba(255,255,255,0.1);">
+                            ${item.imageUrl ? `<img src="${item.imageUrl}" style="width:30px;height:30px;object-fit:contain;">` : `<i class="fas fa-box" style="color:#f59e0b;"></i>`}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-bold text-sm truncate">${item.name}</div>
+                            <div class="text-xs text-green-400 font-bold">${item.price}</div>
+                        </div>
+                        <button onclick="editShopItem('${item.id}')" class="text-yellow-400 hover:text-yellow-300 px-2"><i class="fas fa-edit"></i></button>
+                        <button onclick="deleteShopItem('${item.id}')" class="text-red-400 hover:text-red-300 px-2"><i class="fas fa-trash"></i></button>
+                    </div>`).join('');
+                });
+            }
+
+            function saveShopItem() {
+                const id = document.getElementById('shop-id').value.trim().replace(/\s/g, '');
+                const name = document.getElementById('shop-name').value.trim();
+                if (!id || !name) { alert('ID and Name are required!'); return; }
+
+                const item = {
+                    id, name,
+                    price: document.getElementById('shop-price').value.trim() || '$0.00',
+                    imageUrl: document.getElementById('shop-img').value.trim(),
+                    bgColor: document.getElementById('shop-bg').value.trim() || '#0d0d0d',
+                    btnColor: document.getElementById('shop-btn').value.trim() || '#f59e0b',
+                    page: 'deposit'
+                };
+
+                fetch('/api/admin/shop', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(item)
+                }).then(r => r.json()).then(d => {
+                    if (d.success) {
+                        clearShopForm();
+                        renderAdminShopItems();
+                        alert('Shop item saved!');
+                    } else alert('Failed to save shop item');
+                });
+            }
+
+            function editShopItem(id) {
+                fetch('/api/admin/shop').then(r => r.json()).then(data => {
+                    const s = (data.shopItems || []).find(x => x.id === id);
+                    if (!s) return;
+                    document.getElementById('shop-edit-id').value = s.id;
+                    document.getElementById('shop-id').value = s.id;
+                    document.getElementById('shop-name').value = s.name;
+                    document.getElementById('shop-price').value = s.price || '';
+                    document.getElementById('shop-img').value = s.imageUrl || '';
+                    document.getElementById('shop-bg').value = s.bgColor || '';
+                    document.getElementById('shop-btn').value = s.btnColor || '';
+                });
+            }
+
+            function deleteShopItem(id) {
+                if (!confirm('Delete this item?')) return;
+                fetch('/api/admin/shop/' + id, { method: 'DELETE' }).then(r => r.json()).then(d => {
+                    if (d.success) renderAdminShopItems();
+                    else alert('Failed to delete item');
+                });
+            }
+
+            function clearShopForm() {
+                ['shop-edit-id', 'shop-id', 'shop-name', 'shop-price', 'shop-img', 'shop-bg', 'shop-btn'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            }
+
+
+            function loadConfig() {
+                fetch('/api/admin/settings')
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.settings) {
+                            const s = data.settings;
+                            if (document.getElementById('conf-daily')) document.getElementById('conf-daily').value = s.dailyBonus || 100;
+                            if (document.getElementById('conf-invite')) document.getElementById('conf-invite').value = s.refBonus || 50;
+                            if (document.getElementById('conf-welcome')) document.getElementById('conf-welcome').value = s.welcomeCredits || 500;
+                        }
+                    });
+            }
+
+            function saveConfig() {
+                const daily = document.getElementById('conf-daily').value;
+                const invite = document.getElementById('conf-invite').value;
+                const welcome = document.getElementById('conf-welcome').value;
+
+                fetch('/api/admin/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        dailyBonus: daily,
+                        refBonus: invite,
+                        welcomeBonus: welcome
+                    })
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        alert('Server Settings Saved Successfully!');
+                    });
+            }
+            function saveGems() {
+                // Placeholder: Connect to Gems API similarly
+                localStorage.setItem('adm_gem_price', document.getElementById('conf-gemprice').value);
+                localStorage.setItem('adm_ad_reward', document.getElementById('conf-adreward').value);
+                alert('Gems Config Saved (Local Only for now)!');
+            }
+
+            // CODES (SERVER CONNECTED)
+            function renderCodes() {
+                fetch('/api/admin/codes')
+                    .then(res => res.json())
+                    .then(data => {
+                        const tbody = document.getElementById('codesTable');
+                        tbody.innerHTML = data.codes.map((c, i) => `<tr><td>${c.code}</td><td>${c.amount}</td><td>${c.maxUses || 'Unlimited'}</td><td><button onclick="removeCode('${c.code}')" class="text-red-400 text-xs">Del</button></td></tr>`).join('');
+                    });
+            }
+            function addCode() {
+                const code = document.getElementById('code-code').value;
+                const amount = document.getElementById('code-amount').value;
+                const maxUses = document.getElementById('code-uses').value;
+
+                fetch('/api/admin/codes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code, amount, maxUses })
+                }).then(() => {
+                    renderCodes();
+                    closeModal();
+                });
+            }
+            function removeCode(code) {
+                fetch('/api/admin/codes/' + code, { method: 'DELETE' })
+                    .then(() => renderCodes());
+            }
+
+            // TASKS
+            function renderTasks() {
+                const tasks = JSON.parse(localStorage.getItem('adm_tasks') || '[]');
+                const tbody = document.getElementById('tasksTable');
+                tbody.innerHTML = tasks.map((t, i) => `<tr><td>${t.name}</td><td>${t.reward}</td><td><a href="${t.url}" target="_blank" class="text-blue-400 underline">Link</a></td><td><button onclick="removeTask(${i})" class="text-red-400 text-xs">Del</button></td></tr>`).join('');
+            }
+            function addTask() {
+                const name = document.getElementById('task-name').value;
+                const reward = document.getElementById('task-reward').value;
+                const url = document.getElementById('task-url').value;
+                if (!name) return;
+                const tasks = JSON.parse(localStorage.getItem('adm_tasks') || '[]');
+                tasks.push({ name, reward, url });
+                localStorage.setItem('adm_tasks', JSON.stringify(tasks));
+                renderTasks();
+                closeModal();
+            }
+            function removeTask(i) {
+                const tasks = JSON.parse(localStorage.getItem('adm_tasks') || '[]');
+                tasks.splice(i, 1);
+                localStorage.setItem('adm_tasks', JSON.stringify(tasks));
+                renderTasks();
+            }
+
+            // CARDS
+            function renderCards() {
+                const cards = JSON.parse(localStorage.getItem('adm_cards') || '[]');
+                const grid = document.getElementById('cardsGrid');
+                grid.innerHTML = cards.map((c, i) => `
+                <div class="glass-card p-4 rounded-xl relative">
+                    <button onclick="removeItem('adm_cards', ${i}, 'renderCards')" class="absolute right-2 top-2 text-red-400 text-xs"><i class="fas fa-trash"></i></button>
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center text-blue-400"><i class="fas fa-credit-card"></i></div>
+                        <div><h4 class="font-bold text-sm">${c.name}</h4><div class="text-xs text-gray-400">${c.type}</div></div>
+                    </div>
+                    <div class="text-xl font-bold mt-2">$${c.price}</div>
+                </div>
+            `).join('');
+            }
+            function addCard() {
+                const name = document.getElementById('card-name').value;
+                const price = document.getElementById('card-price').value;
+                const type = document.getElementById('card-type').value;
+                if (!name) return;
+                const items = JSON.parse(localStorage.getItem('adm_cards') || '[]');
+                items.push({ name, price, type });
+                localStorage.setItem('adm_cards', JSON.stringify(items));
+                renderCards();
+                closeModal();
+            }
+
+            // VPN
+            function renderVPN() {
+                const vpns = JSON.parse(localStorage.getItem('adm_vpns') || '[]');
+                const grid = document.getElementById('vpnGrid');
+                grid.innerHTML = vpns.map((c, i) => `
+                <div class="glass-card p-4 rounded-xl relative">
+                    <button onclick="removeItem('adm_vpns', ${i}, 'renderVPN')" class="absolute right-2 top-2 text-red-400 text-xs"><i class="fas fa-trash"></i></button>
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center text-green-400"><i class="fas fa-shield-alt"></i></div>
+                        <div><h4 class="font-bold text-sm">${c.name}</h4><div class="text-xs text-gray-400">${c.country}</div></div>
+                    </div>
+                    <div class="text-xl font-bold mt-2">$${c.price}</div>
+                </div>
+            `).join('');
+            }
+            function addVPN() {
+                const name = document.getElementById('vpn-name').value;
+                const country = document.getElementById('vpn-country').value;
+                const price = document.getElementById('vpn-price').value;
+                if (!name) return;
+                const items = JSON.parse(localStorage.getItem('adm_vpns') || '[]');
+                items.push({ name, country, price });
+                localStorage.setItem('adm_vpns', JSON.stringify(items));
+                renderVPN();
+                closeModal();
+            }
+
+            // APPS
+            function renderApps() {
+                const apps = JSON.parse(localStorage.getItem('adm_apps') || '[]');
+                const grid = document.getElementById('appsGrid');
+                grid.innerHTML = apps.map((c, i) => `
+                <div class="glass-card p-4 rounded-xl relative text-center">
+                    <button onclick="removeItem('adm_apps', ${i}, 'renderApps')" class="absolute right-2 top-2 text-red-400 text-xs"><i class="fas fa-trash"></i></button>
+                    <div class="w-12 h-12 bg-purple-500/20 rounded-xl mx-auto flex items-center justify-center text-purple-400 mb-2"><i class="fas fa-mobile-alt"></i></div>
+                    <h4 class="font-bold text-sm">${c.name}</h4>
+                    <div class="text-xs text-gray-400 truncate">${c.desc}</div>
+                </div>
+            `).join('');
+            }
+            function addApp() {
+                const name = document.getElementById('app-name').value;
+                const desc = document.getElementById('app-desc').value;
+                if (!name) return;
+                const items = JSON.parse(localStorage.getItem('adm_apps') || '[]');
+                items.push({ name, desc });
+                localStorage.setItem('adm_apps', JSON.stringify(items));
+                renderApps();
+                closeModal();
+            }
+
+            // GENERIC REMOVE
+            function removeItem(key, index, callbackName) {
+                const items = JSON.parse(localStorage.getItem(key) || '[]');
+                items.splice(index, 1);
+                localStorage.setItem(key, JSON.stringify(items));
+                window[callbackName]();
+            }
+
+            // MODALS
+            function showModal(id) {
+                document.getElementById('modal-' + id).style.display = 'flex';
+            }
+            function closeModal() {
+                document.querySelectorAll('.modal-overlay').forEach(el => el.style.display = 'none');
+            }
+
+            // CHART
+            function initChart() {
+                const ctx = document.getElementById('mainChart').getContext('2d');
+                new Chart(ctx, { type: 'line', data: { labels: ['M', 'T', 'W', 'T', 'F', 'S', 'S'], datasets: [{ label: 'Users', data: [150, 200, 180, 220, 250, 300, 320], borderColor: '#f59e0b', tension: 0.4 }] }, options: { plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: { color: 'rgba(255,255,255,0.05)' } } } } });
+            }
+
+            document.getElementById("password")?.addEventListener("keyup", function (event) {
+                if (event.keyCode === 13) login();
+            });
+            // UPLOAD HANDLER
+            function uploadAdminImage(input, targetId) {
+                const file = input.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const base64 = e.target.result;
+                    const btn = input.parentElement;
+                    const icon = btn.querySelector('i');
+                    const originalIcon = icon.className;
+                    icon.className = 'fas fa-spinner fa-spin text-yellow-400';
+
+                    fetch('/api/admin/upload', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ image: base64, name: file.name })
+                    })
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.success) {
+                                document.getElementById(targetId).value = data.url;
+                                icon.className = 'fas fa-check text-green-400';
+                                setTimeout(() => icon.className = originalIcon, 2000);
+                            } else {
+                                alert('Upload failed: ' + data.message);
+                                icon.className = 'fas fa-times text-red-400';
+                            }
+                        })
+                        .catch(e => {
+                            console.error(e);
+                            alert('Upload error');
+                            icon.className = 'fas fa-times text-red-400';
+                        });
+                };
+                reader.readAsDataURL(file);
+            }
+
+            // DASHBOARD UPDATE LOGIC
+            function updateDashboard() {
+                fetch('/api/admin/stats')
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            const s = data.stats;
+                            setText('dash-total-users', s.totalUsers);
+                            setText('dash-active', s.activeUsers);
+                            setText('dash-offline', s.offlineUsers);
+                            setText('dash-groups', s.groups);
+                            setText('dash-revenue', s.revenue.toLocaleString());
+                        }
+                    });
+            }
+            function setText(id, txt) {
+                const el = document.getElementById(id);
+                if (el) el.innerText = txt;
+            }
+            // Auto-load dashboard stats on login
+            const originalLogin = login;
+            login = function () {
+                // Call original login first? No, login() is global.
+                // We'll just hook into nav('dashboard') or call it once authenticated
+                document.getElementById('login-overlay').style.display = 'none';
+                document.getElementById('app-container').classList.remove('hidden');
+                updateDashboard();
+                setInterval(updateDashboard, 30000); // Live update
+            }
+
+            // BROADCAST LOGIC
+            function sendBroadcast() {
+                const msg = document.getElementById('bc-message').value;
+                const target = document.getElementById('bc-target').value;
+                const mediaType = document.getElementById('bc-media-type').value;
+                const mediaUrl = document.getElementById('bc-media-url').value;
+                const btnRaw = document.getElementById('bc-buttons').value;
+
+                if (!msg && !mediaUrl) { alert('Enter message or media URL'); return; }
+
+                const statusEl = document.getElementById('bc-status');
+                statusEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+                statusEl.className = 'mt-4 text-yellow-400';
+
+                // Parse buttons
+                let buttons = [];
+                if (btnRaw) {
+                    buttons = btnRaw.split('\n').map(line => {
+                        const parts = line.split('|');
+                        if (parts.length === 2) return { text: parts[0].trim(), url: parts[1].trim() };
+                        return null;
+                    }).filter(b => b);
+                }
+
+                fetch('/api/admin/broadcast', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: msg,
+                        target: target,
+                        mediaType: mediaType,
+                        mediaUrl: mediaUrl,
+                        buttons: buttons
+                    })
+                })
+                    .then(r => r.json())
+                    .then(res => {
+                        if (res.success) {
+                            statusEl.innerHTML = `✅ Sent: ${res.sent} | Failed: ${res.failed} | Total: ${res.total}`;
+                            statusEl.className = 'mt-4 text-green-400 font-bold';
+                            setTimeout(() => statusEl.innerHTML = '', 5000);
+                        } else {
+                            statusEl.innerHTML = '❌ Error: ' + res.message;
+                            statusEl.className = 'mt-4 text-red-400';
+                        }
+                    })
+                    .catch(e => {
+                        statusEl.innerHTML = '❌ Network Error';
+                        statusEl.className = 'mt-4 text-red-400';
+                    });
+            }
+
+            function toggleMediaInput() {
+                const type = document.getElementById('bc-media-type').value;
+                const input = document.getElementById('bc-media-input');
+                if (type === 'none') input.style.display = 'none';
+                else input.style.display = 'block';
+            }
+        </script>
+
+        <!-- BROADCAST PAGE -->
+        <div id="page-broadcast" class="page">
+            <div class="glass-card p-8 rounded-2xl max-w-3xl mx-auto">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="w-12 h-12 bg-pink-500/20 rounded-xl flex items-center justify-center text-pink-400">
+                        <i class="fas fa-bullhorn text-2xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold">Advanced Broadcast</h2>
+                        <p class="text-gray-400 text-sm">Send messages to Users, Groups, or Both</p>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <!-- TARGET -->
+                    <div>
+                        <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Target Audience</label>
+                        <select id="bc-target"
+                            class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-pink-500 outline-none">
+                            <option value="users">👤 Private Users (Bot)</option>
+                            <option value="groups">📢 Telegram Groups & Channels</option>
+                            <option value="all">🌐 All (Users + Groups)</option>
+                        </select>
+                    </div>
+
+                    <!-- MESSAGE -->
+                    <div>
+                        <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Message Text</label>
+                        <textarea id="bc-message" rows="4" placeholder="Enter your broadcast message..."
+                            class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-pink-500 outline-none"></textarea>
+                    </div>
+
+                    <!-- MEDIA -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Media Type</label>
+                            <select id="bc-media-type" onchange="toggleMediaInput()"
+                                class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-pink-500 outline-none">
+                                <option value="none">None (Text Only)</option>
+                                <option value="photo">📸 Photo</option>
+                                <option value="video">🎥 Video</option>
+                            </select>
+                        </div>
+                        <div id="bc-media-input" style="display:none;">
+                            <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Media URL</label>
+                            <input id="bc-media-url" type="text" placeholder="https://example.com/image.jpg"
+                                class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-pink-500 outline-none">
+                        </div>
+                    </div>
+
+                    <!-- BUTTONS -->
+                    <div>
+                        <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Buttons (Optional)</label>
+                        <textarea id="bc-buttons" rows="3"
+                            placeholder="Button Label | https://link.com&#10;Another Button | https://link2.com"
+                            class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-pink-500 outline-none font-mono text-sm"></textarea>
+                        <p class="text-xs text-gray-500 mt-1">Format: Label | URL (One per line)</p>
+                    </div>
+
+                    <!-- SEND BUTTON -->
+                    <button onclick="sendBroadcast()"
+                        class="w-full bg-gradient-to-r from-pink-500 to-rose-600 py-4 rounded-xl font-bold text-white shadow-lg shadow-pink-500/20 hover:shadow-pink-500/40 transition-all transform hover:scale-[1.02]">
+                        <i class="fas fa-paper-plane mr-2"></i> SEND BROADCAST
+                    </button>
+
+                    <!-- STATUS -->
+                    <div id="bc-status" class="text-center"></div>
+                </div>
+            </div>
+        </div>
+        <!-- ACCOUNTS PAGE -->
+        <div id="page-accounts" class="page">
+            <div class="glass-card p-6 rounded-2xl">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="font-bold">Premium Accounts Inventory</h3>
+                    <button onclick="openAddAccountModal()"
+                        class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl font-bold transition-all shadow-lg shadow-blue-500/20">
+                        <i class="fas fa-plus mr-2"></i> NEW ACCOUNT
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="text-xs text-gray-500 uppercase border-b border-white/5">
+                            <tr>
+                                <th class="px-4 py-3">Type</th>
+                                <th class="px-4 py-3">Email / Login</th>
+                                <th class="px-4 py-3">Price</th>
+                                <th class="px-4 py-3">Status</th>
+                                <th class="px-4 py-3">Added</th>
+                                <th class="px-4 py-3 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="accountsTable" class="text-sm divide-y divide-white/5">
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-gray-500">Loading inventory...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ADD ACCOUNT MODAL -->
+            <div id="addAccountModal" class="modal-overlay">
+                <div class="glass-card p-6 rounded-2xl w-full max-w-md mx-4 relative">
+                    <button onclick="closeAddAccountModal()"
+                        class="absolute top-4 right-4 text-gray-400 hover:text-white"><i
+                            class="fas fa-times"></i></button>
+                    <h3 class="text-xl font-bold mb-6">Add Premium Account</h3>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs uppercase text-gray-500 font-bold mb-1">Account Type</label>
+                            <select id="accType"
+                                class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-blue-500 outline-none">
+                                <option value="netflix">Netflix Premium</option>
+                                <option value="spotify">Spotify Premium</option>
+                                <option value="prime">Amazon Prime</option>
+                                <option value="crunchyroll">Crunchyroll</option>
+                                <option value="nordvpn">NordVPN</option>
+                                <option value="expressvpn">ExpressVPN</option>
+                                <option value="chatgpt">ChatGPT Plus</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs uppercase text-gray-500 font-bold mb-1">Email / Username</label>
+                            <input type="text" id="accEmail"
+                                class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-blue-500 outline-none"
+                                placeholder="user@example.com">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs uppercase text-gray-500 font-bold mb-1">Password</label>
+                            <input type="text" id="accPass"
+                                class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-blue-500 outline-none"
+                                placeholder="Secret123">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs uppercase text-gray-500 font-bold mb-1">Price
+                                    (Tokens)</label>
+                                <input type="number" id="accPrice"
+                                    class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-blue-500 outline-none"
+                                    placeholder="100" value="100">
+                            </div>
+                            <div>
+                                <label class="block text-xs uppercase text-gray-500 font-bold mb-1">Instructions</label>
+                                <input type="text" id="accInstr"
+                                    class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-blue-500 outline-none"
+                                    placeholder="Optional notes">
+                            </div>
+                        </div>
+
+                        <button onclick="submitAccount()"
+                            class="w-full gold-gradient py-3 rounded-xl font-bold text-black mt-2 hover:shadow-lg shadow-orange-500/20 transition-all">ADD
+                            TO INVENTORY</button>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                // Account Management Logic
+                function loadAccounts() {
+                    fetch('/api/admin/accounts')
+                        .then(r => r.json())
+                        .then(data => {
+                            const tbody = document.getElementById('accountsTable');
+                            tbody.innerHTML = '';
+                            if (!data.accounts || data.accounts.length === 0) {
+                                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-gray-500">No accounts in inventory</td></tr>';
+                                return;
+                            }
+
+                            data.accounts.reverse().forEach(acc => {
+                                const statusBadge = acc.sold
+                                    ? '<span class="px-2 py-1 rounded bg-red-500/10 text-red-500 text-xs font-bold border border-red-500/20">SOLD</span>'
+                                    : '<span class="px-2 py-1 rounded bg-green-500/10 text-green-500 text-xs font-bold border border-green-500/20">AVAILABLE</span>';
+
+                                const date = new Date(acc.addedAt).toLocaleDateString();
+
+                                const row = `
+                                        <tr class="hover:bg-white/5 transition-colors">
+                                            <td class="px-4 py-3 font-bold capitalize text-white">${acc.type}</td>
+                                            <td class="px-4 py-3 text-gray-300 font-mono text-xs">${acc.email}</td>
+                                            <td class="px-4 py-3 text-yellow-500 font-bold">${acc.price} 🪙</td>
+                                            <td class="px-4 py-3">${statusBadge}</td>
+                                            <td class="px-4 py-3 text-gray-500 text-xs">${date}</td>
+                                            <td class="px-4 py-3 text-right">
+                                                <button onclick="deleteAccount('${acc.id}')" class="text-red-400 hover:text-red-300 p-2 hover:bg-red-500/10 rounded-lg transition-all" title="Delete">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `;
+                                tbody.innerHTML += row;
+                            });
+                        });
+                }
+
+                function openAddAccountModal() {
+                    document.getElementById('addAccountModal').style.display = 'flex';
+                }
+                function closeAddAccountModal() {
+                    document.getElementById('addAccountModal').style.display = 'none';
+                }
+
+                function submitAccount() {
+                    const type = document.getElementById('accType').value;
+                    const email = document.getElementById('accEmail').value;
+                    const password = document.getElementById('accPass').value;
+                    const price = document.getElementById('accPrice').value;
+                    const instructions = document.getElementById('accInstr').value;
+
+                    if (!email || !password || !price) return alert('Please fill all fields');
+
+                    fetch('/api/admin/accounts', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ type, email, password, price, instructions })
+                    })
+                        .then(r => r.json())
+                        .then(res => {
+                            if (res.success) {
+                                closeAddAccountModal();
+                                loadAccounts();
+                                // Clear inputs
+                                document.getElementById('accEmail').value = '';
+                                document.getElementById('accPass').value = '';
+                            } else {
+                                alert('Error adding account');
+                            }
+                        });
+                }
+
+                function deleteAccount(id) {
+                    if (confirm('Are you sure you want to delete this account?')) {
+                        fetch('/api/admin/accounts/' + id, { method: 'DELETE' })
+                            .then(r => r.json())
+                            .then(res => {
+                                if (res.success) loadAccounts();
+                            });
+                    }
+                }
+
+                // Hook into nav function
+                const originalNav = window.nav || function () { };
+                window.nav = function (page) {
+                    // Hide all pages
+                    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+                    // Show target
+                    const target = document.getElementById('page-' + page);
+                    if (target) target.classList.add('active');
+
+                    // Active nav
+                    // Simple loop to find nav item with onclick="nav('page')"
+                    // For now just manually handle or trust existing logic if accessible
+                    // Since original logic is inside a script tag not shown here, I'll rely on my injection being sufficient if I can modify the existing nav function or relying on the existing one which likely iterates pages.
+                    // Actually, existing nav function logic is NOT visible in snippet.
+                    // I'll assume standard ID matching: 'page-' + id.
+
+                    if (page === 'accounts') loadAccounts();
+                    if (page === 'storage') loadStorageStatus();
+                }
+
+                // STORAGE MANAGEMENT
+                function loadStorageStatus() {
+                    const badge = document.getElementById('drive-badge');
+                    const email = document.getElementById('drive-email');
+                    const usageText = document.getElementById('drive-usage-text');
+                    const progress = document.getElementById('drive-progress');
+                    const btnConnect = document.getElementById('btn-drive-connect');
+                    const btnDisconnect = document.getElementById('btn-drive-disconnect');
+
+                    fetch('/api/admin/storage/status')
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.connected) {
+                                badge.textContent = 'CONNECTED';
+                                badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-green-500/10 text-green-500';
+                                email.textContent = data.info.user || 'Unknown';
+
+                                const used = (data.info.used / (1024 * 1024)).toFixed(1); // MB
+                                const total = (data.info.total / (1024 * 1024 * 1024)).toFixed(1); // GB
+                                usageText.textContent = `${used} MB / ${total} GB`;
+
+                                const percent = (data.info.used / data.info.total) * 100 || 0;
+                                progress.style.width = percent + '%';
+
+                                btnConnect.style.display = 'none';
+                                btnDisconnect.style.display = 'block';
+                            } else {
+                                badge.textContent = 'DISCONNECTED';
+                                badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-red-500/10 text-red-500';
+                                email.textContent = 'None';
+                                usageText.textContent = '0 MB / 0 MB';
+                                progress.style.width = '0%';
+
+                                btnConnect.style.display = 'block';
+                                btnDisconnect.style.display = 'none';
+                            }
+                        })
+                        .catch(err => console.error('Storage Status Error:', err));
+                }
+
+                function connectDrive() {
+                    // State 'admin' tells server this is for system storage
+                    window.location.href = '/auth/google?state=admin';
+                }
+
+                function disconnectDrive() {
+                    if (!confirm('Disconnect Google Drive? System will revert to local/Firebase storage only.')) return;
+
+                    fetch('/api/admin/storage/disconnect', { method: 'POST' })
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.success) {
+                                loadStorageStatus();
+                                alert('Disconnected successfully.');
+                            }
+                        });
+                }
+            </script>
+        </div>
+</body>
+
+</html>

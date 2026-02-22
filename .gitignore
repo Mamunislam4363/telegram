@@ -1,0 +1,33 @@
+# Credentials
+serviceAccountKey.json
+credentials.json
+drive-credentials.json
+drive-token.json
+.env
+
+# Dependencies
+node_modules/
+package-lock.json
+
+# Local Data
+database.json
+sessions/
+session.json
+logs/
+*.log
+
+# System
+thumbs.db
+.DS_Store
+.vscode/
+.idea/
+
+# Temp
+temp/
+tmp/
+*.tmp
+changed_files.txt
+untracked_files.txt
+git_status.txt
+backups/
+database.json

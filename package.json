@@ -1,0 +1,43 @@
+{
+  "name": "telegram-verification-bot",
+  "version": "2.0.0",
+  "description": "Telegram Verification Bot with Web Panel",
+  "main": "index.js",
+  "scripts": {
+    "start": "node bot.js",
+    "dev": "nodemon bot.js",
+    "pm2:start": "pm2 start bot.js --name telegram-bot",
+    "pm2:restart": "pm2 restart telegram-bot",
+    "pm2:logs": "pm2 logs telegram-bot",
+    "pm2:save": "pm2 save",
+    "install-deps": "npm install"
+  },
+  "keywords": [
+    "telegram",
+    "bot",
+    "verification",
+    "webapp",
+    "hostinger"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "@faker-js/faker": "^8.3.1",
+    "axios": "^1.13.5",
+    "compression": "^1.7.4",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-session": "^1.17.3",
+    "firebase-admin": "^13.6.1",
+    "googleapis": "^171.4.0",
+    "node-telegram-bot-api": "^0.66.0",
+    "pdfkit": "^0.15.0",
+    "puppeteer": "^24.2.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
