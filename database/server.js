@@ -37,23 +37,42 @@ app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'web', 'admin.html'));
 });
 
-// API: Get Bot Stats (For Admin)
-app.get('/api/stats', (req, res) => {
-    const users = db.getUsers();
-    const totalUsers = Object.keys(users).length;
-    const balance = 0; // Calculate if needed
-    res.json({ totalUsers, activeUsers: totalUsers, totalBalance: balance });
-});
-
 // API: Admin Login Check
 app.post('/api/admin/login', (req, res) => {
     const { password } = req.body;
-    // Simple check against config or fixed password
     if (password === (config.ADMIN_PASSWORD || 'admin123')) {
-        res.json({ success: true, token: 'fake-jwt-token' }); // In prod use real JWT
+        res.json({ success: true, token: 'fake-jwt-token-' + Date.now() });
     } else {
-        res.json({ success: false });
+        res.json({ success: false, message: 'Invalid password' });
     }
+});
+
+app.get('/api/admin/stats', (req, res) => {
+    const users = db.getUsers();
+    const activeToday = users.filter(u => u.lastActive > (Date.now() - 86400000)).length;
+
+    // Currency 1: Tokens (TC)
+    const totalTokens = users.reduce((acc, u) => acc + (u.balance || 0), 0);
+    // Currency 2: James (JS)
+    const totalJames = users.reduce((acc, u) => acc + (u.james || 0), 0);
+
+    const verifiedUsers = users.filter(u => u.verified || u.successfulVerifications > 0).length;
+
+    res.json({
+        success: true,
+        totalUsers: users.length,
+        totalTokens,
+        totalJames,
+        verifiedUsers,
+        activeToday,
+        stats: {
+            totalUsers: users.length,
+            activeUsers: activeToday,
+            offlineUsers: users.length - activeToday,
+            groups: db.getGroups().length,
+            revenue: db.data.transactions ? db.data.transactions.filter(t => t.type === 'deposit').reduce((acc, t) => acc + (t.amount || 0), 0) : 0
+        }
+    });
 });
 
 // API: Save Admin Settings
@@ -71,11 +90,12 @@ app.post('/api/admin/settings', (req, res) => {
 
 // API: Get Codes
 app.get('/api/admin/codes', (req, res) => {
-    const codes = db.data.codes || {};
-    // Convert object to array for frontend
+    const codes = db.data.settings.codes || {};
     const codeList = Object.keys(codes).map(key => ({
         code: key,
-        ...codes[key]
+        ...codes[key],
+        amount: codes[key].amount,
+        maxUses: codes[key].uses // In db.js 'uses' seems to be remaining uses
     }));
     res.json({ success: true, codes: codeList });
 });
@@ -785,24 +805,39 @@ app.delete('/api/admin/vpn/:key', (req, res) => {
 
 // API: Admin - App Management
 app.get('/api/admin/apps', (req, res) => {
-    const apps = Object.entries(db.data.shopItems || {}).map(([id, item]) => ({ id, ...item }));
+    const apps = Object.values(db.data.settings.premiumApps || {});
     res.json({ success: true, apps });
 });
 
 app.post('/api/admin/apps', (req, res) => {
-    const { name, desc, price } = req.body;
-    const id = Date.now().toString();
-    if (!db.data.shopItems) db.data.shopItems = {};
-    db.data.shopItems[id] = { name, desc, price: parseInt(price || 0), addedAt: Date.now() };
-    db.save();
-    res.json({ success: true, id });
+    const { name, link, price, id } = req.body;
+    const appId = id || Date.now().toString();
+    db.addPremiumApp(appId, name, link, price);
+    res.json({ success: true, id: appId });
 });
 
 app.delete('/api/admin/apps/:id', (req, res) => {
     const id = req.params.id;
-    if (db.data.shopItems) delete db.data.shopItems[id];
-    db.save();
-    res.json({ success: true });
+    const success = db.deletePremiumApp(id);
+    res.json({ success: success });
+});
+
+// API: Admin - Task Management
+app.get('/api/admin/tasks', (req, res) => {
+    const tasks = Object.entries(db.data.tasks || {}).map(([id, t]) => ({ id, ...t }));
+    res.json({ success: true, tasks });
+});
+
+app.post('/api/admin/tasks', (req, res) => {
+    const { name, url, reward } = req.body;
+    const id = db.createTask(name, url, reward);
+    res.json({ success: true, id });
+});
+
+app.delete('/api/admin/tasks/:id', (req, res) => {
+    const id = req.params.id;
+    const success = db.deleteTask(id);
+    res.json({ success });
 });
 
 app.post('/api/admin/groups/leave', async (req, res) => {

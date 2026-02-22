@@ -887,6 +887,8 @@
                             document.getElementById('login-overlay').classList.add('hidden');
                             document.getElementById('app-container').classList.remove('hidden');
                             init();
+                            updateDashboard();
+                            setInterval(updateDashboard, 30000);
                         } else {
                             document.getElementById('error-msg').classList.remove('hidden');
                         }
@@ -915,11 +917,12 @@
                 initChart();
                 loadConfig();
                 renderCodes();
-                renderTasks();
-                renderCards();
-                renderVPN();
-                renderApps();
+                loadTasks();
+                loadCards();
+                loadVpn();
+                loadApps();
                 loadAdminStats();
+                loadUsers();
             }
 
             // =============================================
@@ -1367,105 +1370,153 @@
             }
 
             // TASKS
-            function renderTasks() {
-                const tasks = JSON.parse(localStorage.getItem('adm_tasks') || '[]');
+            function loadTasks() {
                 const tbody = document.getElementById('tasksTable');
-                tbody.innerHTML = tasks.map((t, i) => `<tr><td>${t.name}</td><td>${t.reward}</td><td><a href="${t.url}" target="_blank" class="text-blue-400 underline">Link</a></td><td><button onclick="removeTask(${i})" class="text-red-400 text-xs">Del</button></td></tr>`).join('');
+                if (!tbody) return;
+                fetch('/api/admin/tasks')
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            tbody.innerHTML = data.tasks.map((t, i) => `<tr><td>${t.name}</td><td>${t.reward}</td><td><a href="${t.url}" target="_blank" class="text-blue-400 underline">Link</a></td><td><button onclick="deleteTask('${t.id}')" class="text-red-400 text-xs">Del</button></td></tr>`).join('');
+                        }
+                    });
             }
             function addTask() {
                 const name = document.getElementById('task-name').value;
                 const reward = document.getElementById('task-reward').value;
                 const url = document.getElementById('task-url').value;
                 if (!name) return;
-                const tasks = JSON.parse(localStorage.getItem('adm_tasks') || '[]');
-                tasks.push({ name, reward, url });
-                localStorage.setItem('adm_tasks', JSON.stringify(tasks));
-                renderTasks();
-                closeModal();
+                fetch('/api/admin/tasks', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, reward, url })
+                }).then(() => {
+                    loadTasks();
+                    closeModal();
+                });
             }
-            function removeTask(i) {
-                const tasks = JSON.parse(localStorage.getItem('adm_tasks') || '[]');
-                tasks.splice(i, 1);
-                localStorage.setItem('adm_tasks', JSON.stringify(tasks));
-                renderTasks();
+            function deleteTask(id) {
+                if (!confirm('Delete this task?')) return;
+                fetch('/api/admin/tasks/' + id, { method: 'DELETE' })
+                    .then(() => loadTasks());
             }
 
             // CARDS
-            function renderCards() {
-                const cards = JSON.parse(localStorage.getItem('adm_cards') || '[]');
+            function loadCards() {
                 const grid = document.getElementById('cardsGrid');
-                grid.innerHTML = cards.map((c, i) => `
-                <div class="glass-card p-4 rounded-xl relative">
-                    <button onclick="removeItem('adm_cards', ${i}, 'renderCards')" class="absolute right-2 top-2 text-red-400 text-xs"><i class="fas fa-trash"></i></button>
-                    <div class="flex items-center gap-3 mb-2">
-                        <div class="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center text-blue-400"><i class="fas fa-credit-card"></i></div>
-                        <div><h4 class="font-bold text-sm">${c.name}</h4><div class="text-xs text-gray-400">${c.type}</div></div>
-                    </div>
-                    <div class="text-xl font-bold mt-2">$${c.price}</div>
-                </div>
-            `).join('');
+                if (!grid) return;
+                fetch('/api/admin/cards')
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            grid.innerHTML = data.cards.map((c, i) => `
+                                <div class="glass-card p-4 rounded-xl relative">
+                                    <button onclick="deleteCard('${c.id}')" class="absolute right-2 top-2 text-red-400 text-xs"><i class="fas fa-trash"></i></button>
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <div class="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center text-blue-400"><i class="fas fa-credit-card"></i></div>
+                                        <div><h4 class="font-bold text-sm">${c.name}</h4><div class="text-xs text-gray-400">${c.count} items</div></div>
+                                    </div>
+                                    <div class="text-xl font-bold mt-2">${c.price} Cr</div>
+                                </div>
+                            `).join('');
+                        }
+                    });
             }
             function addCard() {
                 const name = document.getElementById('card-name').value;
                 const price = document.getElementById('card-price').value;
-                const type = document.getElementById('card-type').value;
                 if (!name) return;
-                const items = JSON.parse(localStorage.getItem('adm_cards') || '[]');
-                items.push({ name, price, type });
-                localStorage.setItem('adm_cards', JSON.stringify(items));
-                renderCards();
-                closeModal();
+                fetch('/api/admin/cards', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, price })
+                }).then(() => {
+                    loadCards();
+                    closeModal();
+                });
+            }
+            function deleteCard(key) {
+                if (!confirm('Delete this card service?')) return;
+                fetch('/api/admin/cards/' + key, { method: 'DELETE' })
+                    .then(() => loadCards());
             }
 
             // VPN
-            function renderVPN() {
-                const vpns = JSON.parse(localStorage.getItem('adm_vpns') || '[]');
+            function loadVpn() {
                 const grid = document.getElementById('vpnGrid');
-                grid.innerHTML = vpns.map((c, i) => `
-                <div class="glass-card p-4 rounded-xl relative">
-                    <button onclick="removeItem('adm_vpns', ${i}, 'renderVPN')" class="absolute right-2 top-2 text-red-400 text-xs"><i class="fas fa-trash"></i></button>
-                    <div class="flex items-center gap-3 mb-2">
-                        <div class="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center text-green-400"><i class="fas fa-shield-alt"></i></div>
-                        <div><h4 class="font-bold text-sm">${c.name}</h4><div class="text-xs text-gray-400">${c.country}</div></div>
-                    </div>
-                    <div class="text-xl font-bold mt-2">$${c.price}</div>
-                </div>
-            `).join('');
+                if (!grid) return;
+                fetch('/api/admin/vpn')
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            grid.innerHTML = data.vpns.map((v, i) => `
+                                <div class="glass-card p-4 rounded-xl relative">
+                                    <button onclick="deleteVpn('${v.id}')" class="absolute right-2 top-2 text-red-400 text-xs"><i class="fas fa-trash"></i></button>
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <div class="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center text-green-400"><i class="fas fa-shield-alt"></i></div>
+                                        <div><h4 class="font-bold text-sm">${v.name}</h4><div class="text-xs text-gray-400">${v.count} accounts</div></div>
+                                    </div>
+                                    <div class="text-xl font-bold mt-2">${v.price} Cr</div>
+                                </div>
+                            `).join('');
+                        }
+                    });
             }
             function addVPN() {
                 const name = document.getElementById('vpn-name').value;
-                const country = document.getElementById('vpn-country').value;
                 const price = document.getElementById('vpn-price').value;
                 if (!name) return;
-                const items = JSON.parse(localStorage.getItem('adm_vpns') || '[]');
-                items.push({ name, country, price });
-                localStorage.setItem('adm_vpns', JSON.stringify(items));
-                renderVPN();
-                closeModal();
+                fetch('/api/admin/vpn', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, price })
+                }).then(() => {
+                    loadVpn();
+                    closeModal();
+                });
+            }
+            function deleteVpn(key) {
+                if (!confirm('Delete this VPN service?')) return;
+                fetch('/api/admin/vpn/' + key, { method: 'DELETE' })
+                    .then(() => loadVpn());
             }
 
             // APPS
-            function renderApps() {
-                const apps = JSON.parse(localStorage.getItem('adm_apps') || '[]');
+            function loadApps() {
                 const grid = document.getElementById('appsGrid');
-                grid.innerHTML = apps.map((c, i) => `
-                <div class="glass-card p-4 rounded-xl relative text-center">
-                    <button onclick="removeItem('adm_apps', ${i}, 'renderApps')" class="absolute right-2 top-2 text-red-400 text-xs"><i class="fas fa-trash"></i></button>
-                    <div class="w-12 h-12 bg-purple-500/20 rounded-xl mx-auto flex items-center justify-center text-purple-400 mb-2"><i class="fas fa-mobile-alt"></i></div>
-                    <h4 class="font-bold text-sm">${c.name}</h4>
-                    <div class="text-xs text-gray-400 truncate">${c.desc}</div>
-                </div>
-            `).join('');
+                if (!grid) return;
+                fetch('/api/admin/apps')
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            grid.innerHTML = data.apps.map((a, i) => `
+                                <div class="glass-card p-4 rounded-xl relative text-center">
+                                    <button onclick="deleteApp('${a.id}')" class="absolute right-2 top-2 text-red-400 text-xs"><i class="fas fa-trash"></i></button>
+                                    <div class="w-12 h-12 bg-purple-500/20 rounded-xl mx-auto flex items-center justify-center text-purple-400 mb-2"><i class="fas fa-mobile-alt"></i></div>
+                                    <h4 class="font-bold text-sm">${a.name}</h4>
+                                    <div class="text-xs text-green-400">${a.price} Cr</div>
+                                </div>
+                            `).join('');
+                        }
+                    });
             }
             function addApp() {
                 const name = document.getElementById('app-name').value;
                 const desc = document.getElementById('app-desc').value;
                 if (!name) return;
-                const items = JSON.parse(localStorage.getItem('adm_apps') || '[]');
-                items.push({ name, desc });
-                localStorage.setItem('adm_apps', JSON.stringify(items));
-                renderApps();
-                closeModal();
+                fetch('/api/admin/apps', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, link: desc, price: 0 }) // using desc as link for now
+                }).then(() => {
+                    loadApps();
+                    closeModal();
+                });
+            }
+            function deleteApp(id) {
+                if (!confirm('Delete this app?')) return;
+                fetch('/api/admin/apps/' + id, { method: 'DELETE' })
+                    .then(() => loadApps());
             }
 
             // GENERIC REMOVE
@@ -1550,18 +1601,6 @@
                 const el = document.getElementById(id);
                 if (el) el.innerText = txt;
             }
-            // Auto-load dashboard stats on login
-            const originalLogin = login;
-            login = function () {
-                // Call original login first? No, login() is global.
-                // We'll just hook into nav('dashboard') or call it once authenticated
-                document.getElementById('login-overlay').style.display = 'none';
-                document.getElementById('app-container').classList.remove('hidden');
-                updateDashboard();
-                setInterval(updateDashboard, 30000); // Live update
-            }
-
-            // BROADCAST LOGIC
             function sendBroadcast() {
                 const msg = document.getElementById('bc-message').value;
                 const target = document.getElementById('bc-target').value;
