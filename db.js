@@ -272,7 +272,7 @@ class Database {
                 id: numericId,
                 balance: welcomeCredits,  // Welcome credits for new users (legacy)
                 balance_tokens: welcomeCredits, // New: Tokens (TC) currency
-                balance_james: 0,  // New: James (JS) currency
+                balance_Gems: 0,  // New: Gems (JS) currency
                 gems: 0,  // Gems token balance
                 gemsHistory: [],  // Gems trading history
                 joinedAt: Date.now(),
@@ -353,7 +353,7 @@ class Database {
                 id: numericId,
                 balance: 0,
                 balance_tokens: 0, // New: Tokens (TC) currency
-                balance_james: 0,  // New: James (JS) currency
+                balance_Gems: 0,  // New: Gems (JS) currency
                 gems: 0,  // Gems token balance
                 gemsHistory: [],  // Gems trading history
                 joinedAt: Date.now(),
@@ -703,7 +703,7 @@ class Database {
             user_id: userId.toString(),
             type: type, // 'deposit', 'withdraw', 'service', 'exchange', 'bonus'
             amount: amount,
-            currency: currency, // 'Tokens', 'James', 'USD'
+            currency: currency, // 'Tokens', 'Gems', 'USD'
             title: title,
             icon: icon,
             timestamp: Date.now()

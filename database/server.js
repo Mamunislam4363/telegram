@@ -53,8 +53,8 @@ app.get('/api/admin/stats', (req, res) => {
 
     // Currency 1: Tokens (TC)
     const totalTokens = users.reduce((acc, u) => acc + (u.balance || 0), 0);
-    // Currency 2: James (JS)
-    const totalJames = users.reduce((acc, u) => acc + (u.james || 0), 0);
+    // Currency 2: Gems (JS)
+    const totalGems = users.reduce((acc, u) => acc + (u.Gems || 0), 0);
 
     const verifiedUsers = users.filter(u => u.verified || u.successfulVerifications > 0).length;
 
@@ -62,7 +62,7 @@ app.get('/api/admin/stats', (req, res) => {
         success: true,
         totalUsers: users.length,
         totalTokens,
-        totalJames,
+        totalGems,
         verifiedUsers,
         activeToday,
         stats: {
@@ -117,7 +117,7 @@ app.delete('/api/admin/codes/:code', (req, res) => {
 // API: Update User Data (Admin)
 app.post('/api/admin/users/:userId', (req, res) => {
     const { userId } = req.params;
-    const { balance, referralCount, verified, james } = req.body;
+    const { balance, referralCount, verified, Gems } = req.body;
     const user = db.getUser(userId);
     if (!user) return res.json({ success: false, message: 'User not found' });
 
@@ -125,9 +125,9 @@ app.post('/api/admin/users/:userId', (req, res) => {
         if (user.tokens !== undefined) user.tokens = parseInt(balance);
         else user.balance_tokens = parseInt(balance);
     }
-    if (james !== undefined) {
-        if (user.james !== undefined) user.james = parseInt(james);
-        else user.balance_james = parseInt(james);
+    if (Gems !== undefined) {
+        if (user.Gems !== undefined) user.Gems = parseInt(Gems);
+        else user.balance_Gems = parseInt(Gems);
     }
     if (referralCount !== undefined) user.referralCount = parseInt(referralCount);
     if (verified !== undefined) user.verified = (verified === true || verified === 'true');
@@ -151,7 +151,7 @@ app.get('/api/user/:userId', (req, res) => {
         username: user.username || user.firstName || 'User',
         firstName: user.firstName || 'User',
         tokens: user.balance_tokens !== undefined ? user.balance_tokens : (user.tokens || 0),
-        james: user.balance_james !== undefined ? user.balance_james : (user.james || 0),
+        Gems: user.balance_Gems !== undefined ? user.balance_Gems : (user.Gems || 0),
         invites: user.referralCount || user.invites || 0,
         lastClaim: user.lastDaily || 0,
         dailyStreak: user.dailyStreak || 0,
@@ -250,16 +250,16 @@ app.post('/api/verify', (req, res) => {
         return res.json({ success: false, message: 'User not found' });
     }
 
-    // Add james reward
+    // Add Gems reward
     const reward = 20;
-    user.james = (user.james || 0) + reward;
+    user.Gems = (user.Gems || 0) + reward;
 
     // Add to history
     if (!user.history) user.history = [];
     user.history.unshift({
         type: 'verification',
         date: new Date().toISOString(),
-        reward: `+${reward} James`
+        reward: `+${reward} Gems`
     });
 
     saveUsersObj(users);
@@ -268,11 +268,11 @@ app.post('/api/verify', (req, res) => {
         success: true,
         message: 'Verification successful',
         reward: reward,
-        newBalance: user.james
+        newBalance: user.Gems
     });
 });
 
-// API: Exchange Tokens to James
+// API: Exchange Tokens to Gems
 app.post('/api/exchange', (req, res) => {
     const { userId, amount } = req.body;
 
@@ -290,18 +290,18 @@ app.post('/api/exchange', (req, res) => {
         return res.json({ success: false, message: 'Insufficient tokens' });
     }
 
-    const jamesAmount = Math.floor(amtNum / 100); // 100 tokens = 1 james
+    const GemsAmount = Math.floor(amtNum / 100); // 100 tokens = 1 Gems
 
     if (user.tokens !== undefined) user.tokens -= amtNum;
     else user.balance_tokens = (user.balance_tokens || 0) - amtNum;
-    user.james = (user.james || 0) + jamesAmount;
+    user.Gems = (user.Gems || 0) + GemsAmount;
 
     // Add to history
     if (!user.history) user.history = [];
     user.history.unshift({
         type: 'exchange',
         date: new Date().toISOString(),
-        reward: `-${amtNum} Tokens, +${jamesAmount} James`
+        reward: `-${amtNum} Tokens, +${GemsAmount} Gems`
     });
 
     saveUsersObj(users);
@@ -310,13 +310,13 @@ app.post('/api/exchange', (req, res) => {
         success: true,
         message: 'Exchange successful',
         tokensUsed: amtNum,
-        jamesReceived: jamesAmount,
+        GemsReceived: GemsAmount,
         newTokens: user.tokens !== undefined ? user.tokens : user.balance_tokens,
-        newJames: user.james
+        newGems: user.Gems
     });
 });
 
-// API: Exchange Convert (USD/Tokens/James)
+// API: Exchange Convert (USD/Tokens/Gems)
 app.post('/api/exchange/convert', (req, res) => {
     const { userId, from, to, amount } = req.body;
 
@@ -330,11 +330,11 @@ app.post('/api/exchange/convert', (req, res) => {
     if (!Number.isFinite(amt) || amt <= 0) return res.json({ success: false, message: 'Invalid amount' });
 
     const usdToTokens = 100;
-    const jamesToTokens = 100;
+    const GemsToTokens = 100;
 
     const getBal = (cur) => {
         if (cur === 'tokens') return Number(user.tokens || user.balance_tokens || 0);
-        if (cur === 'james') return Number(user.james || 0);
+        if (cur === 'Gems') return Number(user.Gems || 0);
         if (cur === 'usd') return Number(user.usd || 0);
         return 0;
     };
@@ -344,7 +344,7 @@ app.post('/api/exchange/convert', (req, res) => {
             if (user.tokens !== undefined) user.tokens = val;
             else user.balance_tokens = val;
         }
-        if (cur === 'james') user.james = val;
+        if (cur === 'Gems') user.Gems = val;
         if (cur === 'usd') user.usd = val;
     };
 
@@ -355,14 +355,14 @@ app.post('/api/exchange/convert', (req, res) => {
     let tokensBase = 0;
     if (from === 'tokens') tokensBase = amt;
     else if (from === 'usd') tokensBase = amt * usdToTokens;
-    else if (from === 'james') tokensBase = amt * jamesToTokens;
+    else if (from === 'Gems') tokensBase = amt * GemsToTokens;
     else return res.json({ success: false, message: 'Invalid source currency' });
 
     // Convert tokens base -> to
     let toAmount = 0;
     if (to === 'tokens') toAmount = tokensBase;
     else if (to === 'usd') toAmount = tokensBase / usdToTokens;
-    else if (to === 'james') toAmount = tokensBase / jamesToTokens;
+    else if (to === 'Gems') toAmount = tokensBase / GemsToTokens;
     else return res.json({ success: false, message: 'Invalid target currency' });
 
     // Apply rounding rules
@@ -389,7 +389,7 @@ app.post('/api/exchange/convert', (req, res) => {
         fromAmount: amt,
         toAmount,
         tokens: getBal('tokens'),
-        james: getBal('james'),
+        Gems: getBal('Gems'),
         usd: getBal('usd')
     });
 });
@@ -405,8 +405,8 @@ app.post('/api/redeem', (req, res) => {
 
     // Simple code validation (you can enhance this)
     const validCodes = {
-        'WELCOME100': { tokens: 100, james: 0 },
-        'BONUS50': { tokens: 50, james: 5 }
+        'WELCOME100': { tokens: 100, Gems: 0 },
+        'BONUS50': { tokens: 50, Gems: 5 }
     };
 
     if (!validCodes[code]) {
@@ -421,7 +421,7 @@ app.post('/api/redeem', (req, res) => {
 
     const reward = validCodes[code];
     user.tokens = (user.tokens || 0) + reward.tokens;
-    user.james = (user.james || 0) + reward.james;
+    user.Gems = (user.Gems || 0) + reward.Gems;
     user.redeemedCodes.push(code);
 
     // Add to history
@@ -429,7 +429,7 @@ app.post('/api/redeem', (req, res) => {
     user.history.unshift({
         type: 'redeem',
         date: new Date().toISOString(),
-        reward: `+${reward.tokens} Tokens, +${reward.james} James`
+        reward: `+${reward.tokens} Tokens, +${reward.Gems} Gems`
     });
 
     db.saveUsers(users);
@@ -439,7 +439,7 @@ app.post('/api/redeem', (req, res) => {
         message: 'Code redeemed successfully',
         reward: reward,
         newTokens: user.tokens,
-        newJames: user.james
+        newGems: user.Gems
     });
 });
 
@@ -520,11 +520,8 @@ app.post('/api/number/generate', async (req, res) => {
         if (result && result.number) number = result.number;
     } catch (e) { }
 
-    // Fallback: generate demo number
     if (!number) {
-        const prefixes = ['+1', '+44', '+91', '+49', '+33'];
-        const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
-        number = prefix + ' ' + Math.floor(200 + Math.random() * 700) + ' ' + Math.floor(100 + Math.random() * 900) + ' ' + Math.floor(1000 + Math.random() * 9000);
+        return res.json({ success: false, message: "Service is temporarily unavailable. No credits deducted." });
     }
 
     if (user.tokens !== undefined) user.tokens -= tokenCost;
@@ -618,7 +615,7 @@ app.get('/api/admin/users', (req, res) => {
     const list = Object.entries(users).map(([id, u]) => ({
         id, username: u.username || 'Unknown', firstName: u.firstName || u.first_name || '',
         tokens: u.tokens || u.balance_tokens || 0,
-        james: u.james || u.balance_james || 0,
+        Gems: u.Gems || u.balance_Gems || 0,
         gems: u.gems || 0,
         invites: u.invites || u.referralCount || 0,
         verified: u.verified || false, banned: u.banned || u.blocked || false,
@@ -636,7 +633,7 @@ app.post('/api/admin/users/:userId/tokens', (req, res) => {
     const u = users[userId];
 
     let field = 'tokens';
-    if (type === 'james') field = u.james !== undefined ? 'james' : 'balance_james';
+    if (type === 'Gems') field = u.Gems !== undefined ? 'Gems' : 'balance_Gems';
     else if (type === 'gems') field = 'gems';
     else field = u.tokens !== undefined ? 'tokens' : 'balance_tokens';
 
@@ -682,14 +679,14 @@ app.get('/api/admin/stats', (req, res) => {
     let active = 0;
     let revenue = 0;
     let totalTokens = 0;
-    let totalJames = 0;
+    let totalGems = 0;
     let verifiedUsers = 0;
 
     usersList.forEach(u => {
         if (u.lastActive && (now - u.lastActive < day)) active++;
         revenue += (u.balance || 0);
         totalTokens += (u.balance_tokens || u.tokens || 0);
-        totalJames += (u.balance_james || u.james || 0);
+        totalGems += (u.balance_Gems || u.Gems || 0);
         if (u.successfulVerifications > 0 || u.verified) verifiedUsers++;
     });
 
@@ -697,7 +694,7 @@ app.get('/api/admin/stats', (req, res) => {
         success: true,
         totalUsers: usersList.length,
         totalTokens,
-        totalJames,
+        totalGems,
         verifiedUsers,
         activeToday: active,
         stats: {

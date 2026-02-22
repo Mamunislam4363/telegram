@@ -26,11 +26,11 @@ tg.expand();
 
 // APP CONFIG (Admin Control Simulation)
 var appConfig = {
-    dailyReward: parseInt(localStorage.getItem('adm_daily') || '100'),
-    dailyGems: parseInt(localStorage.getItem('adm_daily_gems') || '0'),
-    inviteBonus: parseInt(localStorage.getItem('adm_invite_bonus') || '10'),
-    inviteGems: parseInt(localStorage.getItem('adm_invite_gems') || '0'),
-    welcomeBonus: parseInt(localStorage.getItem('adm_welcome') || '500')
+    dailyReward: 10,
+    dailyGems: 0,
+    inviteBonus: 50,
+    inviteGems: 0,
+    welcomeBonus: 100
 };
 
 // EMAIL SERVICE CONFIG
@@ -39,9 +39,9 @@ var emailServiceConfig = {
     tempMailEnabled: true
 };
 
-// DEMO MODE - Set to true for testing with demo balance
-const DEMO_MODE = true;
-const DEMO_BALANCE = 100000000000000;
+// LIVE MODE - Set to false for production
+const DEMO_MODE = false;
+const DEMO_BALANCE = 0;
 
 // Fetch email service config from server
 function fetchEmailServiceConfig() {
@@ -67,12 +67,12 @@ var userStatus = 'verified'; // 'banned' to test
 
 // GLOBAL USER STATE
 var userData = {
-    id: tg.initDataUnsafe?.user?.id || 999999999,
+    id: tg.initDataUnsafe?.user?.id || 0,
     username: tg.initDataUnsafe?.user?.first_name || tg.initDataUnsafe?.user?.username || 'User',
-    tokens: DEMO_MODE ? DEMO_BALANCE : 0,
-    james: DEMO_MODE ? DEMO_BALANCE : 0,
-    usd: DEMO_MODE ? 1000000000000.00 : 0.00,
-    verified: DEMO_MODE ? true : false,
+    tokens: 0,
+    Gems: 0,
+    usd: 0.00,
+    verified: false,
     dailyStreak: 0,
     lastDailyClaim: 0
 };
@@ -430,7 +430,7 @@ function exchangeTokens() {
 
                 // Sync balances from response
                 if (typeof res.tokens === 'number') userData.tokens = res.tokens;
-                if (typeof res.james === 'number') userData.james = res.james;
+                if (typeof res.Gems === 'number') userData.Gems = res.Gems;
                 if (typeof res.usd === 'number') userData.usd = res.usd;
                 renderBalances();
                 updateExchangeBalances();
@@ -450,7 +450,7 @@ function exchangeTokens() {
 
 const exchangeRates = {
     usd_to_tokens: 100,
-    james_to_tokens: 100
+    Gems_to_tokens: 100
 };
 
 function tokensToUsd(tokens) {
@@ -461,12 +461,12 @@ function usdToTokens(usd) {
     return usd * exchangeRates.usd_to_tokens;
 }
 
-function tokensToJames(tokens) {
-    return tokens / exchangeRates.james_to_tokens;
+function tokensToGems(tokens) {
+    return tokens / exchangeRates.Gems_to_tokens;
 }
 
-function jamesToTokens(james) {
-    return james * exchangeRates.james_to_tokens;
+function GemsToTokens(Gems) {
+    return Gems * exchangeRates.Gems_to_tokens;
 }
 
 function calculateExchange(from, to, amount) {
@@ -477,7 +477,7 @@ function calculateExchange(from, to, amount) {
     let tokensBase = 0;
     if (from === 'tokens') tokensBase = amount;
     else if (from === 'usd') tokensBase = usdToTokens(amount);
-    else if (from === 'james') tokensBase = jamesToTokens(amount);
+    else if (from === 'Gems') tokensBase = GemsToTokens(amount);
     else return { success: false, message: 'Invalid source currency' };
 
     // Convert tokens base -> to
@@ -487,9 +487,9 @@ function calculateExchange(from, to, amount) {
     } else if (to === 'usd') {
         toAmount = tokensToUsd(tokensBase);
         rateText = `1 USD = ${exchangeRates.usd_to_tokens} Tokens`;
-    } else if (to === 'james') {
-        toAmount = tokensToJames(tokensBase);
-        rateText = `1 James = ${exchangeRates.james_to_tokens} Tokens`;
+    } else if (to === 'Gems') {
+        toAmount = tokensToGems(tokensBase);
+        rateText = `1 Gems = ${exchangeRates.Gems_to_tokens} Tokens`;
     } else {
         return { success: false, message: 'Invalid target currency' };
     }
@@ -504,23 +504,23 @@ function calculateExchange(from, to, amount) {
 function formatCurrencyAmount(amount, cur) {
     if (cur === 'usd') return `$${(Math.round(amount * 100) / 100).toFixed(2)}`;
     if (cur === 'tokens') return `${Math.floor(amount)} TOKENS`;
-    if (cur === 'james') return `${Math.floor(amount * 10000) / 10000} JAMES`;
+    if (cur === 'Gems') return `${Math.floor(amount * 10000) / 10000} Gems`;
     return `${amount}`;
 }
 
 function hasSufficientBalance(cur, amount) {
     if (cur === 'tokens') return (userData.tokens || 0) >= amount;
-    if (cur === 'james') return (userData.james || 0) >= amount;
+    if (cur === 'Gems') return (userData.Gems || 0) >= amount;
     if (cur === 'usd') return (userData.usd || 0) >= amount;
     return false;
 }
 
 function updateExchangeBalances() {
     const t = document.getElementById('exBalTokens');
-    const j = document.getElementById('exBalJames');
+    const j = document.getElementById('exBalGems');
     const u = document.getElementById('exBalUsd');
     if (t) t.textContent = (userData.tokens || 0).toString();
-    if (j) j.textContent = (userData.james || 0).toString();
+    if (j) j.textContent = (userData.Gems || 0).toString();
     if (u) u.textContent = (Math.round((userData.usd || 0) * 100) / 100).toFixed(2);
 }
 
@@ -543,7 +543,7 @@ function updateExchangePreview() {
         return;
     }
 
-    const maxVal = fromCur === 'tokens' ? (userData.tokens || 0) : fromCur === 'james' ? (userData.james || 0) : (userData.usd || 0);
+    const maxVal = fromCur === 'tokens' ? (userData.tokens || 0) : fromCur === 'Gems' ? (userData.Gems || 0) : (userData.usd || 0);
     if (fromHint) fromHint.textContent = `MAX: ${fromCur === 'usd' ? '$' + (Math.round(maxVal * 100) / 100).toFixed(2) : maxVal}`;
 
     const preview = calculateExchange(fromCur, toCur, isFinite(amt) ? amt : 0);
@@ -608,7 +608,7 @@ function setMaxExchangeAmount() {
     let maxVal = 0;
 
     if (fromCur === 'tokens') maxVal = userData.tokens || 0;
-    else if (fromCur === 'james') maxVal = userData.james || 0;
+    else if (fromCur === 'Gems') maxVal = userData.Gems || 0;
     else if (fromCur === 'usd') maxVal = userData.usd || 0;
 
     fromAmt.value = maxVal;
@@ -725,7 +725,7 @@ function renderDailyGrid() {
                 <i class="fas fa-crown" style="color: #fbbf24; font-size: 32px;"></i>
                 <div style="display: flex; flex-direction: column; align-items: flex-start;">
                     <span style="font-size:18px; color: #fbbf24;">BIG REWARD</span>
-                    <span style="font-size:12px; color: #aaa;">100 Tokens + 2 James</span>
+                    <span style="font-size:12px; color: #aaa;">100 Tokens + 2 Gems</span>
                 </div>
             `;
         }
@@ -1010,7 +1010,7 @@ function fetchUserData() {
         .then(data => {
             if (data.success) {
                 userData.tokens = data.tokens;
-                userData.james = data.james;
+                userData.Gems = data.Gems;
                 userData.verified = data.verified;
                 // Use server name, fallback to Telegram name, then generic
                 userData.username = data.username || data.firstName ||
@@ -1059,7 +1059,7 @@ function renderBalances() {
     const elProfId = document.getElementById('prof-id');
 
     if (elTc) elTc.innerText = (userData.tokens || 0).toLocaleString();
-    if (elJs) elJs.innerText = (userData.james || 0).toLocaleString();
+    if (elJs) elJs.innerText = (userData.Gems || 0).toLocaleString();
     if (elUsd) elUsd.innerText = '$' + (userData.usd || 0).toFixed(2);
     if (elProfName) elProfName.innerText = displayName;
     if (elProfId) elProfId.innerText = '#' + userData.id;
@@ -1070,7 +1070,7 @@ function renderBalances() {
     const hName = document.getElementById('home-name');
 
     if (hTc) hTc.innerText = (userData.tokens || 0).toLocaleString();
-    if (hJs) hJs.innerText = (userData.james || 0).toLocaleString();
+    if (hJs) hJs.innerText = (userData.Gems || 0).toLocaleString();
     if (hName) hName.innerText = displayName;
 }
 

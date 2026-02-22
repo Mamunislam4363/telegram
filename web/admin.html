@@ -240,8 +240,8 @@
                             <div class="w-12 h-12 rounded-xl bg-pink-500/20 flex items-center justify-center"><i
                                     class="fas fa-gem text-pink-400 text-xl"></i></div>
                         </div>
-                        <h3 class="text-gray-400 text-xs font-bold uppercase">Total James</h3>
-                        <div class="text-2xl font-bold mt-1" id="dash-total-james">...</div>
+                        <h3 class="text-gray-400 text-xs font-bold uppercase">Total Gems</h3>
+                        <div class="text-2xl font-bold mt-1" id="dash-total-Gems">...</div>
                     </div>
                     <div class="glass-card p-6 rounded-2xl">
                         <div class="flex justify-between items-start mb-4">
@@ -346,7 +346,7 @@
                                 <tr>
                                     <th>User</th>
                                     <th>Tokens</th>
-                                    <th>James</th>
+                                    <th>Gems</th>
                                     <th>Invites</th>
                                     <th>Status</th>
                                     <th>Actions</th>
@@ -382,9 +382,9 @@
                                     class="w-full bg-black/30 border border-white/10 p-3 rounded-xl text-white">
                             </div>
                             <div>
-                                <label class="text-xs text-gray-400 uppercase font-bold block mb-1">James
+                                <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Gems
                                     (Payouts)</label>
-                                <input id="editUserJames" type="number"
+                                <input id="editUserGems" type="number"
                                     class="w-full bg-black/30 border border-white/10 p-3 rounded-xl text-white">
                             </div>
                         </div>
@@ -977,7 +977,7 @@
                             'dash-total-users': data.totalUsers,
                             'dash-active': data.activeToday,
                             'dash-total-tokens': data.totalTokens,
-                            'dash-total-james': data.totalJames,
+                            'dash-total-Gems': data.totalGems,
                             'dash-verified': data.verifiedUsers,
                             'dash-groups': data.stats.groups
                         };
@@ -1022,7 +1022,7 @@
                         <div class="text-xs text-gray-400">@${u.username || 'N/A'} · ID: ${u.id}</div>
                     </td>
                     <td class="text-yellow-400 font-bold">${(u.tokens || 0).toLocaleString()}</td>
-                    <td class="text-green-400">${(u.james || 0).toLocaleString()}</td>
+                    <td class="text-green-400">${(u.Gems || 0).toLocaleString()}</td>
                     <td>${u.invites || 0}</td>
                     <td>
                         ${u.banned
@@ -1056,7 +1056,7 @@
                 document.getElementById('editUserId').value = userId;
                 document.getElementById('editUserName').textContent = (u.firstName || u.username || 'User') + ' (@' + (u.username || 'N/A') + ')';
                 document.getElementById('editUserBalance').value = u.tokens || u.balance_tokens || 0;
-                document.getElementById('editUserJames').value = u.james || u.balance_james || 0;
+                document.getElementById('editUserGems').value = u.Gems || u.balance_Gems || 0;
                 document.getElementById('editUserRefs').value = u.referralCount || 0;
                 document.getElementById('editUserVerified').value = u.verified ? 'true' : 'false';
 
@@ -1066,7 +1066,7 @@
             function saveUserChanges() {
                 const userId = document.getElementById('editUserId').value;
                 const balance = document.getElementById('editUserBalance').value;
-                const james = document.getElementById('editUserJames').value;
+                const Gems = document.getElementById('editUserGems').value;
                 const refs = document.getElementById('editUserRefs').value;
                 const verified = document.getElementById('editUserVerified').value === 'true';
 
@@ -1075,7 +1075,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         balance: parseInt(balance),
-                        james: parseInt(james),
+                        Gems: parseInt(Gems),
                         referralCount: parseInt(refs),
                         verified: verified
                     })

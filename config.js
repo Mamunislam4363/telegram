@@ -14,7 +14,7 @@ module.exports = {
     ADMIN_ID: process.env.ADMIN_ID || '8125978050',
 
     // Public URL for web panel (your domain or IP)
-    PUBLIC_URL: process.env.PUBLIC_URL || 'http://localhost:3000',  // Domain URL
+    PUBLIC_URL: process.env.PUBLIC_URL || 'https://autosverify-bot.onrender.com',  // Domain URL
 
     // OAUTH CONFIGURATION (FOR GMAIL SERVICE SYSTEM)
     // Create credentials at: https://console.cloud.google.com/apis/credentials
@@ -54,7 +54,7 @@ module.exports = {
 
     // Remote API Access (Frontend on Hostinger)
     API_KEY: process.env.API_KEY || 'tg_bot_remote_access_key_123', // CHANGE THIS!
-    API_BASE_URL: process.env.API_BASE_URL || 'http://localhost:3000', // Your VPS URL
+    API_BASE_URL: process.env.API_BASE_URL || 'https://autosverify-bot.onrender.com', // Your VPS URL
 
     // SmtpLabs API (Gmail Automation)
     SMTPLABS_API_KEY: 'smtplabs_SQGEMA1yD2cEgFJFJn38Uh7dGcDydAWYut7R7RzZQD3Hbvox',
