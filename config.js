@@ -13,6 +13,9 @@ module.exports = {
     // Admin ID for notifications
     ADMIN_ID: process.env.ADMIN_ID || '8125978050',
 
+    // Admin Panel Password
+    ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'admin123',
+
     // Public URL for web panel (your domain or IP)
     PUBLIC_URL: process.env.PUBLIC_URL || 'https://autosverify-bot.onrender.com',  // Domain URL
 
