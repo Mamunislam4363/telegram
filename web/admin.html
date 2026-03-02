@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Panel - SMS Bot Pro</title>
+    <link rel="icon" href="https://ui-avatars.com/api/?name=A&background=f59e0b&color=000&size=32" type="image/png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -148,10 +149,12 @@
             </div>
             <h2 class="text-3xl font-bold mb-2">ADMIN PANEL</h2>
             <p class="text-sm text-gray-400 mb-8 uppercase tracking-widest">Secure Access</p>
-            <input type="password" id="password" placeholder="Enter Access Code"
-                class="w-full bg-black/30 border border-white/10 text-white px-4 py-4 rounded-xl mb-4 text-center tracking-widest focus:border-orange-500 focus:outline-none transition-all">
-            <button onclick="login()"
-                class="w-full gold-gradient py-4 rounded-xl font-bold shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 transition-all">AUTHENTICATE</button>
+            <form onsubmit="event.preventDefault(); login();">
+                <input type="password" id="password" placeholder="Enter Access Code" autocomplete="current-password"
+                    class="w-full bg-black/30 border border-white/10 text-white px-4 py-4 rounded-xl mb-4 text-center tracking-widest focus:border-orange-500 focus:outline-none transition-all">
+                <button type="submit"
+                    class="w-full gold-gradient py-4 rounded-xl font-bold shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 transition-all">AUTHENTICATE</button>
+            </form>
             <p id="error-msg" class="text-red-500 text-xs mt-4 hidden">Access Denied</p>
         </div>
     </div>
@@ -183,8 +186,6 @@
                 <div class="nav-item" onclick="nav('shopmanage')"><i class="fas fa-store w-5"></i> Shop Items</div>
                 <div class="nav-item" onclick="nav('broadcast')"><i class="fas fa-bullhorn w-5"></i> Broadcast</div>
                 <div class="nav-item" onclick="nav('storage')"><i class="fas fa-hdd w-5"></i> Storage (Drive)</div>
-                <div class="nav-item" onclick="nav('trading')"><i class="fas fa-chart-line w-5"></i> Trading Control
-                </div>
                 <div class="nav-item" onclick="nav('settings')"><i class="fas fa-cog w-5"></i> Settings</div>
             </nav>
 
@@ -210,7 +211,7 @@
 
             <!-- 1. DASHBOARD -->
             <div id="page-dashboard" class="page active">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-6 mb-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-8">
                     <div class="glass-card p-6 rounded-2xl">
                         <div class="flex justify-between items-start mb-4">
                             <div class="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center"><i
@@ -237,14 +238,6 @@
                     </div>
                     <div class="glass-card p-6 rounded-2xl">
                         <div class="flex justify-between items-start mb-4">
-                            <div class="w-12 h-12 rounded-xl bg-pink-500/20 flex items-center justify-center"><i
-                                    class="fas fa-gem text-pink-400 text-xl"></i></div>
-                        </div>
-                        <h3 class="text-gray-400 text-xs font-bold uppercase">Total Gems</h3>
-                        <div class="text-2xl font-bold mt-1" id="dash-total-Gems">...</div>
-                    </div>
-                    <div class="glass-card p-6 rounded-2xl">
-                        <div class="flex justify-between items-start mb-4">
                             <div class="w-12 h-12 rounded-xl bg-indigo-500/20 flex items-center justify-center"><i
                                     class="fas fa-user-shield text-indigo-400 text-xl"></i></div>
                         </div>
@@ -254,10 +247,42 @@
                     <div class="glass-card p-6 rounded-2xl">
                         <div class="flex justify-between items-start mb-4">
                             <div class="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center"><i
-                                    class="fas fa-users-cog text-purple-400 text-xl"></i></div>
+                                    class="fas fa-store text-purple-400 text-xl"></i></div>
                         </div>
-                        <h3 class="text-gray-400 text-xs font-bold uppercase">Groups</h3>
-                        <div class="text-2xl font-bold mt-1" id="dash-groups">...</div>
+                        <h3 class="text-gray-400 text-xs font-bold uppercase">Shop Items</h3>
+                        <div class="text-2xl font-bold mt-1" id="dash-shop-items">...</div>
+                    </div>
+                    <div class="glass-card p-6 rounded-2xl">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-teal-500/20 flex items-center justify-center"><i
+                                    class="fas fa-user-circle text-teal-400 text-xl"></i></div>
+                        </div>
+                        <h3 class="text-gray-400 text-xs font-bold uppercase">Accounts</h3>
+                        <div class="text-2xl font-bold mt-1" id="dash-accounts">...</div>
+                    </div>
+                    <div class="glass-card p-6 rounded-2xl">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center"><i
+                                    class="fas fa-envelope text-red-400 text-xl"></i></div>
+                        </div>
+                        <h3 class="text-gray-400 text-xs font-bold uppercase">Gmails Used</h3>
+                        <div class="text-2xl font-bold mt-1" id="dash-gmails">...</div>
+                    </div>
+                    <div class="glass-card p-6 rounded-2xl">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center"><i
+                                    class="fas fa-shield-alt text-cyan-400 text-xl"></i></div>
+                        </div>
+                        <h3 class="text-gray-400 text-xs font-bold uppercase">Available VPNs</h3>
+                        <div class="text-2xl font-bold mt-1" id="dash-vpns">...</div>
+                    </div>
+                    <div class="glass-card p-6 rounded-2xl">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center"><i
+                                    class="fas fa-credit-card text-orange-400 text-xl"></i></div>
+                        </div>
+                        <h3 class="text-gray-400 text-xs font-bold uppercase">Total Cards</h3>
+                        <div class="text-2xl font-bold mt-1" id="dash-cards">...</div>
                     </div>
                 </div>
                 <div class="glass-card p-6 rounded-2xl h-80">
@@ -546,33 +571,6 @@
                 </div>
             </div>
 
-            <!-- BROADCAST -->
-            <div id="page-broadcast" class="page">
-                <div class="glass-card p-6 rounded-2xl max-w-2xl mx-auto">
-                    <h3 class="text-lg font-bold mb-2">📢 Send Broadcast</h3>
-                    <p class="text-gray-400 text-sm mb-4">Send a message to ALL users via Telegram bot. Supports HTML
-                        formatting.</p>
-                    <div class="mb-3">
-                        <label class="text-xs text-gray-400 uppercase block mb-1">Message (HTML supported)</label>
-                        <textarea id="broadcastMsg"
-                            class="w-full h-36 bg-black/30 border border-white/10 rounded-xl p-4 mb-1 focus:border-orange-500 focus:outline-none text-sm"
-                            placeholder="Enter your message...&#10;&#10;Supports: &lt;b&gt;bold&lt;/b&gt;, &lt;i&gt;italic&lt;/i&gt;, &lt;code&gt;code&lt;/code&gt;"></textarea>
-                    </div>
-                    <div class="flex gap-3 mb-4">
-                        <button onclick="insertBroadcastTag('b')"
-                            class="bg-white/10 px-3 py-1 rounded text-xs font-bold"><b>B</b></button>
-                        <button onclick="insertBroadcastTag('i')"
-                            class="bg-white/10 px-3 py-1 rounded text-xs"><i>I</i></button>
-                        <button onclick="insertBroadcastTag('code')"
-                            class="bg-white/10 px-3 py-1 rounded text-xs font-mono">code</button>
-                    </div>
-                    <button id="broadcastBtn" onclick="sendBroadcast()"
-                        class="w-full gold-gradient py-3 rounded-xl font-bold text-black">
-                        <i class="fas fa-paper-plane mr-2"></i>SEND TO ALL USERS
-                    </button>
-                    <div id="broadcastResult" class="mt-4 hidden"></div>
-                </div>
-            </div>
     </div>
 
     <!-- SERVICES MANAGEMENT -->
@@ -940,16 +938,28 @@
             // NAV
             function nav(p) {
                 document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-                event.currentTarget.classList.add('active');
+                if (event && event.currentTarget) event.currentTarget.classList.add('active');
                 document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
-                document.getElementById('page-' + p).classList.add('active');
+                const target = document.getElementById('page-' + p);
+                if (target) target.classList.add('active');
 
-                const titles = { 'dashboard': 'Dashboard', 'users': 'User Management', 'codes': 'Promo Codes', 'tasks': 'Tasks', 'settings': 'Configuration', 'cards': 'Cards', 'vpn': 'VPN', 'broadcast': 'Broadcast', 'apps': 'App Store', 'trading': 'Trading Control', 'services': 'Services Management', 'shopmanage': 'Shop Management' };
+                const titles = {
+                    'dashboard': 'Dashboard', 'users': 'User Management',
+                    'codes': 'Promo Codes', 'tasks': 'Tasks',
+                    'settings': 'Configuration', 'cards': 'Cards',
+                    'vpn': 'VPN', 'broadcast': 'Broadcast',
+                    'apps': 'App Store', 'trading': 'Trading Control',
+                    'services': 'Services Management', 'shopmanage': 'Shop Management',
+                    'accounts': 'Premium Accounts', 'storage': 'Storage (Drive)',
+                    'groups': 'Groups'
+                };
                 if (titles[p]) document.getElementById('page-title').innerText = titles[p];
                 if (p === 'trading') initTradingAdmin();
                 if (p === 'services') renderAdminServices();
                 if (p === 'shopmanage') renderAdminShopItems();
                 if (p === 'users') loadUsers();
+                if (p === 'accounts') loadAccounts();
+                if (p === 'storage') loadStorageStatus();
             }
 
             // DATA MNGT
@@ -977,9 +987,12 @@
                             'dash-total-users': data.totalUsers,
                             'dash-active': data.activeToday,
                             'dash-total-tokens': data.totalTokens,
-                            'dash-total-Gems': data.totalGems,
                             'dash-verified': data.verifiedUsers,
-                            'dash-groups': data.stats.groups
+                            'dash-shop-items': data.shopItems,
+                            'dash-accounts': data.accounts,
+                            'dash-gmails': data.gmailsUsed,
+                            'dash-vpns': data.totalVpns,
+                            'dash-cards': data.totalCards
                         };
                         Object.entries(map).forEach(([id, val]) => {
                             const el = document.getElementById(id);
@@ -1110,38 +1123,9 @@
             // =============================================
             // BROADCAST
             // =============================================
-            function sendBroadcast() {
-                const msg = document.getElementById('broadcastMsg')?.value?.trim();
-                if (!msg) { alert('Please enter a message'); return; }
-                if (!confirm(`Send this message to ALL users?\n\n"${msg.substring(0, 100)}..."`)) return;
-
-                const btn = document.getElementById('broadcastBtn');
-                const result = document.getElementById('broadcastResult');
-                if (btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Sending...'; btn.disabled = true; }
-
-                fetch('/api/admin/broadcast', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: msg })
-                })
-                    .then(r => r.json())
-                    .then(data => {
-                        if (btn) { btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>SEND TO ALL USERS'; btn.disabled = false; }
-                        if (result) {
-                            result.className = 'mt-4 p-4 rounded-xl ' + (data.success ? 'bg-green-500/10 border border-green-500/30 text-green-400' : 'bg-red-500/10 border border-red-500/30 text-red-400');
-                            result.innerHTML = data.success
-                                ? `✅ Broadcast sent!<br>Delivered: <b>${data.sent}</b> | Failed: <b>${data.failed}</b> | Total: <b>${data.total}</b>`
-                                : `❌ Failed: ${data.message}`;
-                        }
-                    })
-                    .catch(() => {
-                        if (btn) { btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>SEND TO ALL USERS'; btn.disabled = false; }
-                        if (result) { result.className = 'mt-4 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400'; result.textContent = '❌ Network error'; }
-                    });
-            }
-
+            // sendBroadcast() - handled by the advanced broadcast page script below
             function insertBroadcastTag(tag) {
-                const ta = document.getElementById('broadcastMsg');
+                const ta = document.getElementById('bc-message') || document.getElementById('broadcastMsg');
                 if (!ta) return;
                 const start = ta.selectionStart, end = ta.selectionEnd;
                 const selected = ta.value.substring(start, end) || 'text';
@@ -1996,26 +1980,8 @@
                 }
 
                 // Hook into nav function
-                const originalNav = window.nav || function () { };
-                window.nav = function (page) {
-                    // Hide all pages
-                    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-                    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-
-                    // Show target
-                    const target = document.getElementById('page-' + page);
-                    if (target) target.classList.add('active');
-
-                    // Active nav
-                    // Simple loop to find nav item with onclick="nav('page')"
-                    // For now just manually handle or trust existing logic if accessible
-                    // Since original logic is inside a script tag not shown here, I'll rely on my injection being sufficient if I can modify the existing nav function or relying on the existing one which likely iterates pages.
-                    // Actually, existing nav function logic is NOT visible in snippet.
-                    // I'll assume standard ID matching: 'page-' + id.
-
-                    if (page === 'accounts') loadAccounts();
-                    if (page === 'storage') loadStorageStatus();
-                }
+                // nav() is already defined in the main script - no override needed
+                // accounts and storage loader calls are already integrated into main nav()
 
                 // STORAGE MANAGEMENT
                 function loadStorageStatus() {

@@ -47,55 +47,19 @@ app.post('/api/admin/login', (req, res) => {
     }
 });
 
-app.get('/api/admin/stats', (req, res) => {
-    const users = db.getUsers();
-    const activeToday = users.filter(u => u.lastActive > (Date.now() - 86400000)).length;
+// Stats route consolidated below at line ~672 – removed duplicate here
 
-    // Currency 1: Tokens (TC)
-    const totalTokens = users.reduce((acc, u) => acc + (u.balance || 0), 0);
-    // Currency 2: Gems (JS)
-    const totalGems = users.reduce((acc, u) => acc + (u.Gems || 0), 0);
-
-    const verifiedUsers = users.filter(u => u.verified || u.successfulVerifications > 0).length;
-
-    res.json({
-        success: true,
-        totalUsers: users.length,
-        totalTokens,
-        totalGems,
-        verifiedUsers,
-        activeToday,
-        stats: {
-            totalUsers: users.length,
-            activeUsers: activeToday,
-            offlineUsers: users.length - activeToday,
-            groups: db.getGroups().length,
-            revenue: db.data.transactions ? db.data.transactions.filter(t => t.type === 'deposit').reduce((acc, t) => acc + (t.amount || 0), 0) : 0
-        }
-    });
-});
-
-// API: Save Admin Settings
-app.post('/api/admin/settings', (req, res) => {
-    const { dailyBonus, refBonus, welcomeBonus } = req.body;
-    if (dailyBonus) db.updateSetting('dailyBonus', parseInt(dailyBonus));
-    if (refBonus) db.updateSetting('refBonus', parseInt(refBonus));
-    // welcomeBonus needs a specific field in DB or just reuse logic
-    if (welcomeBonus) db.adminSettings ? db.adminSettings.welcomeCredits = parseInt(welcomeBonus) : null;
-
-    // Save Generic keys if passes
-    const settings = db.getSettings();
-    res.json({ success: true, settings });
-});
+// (Settings saved via the full endpoint at bottom of file)
 
 // API: Get Codes
 app.get('/api/admin/codes', (req, res) => {
-    const codes = db.data.settings.codes || {};
+    // codes stored in db.data.codes (primary)
+    const codes = db.data.codes || {};
     const codeList = Object.keys(codes).map(key => ({
         code: key,
         ...codes[key],
         amount: codes[key].amount,
-        maxUses: codes[key].uses // In db.js 'uses' seems to be remaining uses
+        maxUses: codes[key].maxUses || codes[key].uses
     }));
     res.json({ success: true, codes: codeList });
 });
@@ -103,15 +67,16 @@ app.get('/api/admin/codes', (req, res) => {
 // API: Create Code
 app.post('/api/admin/codes', (req, res) => {
     const { code, amount, maxUses } = req.body;
-    db.createCode(code, parseInt(amount), parseInt(maxUses));
+    if (!code) return res.json({ success: false, message: 'Code required' });
+    db.createCode(code, parseInt(amount) || 0, parseInt(maxUses) || 0);
     res.json({ success: true });
 });
 
 // API: Delete Code
 app.delete('/api/admin/codes/:code', (req, res) => {
     const { code } = req.params;
-    db.deleteCode(code);
-    res.json({ success: true });
+    const success = db.deleteCode(code);
+    res.json({ success });
 });
 
 // API: Update User Data (Admin)
@@ -672,37 +637,67 @@ app.delete('/api/admin/users/:userId', (req, res) => {
 // API: Admin - Dashboard Stats
 app.get('/api/admin/stats', (req, res) => {
     const usersList = db.getUsers();
-    const groups = db.getGroups();
     const now = Date.now();
     const day = 24 * 60 * 60 * 1000;
 
     let active = 0;
     let revenue = 0;
     let totalTokens = 0;
-    let totalGems = 0;
     let verifiedUsers = 0;
 
     usersList.forEach(u => {
         if (u.lastActive && (now - u.lastActive < day)) active++;
         revenue += (u.balance || 0);
         totalTokens += (u.balance_tokens || u.tokens || 0);
-        totalGems += (u.balance_Gems || u.Gems || 0);
         if (u.successfulVerifications > 0 || u.verified) verifiedUsers++;
+    });
+
+    const shopItems = Object.keys(db.data.shopItems || {}).length;
+    const accounts = db.data.premiumAccounts ? db.data.premiumAccounts.length : 0;
+
+    // Sum all VPNs
+    let totalVpns = 0;
+    if (db.data.vpnAccounts) {
+        Object.values(db.data.vpnAccounts).forEach(arr => totalVpns += (arr ? arr.length : 0));
+    }
+
+    // Sum all Cards
+    let totalCards = 0;
+    if (db.data.cards) {
+        Object.values(db.data.cards).forEach(arr => totalCards += (arr ? arr.length : 0));
+    }
+
+    // Count generated Gmails (from user transaction history or a general metric)
+    let gmailsUsed = 0;
+    usersList.forEach(u => {
+        if (u.history) {
+            u.history.forEach(h => {
+                if (h.type === 'email' || h.type === 'gmail') gmailsUsed++;
+            });
+        }
     });
 
     res.json({
         success: true,
         totalUsers: usersList.length,
         totalTokens,
-        totalGems,
         verifiedUsers,
         activeToday: active,
+        shopItems,
+        accounts,
+        totalVpns,
+        totalCards,
+        gmailsUsed,
         stats: {
             totalUsers: usersList.length,
             activeUsers: active,
             offlineUsers: usersList.length - active,
             revenue: revenue,
-            groups: groups.length,
+            shopItems,
+            accounts,
+            totalVpns,
+            totalCards,
+            gmailsUsed,
             dbSize: (fs.existsSync(db.DB_FILE) ? (fs.statSync(db.DB_FILE).size / 1024).toFixed(2) : 0) + ' KB'
         }
     });
@@ -1113,18 +1108,62 @@ app.post('/api/admin/upload', (req, res) => {
         const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
         const buffer = Buffer.from(base64Data, 'base64');
 
-        const uploadDir = path.join(__dirname, 'web', 'uploads');
+        // Fixed: upload to project /web/uploads, not /database/web/uploads
+        const uploadDir = path.join(__dirname, '..', 'web', 'uploads');
         if (!fs.existsSync(uploadDir)) { fs.mkdirSync(uploadDir, { recursive: true }); }
 
         const filename = 'img_' + Date.now() + '_' + Math.floor(Math.random() * 1000) + '.png';
         const filepath = path.join(uploadDir, filename);
 
         fs.writeFileSync(filepath, buffer);
-        res.json({ success: true, url: 'uploads/' + filename });
+        res.json({ success: true, url: '/uploads/' + filename });
     } catch (e) {
         console.error(e);
         res.json({ success: false, message: 'Server error: ' + e.message });
     }
+});
+
+// API: Admin - Premium Accounts Inventory
+app.get('/api/admin/accounts', (req, res) => {
+    const accounts = db.data.premiumAccounts || [];
+    res.json({ success: true, accounts });
+});
+
+app.post('/api/admin/accounts', (req, res) => {
+    const { type, email, password, price, instructions } = req.body;
+    if (!email || !password) return res.json({ success: false, message: 'Email and password required' });
+
+    if (!db.data.premiumAccounts) db.data.premiumAccounts = [];
+    const account = {
+        id: 'acc_' + Date.now(),
+        type: type || 'other',
+        email,
+        password,
+        price: parseInt(price) || 0,
+        instructions: instructions || '',
+        sold: false,
+        addedAt: Date.now()
+    };
+    db.data.premiumAccounts.push(account);
+    db.save();
+    res.json({ success: true, id: account.id });
+});
+
+app.delete('/api/admin/accounts/:id', (req, res) => {
+    const { id } = req.params;
+    if (!db.data.premiumAccounts) return res.json({ success: false });
+    const before = db.data.premiumAccounts.length;
+    db.data.premiumAccounts = db.data.premiumAccounts.filter(a => a.id !== id);
+    db.save();
+    res.json({ success: db.data.premiumAccounts.length < before });
+});
+
+// API: Admin - Get all daily bonus claims
+app.get('/api/admin/daily-stats', (req, res) => {
+    const users = db.getUsers();
+    const totalClaims = users.filter(u => u.lastDaily > 0).length;
+    const totalStreak = users.reduce((acc, u) => acc + (u.dailyStreak || 0), 0);
+    res.json({ success: true, totalClaims, avgStreak: users.length ? (totalStreak / users.length).toFixed(1) : 0 });
 });
 
 // API: Admin - Get Settings
@@ -1334,10 +1373,11 @@ app.get('/api/leaderboard', (req, res) => {
 function startServer() {
     console.log(`[DEBUG] Attempting to start server on PORT: ${PORT}`);
     try {
-        const server = app.listen(PORT, () => {
+        const server = app.listen(PORT, '0.0.0.0', () => {
             console.log(`🌐 Web Panel running on http://localhost:${PORT}`);
-            console.log(`   ├─ User Panel: http://localhost:${PORT}/`);
-            console.log(`   └─ Admin Panel: http://localhost:${PORT}/admin`);
+            console.log(`   ├─ User Panel:  http://localhost:${PORT}/`);
+            console.log(`   ├─ Admin Panel: http://localhost:${PORT}/admin`);
+            console.log(`   └─ API Base:    http://localhost:${PORT}/api`);
         });
 
         server.on('error', (e) => {

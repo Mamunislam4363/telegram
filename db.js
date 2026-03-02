@@ -6,8 +6,7 @@ const DB_FILE = path.join(__dirname, 'database.json');
 // Default initial data
 const defaultData = {
     users: {},
-    groups: {}, // New: Store Group/Channel IDs
-    codes: {},
+    groups: {}, // Store Group/Channel IDs
     codes: {},
     settings: {
         dailyBonus: 50,
@@ -161,6 +160,7 @@ class Database {
     constructor() {
         this.data = defaultData;
         this.ready = false;
+        this.DB_FILE = DB_FILE; // Expose for server.js file size stats
 
         // Initialize Asynchronously
         this.dbReady = this.init();
