@@ -1483,7 +1483,10 @@
                         if (data.success) {
                             grid.innerHTML = data.cards.map((c, i) => `
                                 <div class="glass-card p-4 rounded-xl relative">
-                                    <button onclick="deleteCard('${c.id}')" class="absolute right-2 top-2 text-red-400 text-xs"><i class="fas fa-trash"></i></button>
+                                    <div class="absolute right-2 top-2 flex gap-2">
+                                        <button onclick="editCard('${c.id}', '${c.name.replace(/'/g, "\\'")}', ${c.price})" class="text-blue-400 text-xs"><i class="fas fa-edit"></i></button>
+                                        <button onclick="deleteCard('${c.id}')" class="text-red-400 text-xs"><i class="fas fa-trash"></i></button>
+                                    </div>
                                     <div class="flex items-center gap-3 mb-2">
                                         <div class="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center text-blue-400"><i class="fas fa-credit-card"></i></div>
                                         <div><h4 class="font-bold text-sm">${c.name}</h4><div class="text-xs text-gray-400">${c.count} items</div></div>
@@ -1497,15 +1500,33 @@
             function addCard() {
                 const name = document.getElementById('card-name').value;
                 const price = document.getElementById('card-price').value;
+                const oldKeyEl = document.getElementById('card-old-key');
+                const oldKey = oldKeyEl ? oldKeyEl.value : '';
                 if (!name) return;
                 fetch('/api/admin/cards', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, price })
+                    body: JSON.stringify({ name, price, oldKey })
                 }).then(() => {
                     loadCards();
                     closeModal();
+                    if (oldKeyEl) oldKeyEl.remove();
+                    document.getElementById('card-name').value = '';
+                    document.getElementById('card-price').value = '';
                 });
+            }
+            function editCard(key, name, price) {
+                document.getElementById('card-name').value = name;
+                document.getElementById('card-price').value = price;
+                let oldKeyEl = document.getElementById('card-old-key');
+                if (!oldKeyEl) {
+                    oldKeyEl = document.createElement('input');
+                    oldKeyEl.type = 'hidden';
+                    oldKeyEl.id = 'card-old-key';
+                    document.getElementById('addCardModal').querySelector('.modal-body').appendChild(oldKeyEl);
+                }
+                oldKeyEl.value = key;
+                openModal('addCardModal');
             }
             function deleteCard(key) {
                 if (!confirm('Delete this card service?')) return;
@@ -1523,7 +1544,10 @@
                         if (data.success) {
                             grid.innerHTML = data.vpns.map((v, i) => `
                                 <div class="glass-card p-4 rounded-xl relative">
-                                    <button onclick="deleteVpn('${v.id}')" class="absolute right-2 top-2 text-red-400 text-xs"><i class="fas fa-trash"></i></button>
+                                    <div class="absolute right-2 top-2 flex gap-2">
+                                        <button onclick="editVpn('${v.id}', '${v.name.replace(/'/g, "\\'")}', ${v.price})" class="text-blue-400 text-xs"><i class="fas fa-edit"></i></button>
+                                        <button onclick="deleteVpn('${v.id}')" class="text-red-400 text-xs"><i class="fas fa-trash"></i></button>
+                                    </div>
                                     <div class="flex items-center gap-3 mb-2">
                                         <div class="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center text-green-400"><i class="fas fa-shield-alt"></i></div>
                                         <div><h4 class="font-bold text-sm">${v.name}</h4><div class="text-xs text-gray-400">${v.count} accounts</div></div>
@@ -1537,15 +1561,33 @@
             function addVPN() {
                 const name = document.getElementById('vpn-name').value;
                 const price = document.getElementById('vpn-price').value;
+                const oldKeyEl = document.getElementById('vpn-old-key');
+                const oldKey = oldKeyEl ? oldKeyEl.value : '';
                 if (!name) return;
                 fetch('/api/admin/vpn', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, price })
+                    body: JSON.stringify({ name, price, oldKey })
                 }).then(() => {
                     loadVpn();
                     closeModal();
+                    if (oldKeyEl) oldKeyEl.remove();
+                    document.getElementById('vpn-name').value = '';
+                    document.getElementById('vpn-price').value = '';
                 });
+            }
+            function editVpn(key, name, price) {
+                document.getElementById('vpn-name').value = name;
+                document.getElementById('vpn-price').value = price;
+                let oldKeyEl = document.getElementById('vpn-old-key');
+                if (!oldKeyEl) {
+                    oldKeyEl = document.createElement('input');
+                    oldKeyEl.type = 'hidden';
+                    oldKeyEl.id = 'vpn-old-key';
+                    document.getElementById('addVPNModal').querySelector('.modal-body').appendChild(oldKeyEl);
+                }
+                oldKeyEl.value = key;
+                openModal('addVPNModal');
             }
             function deleteVpn(key) {
                 if (!confirm('Delete this VPN service?')) return;
@@ -1563,7 +1605,10 @@
                         if (data.success) {
                             grid.innerHTML = data.apps.map((a, i) => `
                                 <div class="glass-card p-4 rounded-xl relative text-center">
-                                    <button onclick="deleteApp('${a.id}')" class="absolute right-2 top-2 text-red-400 text-xs"><i class="fas fa-trash"></i></button>
+                                    <div class="absolute right-2 top-2 flex gap-2">
+                                        <button onclick="editApp('${a.id}', '${a.name.replace(/'/g, "\\'")}', '${a.link}', ${a.price})" class="text-blue-400 text-xs"><i class="fas fa-edit"></i></button>
+                                        <button onclick="deleteApp('${a.id}')" class="text-red-400 text-xs"><i class="fas fa-trash"></i></button>
+                                    </div>
                                     <div class="w-12 h-12 bg-purple-500/20 rounded-xl mx-auto flex items-center justify-center text-purple-400 mb-2"><i class="fas fa-mobile-alt"></i></div>
                                     <h4 class="font-bold text-sm">${a.name}</h4>
                                     <div class="text-xs text-green-400">${a.price} Cr</div>
@@ -1575,15 +1620,33 @@
             function addApp() {
                 const name = document.getElementById('app-name').value;
                 const desc = document.getElementById('app-desc').value;
+                const oldKeyEl = document.getElementById('app-old-key');
+                const id = oldKeyEl ? oldKeyEl.value : '';
                 if (!name) return;
                 fetch('/api/admin/apps', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, link: desc, price: 0 }) // using desc as link for now
+                    body: JSON.stringify({ name, link: desc, price: 0, id }) // using desc as link for now
                 }).then(() => {
                     loadApps();
                     closeModal();
+                    if (oldKeyEl) oldKeyEl.remove();
+                    document.getElementById('app-name').value = '';
+                    document.getElementById('app-desc').value = '';
                 });
+            }
+            function editApp(id, name, link, price) {
+                document.getElementById('app-name').value = name;
+                document.getElementById('app-desc').value = link;
+                let oldKeyEl = document.getElementById('app-old-key');
+                if (!oldKeyEl) {
+                    oldKeyEl = document.createElement('input');
+                    oldKeyEl.type = 'hidden';
+                    oldKeyEl.id = 'app-old-key';
+                    document.getElementById('addAppModal').querySelector('.modal-body').appendChild(oldKeyEl);
+                }
+                oldKeyEl.value = id;
+                openModal('addAppModal');
             }
             function deleteApp(id) {
                 if (!confirm('Delete this app?')) return;
@@ -1915,19 +1978,21 @@
 
                                 const date = new Date(acc.addedAt).toLocaleDateString();
 
-                                const row = `
-                                        <tr class="hover:bg-white/5 transition-colors">
-                                            <td class="px-4 py-3 font-bold capitalize text-white">${acc.type}</td>
-                                            <td class="px-4 py-3 text-gray-300 font-mono text-xs">${acc.email}</td>
-                                            <td class="px-4 py-3 text-yellow-500 font-bold">${acc.price} 🪙</td>
-                                            <td class="px-4 py-3">${statusBadge}</td>
-                                            <td class="px-4 py-3 text-gray-500 text-xs">${date}</td>
-                                            <td class="px-4 py-3 text-right">
-                                                <button onclick="deleteAccount('${acc.id}')" class="text-red-400 hover:text-red-300 p-2 hover:bg-red-500/10 rounded-lg transition-all" title="Delete">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
+                                <tr class="hover:bg-white/5 transition-colors">
+                                    <td class="px-4 py-3 font-bold capitalize text-white">${acc.type}</td>
+                                    <td class="px-4 py-3 text-gray-300 font-mono text-xs">${acc.email}</td>
+                                    <td class="px-4 py-3 text-yellow-500 font-bold">${acc.price} 🪙</td>
+                                    <td class="px-4 py-3">${statusBadge}</td>
+                                    <td class="px-4 py-3 text-gray-500 text-xs">${date}</td>
+                                    <td class="px-4 py-3 text-right">
+                                        <button onclick="editAccount('${acc.id}', '${acc.type}', '${acc.email.replace(/'/g, "\\'")}', '${acc.password.replace(/'/g, "\\'")}', ${acc.price}, '${(acc.instructions || '').replace(/'/g, "\\'")}')" class="text-blue-400 hover:text-blue-300 p-2 hover:bg-blue-500/10 rounded-lg transition-all mr-1" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button onclick="deleteAccount('${acc.id}')" class="text-red-400 hover:text-red-300 p-2 hover:bg-red-500/10 rounded-lg transition-all" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                                        </tr >
                                     `;
                                 tbody.innerHTML += row;
                             });
@@ -1947,26 +2012,46 @@
                     const password = document.getElementById('accPass').value;
                     const price = document.getElementById('accPrice').value;
                     const instructions = document.getElementById('accInstr').value;
+                    const editIdEl = document.getElementById('accEditId');
+                    const id = editIdEl ? editIdEl.value : '';
 
                     if (!email || !password || !price) return alert('Please fill all fields');
 
                     fetch('/api/admin/accounts', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ type, email, password, price, instructions })
+                        body: JSON.stringify({ id, type, email, password, price, instructions })
                     })
                         .then(r => r.json())
                         .then(res => {
                             if (res.success) {
                                 closeAddAccountModal();
                                 loadAccounts();
-                                // Clear inputs
                                 document.getElementById('accEmail').value = '';
                                 document.getElementById('accPass').value = '';
+                                document.getElementById('accInstr').value = '';
+                                if (editIdEl) editIdEl.remove();
                             } else {
                                 alert('Error adding account');
                             }
                         });
+                }
+
+                function editAccount(id, type, email, password, price, instructions) {
+                    document.getElementById('accType').value = type;
+                    document.getElementById('accEmail').value = email;
+                    document.getElementById('accPass').value = password;
+                    document.getElementById('accPrice').value = price;
+                    document.getElementById('accInstr').value = instructions;
+                    let editIdEl = document.getElementById('accEditId');
+                    if (!editIdEl) {
+                        editIdEl = document.createElement('input');
+                        editIdEl.type = 'hidden';
+                        editIdEl.id = 'accEditId';
+                        document.getElementById('addAccountModal').querySelector('.space-y-4').appendChild(editIdEl);
+                    }
+                    editIdEl.value = id;
+                    openAddAccountModal();
                 }
 
                 function deleteAccount(id) {
@@ -2002,7 +2087,7 @@
 
                                 const used = (data.info.used / (1024 * 1024)).toFixed(1); // MB
                                 const total = (data.info.total / (1024 * 1024 * 1024)).toFixed(1); // GB
-                                usageText.textContent = `${used} MB / ${total} GB`;
+                                usageText.textContent = `${ used } MB / ${ total } GB`;
 
                                 const percent = (data.info.used / data.info.total) * 100 || 0;
                                 progress.style.width = percent + '%';

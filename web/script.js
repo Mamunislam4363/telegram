@@ -192,6 +192,7 @@ const PAGE_TITLES = {
     'chatgptProduct': 'CHATGPT',
     'redeem': 'REDEEM CODE',
     'transfer': 'TRANSFER',
+    'accountsStore': 'PREMIUM ACCOUNTS',
     'support': 'SUPPORT',
 };
 
@@ -267,6 +268,10 @@ function showPage(targetId) {
         renderDailyGrid();
         startDailyCountdown();
     }
+    // Load accounts when entering accounts store page
+    if (targetId === 'accountsStore') {
+        renderAccounts();
+    }
     // Update Header Style based on page type
     const headerContainer = document.querySelector('.sticky-header-container');
     const mainHeader = document.getElementById('mainHeader');
@@ -278,7 +283,7 @@ function showPage(targetId) {
 
     // Define service pages that need simple header
     const servicePages = ['profile', 'services', 'numberService', 'mailService', 'premiumMail', 'emailMenu',
-        'emailService', 'vccCards', 'vpnServices', 'serviceGenerate',
+        'emailService', 'vccCards', 'vpnServices', 'accountsStore', 'serviceGenerate',
         'geminiProduct', 'chatgptProduct', 'checkout', 'deposit',
         'exchange', 'binancePay', 'faucetPay', 'history', 'redeem',
         'invite', 'tasks', 'earn', 'daily', 'verify', 'admin',
@@ -1242,6 +1247,95 @@ function renderVPN() {
                 <button onclick="buyAccount('vpn', ${v.price}, '${v.id}')" style="margin-top:4px; padding:4px 12px; border-radius:8px; background:#3b82f6; color:#fff; font-weight:700; font-size:10px; border:none;">BUY</button>
             </div>
         </div>`).join('');
+}
+
+// ========================
+// ACCOUNTS STORE
+// ========================
+function renderAccounts() {
+    const container = document.getElementById('accountsStoreList');
+    if (!container) return;
+
+    fetch('/api/accounts')
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success || !data.accounts || data.accounts.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align:center; padding:40px 0; color:var(--text-sub);">
+                        <i class="fas fa-box-open" style="font-size:32px; margin-bottom:12px; display:block;"></i>
+                        <p>No accounts available right now</p>
+                    </div>`;
+                return;
+            }
+
+            const typeIcons = {
+                'netflix': { icon: 'fas fa-tv', color: '#e50914', bg: 'rgba(229,9,20,0.1)' },
+                'spotify': { icon: 'fas fa-music', color: '#1db954', bg: 'rgba(29,185,84,0.1)' },
+                'prime': { icon: 'fas fa-play', color: '#00a8e1', bg: 'rgba(0,168,225,0.1)' },
+                'crunchyroll': { icon: 'fas fa-play-circle', color: '#f47521', bg: 'rgba(244,117,33,0.1)' },
+                'nordvpn': { icon: 'fas fa-shield-alt', color: '#4687ff', bg: 'rgba(70,135,255,0.1)' },
+                'expressvpn': { icon: 'fas fa-lock', color: '#da3940', bg: 'rgba(218,57,64,0.1)' },
+                'chatgpt': { icon: 'fas fa-robot', color: '#10a37f', bg: 'rgba(16,163,127,0.1)' },
+                'other': { icon: 'fas fa-user-circle', color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)' }
+            };
+
+            container.innerHTML = data.accounts.map(acc => {
+                const t = typeIcons[acc.type] || typeIcons['other'];
+                return `
+                <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:16px; display:flex; align-items:center; gap:14px;">
+                    <div style="width:48px; height:48px; border-radius:12px; background:${t.bg}; display:flex; align-items:center; justify-content:center; color:${t.color}; font-size:22px; flex-shrink:0;">
+                        <i class="${t.icon}"></i>
+                    </div>
+                    <div style="flex:1; min-width:0;">
+                        <div style="font-weight:700; color:var(--text-main); text-transform:capitalize; font-size:14px;">${acc.type}</div>
+                        <div style="font-size:11px; color:var(--text-sub); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${acc.email}</div>
+                    </div>
+                    <div style="text-align:right; flex-shrink:0;">
+                        <div style="font-weight:800; color:#22c55e; font-size:14px;">${acc.price} TC</div>
+                        <button onclick="buyPremiumAccount('${acc.id}', '${acc.type}', ${acc.price})" style="margin-top:4px; padding:5px 14px; border-radius:8px; background:linear-gradient(135deg,#ef4444,#dc2626); color:#fff; font-weight:700; font-size:10px; border:none; cursor:pointer;">BUY</button>
+                    </div>
+                </div>`;
+            }).join('');
+        })
+        .catch(() => {
+            container.innerHTML = `<div style="text-align:center; padding:40px 0; color:var(--text-sub);">Failed to load accounts</div>`;
+        });
+}
+
+function buyPremiumAccount(accountId, type, price) {
+    if (!userData || !userData.id) {
+        alert('Please login first.');
+        return;
+    }
+
+    const userTokens = userData.tokens || 0;
+    if (userTokens < price) {
+        alert(`Insufficient tokens! You have ${userTokens} TC but need ${price} TC.`);
+        return;
+    }
+
+    if (!confirm(`Buy ${type} account for ${price} TC?`)) return;
+
+    fetch('/api/accounts/buy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: userData.id, accountId })
+    })
+        .then(r => r.json())
+        .then(res => {
+            if (res.success) {
+                userData.tokens = res.newBalance;
+                updateBalanceDisplay();
+
+                // Show account details
+                alert(`✅ Account purchased!\n\nEmail: ${res.account.email}\nPassword: ${res.account.password}${res.account.instructions ? '\nNotes: ' + res.account.instructions : ''}\n\nPlease save these details!`);
+
+                renderAccounts(); // Refresh
+            } else {
+                alert(res.message || 'Purchase failed');
+            }
+        })
+        .catch(() => alert('Network error'));
 }
 
 // Current active service for generate page

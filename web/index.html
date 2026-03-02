@@ -2768,6 +2768,12 @@
                         </div>
                         <span>VPN</span>
                     </div>
+                    <div class="sg-card" onclick="nav('accountsStore')">
+                        <div class="sg-card-icon" style="background:linear-gradient(135deg,#ef4444,#dc2626)">
+                            <i class="fas fa-user-circle"></i>
+                        </div>
+                        <span>Accounts</span>
+                    </div>
                 </div>
 
                 <!-- List View (Default) -->
@@ -2819,6 +2825,18 @@
                         </div>
                         <div class="sc-arrow"><i class="fas fa-chevron-right"></i></div>
                     </div>
+
+                    <!-- Accounts Card -->
+                    <div class="service-card" onclick="nav('accountsStore')">
+                        <div class="sc-icon" style="background:linear-gradient(135deg,#ef4444,#dc2626)">
+                            <i class="fas fa-user-circle"></i>
+                        </div>
+                        <div class="sc-info">
+                            <h3>Premium Accounts</h3>
+                            <p>NETFLIX, SPOTIFY, CHATGPT & MORE</p>
+                        </div>
+                        <div class="sc-arrow"><i class="fas fa-chevron-right"></i></div>
+                    </div>
                 </div>
 
                 <!-- Info Banner -->
@@ -2861,6 +2879,23 @@
                 style="margin-bottom:24px; background:var(--bg-card); padding:10px; border-radius:16px; border:1px solid var(--border-color)">
                 <input type="text" class="gv-input" placeholder="Enter Coupon Code"
                     style="width:100%; background:transparent; border:none; outline:none; color:var(--text-main); font-size:16px; font-weight:700; padding:10px">
+            </div>
+
+            <!-- ACCOUNTS STORE PAGE -->
+            <div id="accountsStorePage" class="page">
+                <div class="section-header-title">PREMIUM ACCOUNTS</div>
+                <p style="color:var(--text-sub); font-size:12px; margin-bottom:16px;">Browse and purchase premium
+                    accounts instantly. All accounts are verified and ready to use.</p>
+                <div id="accountsStoreList" style="display:grid; grid-template-columns:1fr; gap:12px; margin-top:8px;">
+                    <div style="text-align:center; padding:40px 0; color:var(--text-sub);"><i
+                            class="fas fa-spinner fa-spin" style="font-size:24px;"></i>
+                        <p style="margin-top:8px;">Loading accounts...</p>
+                    </div>
+                </div>
+                <button onclick="nav('services')"
+                    style="margin-top:20px; width:100%; padding:15px; border-radius:14px; background:rgba(255,255,255,0.05); color:var(--text-sub); border:1px solid var(--border-color); font-weight:700;">
+                    BACK TO SERVICES
+                </button>
             </div>
             <button class="gv-btn" onclick="redeemCode()"
                 style="width:100%; padding:16px; background:#f59e0b; border:none; border-radius:16px; font-weight:800; color:#000; font-size:16px">

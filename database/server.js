@@ -755,10 +755,18 @@ app.get('/api/admin/cards', (req, res) => {
 });
 
 app.post('/api/admin/cards', (req, res) => {
-    const { name, price } = req.body;
+    const { name, price, oldKey } = req.body;
     const key = name.toLowerCase().replace(/\s+/g, '');
     if (!db.data.cardPrices) db.data.cardPrices = {};
     if (!db.data.cards) db.data.cards = {};
+
+    if (oldKey && oldKey !== key) {
+        db.data.cardPrices[key] = db.data.cardPrices[oldKey];
+        db.data.cards[key] = db.data.cards[oldKey];
+        delete db.data.cardPrices[oldKey];
+        delete db.data.cards[oldKey];
+    }
+
     db.data.cardPrices[key] = parseInt(price);
     if (!db.data.cards[key]) db.data.cards[key] = [];
     db.save();
@@ -794,12 +802,21 @@ app.get('/api/admin/vpn', (req, res) => {
 });
 
 app.post('/api/admin/vpn', (req, res) => {
-    const { name, price, key } = req.body;
+    const { name, price, key, oldKey } = req.body;
     const vpnKey = key || name.toLowerCase().replace(/\s+/g, '');
 
     if (!db.data.vpnPrices) db.data.vpnPrices = {};
     if (!db.data.vpnServiceNames) db.data.vpnServiceNames = {};
     if (!db.data.vpnAccounts) db.data.vpnAccounts = {};
+
+    if (oldKey && oldKey !== vpnKey) {
+        db.data.vpnPrices[vpnKey] = db.data.vpnPrices[oldKey];
+        db.data.vpnServiceNames[vpnKey] = db.data.vpnServiceNames[oldKey];
+        db.data.vpnAccounts[vpnKey] = db.data.vpnAccounts[oldKey];
+        delete db.data.vpnPrices[oldKey];
+        delete db.data.vpnServiceNames[oldKey];
+        delete db.data.vpnAccounts[oldKey];
+    }
 
     db.data.vpnPrices[vpnKey] = parseInt(price);
     db.data.vpnServiceNames[vpnKey] = name;
@@ -1130,10 +1147,25 @@ app.get('/api/admin/accounts', (req, res) => {
 });
 
 app.post('/api/admin/accounts', (req, res) => {
-    const { type, email, password, price, instructions } = req.body;
+    const { id, type, email, password, price, instructions } = req.body;
     if (!email || !password) return res.json({ success: false, message: 'Email and password required' });
 
     if (!db.data.premiumAccounts) db.data.premiumAccounts = [];
+
+    if (id) {
+        // Edit existing
+        const idx = db.data.premiumAccounts.findIndex(a => a.id === id);
+        if (idx !== -1) {
+            db.data.premiumAccounts[idx].type = type || 'other';
+            db.data.premiumAccounts[idx].email = email;
+            db.data.premiumAccounts[idx].password = password;
+            db.data.premiumAccounts[idx].price = parseInt(price) || 0;
+            db.data.premiumAccounts[idx].instructions = instructions || '';
+            db.save();
+            return res.json({ success: true, id });
+        }
+    }
+
     const account = {
         id: 'acc_' + Date.now(),
         type: type || 'other',
@@ -1147,6 +1179,71 @@ app.post('/api/admin/accounts', (req, res) => {
     db.data.premiumAccounts.push(account);
     db.save();
     res.json({ success: true, id: account.id });
+});
+
+// API: User - Get Available Accounts
+app.get('/api/accounts', (req, res) => {
+    const accounts = (db.data.premiumAccounts || []).filter(a => !a.sold).map(a => ({
+        id: a.id,
+        type: a.type,
+        price: a.price,
+        // Hide password and instructions
+        email: a.email.replace(/(.{2})(.*)(?=@)/, (gp1, gp2, gp3) => {
+            return gp2 + gp3.replace(/./g, '*');
+        })
+    }));
+    res.json({ success: true, accounts });
+});
+
+// API: User - Buy Account
+app.post('/api/accounts/buy', (req, res) => {
+    const { userId, accountId } = req.body;
+    const user = db.getUser(userId);
+    if (!user) return res.json({ success: false, message: 'User not found' });
+
+    const allAccounts = db.data.premiumAccounts || [];
+    const idx = allAccounts.findIndex(a => a.id === accountId && !a.sold);
+    if (idx === -1) return res.json({ success: false, message: 'Account not found or already sold' });
+
+    const account = allAccounts[idx];
+    const userTokens = user.tokens !== undefined ? user.tokens : (user.balance_tokens || 0);
+
+    if (userTokens < account.price) {
+        return res.json({ success: false, message: `Insufficient tokens. Need ${account.price} TC.` });
+    }
+
+    // Deduct tokens
+    if (user.tokens !== undefined) {
+        user.tokens -= account.price;
+    } else {
+        user.balance_tokens -= account.price;
+    }
+
+    // Mark sold
+    account.sold = true;
+    account.soldTo = userId;
+    account.soldAt = Date.now();
+
+    // Add to history
+    if (!user.history) user.history = [];
+    user.history.unshift({
+        type: 'email', // using email to show in gmails used as per user request
+        date: new Date().toISOString(),
+        details: `Bought ${account.type} Account: ${account.email}`,
+        reward: `-${account.price}`
+    });
+
+    db.save();
+
+    res.json({
+        success: true,
+        account: {
+            email: account.email,
+            password: account.password,
+            instructions: account.instructions
+        },
+        newBalance: user.tokens !== undefined ? user.tokens : user.balance_tokens
+    });
 });
 
 app.delete('/api/admin/accounts/:id', (req, res) => {
