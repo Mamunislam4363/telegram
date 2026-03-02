@@ -1978,21 +1978,22 @@
 
                                 const date = new Date(acc.addedAt).toLocaleDateString();
 
-                                <tr class="hover:bg-white/5 transition-colors">
-                                    <td class="px-4 py-3 font-bold capitalize text-white">${acc.type}</td>
-                                    <td class="px-4 py-3 text-gray-300 font-mono text-xs">${acc.email}</td>
-                                    <td class="px-4 py-3 text-yellow-500 font-bold">${acc.price} 🪙</td>
-                                    <td class="px-4 py-3">${statusBadge}</td>
-                                    <td class="px-4 py-3 text-gray-500 text-xs">${date}</td>
-                                    <td class="px-4 py-3 text-right">
-                                        <button onclick="editAccount('${acc.id}', '${acc.type}', '${acc.email.replace(/'/g, "\\'")}', '${acc.password.replace(/'/g, "\\'")}', ${acc.price}, '${(acc.instructions || '').replace(/'/g, "\\'")}')" class="text-blue-400 hover:text-blue-300 p-2 hover:bg-blue-500/10 rounded-lg transition-all mr-1" title="Edit">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button onclick="deleteAccount('${acc.id}')" class="text-red-400 hover:text-red-300 p-2 hover:bg-red-500/10 rounded-lg transition-all" title="Delete">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </td>
-                                        </tr >
+                                const row = `
+                                        <tr class="hover:bg-white/5 transition-colors">
+                                            <td class="px-4 py-3 font-bold capitalize text-white">${acc.type}</td>
+                                            <td class="px-4 py-3 text-gray-300 font-mono text-xs">${acc.email}</td>
+                                            <td class="px-4 py-3 text-yellow-500 font-bold">${acc.price} 🪙</td>
+                                            <td class="px-4 py-3">${statusBadge}</td>
+                                            <td class="px-4 py-3 text-gray-500 text-xs">${date}</td>
+                                            <td class="px-4 py-3 text-right">
+                                                <button onclick="editAccount('${acc.id}', '${acc.type}', '${acc.email.replace(/'/g, "\\'")}', '${acc.password.replace(/'/g, "\\'")}', ${acc.price}, '${(acc.instructions || '').replace(/'/g, "\\'")}')" class="text-blue-400 hover:text-blue-300 p-2 hover:bg-blue-500/10 rounded-lg transition-all mr-1" title="Edit">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button onclick="deleteAccount('${acc.id}')" class="text-red-400 hover:text-red-300 p-2 hover:bg-red-500/10 rounded-lg transition-all" title="Delete">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
                                     `;
                                 tbody.innerHTML += row;
                             });
@@ -2087,7 +2088,7 @@
 
                                 const used = (data.info.used / (1024 * 1024)).toFixed(1); // MB
                                 const total = (data.info.total / (1024 * 1024 * 1024)).toFixed(1); // GB
-                                usageText.textContent = `${ used } MB / ${ total } GB`;
+                                usageText.textContent = `${used} MB / ${total} GB`;
 
                                 const percent = (data.info.used / data.info.total) * 100 || 0;
                                 progress.style.width = percent + '%';
