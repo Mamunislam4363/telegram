@@ -471,39 +471,20 @@ bot.onText(/\/start/, async (msg) => {
 
 async function sendMainMenu(chatId, user) {
     const lang = user.language || 'en';
-    const text = getText(lang, 'welcome', user.first_name || 'User', user.balance, user.id);
+    const publicUrl = process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`;
+
+    const welcomeText = `👋 Welcome, ${user.first_name || 'User'}!\n\n💰 Balance: ${user.balance || 0} Credits\n🆔 ID: ${user.id}\n\nTap the button below to open the app:`;
 
     const keyboard = {
         reply_markup: {
             inline_keyboard: [
-                [{ text: '🚀 Start Verification', callback_data: 'start_verify' }],
-                [
-                    { text: '💰 My Balance', callback_data: 'my_balance' },
-                    { text: '📅 Daily Bonus', callback_data: 'daily' }
-                ],
-                [{ text: '🎁 Redeem Code', callback_data: 'redeem_menu' }],
-                [{ text: '💸 Transfer Credits', callback_data: 'transfer_init' }],
-                [
-                    { text: '👥 Refer & Earn', callback_data: 'referral' },
-                    { text: '📋 Tasks', callback_data: 'tasks' }
-                ],
-                [{ text: '📧 Gmail Services', callback_data: 'gmail_menu' }],
-                [{ text: '🌐 Virtual Numbers', callback_data: 'number_service_menu' }],
-                [
-                    { text: '📞 Support', callback_data: 'support_menu' },
-                    { text: '🌍 Language', callback_data: 'change_language' }
-                ]
+                [{ text: '🚀 Open App', web_app: { url: publicUrl } }]
             ]
         }
     };
 
-    // Add Admin Button if authorized
-    if (isAdmin(user.id)) {
-        keyboard.reply_markup.inline_keyboard.push([{ text: getText(lang, 'adminPanel'), callback_data: 'admin_panel' }]);
-    }
-
     try {
-        await bot.sendMessage(chatId, text, { parse_mode: 'Markdown', ...keyboard });
+        await bot.sendMessage(chatId, welcomeText, { parse_mode: 'Markdown', ...keyboard });
     } catch (e) {
         console.error('Error sending main menu:', e);
     }
