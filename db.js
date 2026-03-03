@@ -69,18 +69,6 @@ const defaultData = {
             bkash: 1,
             nagad: 1
         },
-        // Gems Token System
-        gems: {
-            enabled: true,
-            currentPrice: 1.0,  // 1 Gem = X Credits
-            exchangeFee: 0.05,  // 5% fee
-            minTradeAmount: 10,
-            maxTradeAmount: 10000,
-            marketMode: 'fixed',  // fixed or dynamic
-            priceFluctuation: 0.02,  // 2% fluctuation for dynamic
-            manipulationLimit: 10, // Default threshold for rigged trades
-            lastPriceUpdate: Date.now()
-        },
         // Welcome credits for new users
         welcomeCredits: 100
     },
@@ -272,9 +260,6 @@ class Database {
                 id: numericId,
                 balance: welcomeCredits,  // Welcome credits for new users (legacy)
                 balance_tokens: welcomeCredits, // New: Tokens (TC) currency
-                balance_Gems: 0,  // New: Gems (JS) currency
-                gems: 0,  // Gems token balance
-                gemsHistory: [],  // Gems trading history
                 joinedAt: Date.now(),
                 referrer: null,
                 lastDaily: null,
@@ -353,9 +338,6 @@ class Database {
                 id: numericId,
                 balance: 0,
                 balance_tokens: 0, // New: Tokens (TC) currency
-                balance_Gems: 0,  // New: Gems (JS) currency
-                gems: 0,  // Gems token balance
-                gemsHistory: [],  // Gems trading history
                 joinedAt: Date.now(),
                 referrer: null,
                 lastDaily: null,
@@ -1785,235 +1767,6 @@ class Database {
 
     // ==================== GEMS TOKEN SYSTEM ====================
 
-    // Get Gems Settings
-    getGemsSettings() {
-        if (!this.data.adminSettings) {
-            this.data.adminSettings = {};
-        }
-        if (!this.data.adminSettings.gems) {
-            this.data.adminSettings.gems = {
-                enabled: true,
-                currentPrice: 1.0,
-                exchangeFee: 0.05,
-                minTradeAmount: 10,
-                maxTradeAmount: 10000,
-                marketMode: 'fixed',
-                priceFluctuation: 0.02,
-                lastPriceUpdate: Date.now()
-            };
-            this.save();
-        }
-        return this.data.adminSettings.gems;
-    }
-
-    // Update Gems Settings (Admin)
-    updateGemsSettings(settings) {
-        const gems = this.getGemsSettings();
-        Object.keys(settings).forEach(key => {
-            if (gems.hasOwnProperty(key)) {
-                gems[key] = settings[key];
-            }
-        });
-        gems.lastPriceUpdate = Date.now();
-        this.save();
-        return gems;
-    }
-
-    // Exchange Credits to Gems
-    exchangeCreditsToGems(userId, credits) {
-        const user = this.getUser(userId);
-        const settings = this.getGemsSettings();
-
-        if (!settings.enabled) return { success: false, msg: 'Gems system disabled' };
-        if (credits < settings.minTradeAmount) return { success: false, msg: `Minimum ${settings.minTradeAmount} credits required` };
-        if (credits > settings.maxTradeAmount) return { success: false, msg: `Maximum ${settings.maxTradeAmount} credits allowed` };
-        if (user.balance < credits) return { success: false, msg: 'Insufficient credits' };
-
-        // Calculate gems (1 Gem = currentPrice credits)
-        const gemsAmount = Math.floor(credits / settings.currentPrice * (1 - settings.exchangeFee));
-
-        // Deduct credits and add gems
-        user.balance -= credits;
-        user.gems += gemsAmount;
-
-        // Log transaction
-        if (!user.gemsHistory) user.gemsHistory = [];
-        user.gemsHistory.push({
-            type: 'exchange_buy',
-            credits: credits,
-            gems: gemsAmount,
-            price: settings.currentPrice,
-            fee: settings.exchangeFee,
-            date: new Date().toISOString()
-        });
-
-        this.save();
-        return { success: true, gems: gemsAmount, credits: credits };
-    }
-
-    // Exchange Gems to Credits
-    exchangeGemsToCredits(userId, gems) {
-        const user = this.getUser(userId);
-        const settings = this.getGemsSettings();
-
-        if (!settings.enabled) return { success: false, msg: 'Gems system disabled' };
-        if (gems < settings.minTradeAmount) return { success: false, msg: `Minimum ${settings.minTradeAmount} gems required` };
-        if (gems > settings.maxTradeAmount) return { success: false, msg: `Maximum ${settings.maxTradeAmount} gems allowed` };
-        if (user.gems < gems) return { success: false, msg: 'Insufficient gems' };
-
-        // Calculate credits (1 Gem = currentPrice credits)
-        const creditsAmount = Math.floor(gems * settings.currentPrice * (1 - settings.exchangeFee));
-
-        // Deduct gems and add credits
-        user.gems -= gems;
-        user.balance += creditsAmount;
-
-        // Log transaction
-        if (!user.gemsHistory) user.gemsHistory = [];
-        user.gemsHistory.push({
-            type: 'exchange_sell',
-            gems: gems,
-            credits: creditsAmount,
-            price: settings.currentPrice,
-            fee: settings.exchangeFee,
-            date: new Date().toISOString()
-        });
-
-        this.save();
-        return { success: true, credits: creditsAmount, gems: gems };
-    }
-
-    // Trade Gems (Buy/Sell with profit/loss)
-    tradeGems(userId, type, amount, leverage = 1) {
-        const user = this.getUser(userId);
-        const settings = this.getGemsSettings();
-
-        if (!settings.enabled) return { success: false, msg: 'Gems system disabled' };
-        if (amount < settings.minTradeAmount) return { success: false, msg: `Minimum ${settings.minTradeAmount} gems required` };
-
-        // Check balance
-        if (type === 'buy' && user.balance < amount * settings.currentPrice) {
-            return { success: false, msg: 'Insufficient credits for trade' };
-        }
-        if (type === 'sell' && user.gems < amount) {
-            return { success: false, msg: 'Insufficient gems for trade' };
-        }
-
-        // Simulate market movement (random price change)
-        let priceChange = 0;
-        if (settings.marketMode === 'dynamic') {
-            const fluctuation = (Math.random() - 0.5) * 2 * (settings.priceFluctuation || 0.02);
-            priceChange = fluctuation;
-
-            // Manipulation Logic: If amount > limit, force LOSS
-            const limit = settings.manipulationLimit || 10;
-            if (amount > limit) {
-                if (type === 'buy') {
-                    // Force price DOWN (Loss)
-                    if (priceChange > 0) priceChange = -priceChange;
-                    if (Math.abs(priceChange) < 0.01) priceChange = -0.02; // Ensure min loss
-                } else {
-                    // Force price UP (Loss for short/sell)
-                    if (priceChange < 0) priceChange = -priceChange;
-                    if (Math.abs(priceChange) < 0.01) priceChange = 0.02; // Ensure min loss
-                }
-            }
-        }
-
-        const entryPrice = settings.currentPrice;
-        const exitPrice = entryPrice * (1 + priceChange);
-
-        // Calculate P/L
-        const pl = type === 'buy'
-            ? amount * (exitPrice - entryPrice) * leverage
-            : amount * (entryPrice - exitPrice) * leverage;
-
-        // Execute trade
-        if (type === 'buy') {
-            user.balance -= amount * entryPrice;
-            user.gems += amount;
-        } else {
-            user.gems -= amount;
-            user.balance += amount * entryPrice;
-        }
-
-        // Apply P/L
-        if (pl > 0) {
-            user.gems += pl;
-        } else {
-            user.gems = Math.max(0, user.gems + pl);
-        }
-
-        // Log trade
-        if (!user.gemsHistory) user.gemsHistory = [];
-        user.gemsHistory.push({
-            type: 'trade_' + type,
-            amount: amount,
-            entryPrice: entryPrice,
-            exitPrice: exitPrice,
-            leverage: leverage,
-            pl: pl,
-            date: new Date().toISOString()
-        });
-
-        // Update market price if dynamic
-        if (settings.marketMode === 'dynamic') {
-            settings.currentPrice = exitPrice;
-            settings.lastPriceUpdate = Date.now();
-        }
-
-        this.save();
-        return {
-            success: true,
-            type: type,
-            amount: amount,
-            pl: pl,
-            newPrice: exitPrice,
-            gemsBalance: user.gems,
-            creditBalance: user.balance
-        };
-    }
-
-    // Get Gems History
-    getGemsHistory(userId) {
-        const user = this.getUser(userId);
-        return user.gemsHistory || [];
-    }
-
-    // Add Gems to user (Admin function)
-    addGems(userId, amount) {
-        const user = this.getUser(userId);
-        user.gems += amount;
-
-        if (!user.gemsHistory) user.gemsHistory = [];
-        user.gemsHistory.push({
-            type: 'admin_add',
-            gems: amount,
-            date: new Date().toISOString()
-        });
-
-        this.save();
-        return { success: true, gems: user.gems };
-    }
-
-    // Deduct Gems from user (Admin function)
-    deductGems(userId, amount) {
-        const user = this.getUser(userId);
-        if (user.gems < amount) return { success: false, msg: 'Insufficient gems' };
-
-        user.gems -= amount;
-
-        if (!user.gemsHistory) user.gemsHistory = [];
-        user.gemsHistory.push({
-            type: 'admin_deduct',
-            gems: -amount,
-            date: new Date().toISOString()
-        });
-
-        this.save();
-        return { success: true, gems: user.gems };
-    }
-
     // ==================== WELCOME CREDITS ====================
 
     getWelcomeCredits() {
@@ -2249,20 +2002,13 @@ class Database {
         const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);
         let cleanedCount = 0;
 
-        // 1. Clean User History (Purchase, Gems, etc.)
+        // 1. Clean User History (Purchase, etc.)
         Object.values(this.data.users).forEach(user => {
             // Purchase History
             if (user.purchaseHistory && user.purchaseHistory.length > 0) {
                 const initial = user.purchaseHistory.length;
                 user.purchaseHistory = user.purchaseHistory.filter(h => new Date(h.date).getTime() > cutoff);
                 if (user.purchaseHistory.length < initial) cleanedCount++;
-            }
-
-            // Gems History (Trading)
-            if (user.gemsHistory && user.gemsHistory.length > 0) {
-                const initial = user.gemsHistory.length;
-                user.gemsHistory = user.gemsHistory.filter(h => new Date(h.date).getTime() > cutoff);
-                if (user.gemsHistory.length < initial) cleanedCount++;
             }
 
             // Tasks Done (Optional: maybe keep tasks history longer? User said "history of what they buy/trade")

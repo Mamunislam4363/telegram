@@ -373,7 +373,7 @@ function showPage(targetId) {
     else if (['invite', 'leaderboard'].includes(targetId)) activeNavGroup = 'invite';
     else if (['profile', 'history', 'redeem', 'transfer', 'support', 'verify', 'geminiVerification', 'admin'].includes(targetId)) activeNavGroup = 'profile';
 
-    const activeItem = document.querySelector(`[data-page="${activeNavGroup}"]`);
+    const activeItem = document.querySelector(`.bottom-nav [data-page="${activeNavGroup}"]`);
     if (activeItem) activeItem.classList.add('active');
 }
 

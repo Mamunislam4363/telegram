@@ -183,6 +183,8 @@
                 <div class="nav-item" onclick="nav('apps')"><i class="fas fa-mobile-alt w-5"></i> Apps</div>
                 <div class="nav-item" onclick="nav('services')"><i class="fas fa-cogs w-5"></i> Services</div>
                 <div class="nav-item" onclick="nav('accounts')"><i class="fas fa-user-shield w-5"></i> Accounts</div>
+                <div class="nav-item" onclick="nav('premiumemail')"><i class="fas fa-envelope w-5"></i> Premium Email
+                </div>
                 <div class="nav-item" onclick="nav('shopmanage')"><i class="fas fa-store w-5"></i> Shop Items</div>
                 <div class="nav-item" onclick="nav('broadcast')"><i class="fas fa-bullhorn w-5"></i> Broadcast</div>
                 <div class="nav-item" onclick="nav('storage')"><i class="fas fa-hdd w-5"></i> Storage (Drive)</div>
@@ -371,7 +373,6 @@
                                 <tr>
                                     <th>User</th>
                                     <th>Tokens</th>
-                                    <th>Gems</th>
                                     <th>Invites</th>
                                     <th>Status</th>
                                     <th>Actions</th>
@@ -379,7 +380,7 @@
                             </thead>
                             <tbody id="usersTable">
                                 <tr>
-                                    <td colspan="6" class="text-center text-gray-500 py-8">Loading...</td>
+                                    <td colspan="5" class="text-center text-gray-500 py-8">Loading...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -407,20 +408,14 @@
                                     class="w-full bg-black/30 border border-white/10 p-3 rounded-xl text-white">
                             </div>
                             <div>
-                                <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Gems
-                                    (Payouts)</label>
-                                <input id="editUserGems" type="number"
-                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-xl text-white">
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-4 mb-6">
-                            <div>
                                 <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Referral
                                     Count</label>
                                 <input id="editUserRefs" type="number"
                                     class="w-full bg-black/30 border border-white/10 p-3 rounded-xl text-white">
                             </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-4 mb-6">
                             <div>
                                 <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Verification
                                     Status</label>
@@ -489,48 +484,292 @@
 
             <!-- 5. SETTINGS -->
             <div id="page-settings" class="page">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <div class="glass-card p-6 rounded-2xl">
-                        <h3 class="text-lg font-bold mb-6 text-orange-400"><i class="fas fa-gift"></i> System Costs &
-                            Rewards</h3>
-                        <div class="space-y-4">
-                            <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Daily
-                                    Reward</label><input type="number" id="conf-daily"
-                                    class="w-full bg-black/30 border border-white/10 rounded-lg p-3"></div>
-                            <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Invite
-                                    Bonus</label><input type="number" id="conf-invite"
-                                    class="w-full bg-black/30 border border-white/10 rounded-lg p-3"></div>
-                            <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Welcome
-                                    Bonus</label><input type="number" id="conf-welcome"
-                                    class="w-full bg-black/30 border border-white/10 rounded-lg p-3"></div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Support
-                                        Cost</label><input type="number" id="conf-support"
-                                        class="w-full bg-black/30 border border-white/10 rounded-lg p-3"></div>
-                                <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Gmail
-                                        Cost</label><input type="number" id="conf-gmail"
-                                        class="w-full bg-black/30 border border-white/10 rounded-lg p-3"></div>
+
+                <!-- System Dashboard -->
+                <div class="glass-card p-6 rounded-2xl mb-8">
+                    <h3 class="text-xl font-bold mb-6 text-white flex items-center"><i
+                            class="fas fa-tachometer-alt text-purple-400 mr-2"></i> System Dashboard</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                        <div
+                            class="bg-black/40 rounded-xl p-4 border border-white/5 flex flex-col items-center justify-center relative overflow-hidden group">
+                            <div
+                                class="absolute inset-0 bg-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity">
                             </div>
-                            <button onclick="saveConfig()"
-                                class="w-full bg-orange-500 text-black font-bold py-3 rounded-lg mt-2 shadow-lg shadow-orange-500/20">Save
-                                System Settings</button>
+                            <i class="fas fa-microchip text-blue-400 text-2xl mb-2"></i>
+                            <span class="text-xs text-gray-400 uppercase tracking-wider mb-1">CPU Usage</span>
+                            <span id="metric-cpu" class="text-2xl font-bold text-white relative z-10">0%</span>
                         </div>
-                    </div>
-                    <div class="glass-card p-6 rounded-2xl">
-                        <h3 class="text-lg font-bold mb-6 text-blue-400"><i class="fas fa-gem"></i> Gems & Ads</h3>
-                        <div class="space-y-4">
-                            <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Gem Price
-                                    (Credits)</label><input type="number" id="conf-gemprice"
-                                    class="w-full bg-black/30 border border-white/10 rounded-lg p-3" value="100"></div>
-                            <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Ad
-                                    Reward</label><input type="number" id="conf-adreward"
-                                    class="w-full bg-black/30 border border-white/10 rounded-lg p-3" value="1"></div>
-                            <button onclick="saveGems()"
-                                class="w-full bg-blue-500 text-white font-bold py-3 rounded-lg mt-2">Save Gems
-                                Config</button>
+                        <div
+                            class="bg-black/40 rounded-xl p-4 border border-white/5 flex flex-col items-center justify-center relative overflow-hidden group">
+                            <div
+                                class="absolute inset-0 bg-green-500/10 opacity-0 group-hover:opacity-100 transition-opacity">
+                            </div>
+                            <i class="fas fa-memory text-green-400 text-2xl mb-2"></i>
+                            <span class="text-xs text-gray-400 uppercase tracking-wider mb-1">Memory</span>
+                            <span id="metric-mem" class="text-2xl font-bold text-white relative z-10">0%</span>
+                        </div>
+                        <div
+                            class="bg-black/40 rounded-xl p-4 border border-white/5 flex flex-col items-center justify-center relative overflow-hidden group">
+                            <div
+                                class="absolute inset-0 bg-yellow-500/10 opacity-0 group-hover:opacity-100 transition-opacity">
+                            </div>
+                            <i class="fas fa-database text-yellow-400 text-2xl mb-2"></i>
+                            <span class="text-xs text-gray-400 uppercase tracking-wider mb-1">DB Size</span>
+                            <span id="metric-db" class="text-xl font-bold text-white relative z-10">0 KB</span>
+                        </div>
+                        <div
+                            class="bg-black/40 rounded-xl p-4 border border-white/5 flex flex-col items-center justify-center relative overflow-hidden group">
+                            <div
+                                class="absolute inset-0 bg-red-500/10 opacity-0 group-hover:opacity-100 transition-opacity">
+                            </div>
+                            <i class="fas fa-clock text-red-400 text-2xl mb-2"></i>
+                            <span class="text-xs text-gray-400 uppercase tracking-wider mb-1">Uptime</span>
+                            <span id="metric-uptime" class="text-xl font-bold text-white relative z-10">0s</span>
+                        </div>
+                        <div
+                            class="bg-black/40 rounded-xl p-4 border border-white/5 flex flex-col items-center justify-center relative overflow-hidden group">
+                            <div
+                                class="absolute inset-0 bg-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity">
+                            </div>
+                            <i class="fas fa-exchange-alt text-purple-400 text-2xl mb-2"></i>
+                            <span class="text-xs text-gray-400 uppercase tracking-wider mb-1">Callbacks</span>
+                            <span id="metric-callbacks" class="text-xl font-bold text-white relative z-10">0</span>
+                        </div>
+                        <div
+                            class="bg-black/40 rounded-xl p-4 border border-white/5 flex flex-col items-center justify-center relative overflow-hidden group">
+                            <div
+                                class="absolute inset-0 bg-cyan-500/10 opacity-0 group-hover:opacity-100 transition-opacity">
+                            </div>
+                            <i class="fas fa-users text-cyan-400 text-2xl mb-2"></i>
+                            <span class="text-xs text-gray-400 uppercase tracking-wider mb-1">Active (24h)</span>
+                            <span id="metric-active" class="text-xl font-bold text-white relative z-10">0</span>
                         </div>
                     </div>
                 </div>
+
+                <!-- Cost Management -->
+                <div class="glass-card rounded-2xl mb-6 overflow-hidden">
+                    <button onclick="toggleSection('cost-management-content')"
+                        class="w-full p-4 flex justify-between items-center hover:bg-white/5 transition-colors focus:outline-none">
+                        <h3 class="text-lg font-bold text-orange-400 flex items-center"><i
+                                class="fas fa-coins mr-3"></i> Cost Management</h3>
+                        <i id="icon-cost-management-content"
+                            class="fas fa-chevron-down text-gray-400 transition-transform duration-300"></i>
+                    </button>
+
+                    <div id="cost-management-content" class="hidden px-6 pb-4 pt-2 border-t border-white/5">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+
+                            <!-- Rewards & Bonuses -->
+                            <div
+                                class="space-y-3 col-span-1 md:col-span-2 lg:col-span-1 border border-white/10 rounded-xl p-4 bg-black/20">
+                                <h4 class="text-sm font-semibold text-green-400 border-b border-white/10 pb-2 mb-3">
+                                    Rewards & Bonuses</h4>
+                                <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Daily
+                                        Reward</label><input type="number" id="conf-daily"
+                                        class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
+                                </div>
+                                <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Invite
+                                        Bonus</label><input type="number" id="conf-invite"
+                                        class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
+                                </div>
+                                <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Welcome
+                                        Bonus</label><input type="number" id="conf-welcome"
+                                        class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
+                                </div>
+                                <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Ad
+                                        Reward</label><input type="number" id="conf-adreward"
+                                        class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
+                                </div>
+                            </div>
+
+                            <!-- System Fees -->
+                            <div
+                                class="space-y-3 col-span-1 md:col-span-2 lg:col-span-1 border border-white/10 rounded-xl p-4 bg-black/20">
+                                <h4 class="text-sm font-semibold text-red-400 border-b border-white/10 pb-2 mb-3">System
+                                    Fees</h4>
+                                <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Transfer
+                                        Fee</label><input type="number" id="conf-transfer"
+                                        class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
+                                </div>
+                                <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Support
+                                        Cost</label><input type="number" id="conf-support"
+                                        class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
+                                </div>
+                            </div>
+
+                            <!-- Service Costs -->
+                            <div
+                                class="space-y-4 col-span-1 md:col-span-2 lg:col-span-2 border border-white/10 rounded-xl p-4 bg-black/20">
+                                <h4 class="text-sm font-semibold text-blue-400 border-b border-white/10 pb-2 mb-3">
+                                    Service Costs</h4>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Gmail
+                                            Add/Create</label><input type="number" id="conf-gmail"
+                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
+                                    </div>
+                                    <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Mini App
+                                            Verification</label><input type="number" id="conf-verification"
+                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
+                                    </div>
+                                    <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Virtual
+                                            Number</label><input type="number" id="conf-number"
+                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
+                                    </div>
+                                    <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Temp
+                                            Mail</label><input type="number" id="conf-mail"
+                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 flex justify-end">
+                            <button onclick="saveAllCosts()"
+                                class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-8 rounded-xl transition-all shadow-lg shadow-orange-500/20 transform hover:scale-[1.02] active:scale-95 flex items-center">
+                                <i class="fas fa-save mr-2"></i> Save Cost Configurations
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- API Keys Management -->
+                <div class="glass-card rounded-2xl overflow-hidden">
+                    <button onclick="toggleSection('api-keys-content')"
+                        class="w-full p-6 flex justify-between items-center hover:bg-white/5 transition-colors focus:outline-none">
+                        <h3 class="text-lg font-bold text-blue-400 flex items-center"><i class="fas fa-key mr-3"></i>
+                            API Keys Management</h3>
+                        <i id="icon-api-keys-content"
+                            class="fas fa-chevron-down text-gray-400 transition-transform duration-300"></i>
+                    </button>
+
+                    <div id="api-keys-content" class="hidden px-6 pb-6 pt-2 border-t border-white/5">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                            <!-- Bot Tokens -->
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Main Bot Token
+                                        (Read Only)</label>
+                                    <div class="relative">
+                                        <input type="password" id="api-bot-token"
+                                            class="w-full bg-black/60 border border-white/5 text-gray-500 rounded-lg p-3 cursor-not-allowed"
+                                            disabled value="••••••••••••••••••••••••••••••••">
+                                        <i class="fas fa-lock absolute right-4 top-4 text-gray-600"></i>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1">To change, update .env file and restart</p>
+                                </div>
+
+                                <div>
+                                    <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Backup Bot
+                                        Token</label>
+                                    <div class="relative">
+                                        <input type="password" id="api-backup-token"
+                                            class="w-full bg-black/40 border border-white/10 focus:border-blue-500 rounded-lg p-3 transition-colors pr-10">
+                                        <button onclick="togglePasswordVisibility('api-backup-token')"
+                                            class="absolute right-3 top-3.5 text-gray-400 hover:text-white transition-colors">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- External Services -->
+                            <div class="space-y-4">
+                                <div>
+                                    <label
+                                        class="text-xs text-gray-400 uppercase font-bold block mb-1 flex items-center">
+                                        <i class="fas fa-envelope text-red-400 mr-2"></i> SMTP Labs API Key
+                                    </label>
+                                    <div class="relative">
+                                        <input type="password" id="api-smtp-key"
+                                            class="w-full bg-black/40 border border-white/10 focus:border-blue-500 rounded-lg p-3 transition-colors pr-10">
+                                        <button onclick="togglePasswordVisibility('api-smtp-key')"
+                                            class="absolute right-3 top-3.5 text-gray-400 hover:text-white transition-colors">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label
+                                        class="text-xs text-gray-400 uppercase font-bold block mb-1 flex items-center">
+                                        <i class="fab fa-google text-green-400 mr-2"></i> Gmail Client ID
+                                    </label>
+                                    <input type="text" id="api-gmail-client"
+                                        class="w-full bg-black/40 border border-white/10 focus:border-blue-500 rounded-lg p-3 transition-colors">
+                                </div>
+
+                                <div>
+                                    <label
+                                        class="text-xs text-gray-400 uppercase font-bold block mb-1 flex items-center">
+                                        <i class="fab fa-google text-yellow-400 mr-2"></i> Gmail Client Secret
+                                    </label>
+                                    <div class="relative">
+                                        <input type="password" id="api-gmail-secret"
+                                            class="w-full bg-black/40 border border-white/10 focus:border-blue-500 rounded-lg p-3 transition-colors pr-10">
+                                        <button onclick="togglePasswordVisibility('api-gmail-secret')"
+                                            class="absolute right-3 top-3.5 text-gray-400 hover:text-white transition-colors">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label
+                                        class="text-xs text-gray-400 uppercase font-bold block mb-1 flex items-center">
+                                        <i class="fas fa-link text-purple-400 mr-2"></i> Mini App Base URL
+                                    </label>
+                                    <input type="text" id="api-miniapp-url" placeholder="https://your-domain.com"
+                                        class="w-full bg-black/40 border border-white/10 focus:border-blue-500 rounded-lg p-3 transition-colors">
+                                    <p class="text-xs text-gray-500 mt-1">Used for verification callbacks and deep
+                                        links.</p>
+                                </div>
+
+                                <div>
+                                    <label
+                                        class="text-xs text-gray-400 uppercase font-bold block mb-1 flex items-center">
+                                        <i class="fas fa-mobile-alt text-cyan-400 mr-2"></i> Number Panel API Key
+                                    </label>
+                                    <div class="relative">
+                                        <input type="password" id="api-number-key"
+                                            class="w-full bg-black/40 border border-white/10 focus:border-blue-500 rounded-lg p-3 transition-colors pr-10">
+                                        <button onclick="togglePasswordVisibility('api-number-key')"
+                                            class="absolute right-3 top-3.5 text-gray-400 hover:text-white transition-colors">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1">API key for SMS/Virtual Number providers.</p>
+                                </div>
+
+                                <div>
+                                    <label
+                                        class="text-xs text-gray-400 uppercase font-bold block mb-1 flex items-center">
+                                        <i class="fas fa-envelope-open text-pink-400 mr-2"></i> Temp Mail API Key
+                                    </label>
+                                    <div class="relative">
+                                        <input type="password" id="api-tempmail-key"
+                                            class="w-full bg-black/40 border border-white/10 focus:border-blue-500 rounded-lg p-3 transition-colors pr-10">
+                                        <button onclick="togglePasswordVisibility('api-tempmail-key')"
+                                            class="absolute right-3 top-3.5 text-gray-400 hover:text-white transition-colors">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1">API key for temporary email service providers.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 border-t border-white/5 pt-6 flex justify-end">
+                            <button onclick="saveApiKeys()"
+                                class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-xl transition-all shadow-lg shadow-blue-500/20 transform hover:scale-[1.02] active:scale-95 flex items-center">
+                                <i class="fas fa-save mr-2"></i> Save API Keys
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
             <!-- 6. CARDS -->
@@ -809,105 +1048,145 @@
                 </div>
             </div>
 
+            <!-- PREMIUM EMAIL SECTION -->
+            <div id="page-premiumemail" class="page">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Add Premium Email Form -->
+                    <div class="glass-card p-6 rounded-2xl">
+                        <h3 class="font-bold mb-4 flex items-center gap-2"><i class="fas fa-envelope text-pink-400"></i>
+                            Add Premium Email</h3>
+                        <div class="space-y-3">
+                            <input type="hidden" id="premiumemail-edit-id">
+                            <div>
+                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Email
+                                    Address</label>
+                                <input id="premiumemail-address" type="email" placeholder="example@gmail.com"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Password / App
+                                    Password</label>
+                                <input id="premiumemail-password" type="password" placeholder="••••••••"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Provider (IMAP
+                                    Server)</label>
+                                <select id="premiumemail-provider"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                                    <option value="gmail">Gmail (imap.gmail.com)</option>
+                                    <option value="yahoo">Yahoo (imap.mail.yahoo.com)</option>
+                                    <option value="outlook">Outlook (outlook.office365.com)</option>
+                                    <option value="custom">Custom</option>
+                                </select>
+                            </div>
+                            <div id="custom-imap-container" class="hidden">
+                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Custom IMAP
+                                    Server</label>
+                                <input id="premiumemail-imap" placeholder="imap.example.com"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                            </div>
+                            <button onclick="savePremiumEmail()"
+                                class="w-full bg-pink-500 hover:bg-pink-600 py-3 rounded-xl font-bold text-white">ADD
+                                EMAIL</button>
+                            <button onclick="clearPremiumEmailForm()"
+                                class="w-full bg-white/5 border border-white/10 py-2 rounded-xl text-sm text-gray-400">Clear
+                                Form</button>
+                        </div>
+                    </div>
+
+                    <!-- Email List & Inbox -->
+                    <div class="glass-card p-6 rounded-2xl">
+                        <h3 class="font-bold mb-4 flex items-center gap-2"><i class="fas fa-inbox text-blue-400"></i>
+                            Premium Emails & Inbox</h3>
+                        <div id="premiumemail-list" class="space-y-3 max-h-96 overflow-y-auto">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- OTP Display Box -->
+                <div class="glass-card p-6 rounded-2xl mt-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold flex items-center gap-2"><i class="fas fa-key text-yellow-400"></i>
+                            Latest OTP / Messages</h3>
+                        <button onclick="refreshPremiumEmailInbox()"
+                            class="bg-blue-500/20 text-blue-400 px-4 py-2 rounded-lg text-sm font-bold">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                    <div id="premiumemail-otp-box"
+                        class="bg-black/30 rounded-xl p-4 border border-white/10 min-h-[150px]">
+                        <div class="text-center text-gray-500 py-8">
+                            <i class="fas fa-envelope-open-text text-4xl mb-3 block"></i>
+                            Select an email and click refresh to view OTP/messages
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BROADCAST PAGE -->
+            <div id="page-broadcast" class="page">
+                <div class="glass-card p-8 rounded-2xl max-w-3xl mx-auto">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="w-12 h-12 bg-pink-500/20 rounded-xl flex items-center justify-center text-pink-400">
+                            <i class="fas fa-bullhorn text-2xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-bold">Advanced Broadcast</h2>
+                            <p class="text-gray-400 text-sm">Send messages to Users, Groups, or Both</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-6">
+                        <!-- TARGET -->
+                        <div>
+                            <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Target Audience</label>
+                            <select id="bc-target"
+                                class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-pink-500 outline-none">
+                                <option value="users">👤 Private Users (Bot)</option>
+                                <option value="groups">📢 Telegram Groups & Channels</option>
+                                <option value="all">🌐 All (Users + Groups)</option>
+                            </select>
+                        </div>
+
+                        <!-- MESSAGE -->
+                        <div>
+                            <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Message Text</label>
+                            <textarea id="bc-message" rows="4" placeholder="Enter your broadcast message..."
+                                class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-pink-500 outline-none"></textarea>
+                        </div>
+
+                        <!-- MEDIA -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Media Type</label>
+                                <select id="bc-media-type" onchange="toggleMediaInput()"
+                                    class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-pink-500 outline-none">
+                                    <option value="none">None (Text Only)</option>
+                                    <option value="photo">📸 Photo</option>
+                                    <option value="video">🎥 Video</option>
+                                </select>
+                            </div>
+                            <div id="bc-media-input" style="display:none;">
+                                <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Media URL</label>
+                                <input id="bc-media-url" type="text" placeholder="https://example.com/image.jpg"
+                                    class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-pink-500 outline-none">
+                            </div>
+                        </div>
+
+                        <!-- BUTTONS -->
+                        <div>
+                            <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Buttons
+                                (Optional)</label>
+                            <textarea id="bc-buttons" rows="3"
+                                placeholder="Button Label | https://link.com&#10;Another Button | https://link2.com"
+                                class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-pink-500 outline-none font-mono text-sm"></textarea>
+                            <p class="text-xs text-gray-500 mt-1">Format: Label | URL (One per line)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
             </main>
-
-        </div>
-
-        <!-- MODALS -->
-        <!-- Create Code Modal -->
-        <div id="modal-createCode" class="modal-overlay">
-            <div class="glass-card modal-body rounded-2xl p-6 relative">
-                <button onclick="closeModal()" class="absolute right-4 top-4 text-gray-400 hover:text-white"><i
-                        class="fas fa-times"></i></button>
-                <h3 class="text-xl font-bold mb-4">Create Promo Code</h3>
-                <div class="space-y-4">
-                    <input type="text" id="code-code" placeholder="Code (e.g. SUMMER2026)"
-                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg">
-                    <input type="number" id="code-amount" placeholder="Amount"
-                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg">
-                    <input type="number" id="code-uses" placeholder="Max Uses"
-                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg">
-                    <button onclick="addCode()"
-                        class="w-full bg-orange-500 text-black font-bold p-3 rounded-lg">Create</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Create Task Modal -->
-        <div id="modal-createTask" class="modal-overlay">
-            <div class="glass-card modal-body rounded-2xl p-6 relative">
-                <button onclick="closeModal()" class="absolute right-4 top-4 text-gray-400 hover:text-white"><i
-                        class="fas fa-times"></i></button>
-                <h3 class="text-xl font-bold mb-4">Create Task</h3>
-                <div class="space-y-4">
-                    <input type="text" id="task-name" placeholder="Task Name"
-                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg">
-                    <input type="number" id="task-reward" placeholder="Reward"
-                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg">
-                    <input type="text" id="task-url" placeholder="URL"
-                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg">
-                    <button onclick="addTask()"
-                        class="w-full bg-orange-500 text-black font-bold p-3 rounded-lg">Create</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Add Card Modal -->
-        <div id="modal-addCard" class="modal-overlay">
-            <div class="glass-card modal-body rounded-2xl p-6 relative">
-                <button onclick="closeModal()" class="absolute right-4 top-4 text-gray-400 hover:text-white"><i
-                        class="fas fa-times"></i></button>
-                <h3 class="text-xl font-bold mb-4">Add Virtual Card</h3>
-                <div class="space-y-4">
-                    <input type="text" id="card-name" placeholder="Card Name (e.g. Visa Gold)"
-                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg">
-                    <input type="number" id="card-price" placeholder="Price ($)"
-                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg">
-                    <select id="card-type"
-                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-gray-400">
-                        <option value="visa">Visa</option>
-                        <option value="mastercard">Mastercard</option>
-                    </select>
-                    <button onclick="addCard()" class="w-full bg-blue-500 text-white font-bold p-3 rounded-lg">Add
-                        Card</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Add VPN Modal -->
-        <div id="modal-addVPN" class="modal-overlay">
-            <div class="glass-card modal-body rounded-2xl p-6 relative">
-                <button onclick="closeModal()" class="absolute right-4 top-4 text-gray-400 hover:text-white"><i
-                        class="fas fa-times"></i></button>
-                <h3 class="text-xl font-bold mb-4">Add VPN Service</h3>
-                <div class="space-y-4">
-                    <input type="text" id="vpn-name" placeholder="Name (e.g. US Premium)"
-                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg">
-                    <input type="text" id="vpn-country" placeholder="Country (e.g. USA)"
-                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg">
-                    <input type="number" id="vpn-price" placeholder="Price ($)"
-                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg">
-                    <button onclick="addVPN()" class="w-full bg-green-500 text-white font-bold p-3 rounded-lg">Add
-                        VPN</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Add App Modal -->
-        <div id="modal-addApp" class="modal-overlay">
-            <div class="glass-card modal-body rounded-2xl p-6 relative">
-                <button onclick="closeModal()" class="absolute right-4 top-4 text-gray-400 hover:text-white"><i
-                        class="fas fa-times"></i></button>
-                <h3 class="text-xl font-bold mb-4">Add App</h3>
-                <div class="space-y-4">
-                    <input type="text" id="app-name" placeholder="App Name"
-                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg">
-                    <input type="text" id="app-desc" placeholder="Description"
-                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg">
-                    <button onclick="addApp()" class="w-full bg-purple-500 text-white font-bold p-3 rounded-lg">Add
-                        App</button>
-                </div>
-            </div>
         </div>
 
         <script>
@@ -925,8 +1204,6 @@
                             document.getElementById('login-overlay').classList.add('hidden');
                             document.getElementById('app-container').classList.remove('hidden');
                             init();
-                            updateDashboard();
-                            setInterval(updateDashboard, 30000);
                         } else {
                             document.getElementById('error-msg').classList.remove('hidden');
                         }
@@ -951,7 +1228,7 @@
                     'apps': 'App Store', 'trading': 'Trading Control',
                     'services': 'Services Management', 'shopmanage': 'Shop Management',
                     'accounts': 'Premium Accounts', 'storage': 'Storage (Drive)',
-                    'groups': 'Groups'
+                    'groups': 'Groups', 'premiumemail': 'Premium Email'
                 };
                 if (titles[p]) document.getElementById('page-title').innerText = titles[p];
                 if (p === 'trading') initTradingAdmin();
@@ -960,24 +1237,16 @@
                 if (p === 'users') loadUsers();
                 if (p === 'accounts') loadAccounts();
                 if (p === 'storage') loadStorageStatus();
+                if (p === 'premiumemail') loadPremiumEmails();
             }
 
-            // DATA MNGT
+            // INIT
             function init() {
-                initChart();
-                loadConfig();
-                renderCodes();
-                loadTasks();
-                loadCards();
-                loadVpn();
-                loadApps();
                 loadAdminStats();
-                loadUsers();
+                initChart();
             }
 
-            // =============================================
-            // REAL STATS
-            // =============================================
+            // STATS
             function loadAdminStats() {
                 fetch('/api/admin/stats')
                     .then(r => r.json())
@@ -1001,14 +1270,40 @@
                     }).catch(() => { });
             }
 
-            // =============================================
-            // USER MANAGEMENT
-            // =============================================
-            let allUsersData = [];
+            // CHART
+            function initChart() {
+                const ctx = document.getElementById('mainChart');
+                if (!ctx) return;
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                        datasets: [{
+                            label: 'Active Users',
+                            data: [65, 78, 90, 81, 86, 95, 88],
+                            borderColor: '#f59e0b',
+                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { beginAtZero: true, grid: { color: 'rgba(255, 255, 255, 0.1)' }, ticks: { color: '#94a3b8' } },
+                            x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                        }
+                    }
+                });
+            }
 
+            // USERS
+            let allUsersData = [];
             function loadUsers() {
                 const tbody = document.getElementById('usersTable');
-                if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-500 py-8"><i class="fas fa-spinner fa-spin mr-2"></i>Loading...</td></tr>';
+                if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-center text-gray-500 py-8">Loading...</td></tr>';
                 fetch('/api/admin/users')
                     .then(r => r.json())
                     .then(data => {
@@ -1017,7 +1312,7 @@
                         renderUsersTable(allUsersData);
                     })
                     .catch(() => {
-                        if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center text-red-400 py-8">Failed to load users</td></tr>';
+                        if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-center text-red-400 py-8">Failed to load</td></tr>';
                     });
             }
 
@@ -1025,31 +1320,26 @@
                 const tbody = document.getElementById('usersTable');
                 if (!tbody) return;
                 if (!users.length) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-500 py-8">No users found</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-gray-500 py-8">No users found</td></tr>';
                     return;
                 }
                 tbody.innerHTML = users.map(u => `
-                <tr>
-                    <td>
-                        <div class="font-bold">${u.firstName || u.username || 'Unknown'}</div>
-                        <div class="text-xs text-gray-400">@${u.username || 'N/A'} · ID: ${u.id}</div>
-                    </td>
-                    <td class="text-yellow-400 font-bold">${(u.tokens || 0).toLocaleString()}</td>
-                    <td class="text-green-400">${(u.Gems || 0).toLocaleString()}</td>
-                    <td>${u.invites || 0}</td>
-                    <td>
-                        ${u.banned
-                        ? '<span class="bg-red-500/20 text-red-400 px-2 py-0.5 rounded text-xs">Banned</span>'
-                        : '<span class="bg-green-500/20 text-green-400 px-2 py-0.5 rounded text-xs">Active</span>'}
-                    </td>
-                    <td>
-                        <div class="flex gap-1">
-                            <button onclick="openEditUser('${u.id}')" class="bg-blue-500/20 text-blue-400 px-2 py-1 rounded text-xs font-bold" title="Edit User"><i class="fas fa-user-edit"></i></button>
-                            <button onclick="toggleBanUser('${u.id}',${!u.banned})" class="bg-${u.banned ? 'green' : 'red'}-500/20 text-${u.banned ? 'green' : 'red'}-400 px-2 py-1 rounded text-xs" title="${u.banned ? 'Unban' : 'Ban'}"><i class="fas fa-${u.banned ? 'check' : 'ban'}"></i></button>
-                            <button onclick="deleteUser('${u.id}')" class="bg-gray-500/20 text-gray-400 px-2 py-1 rounded text-xs" title="Delete"><i class="fas fa-trash"></i></button>
-                        </div>
-                    </td>
-                </tr>`).join('');
+            <tr>
+                <td>
+                    <div class="font-bold">${u.firstName || u.username || 'Unknown'}</div>
+                    <div class="text-xs text-gray-400">@${u.username || 'N/A'} · ID: ${u.id}</div>
+                </td>
+                <td class="text-yellow-400 font-bold">${(u.tokens || 0).toLocaleString()}</td>
+                <td>${u.invites || 0}</td>
+                <td>${u.banned ? '<span class="bg-red-500/20 text-red-400 px-2 py-0.5 rounded text-xs">Banned</span>' : '<span class="bg-green-500/20 text-green-400 px-2 py-0.5 rounded text-xs">Active</span>'}</td>
+                <td>
+                    <div class="flex gap-1">
+                        <button onclick="openEditUser('${u.id}')" class="bg-blue-500/20 text-blue-400 px-2 py-1 rounded text-xs font-bold" title="Edit"><i class="fas fa-user-edit"></i></button>
+                        <button onclick="toggleBanUser('${u.id}',${!u.banned})" class="bg-${u.banned ? 'green' : 'red'}-500/20 text-${u.banned ? 'green' : 'red'}-400 px-2 py-1 rounded text-xs" title="${u.banned ? 'Unban' : 'Ban'}"><i class="fas fa-${u.banned ? 'check' : 'ban'}"></i></button>
+                        <button onclick="deleteUser('${u.id}')" class="bg-gray-500/20 text-gray-400 px-2 py-1 rounded text-xs" title="Delete"><i class="fas fa-trash"></i></button>
+                    </div>
+                </td>
+            </tr>`).join('');
             }
 
             function filterUsers() {
@@ -1065,40 +1355,31 @@
             function openEditUser(userId) {
                 const u = allUsersData.find(user => user.id == userId);
                 if (!u) return;
-
                 document.getElementById('editUserId').value = userId;
                 document.getElementById('editUserName').textContent = (u.firstName || u.username || 'User') + ' (@' + (u.username || 'N/A') + ')';
-                document.getElementById('editUserBalance').value = u.tokens || u.balance_tokens || 0;
-                document.getElementById('editUserGems').value = u.Gems || u.balance_Gems || 0;
+                document.getElementById('editUserBalance').value = u.tokens || 0;
                 document.getElementById('editUserRefs').value = u.referralCount || 0;
                 document.getElementById('editUserVerified').value = u.verified ? 'true' : 'false';
-
                 document.getElementById('editUserModal').style.display = 'flex';
             }
 
             function saveUserChanges() {
                 const userId = document.getElementById('editUserId').value;
                 const balance = document.getElementById('editUserBalance').value;
-                const Gems = document.getElementById('editUserGems').value;
                 const refs = document.getElementById('editUserRefs').value;
                 const verified = document.getElementById('editUserVerified').value === 'true';
 
                 fetch(`/api/admin/users/${userId}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        balance: parseInt(balance),
-                        Gems: parseInt(Gems),
-                        referralCount: parseInt(refs),
-                        verified: verified
-                    })
+                    body: JSON.stringify({ balance: parseInt(balance), referralCount: parseInt(refs), verified: verified })
                 })
                     .then(r => r.json())
                     .then(data => {
                         if (data.success) {
                             document.getElementById('editUserModal').style.display = 'none';
                             loadUsers();
-                            alert('User updated successfully!');
+                            alert('User updated!');
                         } else {
                             alert('Error: ' + data.message);
                         }
@@ -1115,1019 +1396,102 @@
             }
 
             function deleteUser(userId) {
-                if (!confirm('⚠️ Permanently delete this user? This cannot be undone.')) return;
-                fetch(`/api/admin/users/${userId}`, { method: 'DELETE' })
-                    .then(() => loadUsers());
+                if (!confirm('⚠️ Permanently delete this user?')) return;
+                fetch(`/api/admin/users/${userId}`, { method: 'DELETE' }).then(() => loadUsers());
             }
 
-            // =============================================
-            // BROADCAST
-            // =============================================
-            // sendBroadcast() - handled by the advanced broadcast page script below
-            function insertBroadcastTag(tag) {
-                const ta = document.getElementById('bc-message') || document.getElementById('broadcastMsg');
-                if (!ta) return;
-                const start = ta.selectionStart, end = ta.selectionEnd;
-                const selected = ta.value.substring(start, end) || 'text';
-                const replacement = `<${tag}>${selected}</${tag}>`;
-                ta.value = ta.value.substring(0, start) + replacement + ta.value.substring(end);
-                ta.focus();
-            }
-
-            // TRADING ADMIN
-            function initTradingAdmin() {
-                const mode = localStorage.getItem('tradeMode') || 'random';
-                updateTradeModeUI(mode);
-            }
-
-            function setTradeMode(mode) {
-                localStorage.setItem('tradeMode', mode);
-                updateTradeModeUI(mode);
-            }
-
-            function updateTradeModeUI(mode) {
-                ['random', 'win', 'lose'].forEach(m => {
-                    const el = document.getElementById('mode-' + m);
-                    if (!el) return;
-                    el.classList.remove('border-yellow-500', 'border-green-500', 'border-red-500', 'bg-yellow-500/10', 'bg-green-500/10', 'bg-red-500/10');
-                    el.classList.add('border-gray-600', 'bg-gray-800/50');
-                });
-                const el = document.getElementById('mode-' + mode);
-                if (el) {
-                    el.classList.remove('border-gray-600', 'bg-gray-800/50');
-                    if (mode === 'random') el.classList.add('border-yellow-500', 'bg-yellow-500/10');
-                    if (mode === 'win') el.classList.add('border-green-500', 'bg-green-500/10');
-                    if (mode === 'lose') el.classList.add('border-red-500', 'bg-red-500/10');
-                }
-                const display = document.getElementById('currentModeDisplay');
-                if (display) {
-                    const labels = { random: '🎲 RANDOM (50/50)', win: '🏆 ALWAYS WIN', lose: '💀 ALWAYS LOSE' };
-                    const colors = { random: 'text-yellow-400', win: 'text-green-400', lose: 'text-red-400' };
-                    display.textContent = labels[mode];
-                    display.className = 'text-xl font-bold ' + colors[mode];
-                }
-            }
-
-            function savePayout() {
-                const val = document.getElementById('payoutInput')?.value;
-                if (!val || val < 1 || val > 200) { alert('Invalid payout rate!'); return; }
-                localStorage.setItem('tradePayoutRate', val);
-                alert('Payout rate saved: ' + val + '%');
-            }
-
-            // ===== SERVICES MANAGEMENT =====
-            const defaultAdminServices = [
-                { id: 'verify', name: 'Verification', desc: 'Get verified badge', icon: 'fas fa-check-circle', color: '#166534,#15803d', cost: 20, page: 'verify' },
-                { id: 'gemini', name: 'Gemini Card', desc: 'Generate custom cards', imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Google_Gemini_logo.svg/60px-Google_Gemini_logo.svg.png', color: '#1e3a5f,#2563eb', cost: 10, page: 'serviceGenerate' },
-                { id: 'chatgpt', name: 'ChatGPT', desc: 'AI Assistant Access', icon: 'fas fa-robot', color: '#7c3f00,#d97706', cost: 15, page: 'serviceGenerate' },
-                { id: 'number', name: 'Number Service', desc: 'Virtual phone numbers', icon: 'fas fa-phone', color: '#4a044e,#9333ea', cost: 15, page: 'numberService' },
-                { id: 'mail', name: 'Mail Service', desc: 'Temporary email inbox', icon: 'fas fa-envelope', color: '#7f1d1d,#dc2626', cost: 10, page: 'mailService' },
-            ];
-
-            function renderAdminServices() {
-                fetch('/api/admin/services').then(r => r.json()).then(data => {
-                    const list = document.getElementById('admin-services-list');
-                    if (!list) return;
-                    const services = data.services || [];
-                    if (!services.length) { list.innerHTML = '<p class="text-gray-500 text-sm">No services yet.</p>'; return; }
-                    list.innerHTML = services.map(s => `
-                    <div class="flex items-center gap-3 bg-black/20 rounded-xl p-3 border border-white/5">
-                        <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,${s.color || '#1e3a5f,#2563eb'});display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">
-                            ${s.imageUrl ? `<img src="${s.imageUrl}" style="width:26px;height:26px;object-fit:contain;">` : `<i class="${s.icon || 'fas fa-cog'}" style="color:#fff;font-size:16px;"></i>`}
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <div class="font-bold text-sm truncate">${s.name}</div>
-                            <div class="text-xs text-gray-400">${s.cost} TC &bull; ${s.page}</div>
-                        </div>
-                        <button onclick="editService('${s.id}')" class="text-yellow-400 hover:text-yellow-300 px-2"><i class="fas fa-edit"></i></button>
-                        <button onclick="deleteService('${s.id}')" class="text-red-400 hover:text-red-300 px-2"><i class="fas fa-trash"></i></button>
-                    </div>`).join('');
-                });
-            }
-
-            function saveService() {
-                const id = document.getElementById('svc-id').value.trim().replace(/\s/g, '');
-                const name = document.getElementById('svc-name').value.trim();
-                if (!id || !name) { alert('ID and Name are required!'); return; }
-
-                const item = {
-                    id, name,
-                    desc: document.getElementById('svc-desc').value.trim(),
-                    imageUrl: document.getElementById('svc-img').value.trim(),
-                    icon: document.getElementById('svc-icon').value.trim() || 'fas fa-cog',
-                    cost: parseInt(document.getElementById('svc-cost').value) || 10,
-                    color: document.getElementById('svc-color').value.trim() || '#1e3a5f,#2563eb',
-                    page: document.getElementById('svc-page').value
-                };
-
-                fetch('/api/admin/services', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(item)
-                }).then(r => r.json()).then(d => {
-                    if (d.success) {
-                        clearServiceForm();
-                        renderAdminServices();
-                        alert('Service saved!');
-                    } else alert('Failed to save service');
-                });
-            }
-
-            function editService(id) {
-                fetch('/api/admin/services').then(r => r.json()).then(data => {
-                    const s = (data.services || []).find(x => x.id === id);
-                    if (!s) return;
-                    document.getElementById('svc-edit-id').value = s.id;
-                    document.getElementById('svc-id').value = s.id;
-                    document.getElementById('svc-name').value = s.name;
-                    document.getElementById('svc-desc').value = s.desc || '';
-                    document.getElementById('svc-img').value = s.imageUrl || '';
-                    document.getElementById('svc-icon').value = s.icon || '';
-                    document.getElementById('svc-cost').value = s.cost || 10;
-                    document.getElementById('svc-color').value = s.color || '';
-                    document.getElementById('svc-page').value = s.page || 'serviceGenerate';
-                });
-            }
-
-            function deleteService(id) {
-                if (!confirm('Delete this service?')) return;
-                fetch('/api/admin/services/' + id, { method: 'DELETE' })
-                    .then(r => r.json())
-                    .then(d => {
-                        if (d.success) renderAdminServices();
-                        else alert('Failed to delete service');
-                    });
-            }
-
-            function clearServiceForm() {
-                ['svc-edit-id', 'svc-id', 'svc-name', 'svc-desc', 'svc-img', 'svc-icon', 'svc-cost', 'svc-color'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-            }
-
-            // ===== SHOP MANAGEMENT =====
-            const defaultAdminShop = [
-                { id: 'gemini1y', name: 'GEMINI 1 YEAR', price: '$3.00', imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Google_Gemini_logo.svg/200px-Google_Gemini_logo.svg.png', bgColor: '#0d0d0d', btnColor: '#f59e0b', page: 'deposit' },
-                { id: 'chatgptplus', name: 'CHATGPT PLUS', price: '$5.00', imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/ChatGPT_logo.svg/200px-ChatGPT_logo.svg.png', bgColor: '#0d0d0d', btnColor: '#22c55e', page: 'deposit' },
-            ];
-
-            function renderAdminShopItems() {
-                fetch('/api/admin/shop').then(r => r.json()).then(data => {
-                    const list = document.getElementById('admin-shop-list');
-                    if (!list) return;
-                    const items = data.shopItems || [];
-                    if (!items.length) { list.innerHTML = '<p class="text-gray-500 text-sm">No items yet.</p>'; return; }
-                    list.innerHTML = items.map(item => `
-                    <div class="flex items-center gap-3 bg-black/20 rounded-xl p-3 border border-white/5">
-                        <div style="width:40px;height:40px;border-radius:10px;background:${item.bgColor || '#0d0d0d'};display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;border:1px solid rgba(255,255,255,0.1);">
-                            ${item.imageUrl ? `<img src="${item.imageUrl}" style="width:30px;height:30px;object-fit:contain;">` : `<i class="fas fa-box" style="color:#f59e0b;"></i>`}
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <div class="font-bold text-sm truncate">${item.name}</div>
-                            <div class="text-xs text-green-400 font-bold">${item.price}</div>
-                        </div>
-                        <button onclick="editShopItem('${item.id}')" class="text-yellow-400 hover:text-yellow-300 px-2"><i class="fas fa-edit"></i></button>
-                        <button onclick="deleteShopItem('${item.id}')" class="text-red-400 hover:text-red-300 px-2"><i class="fas fa-trash"></i></button>
-                    </div>`).join('');
-                });
-            }
-
-            function saveShopItem() {
-                const id = document.getElementById('shop-id').value.trim().replace(/\s/g, '');
-                const name = document.getElementById('shop-name').value.trim();
-                if (!id || !name) { alert('ID and Name are required!'); return; }
-
-                const item = {
-                    id, name,
-                    price: document.getElementById('shop-price').value.trim() || '$0.00',
-                    imageUrl: document.getElementById('shop-img').value.trim(),
-                    bgColor: document.getElementById('shop-bg').value.trim() || '#0d0d0d',
-                    btnColor: document.getElementById('shop-btn').value.trim() || '#f59e0b',
-                    page: 'deposit'
-                };
-
-                fetch('/api/admin/shop', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(item)
-                }).then(r => r.json()).then(d => {
-                    if (d.success) {
-                        clearShopForm();
-                        renderAdminShopItems();
-                        alert('Shop item saved!');
-                    } else alert('Failed to save shop item');
-                });
-            }
-
-            function editShopItem(id) {
-                fetch('/api/admin/shop').then(r => r.json()).then(data => {
-                    const s = (data.shopItems || []).find(x => x.id === id);
-                    if (!s) return;
-                    document.getElementById('shop-edit-id').value = s.id;
-                    document.getElementById('shop-id').value = s.id;
-                    document.getElementById('shop-name').value = s.name;
-                    document.getElementById('shop-price').value = s.price || '';
-                    document.getElementById('shop-img').value = s.imageUrl || '';
-                    document.getElementById('shop-bg').value = s.bgColor || '';
-                    document.getElementById('shop-btn').value = s.btnColor || '';
-                });
-            }
-
-            function deleteShopItem(id) {
-                if (!confirm('Delete this item?')) return;
-                fetch('/api/admin/shop/' + id, { method: 'DELETE' }).then(r => r.json()).then(d => {
-                    if (d.success) renderAdminShopItems();
-                    else alert('Failed to delete item');
-                });
-            }
-
-            function clearShopForm() {
-                ['shop-edit-id', 'shop-id', 'shop-name', 'shop-price', 'shop-img', 'shop-bg', 'shop-btn'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-            }
-
-
-            function loadConfig() {
-                fetch('/api/admin/settings')
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.settings) {
-                            const s = data.settings;
-                            const adm = data.adminSettings || {};
-                            if (document.getElementById('conf-daily')) document.getElementById('conf-daily').value = s.dailyBonus || 100;
-                            if (document.getElementById('conf-invite')) document.getElementById('conf-invite').value = s.refBonus || 50;
-                            if (document.getElementById('conf-welcome')) document.getElementById('conf-welcome').value = adm.welcomeCredits || 500;
-                            if (document.getElementById('conf-support')) document.getElementById('conf-support').value = adm.supportCost || 5;
-                            if (document.getElementById('conf-gmail')) document.getElementById('conf-gmail').value = adm.gmailCost || 10;
-
-                            // Gems
-                            if (adm.gems) {
-                                if (document.getElementById('conf-gemprice')) document.getElementById('conf-gemprice').value = adm.gems.currentPrice || 100;
-                            }
-                        }
-                    });
-            }
-
-            function saveConfig() {
-                const daily = document.getElementById('conf-daily').value;
-                const invite = document.getElementById('conf-invite').value;
-                const welcome = document.getElementById('conf-welcome').value;
-                const support = document.getElementById('conf-support').value;
-                const gmail = document.getElementById('conf-gmail').value;
-
-                fetch('/api/admin/settings', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        dailyBonus: daily,
-                        refBonus: invite,
-                        welcomeBonus: welcome,
-                        supportCost: support,
-                        gmailCost: gmail
-                    })
-                })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success) alert('System Settings Saved Successfully!');
-                        else alert('Failed to save: ' + (data.message || 'Unknown error'));
-                    });
-            }
-
-            function saveGems() {
-                const price = document.getElementById('conf-gemprice').value;
-                const reward = document.getElementById('conf-adreward').value;
-
-                if (!price) return alert('Enter gem price');
-
-                fetch('/api/admin/settings', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        gems: {
-                            price: parseFloat(price),
-                            enabled: true
-                        }
-                    })
-                })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success) alert('Gems Configuration Saved!');
-                        else alert('Error: ' + data.message);
-                    });
-            }
-
-            // CODES (SERVER CONNECTED)
+            // CODES
             function renderCodes() {
-                fetch('/api/admin/codes')
-                    .then(res => res.json())
-                    .then(data => {
-                        const tbody = document.getElementById('codesTable');
-                        tbody.innerHTML = data.codes.map((c, i) => `<tr><td>${c.code}</td><td>${c.amount}</td><td>${c.maxUses || 'Unlimited'}</td><td><button onclick="removeCode('${c.code}')" class="text-red-400 text-xs">Del</button></td></tr>`).join('');
-                    });
+                fetch('/api/admin/codes').then(r => r.json()).then(data => {
+                    const tbody = document.getElementById('codesTable');
+                    if (!tbody) return;
+                    tbody.innerHTML = (data.codes || []).map(c => `
+                <tr>
+                    <td class="font-mono text-orange-400">${c.code}</td>
+                    <td>${c.amount}</td>
+                    <td>${c.used}/${c.maxUses}</td>
+                    <td><button onclick="deleteCode('${c.code}')" class="text-red-400 hover:text-red-300"><i class="fas fa-trash"></i></button></td>
+                </tr>`).join('') || '<tr><td colspan="4" class="text-center text-gray-500 py-4">No codes</td></tr>';
+                });
             }
+
             function addCode() {
-                const code = document.getElementById('code-code').value;
-                const amount = document.getElementById('code-amount').value;
-                const maxUses = document.getElementById('code-uses').value;
+                const code = document.getElementById('code-code').value.trim();
+                const amount = parseInt(document.getElementById('code-amount').value) || 0;
+                const maxUses = parseInt(document.getElementById('code-uses').value) || 1;
+                if (!code || !amount) return alert('Code and amount required');
 
                 fetch('/api/admin/codes', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ code, amount, maxUses })
-                }).then(() => {
-                    renderCodes();
-                    closeModal();
-                });
+                })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            closeModal();
+                            renderCodes();
+                        } else {
+                            alert(data.message || 'Failed to create code');
+                        }
+                    });
             }
-            function removeCode(code) {
-                fetch('/api/admin/codes/' + code, { method: 'DELETE' })
-                    .then(() => renderCodes());
+
+            function deleteCode(code) {
+                if (!confirm('Delete promo code ' + code + '?')) return;
+                fetch('/api/admin/codes/' + code, { method: 'DELETE' }).then(() => renderCodes());
             }
 
             // TASKS
             function loadTasks() {
-                const tbody = document.getElementById('tasksTable');
-                if (!tbody) return;
-                fetch('/api/admin/tasks')
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success) {
-                            tbody.innerHTML = data.tasks.map((t, i) => `<tr><td>${t.name}</td><td>${t.reward}</td><td><a href="${t.url}" target="_blank" class="text-blue-400 underline">Link</a></td><td><button onclick="deleteTask('${t.id}')" class="text-red-400 text-xs">Del</button></td></tr>`).join('');
-                        }
-                    });
+                fetch('/api/admin/tasks').then(r => r.json()).then(data => {
+                    const tbody = document.getElementById('tasksTable');
+                    if (!tbody) return;
+                    tbody.innerHTML = (data.tasks || []).map(t => `
+                <tr>
+                    <td>${t.name}</td>
+                    <td>${t.reward}</td>
+                    <td><button onclick="deleteTask(${t.id})" class="text-red-400 hover:text-red-300"><i class="fas fa-trash"></i></button></td>
+                </tr>`).join('') || '<tr><td colspan="3" class="text-center text-gray-500 py-4">No tasks</td></tr>';
+                });
             }
+
             function addTask() {
-                const name = document.getElementById('task-name').value;
-                const reward = document.getElementById('task-reward').value;
-                const url = document.getElementById('task-url').value;
-                if (!name) return;
+                const name = document.getElementById('task-name').value.trim();
+                const reward = parseInt(document.getElementById('task-reward').value) || 0;
+                const url = document.getElementById('task-url').value.trim();
+                if (!name || !reward) return alert('Name and reward required');
+
                 fetch('/api/admin/tasks', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, reward, url })
-                }).then(() => {
-                    loadTasks();
-                    closeModal();
-                });
-            }
-            function deleteTask(id) {
-                if (!confirm('Delete this task?')) return;
-                fetch('/api/admin/tasks/' + id, { method: 'DELETE' })
-                    .then(() => loadTasks());
-            }
-
-            // CARDS
-            function loadCards() {
-                const grid = document.getElementById('cardsGrid');
-                if (!grid) return;
-                fetch('/api/admin/cards')
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success) {
-                            grid.innerHTML = data.cards.map((c, i) => `
-                                <div class="glass-card p-4 rounded-xl relative">
-                                    <div class="absolute right-2 top-2 flex gap-2">
-                                        <button onclick="editCard('${c.id}', '${c.name.replace(/'/g, "\\'")}', ${c.price})" class="text-blue-400 text-xs"><i class="fas fa-edit"></i></button>
-                                        <button onclick="deleteCard('${c.id}')" class="text-red-400 text-xs"><i class="fas fa-trash"></i></button>
-                                    </div>
-                                    <div class="flex items-center gap-3 mb-2">
-                                        <div class="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center text-blue-400"><i class="fas fa-credit-card"></i></div>
-                                        <div><h4 class="font-bold text-sm">${c.name}</h4><div class="text-xs text-gray-400">${c.count} items</div></div>
-                                    </div>
-                                    <div class="text-xl font-bold mt-2">${c.price} Cr</div>
-                                </div>
-                            `).join('');
-                        }
-                    });
-            }
-            function addCard() {
-                const name = document.getElementById('card-name').value;
-                const price = document.getElementById('card-price').value;
-                const oldKeyEl = document.getElementById('card-old-key');
-                const oldKey = oldKeyEl ? oldKeyEl.value : '';
-                if (!name) return;
-                fetch('/api/admin/cards', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, price, oldKey })
-                }).then(() => {
-                    loadCards();
-                    closeModal();
-                    if (oldKeyEl) oldKeyEl.remove();
-                    document.getElementById('card-name').value = '';
-                    document.getElementById('card-price').value = '';
-                });
-            }
-            function editCard(key, name, price) {
-                document.getElementById('card-name').value = name;
-                document.getElementById('card-price').value = price;
-                let oldKeyEl = document.getElementById('card-old-key');
-                if (!oldKeyEl) {
-                    oldKeyEl = document.createElement('input');
-                    oldKeyEl.type = 'hidden';
-                    oldKeyEl.id = 'card-old-key';
-                    document.getElementById('addCardModal').querySelector('.modal-body').appendChild(oldKeyEl);
-                }
-                oldKeyEl.value = key;
-                openModal('addCardModal');
-            }
-            function deleteCard(key) {
-                if (!confirm('Delete this card service?')) return;
-                fetch('/api/admin/cards/' + key, { method: 'DELETE' })
-                    .then(() => loadCards());
-            }
-
-            // VPN
-            function loadVpn() {
-                const grid = document.getElementById('vpnGrid');
-                if (!grid) return;
-                fetch('/api/admin/vpn')
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success) {
-                            grid.innerHTML = data.vpns.map((v, i) => `
-                                <div class="glass-card p-4 rounded-xl relative">
-                                    <div class="absolute right-2 top-2 flex gap-2">
-                                        <button onclick="editVpn('${v.id}', '${v.name.replace(/'/g, "\\'")}', ${v.price})" class="text-blue-400 text-xs"><i class="fas fa-edit"></i></button>
-                                        <button onclick="deleteVpn('${v.id}')" class="text-red-400 text-xs"><i class="fas fa-trash"></i></button>
-                                    </div>
-                                    <div class="flex items-center gap-3 mb-2">
-                                        <div class="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center text-green-400"><i class="fas fa-shield-alt"></i></div>
-                                        <div><h4 class="font-bold text-sm">${v.name}</h4><div class="text-xs text-gray-400">${v.count} accounts</div></div>
-                                    </div>
-                                    <div class="text-xl font-bold mt-2">${v.price} Cr</div>
-                                </div>
-                            `).join('');
-                        }
-                    });
-            }
-            function addVPN() {
-                const name = document.getElementById('vpn-name').value;
-                const price = document.getElementById('vpn-price').value;
-                const oldKeyEl = document.getElementById('vpn-old-key');
-                const oldKey = oldKeyEl ? oldKeyEl.value : '';
-                if (!name) return;
-                fetch('/api/admin/vpn', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, price, oldKey })
-                }).then(() => {
-                    loadVpn();
-                    closeModal();
-                    if (oldKeyEl) oldKeyEl.remove();
-                    document.getElementById('vpn-name').value = '';
-                    document.getElementById('vpn-price').value = '';
-                });
-            }
-            function editVpn(key, name, price) {
-                document.getElementById('vpn-name').value = name;
-                document.getElementById('vpn-price').value = price;
-                let oldKeyEl = document.getElementById('vpn-old-key');
-                if (!oldKeyEl) {
-                    oldKeyEl = document.createElement('input');
-                    oldKeyEl.type = 'hidden';
-                    oldKeyEl.id = 'vpn-old-key';
-                    document.getElementById('addVPNModal').querySelector('.modal-body').appendChild(oldKeyEl);
-                }
-                oldKeyEl.value = key;
-                openModal('addVPNModal');
-            }
-            function deleteVpn(key) {
-                if (!confirm('Delete this VPN service?')) return;
-                fetch('/api/admin/vpn/' + key, { method: 'DELETE' })
-                    .then(() => loadVpn());
-            }
-
-            // APPS
-            function loadApps() {
-                const grid = document.getElementById('appsGrid');
-                if (!grid) return;
-                fetch('/api/admin/apps')
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success) {
-                            grid.innerHTML = data.apps.map((a, i) => `
-                                <div class="glass-card p-4 rounded-xl relative text-center">
-                                    <div class="absolute right-2 top-2 flex gap-2">
-                                        <button onclick="editApp('${a.id}', '${a.name.replace(/'/g, "\\'")}', '${a.link}', ${a.price})" class="text-blue-400 text-xs"><i class="fas fa-edit"></i></button>
-                                        <button onclick="deleteApp('${a.id}')" class="text-red-400 text-xs"><i class="fas fa-trash"></i></button>
-                                    </div>
-                                    <div class="w-12 h-12 bg-purple-500/20 rounded-xl mx-auto flex items-center justify-center text-purple-400 mb-2"><i class="fas fa-mobile-alt"></i></div>
-                                    <h4 class="font-bold text-sm">${a.name}</h4>
-                                    <div class="text-xs text-green-400">${a.price} Cr</div>
-                                </div>
-                            `).join('');
-                        }
-                    });
-            }
-            function addApp() {
-                const name = document.getElementById('app-name').value;
-                const desc = document.getElementById('app-desc').value;
-                const oldKeyEl = document.getElementById('app-old-key');
-                const id = oldKeyEl ? oldKeyEl.value : '';
-                if (!name) return;
-                fetch('/api/admin/apps', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, link: desc, price: 0, id }) // using desc as link for now
-                }).then(() => {
-                    loadApps();
-                    closeModal();
-                    if (oldKeyEl) oldKeyEl.remove();
-                    document.getElementById('app-name').value = '';
-                    document.getElementById('app-desc').value = '';
-                });
-            }
-            function editApp(id, name, link, price) {
-                document.getElementById('app-name').value = name;
-                document.getElementById('app-desc').value = link;
-                let oldKeyEl = document.getElementById('app-old-key');
-                if (!oldKeyEl) {
-                    oldKeyEl = document.createElement('input');
-                    oldKeyEl.type = 'hidden';
-                    oldKeyEl.id = 'app-old-key';
-                    document.getElementById('addAppModal').querySelector('.modal-body').appendChild(oldKeyEl);
-                }
-                oldKeyEl.value = id;
-                openModal('addAppModal');
-            }
-            function deleteApp(id) {
-                if (!confirm('Delete this app?')) return;
-                fetch('/api/admin/apps/' + id, { method: 'DELETE' })
-                    .then(() => loadApps());
-            }
-
-            // GENERIC REMOVE
-            function removeItem(key, index, callbackName) {
-                const items = JSON.parse(localStorage.getItem(key) || '[]');
-                items.splice(index, 1);
-                localStorage.setItem(key, JSON.stringify(items));
-                window[callbackName]();
-            }
-
-            // MODALS
-            function showModal(id) {
-                document.getElementById('modal-' + id).style.display = 'flex';
-            }
-            function closeModal() {
-                document.querySelectorAll('.modal-overlay').forEach(el => el.style.display = 'none');
-            }
-
-            // CHART
-            function initChart() {
-                const ctx = document.getElementById('mainChart').getContext('2d');
-                new Chart(ctx, { type: 'line', data: { labels: ['M', 'T', 'W', 'T', 'F', 'S', 'S'], datasets: [{ label: 'Users', data: [150, 200, 180, 220, 250, 300, 320], borderColor: '#f59e0b', tension: 0.4 }] }, options: { plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: { color: 'rgba(255,255,255,0.05)' } } } } });
-            }
-
-            document.getElementById("password")?.addEventListener("keyup", function (event) {
-                if (event.keyCode === 13) login();
-            });
-            // UPLOAD HANDLER
-            function uploadAdminImage(input, targetId) {
-                const file = input.files[0];
-                if (!file) return;
-
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    const base64 = e.target.result;
-                    const btn = input.parentElement;
-                    const icon = btn.querySelector('i');
-                    const originalIcon = icon.className;
-                    icon.className = 'fas fa-spinner fa-spin text-yellow-400';
-
-                    fetch('/api/admin/upload', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ image: base64, name: file.name })
-                    })
-                        .then(r => r.json())
-                        .then(data => {
-                            if (data.success) {
-                                document.getElementById(targetId).value = data.url;
-                                icon.className = 'fas fa-check text-green-400';
-                                setTimeout(() => icon.className = originalIcon, 2000);
-                            } else {
-                                alert('Upload failed: ' + data.message);
-                                icon.className = 'fas fa-times text-red-400';
-                            }
-                        })
-                        .catch(e => {
-                            console.error(e);
-                            alert('Upload error');
-                            icon.className = 'fas fa-times text-red-400';
-                        });
-                };
-                reader.readAsDataURL(file);
-            }
-
-            // DASHBOARD UPDATE LOGIC
-            function updateDashboard() {
-                fetch('/api/admin/stats')
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.success) {
-                            const s = data.stats;
-                            setText('dash-total-users', s.totalUsers);
-                            setText('dash-active', s.activeUsers);
-                            setText('dash-offline', s.offlineUsers);
-                            setText('dash-groups', s.groups);
-                            setText('dash-revenue', s.revenue.toLocaleString());
-                        }
-                    });
-            }
-            function setText(id, txt) {
-                const el = document.getElementById(id);
-                if (el) el.innerText = txt;
-            }
-            function sendBroadcast() {
-                const msg = document.getElementById('bc-message').value;
-                const target = document.getElementById('bc-target').value;
-                const mediaType = document.getElementById('bc-media-type').value;
-                const mediaUrl = document.getElementById('bc-media-url').value;
-                const btnRaw = document.getElementById('bc-buttons').value;
-
-                if (!msg && !mediaUrl) { alert('Enter message or media URL'); return; }
-
-                const statusEl = document.getElementById('bc-status');
-                statusEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
-                statusEl.className = 'mt-4 text-yellow-400';
-
-                // Parse buttons
-                let buttons = [];
-                if (btnRaw) {
-                    buttons = btnRaw.split('\n').map(line => {
-                        const parts = line.split('|');
-                        if (parts.length === 2) return { text: parts[0].trim(), url: parts[1].trim() };
-                        return null;
-                    }).filter(b => b);
-                }
-
-                fetch('/api/admin/broadcast', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        message: msg,
-                        target: target,
-                        mediaType: mediaType,
-                        mediaUrl: mediaUrl,
-                        buttons: buttons
-                    })
                 })
                     .then(r => r.json())
-                    .then(res => {
-                        if (res.success) {
-                            statusEl.innerHTML = `✅ Sent: ${res.sent} | Failed: ${res.failed} | Total: ${res.total}`;
-                            statusEl.className = 'mt-4 text-green-400 font-bold';
-                            setTimeout(() => statusEl.innerHTML = '', 5000);
+                    .then(data => {
+                        if (data.success) {
+                            closeModal();
+                            loadTasks();
                         } else {
-                            statusEl.innerHTML = '❌ Error: ' + res.message;
-                            statusEl.className = 'mt-4 text-red-400';
+                            alert(data.message || 'Failed to create task');
                         }
-                    })
-                    .catch(e => {
-                        statusEl.innerHTML = '❌ Network Error';
-                        statusEl.className = 'mt-4 text-red-400';
                     });
             }
 
-            function toggleMediaInput() {
-                const type = document.getElementById('bc-media-type').value;
-                const input = document.getElementById('bc-media-input');
-                if (type === 'none') input.style.display = 'none';
-                else input.style.display = 'block';
+            function deleteTask(id) {
+                if (!confirm('Delete task?')) return;
+                fetch('/api/admin/tasks/' + id, { method: 'DELETE' }).then(() => loadTasks());
+            }
+
+            // MODAL
+            function showModal(type) {
+                document.getElementById('modal-' + type).style.display = 'flex';
+            }
+
+            function closeModal() {
+                document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
             }
         </script>
-
-        <!-- BROADCAST PAGE -->
-        <div id="page-broadcast" class="page">
-            <div class="glass-card p-8 rounded-2xl max-w-3xl mx-auto">
-                <div class="flex items-center gap-4 mb-6">
-                    <div class="w-12 h-12 bg-pink-500/20 rounded-xl flex items-center justify-center text-pink-400">
-                        <i class="fas fa-bullhorn text-2xl"></i>
-                    </div>
-                    <div>
-                        <h2 class="text-2xl font-bold">Advanced Broadcast</h2>
-                        <p class="text-gray-400 text-sm">Send messages to Users, Groups, or Both</p>
-                    </div>
-                </div>
-
-                <div class="space-y-6">
-                    <!-- TARGET -->
-                    <div>
-                        <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Target Audience</label>
-                        <select id="bc-target"
-                            class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-pink-500 outline-none">
-                            <option value="users">👤 Private Users (Bot)</option>
-                            <option value="groups">📢 Telegram Groups & Channels</option>
-                            <option value="all">🌐 All (Users + Groups)</option>
-                        </select>
-                    </div>
-
-                    <!-- MESSAGE -->
-                    <div>
-                        <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Message Text</label>
-                        <textarea id="bc-message" rows="4" placeholder="Enter your broadcast message..."
-                            class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-pink-500 outline-none"></textarea>
-                    </div>
-
-                    <!-- MEDIA -->
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Media Type</label>
-                            <select id="bc-media-type" onchange="toggleMediaInput()"
-                                class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-pink-500 outline-none">
-                                <option value="none">None (Text Only)</option>
-                                <option value="photo">📸 Photo</option>
-                                <option value="video">🎥 Video</option>
-                            </select>
-                        </div>
-                        <div id="bc-media-input" style="display:none;">
-                            <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Media URL</label>
-                            <input id="bc-media-url" type="text" placeholder="https://example.com/image.jpg"
-                                class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-pink-500 outline-none">
-                        </div>
-                    </div>
-
-                    <!-- BUTTONS -->
-                    <div>
-                        <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Buttons (Optional)</label>
-                        <textarea id="bc-buttons" rows="3"
-                            placeholder="Button Label | https://link.com&#10;Another Button | https://link2.com"
-                            class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-pink-500 outline-none font-mono text-sm"></textarea>
-                        <p class="text-xs text-gray-500 mt-1">Format: Label | URL (One per line)</p>
-                    </div>
-
-                    <!-- SEND BUTTON -->
-                    <button onclick="sendBroadcast()"
-                        class="w-full bg-gradient-to-r from-pink-500 to-rose-600 py-4 rounded-xl font-bold text-white shadow-lg shadow-pink-500/20 hover:shadow-pink-500/40 transition-all transform hover:scale-[1.02]">
-                        <i class="fas fa-paper-plane mr-2"></i> SEND BROADCAST
-                    </button>
-
-                    <!-- STATUS -->
-                    <div id="bc-status" class="text-center"></div>
-                </div>
-            </div>
-        </div>
-        <!-- ACCOUNTS PAGE -->
-        <div id="page-accounts" class="page">
-            <div class="glass-card p-6 rounded-2xl">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="font-bold">Premium Accounts Inventory</h3>
-                    <button onclick="openAddAccountModal()"
-                        class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl font-bold transition-all shadow-lg shadow-blue-500/20">
-                        <i class="fas fa-plus mr-2"></i> NEW ACCOUNT
-                    </button>
-                </div>
-
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left">
-                        <thead class="text-xs text-gray-500 uppercase border-b border-white/5">
-                            <tr>
-                                <th class="px-4 py-3">Type</th>
-                                <th class="px-4 py-3">Email / Login</th>
-                                <th class="px-4 py-3">Price</th>
-                                <th class="px-4 py-3">Status</th>
-                                <th class="px-4 py-3">Added</th>
-                                <th class="px-4 py-3 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="accountsTable" class="text-sm divide-y divide-white/5">
-                            <tr>
-                                <td colspan="6" class="text-center py-4 text-gray-500">Loading inventory...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- ADD ACCOUNT MODAL -->
-            <div id="addAccountModal" class="modal-overlay">
-                <div class="glass-card p-6 rounded-2xl w-full max-w-md mx-4 relative">
-                    <button onclick="closeAddAccountModal()"
-                        class="absolute top-4 right-4 text-gray-400 hover:text-white"><i
-                            class="fas fa-times"></i></button>
-                    <h3 class="text-xl font-bold mb-6">Add Premium Account</h3>
-
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-xs uppercase text-gray-500 font-bold mb-1">Account Type</label>
-                            <select id="accType"
-                                class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-blue-500 outline-none">
-                                <option value="netflix">Netflix Premium</option>
-                                <option value="spotify">Spotify Premium</option>
-                                <option value="prime">Amazon Prime</option>
-                                <option value="crunchyroll">Crunchyroll</option>
-                                <option value="nordvpn">NordVPN</option>
-                                <option value="expressvpn">ExpressVPN</option>
-                                <option value="chatgpt">ChatGPT Plus</option>
-                                <option value="other">Other</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs uppercase text-gray-500 font-bold mb-1">Email / Username</label>
-                            <input type="text" id="accEmail"
-                                class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-blue-500 outline-none"
-                                placeholder="user@example.com">
-                        </div>
-
-                        <div>
-                            <label class="block text-xs uppercase text-gray-500 font-bold mb-1">Password</label>
-                            <input type="text" id="accPass"
-                                class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-blue-500 outline-none"
-                                placeholder="Secret123">
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs uppercase text-gray-500 font-bold mb-1">Price
-                                    (Tokens)</label>
-                                <input type="number" id="accPrice"
-                                    class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-blue-500 outline-none"
-                                    placeholder="100" value="100">
-                            </div>
-                            <div>
-                                <label class="block text-xs uppercase text-gray-500 font-bold mb-1">Instructions</label>
-                                <input type="text" id="accInstr"
-                                    class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-blue-500 outline-none"
-                                    placeholder="Optional notes">
-                            </div>
-                        </div>
-
-                        <button onclick="submitAccount()"
-                            class="w-full gold-gradient py-3 rounded-xl font-bold text-black mt-2 hover:shadow-lg shadow-orange-500/20 transition-all">ADD
-                            TO INVENTORY</button>
-                    </div>
-                </div>
-            </div>
-
-            <script>
-                // Account Management Logic
-                function loadAccounts() {
-                    fetch('/api/admin/accounts')
-                        .then(r => r.json())
-                        .then(data => {
-                            const tbody = document.getElementById('accountsTable');
-                            tbody.innerHTML = '';
-                            if (!data.accounts || data.accounts.length === 0) {
-                                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-gray-500">No accounts in inventory</td></tr>';
-                                return;
-                            }
-
-                            data.accounts.reverse().forEach(acc => {
-                                const statusBadge = acc.sold
-                                    ? '<span class="px-2 py-1 rounded bg-red-500/10 text-red-500 text-xs font-bold border border-red-500/20">SOLD</span>'
-                                    : '<span class="px-2 py-1 rounded bg-green-500/10 text-green-500 text-xs font-bold border border-green-500/20">AVAILABLE</span>';
-
-                                const date = new Date(acc.addedAt).toLocaleDateString();
-
-                                const row = `
-                                        <tr class="hover:bg-white/5 transition-colors">
-                                            <td class="px-4 py-3 font-bold capitalize text-white">${acc.type}</td>
-                                            <td class="px-4 py-3 text-gray-300 font-mono text-xs">${acc.email}</td>
-                                            <td class="px-4 py-3 text-yellow-500 font-bold">${acc.price} 🪙</td>
-                                            <td class="px-4 py-3">${statusBadge}</td>
-                                            <td class="px-4 py-3 text-gray-500 text-xs">${date}</td>
-                                            <td class="px-4 py-3 text-right">
-                                                <button onclick="editAccount('${acc.id}', '${acc.type}', '${acc.email.replace(/'/g, "\\'")}', '${acc.password.replace(/'/g, "\\'")}', ${acc.price}, '${(acc.instructions || '').replace(/'/g, "\\'")}')" class="text-blue-400 hover:text-blue-300 p-2 hover:bg-blue-500/10 rounded-lg transition-all mr-1" title="Edit">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                                <button onclick="deleteAccount('${acc.id}')" class="text-red-400 hover:text-red-300 p-2 hover:bg-red-500/10 rounded-lg transition-all" title="Delete">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    `;
-                                tbody.innerHTML += row;
-                            });
-                        });
-                }
-
-                function openAddAccountModal() {
-                    document.getElementById('addAccountModal').style.display = 'flex';
-                }
-                function closeAddAccountModal() {
-                    document.getElementById('addAccountModal').style.display = 'none';
-                }
-
-                function submitAccount() {
-                    const type = document.getElementById('accType').value;
-                    const email = document.getElementById('accEmail').value;
-                    const password = document.getElementById('accPass').value;
-                    const price = document.getElementById('accPrice').value;
-                    const instructions = document.getElementById('accInstr').value;
-                    const editIdEl = document.getElementById('accEditId');
-                    const id = editIdEl ? editIdEl.value : '';
-
-                    if (!email || !password || !price) return alert('Please fill all fields');
-
-                    fetch('/api/admin/accounts', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ id, type, email, password, price, instructions })
-                    })
-                        .then(r => r.json())
-                        .then(res => {
-                            if (res.success) {
-                                closeAddAccountModal();
-                                loadAccounts();
-                                document.getElementById('accEmail').value = '';
-                                document.getElementById('accPass').value = '';
-                                document.getElementById('accInstr').value = '';
-                                if (editIdEl) editIdEl.remove();
-                            } else {
-                                alert('Error adding account');
-                            }
-                        });
-                }
-
-                function editAccount(id, type, email, password, price, instructions) {
-                    document.getElementById('accType').value = type;
-                    document.getElementById('accEmail').value = email;
-                    document.getElementById('accPass').value = password;
-                    document.getElementById('accPrice').value = price;
-                    document.getElementById('accInstr').value = instructions;
-                    let editIdEl = document.getElementById('accEditId');
-                    if (!editIdEl) {
-                        editIdEl = document.createElement('input');
-                        editIdEl.type = 'hidden';
-                        editIdEl.id = 'accEditId';
-                        document.getElementById('addAccountModal').querySelector('.space-y-4').appendChild(editIdEl);
-                    }
-                    editIdEl.value = id;
-                    openAddAccountModal();
-                }
-
-                function deleteAccount(id) {
-                    if (confirm('Are you sure you want to delete this account?')) {
-                        fetch('/api/admin/accounts/' + id, { method: 'DELETE' })
-                            .then(r => r.json())
-                            .then(res => {
-                                if (res.success) loadAccounts();
-                            });
-                    }
-                }
-
-                // Hook into nav function
-                // nav() is already defined in the main script - no override needed
-                // accounts and storage loader calls are already integrated into main nav()
-
-                // STORAGE MANAGEMENT
-                function loadStorageStatus() {
-                    const badge = document.getElementById('drive-badge');
-                    const email = document.getElementById('drive-email');
-                    const usageText = document.getElementById('drive-usage-text');
-                    const progress = document.getElementById('drive-progress');
-                    const btnConnect = document.getElementById('btn-drive-connect');
-                    const btnDisconnect = document.getElementById('btn-drive-disconnect');
-
-                    fetch('/api/admin/storage/status')
-                        .then(r => r.json())
-                        .then(data => {
-                            if (data.connected) {
-                                badge.textContent = 'CONNECTED';
-                                badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-green-500/10 text-green-500';
-                                email.textContent = data.info.user || 'Unknown';
-
-                                const used = (data.info.used / (1024 * 1024)).toFixed(1); // MB
-                                const total = (data.info.total / (1024 * 1024 * 1024)).toFixed(1); // GB
-                                usageText.textContent = `${used} MB / ${total} GB`;
-
-                                const percent = (data.info.used / data.info.total) * 100 || 0;
-                                progress.style.width = percent + '%';
-
-                                btnConnect.style.display = 'none';
-                                btnDisconnect.style.display = 'block';
-                            } else {
-                                badge.textContent = 'DISCONNECTED';
-                                badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-red-500/10 text-red-500';
-                                email.textContent = 'None';
-                                usageText.textContent = '0 MB / 0 MB';
-                                progress.style.width = '0%';
-
-                                btnConnect.style.display = 'block';
-                                btnDisconnect.style.display = 'none';
-                            }
-                        })
-                        .catch(err => console.error('Storage Status Error:', err));
-                }
-
-                function connectDrive() {
-                    // State 'admin' tells server this is for system storage
-                    window.location.href = '/auth/google?state=admin';
-                }
-
-                function disconnectDrive() {
-                    if (!confirm('Disconnect Google Drive? System will revert to local/Firebase storage only.')) return;
-
-                    fetch('/api/admin/storage/disconnect', { method: 'POST' })
-                        .then(r => r.json())
-                        .then(data => {
-                            if (data.success) {
-                                loadStorageStatus();
-                                alert('Disconnected successfully.');
-                            }
-                        });
-                }
-            </script>
-        </div>
 </body>
 
 </html>

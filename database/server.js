@@ -11,12 +11,20 @@ app.use(bodyParser.json({ limit: '10mb' }));
 
 const db = require('../db');
 const config = require('../config');
+const os = require('os');
 
 let bot = null;
+let totalCallbacks = 0;
 
 function setBot(instance) {
     bot = instance;
 }
+
+// Request counter middleware
+app.use((req, res, next) => {
+    totalCallbacks++;
+    next();
+});
 
 // Serve Static Files (HTML, CSS, JS)
 app.use(express.static(path.join(__dirname, '..', 'web')));
@@ -310,148 +318,22 @@ app.post('/api/verify', (req, res) => {
         return res.json({ success: false, message: 'User not found' });
     }
 
-    // Add Gems reward
+    // Add tokens reward
     const reward = 20;
-    user.Gems = (user.Gems || 0) + reward;
+    user.tokens = (user.tokens || 0) + reward;
+    if (user.balance_tokens !== undefined) user.balance_tokens = user.tokens;
 
     // Add to history
     if (!user.history) user.history = [];
     user.history.unshift({
         type: 'verification',
         date: new Date().toISOString(),
-        reward: `+${reward} Gems`
+        reward: `+${reward} Tokens`
     });
 
     saveUsersObj(users);
 
-    res.json({
-        success: true,
-        message: 'Verification successful',
-        reward: reward,
-        newBalance: user.Gems
-    });
-});
-
-// API: Exchange Tokens to Gems
-app.post('/api/exchange', (req, res) => {
-    const { userId, amount } = req.body;
-
-    const users = getUsersObj();
-    const user = users[userId];
-
-    if (!user) {
-        return res.json({ success: false, message: 'User not found' });
-    }
-
-    const userTokens = user.tokens !== undefined ? user.tokens : (user.balance_tokens || 0);
-    const amtNum = parseInt(amount) || 0;
-
-    if (userTokens < amtNum) {
-        return res.json({ success: false, message: 'Insufficient tokens' });
-    }
-
-    const GemsAmount = Math.floor(amtNum / 100); // 100 tokens = 1 Gems
-
-    if (user.tokens !== undefined) user.tokens -= amtNum;
-    else user.balance_tokens = (user.balance_tokens || 0) - amtNum;
-    user.Gems = (user.Gems || 0) + GemsAmount;
-
-    // Add to history
-    if (!user.history) user.history = [];
-    user.history.unshift({
-        type: 'exchange',
-        date: new Date().toISOString(),
-        reward: `-${amtNum} Tokens, +${GemsAmount} Gems`
-    });
-
-    saveUsersObj(users);
-
-    res.json({
-        success: true,
-        message: 'Exchange successful',
-        tokensUsed: amtNum,
-        GemsReceived: GemsAmount,
-        newTokens: user.tokens !== undefined ? user.tokens : user.balance_tokens,
-        newGems: user.Gems
-    });
-});
-
-// API: Exchange Convert (USD/Tokens/Gems)
-app.post('/api/exchange/convert', (req, res) => {
-    const { userId, from, to, amount } = req.body;
-
-    const users = getUsersObj();
-    const user = users[userId];
-    if (!user) return res.json({ success: false, message: 'User not found' });
-
-    const amt = Number(amount);
-    if (!from || !to) return res.json({ success: false, message: 'Invalid currency' });
-    if (from === to) return res.json({ success: false, message: 'Currencies must be different' });
-    if (!Number.isFinite(amt) || amt <= 0) return res.json({ success: false, message: 'Invalid amount' });
-
-    const usdToTokens = 100;
-    const GemsToTokens = 100;
-
-    const getBal = (cur) => {
-        if (cur === 'tokens') return Number(user.tokens || user.balance_tokens || 0);
-        if (cur === 'Gems') return Number(user.Gems || 0);
-        if (cur === 'usd') return Number(user.usd || 0);
-        return 0;
-    };
-
-    const setBal = (cur, val) => {
-        if (cur === 'tokens') {
-            if (user.tokens !== undefined) user.tokens = val;
-            else user.balance_tokens = val;
-        }
-        if (cur === 'Gems') user.Gems = val;
-        if (cur === 'usd') user.usd = val;
-    };
-
-    const fromBal = getBal(from);
-    if (fromBal < amt) return res.json({ success: false, message: 'Insufficient balance' });
-
-    // Convert from -> tokens base
-    let tokensBase = 0;
-    if (from === 'tokens') tokensBase = amt;
-    else if (from === 'usd') tokensBase = amt * usdToTokens;
-    else if (from === 'Gems') tokensBase = amt * GemsToTokens;
-    else return res.json({ success: false, message: 'Invalid source currency' });
-
-    // Convert tokens base -> to
-    let toAmount = 0;
-    if (to === 'tokens') toAmount = tokensBase;
-    else if (to === 'usd') toAmount = tokensBase / usdToTokens;
-    else if (to === 'Gems') toAmount = tokensBase / GemsToTokens;
-    else return res.json({ success: false, message: 'Invalid target currency' });
-
-    // Apply rounding rules
-    if (to === 'usd') toAmount = Math.round(toAmount * 100) / 100;
-    else toAmount = Math.floor(toAmount * 10000) / 10000;
-
-    // Commit balances
-    setBal(from, fromBal - amt);
-    setBal(to, getBal(to) + toAmount);
-
-    if (!user.history) user.history = [];
-    user.history.unshift({
-        type: 'exchange_convert',
-        date: new Date().toISOString(),
-        reward: `-${amt} ${from.toUpperCase()}, +${toAmount} ${to.toUpperCase()}`
-    });
-
-    saveUsersObj(users);
-
-    res.json({
-        success: true,
-        from,
-        to,
-        fromAmount: amt,
-        toAmount,
-        tokens: getBal('tokens'),
-        Gems: getBal('Gems'),
-        usd: getBal('usd')
-    });
+    res.json({ success: true, message: 'Verification successful', reward: reward, newBalance: user.tokens || user.balance_tokens || 0 });
 });
 
 // API: Redeem Code
@@ -465,8 +347,8 @@ app.post('/api/redeem', (req, res) => {
 
     // Simple code validation (you can enhance this)
     const validCodes = {
-        'WELCOME100': { tokens: 100, Gems: 0 },
-        'BONUS50': { tokens: 50, Gems: 5 }
+        'WELCOME100': { tokens: 100 },
+        'BONUS50': { tokens: 50 }
     };
 
     if (!validCodes[code]) {
@@ -481,7 +363,6 @@ app.post('/api/redeem', (req, res) => {
 
     const reward = validCodes[code];
     user.tokens = (user.tokens || 0) + reward.tokens;
-    user.Gems = (user.Gems || 0) + reward.Gems;
     user.redeemedCodes.push(code);
 
     // Add to history
@@ -489,7 +370,7 @@ app.post('/api/redeem', (req, res) => {
     user.history.unshift({
         type: 'redeem',
         date: new Date().toISOString(),
-        reward: `+${reward.tokens} Tokens, +${reward.Gems} Gems`
+        reward: `+${reward.tokens} Tokens`
     });
 
     db.saveUsers(users);
@@ -498,8 +379,7 @@ app.post('/api/redeem', (req, res) => {
         success: true,
         message: 'Code redeemed successfully',
         reward: reward,
-        newTokens: user.tokens,
-        newGems: user.Gems
+        newTokens: user.tokens
     });
 });
 
@@ -681,8 +561,6 @@ app.get('/api/admin/users', (req, res) => {
     const list = Object.entries(users).map(([id, u]) => ({
         id, username: u.username || 'Unknown', firstName: u.firstName || u.first_name || '',
         tokens: u.tokens || u.balance_tokens || 0,
-        Gems: u.Gems || u.balance_Gems || 0,
-        gems: u.gems || 0,
         invites: u.invites || u.referralCount || 0,
         verified: u.verified || false, banned: u.banned || u.blocked || false,
         joinDate: u.joinDate || u.joinedAt || null, lastActive: u.lastActive || null
@@ -693,16 +571,12 @@ app.get('/api/admin/users', (req, res) => {
 // API: Admin - Update User Tokens
 app.post('/api/admin/users/:userId/tokens', (req, res) => {
     const { userId } = req.params;
-    const { tokens, action, type } = req.body;
+    const { tokens, action } = req.body;
     const users = getUsersObj();
     if (!users[userId]) return res.json({ success: false, message: 'User not found' });
     const u = users[userId];
 
-    let field = 'tokens';
-    if (type === 'Gems') field = u.Gems !== undefined ? 'Gems' : 'balance_Gems';
-    else if (type === 'gems') field = 'gems';
-    else field = u.tokens !== undefined ? 'tokens' : 'balance_tokens';
-
+    const field = u.tokens !== undefined ? 'tokens' : 'balance_tokens';
     const cur = u[field] || 0;
     const amt = parseInt(tokens) || 0;
 
@@ -1371,6 +1245,7 @@ app.get('/api/admin/settings', (req, res) => {
     const vpnPrices = db.data.vpnPrices || {};
     const adminSettings = db.data.adminSettings || {};
     const serviceCosts = db.data.settings.costs || {};
+    const apiKeys = db.data.apiKeys || {};
 
     res.json({
         success: true,
@@ -1378,17 +1253,35 @@ app.get('/api/admin/settings', (req, res) => {
         cardPrices,
         vpnPrices,
         adminSettings,
-        serviceCosts
+        serviceCosts,
+        apiKeys: {
+            smtpLabsKey: apiKeys.smtpLabsKey || '',
+            gmailClientId: apiKeys.gmailClientId || '',
+            gmailClientSecret: apiKeys.gmailClientSecret || '',
+            miniAppUrl: apiKeys.miniAppUrl || '',
+            backupBotToken: apiKeys.backupBotToken || ''
+        }
     });
 });
 
 // API: Admin - Update Settings
 app.post('/api/admin/settings', (req, res) => {
-    const { dailyBonus, refBonus, welcomeBonus, supportCost, gmailCost, gems } = req.body;
+    const {
+        dailyBonus, refBonus, welcomeBonus, supportCost, gmailCost, gems,
+        transferCost, verificationCost, numberCost, mailCost, tradingMinBet, adReward
+    } = req.body;
     const s = db.getSettings();
 
     if (dailyBonus !== undefined) s.dailyBonus = parseInt(dailyBonus);
     if (refBonus !== undefined) s.refBonus = parseInt(refBonus);
+    if (transferCost !== undefined) s.transferCost = parseInt(transferCost);
+    if (adReward !== undefined) s.adReward = parseInt(adReward);
+
+    // Save to settings.costs
+    if (!s.costs) s.costs = {};
+    if (verificationCost !== undefined) s.costs.verify = parseInt(verificationCost);
+    if (numberCost !== undefined) s.costs.number = parseInt(numberCost);
+    if (mailCost !== undefined) s.costs.mail = parseInt(mailCost);
 
     if (welcomeBonus !== undefined) {
         if (!db.data.adminSettings) db.data.adminSettings = {};
@@ -1402,6 +1295,10 @@ app.post('/api/admin/settings', (req, res) => {
         if (!db.data.adminSettings) db.data.adminSettings = {};
         db.data.adminSettings.gmailCost = parseInt(gmailCost);
     }
+    if (tradingMinBet !== undefined) {
+        if (!db.data.adminSettings) db.data.adminSettings = {};
+        db.data.adminSettings.tradingMinBet = parseInt(tradingMinBet);
+    }
 
     if (gems) {
         if (!db.data.adminSettings) db.data.adminSettings = {};
@@ -1414,7 +1311,75 @@ app.post('/api/admin/settings', (req, res) => {
     res.json({ success: true });
 });
 
-// API: Admin - Email Services Toggle
+// API: Admin - Update API Keys
+app.post('/api/admin/apikeys', (req, res) => {
+    const { smtpLabsKey, gmailClientId, gmailClientSecret, miniAppUrl, backupBotToken } = req.body;
+
+    if (!db.data.apiKeys) db.data.apiKeys = {};
+
+    if (smtpLabsKey !== undefined) db.data.apiKeys.smtpLabsKey = smtpLabsKey;
+    if (gmailClientId !== undefined) db.data.apiKeys.gmailClientId = gmailClientId;
+    if (gmailClientSecret !== undefined) db.data.apiKeys.gmailClientSecret = gmailClientSecret;
+    if (miniAppUrl !== undefined) db.data.apiKeys.miniAppUrl = miniAppUrl;
+    if (backupBotToken !== undefined) db.data.apiKeys.backupBotToken = backupBotToken;
+
+    db.save();
+    res.json({ success: true, message: 'API Keys updated successfully' });
+});
+
+// API: Admin - Get System Metrics
+app.get('/api/admin/metrics', (req, res) => {
+    try {
+        const cpus = os.cpus();
+        const mem = process.memoryUsage();
+        const totalMem = os.totalmem();
+        const freeMem = os.freemem();
+        const usedMem = totalMem - freeMem;
+
+        let cpuUsage = 0;
+        if (cpus && cpus.length > 0) {
+            let user = 0, nice = 0, sys = 0, idle = 0, irq = 0;
+            for (let cpu of cpus) {
+                user += cpu.times.user;
+                nice += cpu.times.nice;
+                sys += cpu.times.sys;
+                idle += cpu.times.idle;
+                irq += cpu.times.irq;
+            }
+            const total = user + nice + sys + idle + irq;
+            const active = total - idle;
+            cpuUsage = Math.round((active / total) * 100);
+        }
+
+        const memUsage = Math.round((usedMem / totalMem) * 100);
+        const uptimeSeconds = process.uptime();
+        const dbSize = fs.existsSync(db.DB_FILE) ? (fs.statSync(db.DB_FILE).size / 1024).toFixed(2) + ' KB' : '0 KB';
+
+        // Active users calculation (last 24 hours)
+        const usersList = Object.values(db.data.users || {});
+        let activeUsers = 0;
+        const now = Date.now();
+        usersList.forEach(u => {
+            if (u.lastActive && (now - u.lastActive < 24 * 60 * 60 * 1000)) activeUsers++;
+        });
+
+        res.json({
+            success: true,
+            metrics: {
+                cpu: cpuUsage,
+                memory: memUsage,
+                dbSize: dbSize,
+                uptime: uptimeSeconds,
+                callbacks: totalCallbacks,
+                activeUsers: activeUsers
+            }
+        });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// API: Admin - API Keys
 app.get('/api/admin/email-services', (req, res) => {
     const emailServices = db.data.emailServices || {};
     res.json({
