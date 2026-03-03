@@ -475,10 +475,11 @@ async function sendMainMenu(chatId, user) {
 
     const welcomeText = `👋 Welcome, ${user.first_name || 'User'}!\n\n💰 Balance: ${user.balance || 0} Credits\n🆔 ID: ${user.id}\n\nTap the button below to open the app:`;
 
+    const cacheBusterUrl = `${publicUrl}?v=${Date.now()}`;
     const keyboard = {
         reply_markup: {
             inline_keyboard: [
-                [{ text: '🚀 Open App', web_app: { url: publicUrl } }]
+                [{ text: '🚀 Open App', web_app: { url: cacheBusterUrl } }]
             ]
         }
     };

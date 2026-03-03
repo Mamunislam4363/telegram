@@ -193,6 +193,7 @@ const PAGE_TITLES = {
     'redeem': 'REDEEM CODE',
     'transfer': 'TRANSFER',
     'accountsStore': 'PREMIUM ACCOUNTS',
+    'accountDetail': 'ACCOUNT DETAILS',
     'support': 'SUPPORT',
 };
 
@@ -247,6 +248,9 @@ function showPage(targetId) {
         }
     }
 
+    // Update current page tracker
+    currentPage = targetId;
+
     // Auto-update mail balances and start/stop polling
     stopInboxPolling();
     if (targetId === 'mailService') {
@@ -271,6 +275,10 @@ function showPage(targetId) {
     // Load accounts when entering accounts store page
     if (targetId === 'accountsStore') {
         renderAccounts();
+    }
+    // Update virtual number balance when entering the number service page
+    if (targetId === 'numberService') {
+        updateNumBalance();
     }
     // Update Header Style based on page type
     const headerContainer = document.querySelector('.sticky-header-container');
@@ -355,13 +363,13 @@ function showPage(targetId) {
         if (headerStatus) headerStatus.style.display = 'flex';
     }
 
-    // Bottom Nav Active State Logic
     // Bottom Nav Active State Logic using data-page for reliability
     document.querySelectorAll('.nav-item, .nav-center').forEach(n => n.classList.remove('active'));
 
     let activeNavGroup = 'home';
-    if (['tasks', 'earn', 'earnMenu', 'daily'].includes(targetId)) activeNavGroup = 'tasks';
-    else if (['shop', 'exchange', 'deposit', 'binancePay', 'faucetPay', 'geminiProduct', 'chatgptProduct', 'services', 'numberService', 'mailService', 'emailMenu', 'emailService', 'vccCards', 'vpnServices', 'serviceGenerate', 'checkout'].includes(targetId)) activeNavGroup = 'shop';
+    if (['home'].includes(targetId)) activeNavGroup = 'home';
+    else if (['tasks', 'earn', 'earnMenu', 'daily'].includes(targetId)) activeNavGroup = 'tasks';
+    else if (['shop', 'exchange', 'deposit', 'binancePay', 'faucetPay', 'geminiProduct', 'chatgptProduct', 'services', 'numberService', 'mailService', 'emailMenu', 'emailService', 'vccCards', 'vpnServices', 'accountsStore', 'accountDetail', 'serviceGenerate', 'checkout'].includes(targetId)) activeNavGroup = 'shop';
     else if (['invite', 'leaderboard'].includes(targetId)) activeNavGroup = 'invite';
     else if (['profile', 'history', 'redeem', 'transfer', 'support', 'verify', 'geminiVerification', 'admin'].includes(targetId)) activeNavGroup = 'profile';
 
@@ -679,21 +687,110 @@ function payWithBalance() {
 }
 
 // TASK LOGIC
-function earn(type, amount) {
+const IN_PROGRESS_TASKS = {};
+
+function earn(buttonElement, type, amount) {
+    if (IN_PROGRESS_TASKS[type] === 'completed') {
+        tg.showAlert('You have already completed this task!');
+        return;
+    }
+
+    if (IN_PROGRESS_TASKS[type] === 'claiming') {
+        // User clicked CLAIM
+        fetch('/api/earn', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: userData.id, taskType: type, amount: amount })
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    IN_PROGRESS_TASKS[type] = 'completed';
+                    buttonElement.innerHTML = '<i class="fas fa-check"></i> DONE';
+                    buttonElement.style.background = '#22c55e';
+                    buttonElement.style.color = '#fff';
+                    buttonElement.style.pointerEvents = 'none';
+
+                    // Update local balance
+                    userData.tokens = data.newBalance || (userData.tokens + amount);
+                    updateBalanceUI();
+
+                    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+
+                    // FIREWORKS ANIMATION (Bajimata Effect)
+                    var duration = 5 * 1000;
+                    var animationEnd = Date.now() + duration;
+                    var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 99999 };
+
+                    function randomInRange(min, max) {
+                        return Math.random() * (max - min) + min;
+                    }
+
+                    var interval = setInterval(function () {
+                        var timeLeft = animationEnd - Date.now();
+                        if (timeLeft <= 0) {
+                            return clearInterval(interval);
+                        }
+                        var particleCount = 50 * (timeLeft / duration);
+                        if (typeof confetti !== 'undefined') {
+                            confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+                            confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+                        }
+                    }, 250);
+
+                    tg.showPopup({
+                        title: 'MISSION COMPLETE!',
+                        message: `You earned +${amount} Tokens!\nAwesome work!`,
+                        buttons: [{ type: 'ok' }]
+                    });
+                } else {
+                    tg.showAlert(data.message || 'Error completing task.');
+                    IN_PROGRESS_TASKS[type] = null; // reset
+                    buttonElement.innerHTML = 'CLAIM';
+                }
+            })
+            .catch(err => {
+                tg.showAlert('Error verifying task.');
+                IN_PROGRESS_TASKS[type] = null; // reset
+                buttonElement.innerHTML = 'CLAIM';
+            });
+        return;
+    }
+
+    if (IN_PROGRESS_TASKS[type]) {
+        return; // Already started
+    }
+
     tg.showConfirm('Start this mission?', (ok) => {
         if (ok) {
             // Open Link
             if (type === 'yt') window.open('https://youtube.com');
-            else if (type === 'tg') window.open('https://t.me/telegram');
+            else if (type === 'tg') window.open('https://t.me/SparklyDeep');
+            else if (type === 'tg_ch') window.open('https://t.me/SparklyDeep');
 
-            // Simulate Verification
-            setTimeout(() => {
-                const r = confirm('Did you complete the task?');
-                if (r) {
-                    tg.showAlert(`Task Completed! +${amount} Tokens`);
-                    // Update balance logic here...
+            // Start 30s Countdown
+            IN_PROGRESS_TASKS[type] = 'waiting';
+            buttonElement.style.pointerEvents = 'none';
+            buttonElement.style.background = '#333';
+            buttonElement.style.color = '#aaa';
+
+            let timeLeft = 30;
+            buttonElement.innerHTML = `${timeLeft}s...`;
+
+            const timer = setInterval(() => {
+                timeLeft--;
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    IN_PROGRESS_TASKS[type] = 'claiming';
+                    buttonElement.style.pointerEvents = 'auto';
+                    buttonElement.style.background = '#22c55e'; // Green claim button
+                    buttonElement.style.color = '#fff';
+                    buttonElement.innerHTML = 'CLAIM';
+                    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+                } else {
+                    buttonElement.innerHTML = `${timeLeft}s...`;
                 }
-            }, 5000);
+            }, 1000);
         }
     });
 }
@@ -708,10 +805,15 @@ function renderDailyGrid() {
 
     // Fixed 7-day rewards
     const rewards = [10, 20, 30, 40, 50, 60, 100];
-    const userClaimedDay = userData.dailyStreak || 0; // Days completed
+    let userClaimedDay = userData.dailyStreak || 0; // Days completed
     const lastClaim = userData.lastDailyClaim || 0; // Timestamp
     const now = Date.now();
     const canClaim = (now - lastClaim) >= 24 * 60 * 60 * 1000;
+
+    // Reset local view if streak is broken (> 48h)
+    if (lastClaim > 0 && (now - lastClaim > 48 * 60 * 60 * 1000)) {
+        userClaimedDay = 0;
+    }
 
     let html = '';
     for (let i = 1; i <= 7; i++) {
@@ -845,8 +947,10 @@ function claimDaily() {
 
                     var particleCount = 50 * (timeLeft / duration);
                     // since particles fall down, start a bit higher than random
-                    confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
-                    confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+                    if (typeof confetti !== 'undefined') {
+                        confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+                        confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+                    }
                 }, 250);
 
                 tg.showPopup({
@@ -1024,6 +1128,23 @@ function fetchUserData() {
                 userData.usd = data.usd || (data.tokens / 100);
                 userData.dailyStreak = data.dailyStreak || 0;
                 userData.lastDailyClaim = data.lastClaim || 0;
+                userData.completedTasks = data.completedTasks || [];
+
+                // Hide or mark done missions in UI
+                if (userData.completedTasks.length > 0) {
+                    userData.completedTasks.forEach(taskId => {
+                        IN_PROGRESS_TASKS[taskId] = 'completed';
+                        // Use proper quoting to prevent substring collisions (e.g. 'tg' vs 'tg_ch')
+                        const btn = document.querySelector(`button[onclick*="'${taskId}',"]`) || document.querySelector(`button[onclick*="'${taskId}', "]`);
+                        if (btn) {
+                            btn.innerHTML = '<i class="fas fa-check"></i> DONE';
+                            btn.style.background = '#22c55e';
+                            btn.style.color = '#fff';
+                            btn.style.pointerEvents = 'none';
+                        }
+                    });
+                }
+
                 renderBalances();
                 if (currentPage === 'daily') {
                     renderDailyGrid();
@@ -1338,7 +1459,245 @@ function buyPremiumAccount(accountId, type, price) {
         .catch(() => alert('Network error'));
 }
 
-// Current active service for generate page
+// ==========================================
+// ACCOUNT STORE CATEGORY DETAIL
+// ==========================================
+
+const ACCOUNT_CATEGORIES = {
+    gmail: {
+        name: 'Gmail Accounts',
+        icon: 'fas fa-envelope',
+        color: '#ea4335',
+        gradient: 'linear-gradient(135deg, #ea4335, #c5221f)',
+        desc: 'Verified Gmail accounts ready for use. Phone-verified and aged accounts available.',
+        price: 50,
+        features: ['Phone Verified', 'Aged Account', 'Recovery Email Set', 'Instant Delivery']
+    },
+    netflix: {
+        name: 'Netflix Premium',
+        icon: 'fas fa-film',
+        color: '#e50914',
+        gradient: 'linear-gradient(135deg, #e50914, #b81d24)',
+        desc: 'Premium Netflix accounts with UHD streaming. Shared and private accounts available.',
+        price: 80,
+        features: ['4K UHD Streaming', '1 Month Warranty', 'Auto-Renew Option', 'Instant Delivery']
+    },
+    spotify: {
+        name: 'Spotify Premium',
+        icon: 'fab fa-spotify',
+        color: '#1db954',
+        gradient: 'linear-gradient(135deg, #1db954, #15873d)',
+        desc: 'Premium Spotify accounts with ad-free music. Individual and family plans available.',
+        price: 40,
+        features: ['Ad-Free Music', 'Offline Downloads', 'High Quality Audio', 'Instant Delivery']
+    },
+    disney: {
+        name: 'Disney+ Premium',
+        icon: 'fas fa-star',
+        color: '#113ccf',
+        gradient: 'linear-gradient(135deg, #113ccf, #0b25a0)',
+        desc: 'Premium Disney+ accounts with full content library access including Marvel and Star Wars.',
+        price: 60,
+        features: ['Full Content Library', '4K Streaming', '4 Screens', 'Instant Delivery']
+    },
+    youtube: {
+        name: 'YouTube Premium',
+        icon: 'fab fa-youtube',
+        color: '#ff0000',
+        gradient: 'linear-gradient(135deg, #ff0000, #cc0000)',
+        desc: 'Ad-free YouTube with background play, YouTube Music, and offline downloads.',
+        price: 45,
+        features: ['Ad-Free Videos', 'Background Play', 'YouTube Music', 'Instant Delivery']
+    },
+    amazon: {
+        name: 'Amazon Prime',
+        icon: 'fab fa-amazon',
+        color: '#ff9900',
+        gradient: 'linear-gradient(135deg, #ff9900, #cc7a00)',
+        desc: 'Amazon Prime with free shipping, Prime Video, and Prime Music included.',
+        price: 70,
+        features: ['Free Shipping', 'Prime Video', 'Prime Music', 'Instant Delivery']
+    }
+};
+
+let currentAccountCategory = null;
+
+function showAccountCategory(category) {
+    currentAccountCategory = category;
+    const cat = ACCOUNT_CATEGORIES[category];
+    if (!cat) return;
+
+    const container = document.getElementById('accountDetailContent');
+    if (!container) return;
+
+    container.innerHTML = `
+        <!-- Category Header Card -->
+        <div style="background:${cat.gradient}; border-radius:24px; padding:28px 20px; margin-bottom:20px; text-align:center; position:relative; overflow:hidden;">
+            <div style="position:absolute; top:0; left:0; right:0; bottom:0; background:radial-gradient(circle at 30% 50%, rgba(255,255,255,0.1), transparent 70%);"></div>
+            <div style="position:relative; z-index:1;">
+                <div style="width:70px; height:70px; background:rgba(255,255,255,0.2); border-radius:20px; display:flex; align-items:center; justify-content:center; margin:0 auto 14px; backdrop-filter:blur(10px);">
+                    <i class="${cat.icon}" style="font-size:32px; color:#fff;"></i>
+                </div>
+                <div style="font-size:20px; font-weight:900; color:#fff; margin-bottom:6px;">${cat.name}</div>
+                <div style="font-size:12px; color:rgba(255,255,255,0.8); max-width:260px; margin:0 auto; line-height:1.5;">${cat.desc}</div>
+            </div>
+        </div>
+
+        <!-- Price Card -->
+        <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:20px; padding:20px; margin-bottom:16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <div style="font-size:12px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:1px;">Price</div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <i class="fas fa-coins" style="color:#fbbf24; font-size:14px;"></i>
+                    <span style="font-size:22px; font-weight:900; color:#fbbf24;">${cat.price}</span>
+                    <span style="font-size:12px; color:var(--text-sub); font-weight:600;">TOKENS</span>
+                </div>
+            </div>
+            <div style="height:1px; background:var(--border-color); margin-bottom:16px;"></div>
+            <div style="font-size:11px; font-weight:700; color:var(--text-sub); margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">What you get</div>
+            ${cat.features.map(f => `
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                    <i class="fas fa-check-circle" style="color:${cat.color}; font-size:14px;"></i>
+                    <span style="font-size:13px; color:var(--text-main); font-weight:600;">${f}</span>
+                </div>
+            `).join('')}
+        </div>
+
+        <!-- Credentials Box (Hidden by default, shown after purchase) -->
+        <div id="accountCredentialsBox" style="display:none; margin-bottom:16px;">
+            <div style="background:rgba(34,197,94,0.08); border:1px solid rgba(34,197,94,0.3); border-radius:20px; padding:20px;">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px;">
+                    <i class="fas fa-check-circle" style="color:#22c55e; font-size:16px;"></i>
+                    <span style="font-size:14px; font-weight:800; color:#22c55e;">PURCHASE SUCCESSFUL</span>
+                </div>
+                <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:16px;">
+                    <div style="margin-bottom:12px;">
+                        <div style="font-size:10px; font-weight:700; color:var(--text-sub); margin-bottom:4px; text-transform:uppercase;">Email</div>
+                        <div id="accCredEmail" style="font-size:14px; font-weight:700; color:var(--text-main); background:rgba(255,255,255,0.05); padding:10px 12px; border-radius:10px; border:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+                            <span id="accEmailText">-</span>
+                            <i class="fas fa-copy" style="color:${cat.color}; cursor:pointer;" onclick="copyAccCred('email')"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size:10px; font-weight:700; color:var(--text-sub); margin-bottom:4px; text-transform:uppercase;">Password</div>
+                        <div id="accCredPass" style="font-size:14px; font-weight:700; color:var(--text-main); background:rgba(255,255,255,0.05); padding:10px 12px; border-radius:10px; border:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+                            <span id="accPassText">-</span>
+                            <i class="fas fa-copy" style="color:${cat.color}; cursor:pointer;" onclick="copyAccCred('pass')"></i>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top:12px; font-size:11px; color:#888; text-align:center; font-weight:600;">
+                    <i class="fas fa-exclamation-triangle" style="color:#f59e0b;"></i> Save these credentials! They won't be shown again.
+                </div>
+            </div>
+        </div>
+
+        <!-- Buy Button -->
+        <button id="buyAccountBtn" onclick="buyAccountFromCategory('${category}')"
+            style="width:100%; padding:16px; border:none; border-radius:16px; font-weight:900; font-size:15px; color:#fff; background:${cat.gradient}; cursor:pointer; text-transform:uppercase; letter-spacing:1px; box-shadow:0 8px 24px ${cat.color}44; transition:all 0.3s ease;">
+            <i class="fas fa-shopping-cart"></i> BUY FOR ${cat.price} TOKENS
+        </button>
+
+        <!-- Availability Note -->
+        <div style="margin-top:16px; text-align:center;">
+            <div style="font-size:11px; color:var(--text-sub); font-weight:600;">
+                <i class="fas fa-circle" style="color:#22c55e; font-size:8px;"></i> Available &bull; Instant Delivery &bull; 24/7 Support
+            </div>
+        </div>
+    `;
+}
+window.showAccountCategory = showAccountCategory;
+
+function buyAccountFromCategory(category) {
+    const cat = ACCOUNT_CATEGORIES[category];
+    if (!cat) return;
+
+    const userTokens = userData.tokens || 0;
+    if (userTokens < cat.price) {
+        tg.showAlert(`Insufficient tokens! You have ${userTokens} TC but need ${cat.price} TC.`);
+        return;
+    }
+
+    tg.showConfirm(`Buy ${cat.name} for ${cat.price} Tokens?`, (ok) => {
+        if (!ok) return;
+
+        const btn = document.getElementById('buyAccountBtn');
+        if (btn) {
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> PROCESSING...';
+            btn.style.pointerEvents = 'none';
+        }
+
+        fetch('/api/accounts/buy-category', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: userData.id, category: category, price: cat.price })
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    userData.tokens = data.newBalance;
+                    updateBalanceUI();
+
+                    // Show credentials
+                    const credBox = document.getElementById('accountCredentialsBox');
+                    const emailEl = document.getElementById('accEmailText');
+                    const passEl = document.getElementById('accPassText');
+
+                    if (credBox) credBox.style.display = 'block';
+                    if (emailEl) emailEl.textContent = data.account.email;
+                    if (passEl) passEl.textContent = data.account.password;
+
+                    if (btn) {
+                        btn.innerHTML = '<i class="fas fa-check"></i> PURCHASED';
+                        btn.style.background = '#22c55e';
+                        btn.style.boxShadow = '0 8px 24px rgba(34,197,94,0.3)';
+                        btn.style.pointerEvents = 'none';
+                    }
+
+                    // Confetti
+                    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+                    if (typeof confetti !== 'undefined') {
+                        var duration = 3 * 1000;
+                        var animationEnd = Date.now() + duration;
+                        var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 99999 };
+                        var interval = setInterval(function () {
+                            var timeLeft = animationEnd - Date.now();
+                            if (timeLeft <= 0) return clearInterval(interval);
+                            var particleCount = 50 * (timeLeft / duration);
+                            confetti(Object.assign({}, defaults, { particleCount, origin: { x: Math.random(), y: Math.random() - 0.2 } }));
+                        }, 250);
+                    }
+                } else {
+                    tg.showAlert(data.message || 'Purchase failed.');
+                    if (btn) {
+                        btn.innerHTML = `<i class="fas fa-shopping-cart"></i> BUY FOR ${cat.price} TOKENS`;
+                        btn.style.pointerEvents = 'auto';
+                    }
+                }
+            })
+            .catch(() => {
+                tg.showAlert('Network error. Please try again.');
+                if (btn) {
+                    btn.innerHTML = `<i class="fas fa-shopping-cart"></i> BUY FOR ${cat.price} TOKENS`;
+                    btn.style.pointerEvents = 'auto';
+                }
+            });
+    });
+}
+window.buyAccountFromCategory = buyAccountFromCategory;
+
+function copyAccCred(type) {
+    const el = type === 'email' ? document.getElementById('accEmailText') : document.getElementById('accPassText');
+    if (el) {
+        navigator.clipboard.writeText(el.textContent).then(() => {
+            tg.showAlert(`${type === 'email' ? 'Email' : 'Password'} copied!`);
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+        }).catch(() => {
+            tg.showAlert('Copy failed. Please copy manually.');
+        });
+    }
+}
+window.copyAccCred = copyAccCred;
 let currentServiceData = null;
 
 function openService(serviceId) {
@@ -2142,29 +2501,32 @@ function openPremiumMailDirect() {
 function autoGeneratePremiumMail() {
     const type = 'premium';
     const cost = 50;
-    if ((userData.tokens || 0) < cost) {
-        return;
-    }
-    fetch("/api/mail/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: userData.id, cost, type })
-    })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
-                userData.tokens -= cost;
-                renderBalances();
-                mailSessions[type] = data;
-                updateMailBalance(type);
-                refreshInbox(type);
-            } else {
-                generateDemoPremiumMail(type, cost);
-            }
+    // If user has enough tokens, try real API first
+    if ((userData.tokens || 0) >= cost) {
+        fetch("/api/mail/generate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId: userData.id, cost, type })
         })
-        .catch(() => {
-            generateDemoPremiumMail(type, cost);
-        });
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    userData.tokens -= cost;
+                    renderBalances();
+                    mailSessions[type] = data;
+                    updateMailBalance(type);
+                    refreshInbox(type);
+                } else {
+                    generateDemoPremiumMail(type, 0);
+                }
+            })
+            .catch(() => {
+                generateDemoPremiumMail(type, 0);
+            });
+    } else {
+        // Not enough tokens - generate demo email (free preview)
+        generateDemoPremiumMail(type, 0);
+    }
 }
 
 function generateDemoPremiumMail(type, cost) {

@@ -1,14 +1,14 @@
 // Service Worker for PWA - Advanced Caching Strategy
-const CACHE_NAME = 'gemini-wallet-v1';
-const STATIC_CACHE = 'static-v1';
-const DYNAMIC_CACHE = 'dynamic-v1';
+const CACHE_NAME = 'gemini-wallet-v9';
+const STATIC_CACHE = 'static-v9';
+const DYNAMIC_CACHE = 'dynamic-v9';
 
 // Static assets to cache immediately
 const STATIC_ASSETS = [
     './',
     './index.html',
     './style.css',
-    './script.js',
+    './script.js?v=2.8',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
     'https://telegram.org/js/telegram-web-app.js'
 ];
