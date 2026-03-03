@@ -149,7 +149,7 @@ function nav(p) {
             message: 'You have been banned by the admin.\nPlease contact support to resolve this issue.',
             buttons: [{ type: 'destructive', text: 'Contact Support', id: 'support' }, { type: 'close' }]
         }, (btn) => {
-            if (btn === 'support') window.open('https://t.me/support');
+            if (btn === 'support') window.open('https://t.me/Onlin_Income_Support');
         });
         return;
     }

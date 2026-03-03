@@ -17,7 +17,7 @@ module.exports = {
     ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'admin123',
 
     // Public URL for web panel (your domain or IP)
-    PUBLIC_URL: process.env.PUBLIC_URL || 'https://autosverify-bot.onrender.com',  // Domain URL
+    PUBLIC_URL: process.env.PUBLIC_URL || 'https://mamunislam.netlify.app',  // Domain URL
 
     // OAUTH CONFIGURATION (FOR GMAIL SERVICE SYSTEM)
     // Create credentials at: https://console.cloud.google.com/apis/credentials
@@ -29,7 +29,7 @@ module.exports = {
     },
 
     // Mini App Subdomain (Telegram Mini App URL)
-    MINI_APP_URL: process.env.MINI_APP_URL || 'https://autosverify-bot.onrender.com',  // Telegram Mini App subdomain
+    MINI_APP_URL: process.env.MINI_APP_URL || 'https://mamunislam.netlify.app',  // Telegram Mini App subdomain
 
     // Mandatory Channel & Group (users MUST join to use the bot)
     REQUIRED_CHANNEL: '@AutosVerifyCh',  // Channel username or ID
@@ -57,7 +57,7 @@ module.exports = {
 
     // Remote API Access (Frontend on Hostinger)
     API_KEY: process.env.API_KEY || 'tg_bot_remote_access_key_123', // CHANGE THIS!
-    API_BASE_URL: process.env.API_BASE_URL || 'https://autosverify-bot.onrender.com', // Your VPS URL
+    API_BASE_URL: process.env.API_BASE_URL || 'https://mamunislam.netlify.app', // Your VPS URL
 
     // SmtpLabs API (Gmail Automation)
     SMTPLABS_API_KEY: 'smtplabs_SQGEMA1yD2cEgFJFJn38Uh7dGcDydAWYut7R7RzZQD3Hbvox',
