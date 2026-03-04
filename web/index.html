@@ -2207,7 +2207,7 @@
                         style="background:var(--bg-body); padding:12px; border-radius:12px; display:flex; justify-content:space-between; align-items:center; border:1px solid var(--border-color);">
                         <div class="rc-link" id="referralLink"
                             style="color:var(--accent-color); font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:80%">
-                            https://t.me/geminiverified_bot?start=...</div>
+                            https://t.me/AutosVerify_bot?start=ref_...</div>
                         <div style="color:var(--accent-color); cursor:pointer" onclick="copyLink()"><i
                                 class="far fa-copy"></i>
                         </div>
@@ -3043,11 +3043,12 @@
         </div>
 
         <div id="redeemPage" class="page"
-            style="display:none; flex-direction:column; justify-content:flex-start; padding-top:20px; padding-bottom:20px">
-            <div class="section-title" style="margin-bottom:24px">REDEEM COUPON</div>
+            style="display:none; flex-direction:column; justify-content:flex-start; padding-top:0; padding-bottom:20px">
+
+            <div class="section-title" style="margin-top:0; margin-bottom:8px; padding-top:0">REDEEM COUPON</div>
             <div class="gv-input-box"
-                style="margin-bottom:24px; background:var(--bg-card); padding:10px; border-radius:16px; border:1px solid var(--border-color)">
-                <input type="text" class="gv-input" placeholder="Enter Coupon Code"
+                style="margin-bottom:12px; background:var(--bg-card); padding:10px; border-radius:16px; border:1px solid var(--border-color)">
+                <input type="text" class="gv-input" id="redeemCodeInput" placeholder="Enter Coupon Code"
                     style="width:100%; background:transparent; border:none; outline:none; color:var(--text-main); font-size:16px; font-weight:700; padding:10px">
             </div>
             <button class="gv-btn" onclick="redeemCode()"
@@ -3621,11 +3622,11 @@
                 /* Top Light */
                 box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 15px rgba(245, 158, 11, 0.15) !important;
                 /* Glow */
-                padding: 4px 12px;
-                /* THINNER */
+                padding: 1px 12px;
+                /* VERY THIN */
                 z-index: 1000;
-                min-height: 48px;
-                /* Fixed thinner height */
+                min-height: 36px;
+                /* Thinner height */
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
@@ -3639,12 +3640,20 @@
             }
 
             .cb-avatar {
-                width: 48px !important;
-                height: 48px !important;
+                width: 56px !important;
+                height: 56px !important;
+                border-radius: 50% !important;
+                overflow: hidden !important;
+            }
+
+            .cb-avatar img {
+                width: 100% !important;
+                height: 100% !important;
+                object-fit: cover !important;
             }
 
             .cb-avatar i {
-                font-size: 24px !important;
+                font-size: 28px !important;
             }
 
             .cb-text {

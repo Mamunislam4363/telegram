@@ -397,14 +397,59 @@ class Database {
         const referrer = this.getUser(referrerId);
         if (!referrer) return false;
 
+        // Set referral relationship
         newUser.referredBy = referrerId;
 
+        // Track in referrer's list
+        if (!referrer.referredUsers) referrer.referredUsers = [];
+        referrer.referredUsers.push({
+            userId: newUserId,
+            date: Date.now(),
+            rewarded: false
+        });
+
+        // Increment count
         if (!referrer.referralCount) referrer.referralCount = 0;
         referrer.referralCount++;
-        referrer.balance += this.data.settings.refBonus; // Bonus for referrer
 
-        // Optional: Bonus for new user
-        // newUser.balance += 10; 
+        // Add bonus to referrer (use new token fields)
+        const refBonus = this.data.settings.refBonus || 10;
+        if (referrer.balance_tokens !== undefined) referrer.balance_tokens += refBonus;
+        if (referrer.tokens !== undefined) referrer.tokens += refBonus;
+        referrer.balance += refBonus; // Legacy
+
+        // Add welcome bonus to new user
+        if (newUser.balance_tokens !== undefined) newUser.balance_tokens += refBonus;
+        if (newUser.tokens !== undefined) newUser.tokens += refBonus;
+        newUser.balance += refBonus; // Legacy
+
+        // Add to referrer's history
+        if (!referrer.history) referrer.history = [];
+        referrer.history.unshift({
+            type: 'referral',
+            date: Date.now(),
+            details: `Referred user #${newUserId}`,
+            reward: `+${refBonus} Tokens`
+        });
+
+        // Add to new user's history
+        if (!newUser.history) newUser.history = [];
+        newUser.history.unshift({
+            type: 'welcome_bonus',
+            date: Date.now(),
+            details: `Joined via referral from #${referrerId}`,
+            reward: `+${refBonus} Tokens`
+        });
+
+        // Mark as rewarded
+        const refIndex = referrer.referredUsers.findIndex(r => r.userId === newUserId);
+        if (refIndex !== -1) {
+            referrer.referredUsers[refIndex].rewarded = true;
+        }
+
+        // Add transaction record
+        this.addTransaction(referrerId, 'referral', refBonus, 'Tokens', `Referral bonus from #${newUserId}`, 'user-plus');
+        this.addTransaction(newUserId, 'bonus', refBonus, 'Tokens', 'Welcome referral bonus', 'gift');
 
         this.save();
         return true;

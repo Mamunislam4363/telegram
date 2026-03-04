@@ -478,16 +478,19 @@ async function sendMainMenu(chatId, user, msgFrom) {
     const tokens = user.balance_tokens !== undefined ? user.balance_tokens :
         (user.tokens || user.balance || 0);
 
+    // Welcome message matching screenshot style
     const welcomeText = `👋 *Welcome, ${firstName}!*\n\n` +
         `💰 Balance: *${tokens} TC*\n` +
         `🆔 Your ID: \`${user.id}\`\n\n` +
         `Tap below to open the Mini App:`;
 
     const appUrl = `${publicUrl}`;
+
+    // Keyboard matching screenshot style - 2 buttons per row
     const keyboard = {
         reply_markup: {
             inline_keyboard: [
-                [{ text: '🚀 Open App', web_app: { url: appUrl } }],
+                [{ text: '🚀 Launch App', web_app: { url: appUrl } }],
                 [{ text: '👥 Invite Friends', callback_data: 'referral' }]
             ]
         }

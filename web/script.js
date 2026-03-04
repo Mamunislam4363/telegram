@@ -219,11 +219,18 @@ function showPage(targetId) {
         tg.BackButton.onClick(() => goBack());
     }
 
-    // Hide all pages
+    // Hide ALL pages including home
     document.querySelectorAll('.page').forEach(e => {
         e.classList.remove('active');
         e.style.display = 'none';
     });
+
+    // Explicitly hide home page when not on home
+    const homePage = document.getElementById('homePage');
+    if (homePage && targetId !== 'home') {
+        homePage.style.display = 'none';
+        homePage.classList.remove('active');
+    }
 
     // Explicitly hide mail pages when not on mail pages
     if (targetId !== 'mailService' && targetId !== 'premiumMail') {
@@ -237,8 +244,9 @@ function showPage(targetId) {
     // Email Service availability check - after hide all pages
     if (targetId === 'emailService') {
         targetId = 'mailService'; // Use same page for now with different provider
-        // TODO: Differentiate Email Service vs Temp Mail UI
     }
+
+    // Show target page
     const targetPage = document.getElementById(targetId + 'Page') || document.getElementById(targetId);
     if (targetPage) {
         targetPage.style.display = 'block';
@@ -251,6 +259,13 @@ function showPage(targetId) {
             setTimeout(() => {
                 mainScroll.scrollTop = savedTop;
             }, 0);
+        }
+    } else {
+        console.error('Page not found:', targetId);
+        // Fallback to home if page not found
+        if (targetId !== 'home') {
+            nav('home');
+            return;
         }
     }
 
@@ -423,48 +438,41 @@ function exchangeTokens() {
         return;
     }
 
-    tg.showPopup({
-        title: 'CONFIRM EXCHANGE',
-        message: `${formatCurrencyAmount(amt, fromCur)}  ➜  ${formatCurrencyAmount(preview.toAmount, toCur)}\n\nRate: ${preview.rateText}`,
-        buttons: [{ type: 'ok', id: 'ok', text: 'CONFIRM' }, { type: 'cancel', id: 'cancel' }]
-    }, (btnId) => {
-        if (btnId !== 'ok') return;
-
-        fetch('/api/exchange/convert', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                userId: userData.id,
-                from: fromCur,
-                to: toCur,
-                amount: amt
-            })
+    // Execute exchange directly without confirmation
+    fetch('/api/exchange/convert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            userId: userData.id,
+            from: fromCur,
+            to: toCur,
+            amount: amt
         })
-            .then(r => r.json())
-            .then(res => {
-                if (!res.success) {
-                    tg.showAlert(res.message || 'Exchange failed.');
-                    return;
-                }
+    })
+        .then(r => r.json())
+        .then(res => {
+            if (!res.success) {
+                tg.showAlert(res.message || 'Exchange failed.');
+                return;
+            }
 
-                // Sync balances from response
-                if (typeof res.tokens === 'number') userData.tokens = res.tokens;
-                if (typeof res.Gems === 'number') userData.Gems = res.Gems;
-                if (typeof res.usd === 'number') userData.usd = res.usd;
-                renderBalances();
-                updateExchangeBalances();
-                updateExchangePreview();
+            // Sync balances from response
+            if (typeof res.tokens === 'number') userData.tokens = res.tokens;
+            if (typeof res.Gems === 'number') userData.Gems = res.Gems;
+            if (typeof res.usd === 'number') userData.usd = res.usd;
+            renderBalances();
+            updateExchangeBalances();
+            updateExchangePreview();
 
-                tg.showPopup({
-                    title: '✅ EXCHANGE SUCCESSFUL',
-                    message: `${formatCurrencyAmount(amt, fromCur)} ➜ ${formatCurrencyAmount(res.toAmount ?? preview.toAmount, toCur)}`,
-                    buttons: [{ type: 'ok' }]
-                });
-            })
-            .catch(() => {
-                tg.showAlert('Network error. Please try again.');
+            tg.showPopup({
+                title: '✅ EXCHANGE SUCCESSFUL',
+                message: `${formatCurrencyAmount(amt, fromCur)} ➜ ${formatCurrencyAmount(res.toAmount ?? preview.toAmount, toCur)}`,
+                buttons: [{ type: 'ok' }]
             });
-    });
+        })
+        .catch(() => {
+            tg.showAlert('Network error. Please try again.');
+        });
 }
 
 const exchangeRates = {
@@ -746,13 +754,15 @@ function earn(buttonElement, type, amount) {
                         buttons: [{ type: 'ok' }]
                     });
                 } else {
+                    console.error('Task claim failed:', data.message);
                     tg.showAlert(data.message || 'Error completing task.');
                     IN_PROGRESS_TASKS[type] = null; // reset
                     buttonElement.innerHTML = 'CLAIM';
                 }
             })
             .catch(err => {
-                tg.showAlert('Error verifying task.');
+                console.error('Task claim error:', err);
+                tg.showAlert('Error: ' + (err.message || 'Could not connect to server. Please try again.'));
                 IN_PROGRESS_TASKS[type] = null; // reset
                 buttonElement.innerHTML = 'CLAIM';
             });
@@ -763,38 +773,35 @@ function earn(buttonElement, type, amount) {
         return; // Already started
     }
 
-    tg.showConfirm('Start this mission?', (ok) => {
-        if (ok) {
-            // Open Link
-            if (type === 'yt') window.open('https://youtube.com/@MamunIslamyts');
-            else if (type === 'tg') window.open('https://t.me/AutosVerifych');
-            else if (type === 'tg_ch') window.open('https://t.me/AutosVerify');
+    // Start mission directly without confirmation
+    // Open Link
+    if (type === 'yt') window.open('https://youtube.com/@MamunIslamyts');
+    else if (type === 'tg') window.open('https://t.me/AutosVerifych');
+    else if (type === 'tg_ch') window.open('https://t.me/AutosVerify');
 
-            // Start 30s Countdown
-            IN_PROGRESS_TASKS[type] = 'waiting';
-            buttonElement.style.pointerEvents = 'none';
-            buttonElement.style.background = '#333';
-            buttonElement.style.color = '#aaa';
+    // Start 30s Countdown
+    IN_PROGRESS_TASKS[type] = 'waiting';
+    buttonElement.style.pointerEvents = 'none';
+    buttonElement.style.background = '#333';
+    buttonElement.style.color = '#aaa';
 
-            let timeLeft = 30;
+    let timeLeft = 30;
+    buttonElement.innerHTML = `${timeLeft}s...`;
+
+    const timer = setInterval(() => {
+        timeLeft--;
+        if (timeLeft <= 0) {
+            clearInterval(timer);
+            IN_PROGRESS_TASKS[type] = 'claiming';
+            buttonElement.style.pointerEvents = 'auto';
+            buttonElement.style.background = '#22c55e'; // Green claim button
+            buttonElement.style.color = '#fff';
+            buttonElement.innerHTML = 'CLAIM';
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+        } else {
             buttonElement.innerHTML = `${timeLeft}s...`;
-
-            const timer = setInterval(() => {
-                timeLeft--;
-                if (timeLeft <= 0) {
-                    clearInterval(timer);
-                    IN_PROGRESS_TASKS[type] = 'claiming';
-                    buttonElement.style.pointerEvents = 'auto';
-                    buttonElement.style.background = '#22c55e'; // Green claim button
-                    buttonElement.style.color = '#fff';
-                    buttonElement.innerHTML = 'CLAIM';
-                    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-                } else {
-                    buttonElement.innerHTML = `${timeLeft}s...`;
-                }
-            }, 1000);
         }
-    });
+    }, 1000);
 }
 
 // ==========================================
@@ -1180,36 +1187,91 @@ function updateInviteUI() {
     }
 }
 
-// RENDER REFERRAL HISTORY
+// RENDER REFERRAL HISTORY - Fetch from server
 function renderReferralHistory() {
     const container = document.getElementById('refHistoryList');
     if (!container) return;
 
-    // Mock Data
-    const history = [
-        { name: 'Alice Wonderland', date: 'Today, 10:30 AM', status: 'Active', reward: '+10' },
-        { name: 'Bob Builder', date: 'Yesterday, 05:45 PM', status: 'Pending', reward: '0' },
-        { name: 'Charlie Chaplin', date: 'Feb 12, 09:00 AM', status: 'Active', reward: '+10' }
-    ];
+    // Show loading state
+    container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-sub);"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
 
-    container.innerHTML = history.map(h => `
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid var(--border-color)">
-            <div style="display:flex; gap:10px; align-items:center">
-                <div style="width:32px; height:32px; background:#333; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700">
-                    ${h.name.charAt(0)}
+    // Fetch real data from API
+    fetch(`/api/referrals/${userData.id}`)
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success || !data.referrals || data.referrals.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align:center; padding:40px; color:var(--text-sub);">
+                        <i class="fas fa-user-plus" style="font-size:32px; margin-bottom:10px; display:block; opacity:0.3;"></i>
+                        <div style="font-size:12px;">No referrals yet. Share your link to invite friends!</div>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = data.referrals.map(h => {
+                const date = new Date(h.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                const time = new Date(h.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                return `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid var(--border-color)">
+                    <div style="display:flex; gap:10px; align-items:center">
+                        <div style="width:32px; height:32px; background:#333; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700">
+                            ${h.name.charAt(0)}
+                        </div>
+                        <div>
+                            <div style="font-size:13px; font-weight:700; color:var(--text-main)">${h.name}</div>
+                            <div style="font-size:10px; color:var(--text-sub)">${date} • ${time}</div>
+                        </div>
+                    </div>
+                    <div style="text-align:right">
+                        <div style="font-size:10px; color:${h.status === 'Active' ? '#22c55e' : '#f59e0b'}">${h.status}</div>
+                        <div style="font-size:12px; font-weight:800; color:var(--text-main)">${h.reward} T</div>
+                    </div>
                 </div>
-                <div>
-                    <div style="font-size:13px; font-weight:700; color:var(--text-main)">${h.name}</div>
-                    <div style="font-size:10px; color:var(--text-sub)">${h.date}</div>
-                </div>
-            </div>
-            <div style="text-align:right">
-                <div style="font-size:10px; color:${h.status === 'Active' ? '#22c55e' : '#f59e0b'}">${h.status}</div>
-                <div style="font-size:12px; font-weight:800; color:var(--text-main)">${h.reward} T</div>
-            </div>
-        </div>
-    `).join('');
+            `}).join('');
+        })
+        .catch(() => {
+            container.innerHTML = `
+                <div style="text-align:center; padding:20px; color:#ef4444;">
+                    <i class="fas fa-exclamation-circle" style="font-size:24px; margin-bottom:8px; display:block;"></i>
+                    Failed to load referrals.
+                </div>`;
+        });
 }
+
+// Load invite page stats
+function loadInviteStats() {
+    fetch(`/api/referrals/${userData.id}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                // Update stats cards
+                const invitedEl = document.querySelector('.stat-card .mi-icon.blue + div div:last-child');
+                const earnedEl = document.querySelector('.stat-card .mi-icon.yellow + div div:last-child');
+
+                if (invitedEl) invitedEl.textContent = data.stats.invited;
+                if (earnedEl) earnedEl.textContent = data.stats.earned;
+
+                // Update referral link
+                const linkEl = document.getElementById('referralLink');
+                if (linkEl && data.referralLink) {
+                    linkEl.textContent = data.referralLink;
+                }
+            }
+        })
+        .catch(() => {
+            // Silent fail - keep default values
+        });
+}
+
+// Update invite page when navigating to it
+const originalShowPage = showPage;
+showPage = function (targetId) {
+    originalShowPage(targetId);
+    if (targetId === 'invite') {
+        renderReferralHistory();
+        loadInviteStats();
+    }
+};
 
 // Call init functions
 updateInviteUI();
@@ -1289,10 +1351,10 @@ function registerAndFetchUser() {
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                // Sync from server
-                userData.tokens = data.tokens || 0;
-                userData.Gems = data.Gems || 0;
-                userData.usd = data.usd || (data.tokens / 100);
+                // Sync from server - check both tokens and balance_tokens fields
+                userData.tokens = data.tokens || data.balance_tokens || 0;
+                userData.Gems = data.Gems || data.gems || 0;
+                userData.usd = data.usd || (userData.tokens / 100);
                 userData.verified = data.verified || false;
                 userData.dailyStreak = data.dailyStreak || 0;
                 userData.lastDailyClaim = data.lastClaim || 0;
@@ -1444,8 +1506,18 @@ function saveWallet() { renderBalances(); }
 
 function updateBalanceUI() { renderBalances(); }
 
+// Helper: Get short name (first 2 words max)
+function getShortName(fullName) {
+    if (!fullName) return 'Guest';
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length <= 2) return fullName;
+    // Return first 2 parts for long names like "Riad Al Mamun" -> "Riad Al"
+    return parts.slice(0, 2).join(' ');
+}
+
 function renderBalances() {
-    const displayName = userData.firstName || userData.username || _tgUser.first_name || 'Guest';
+    const rawName = userData.firstName || userData.username || _tgUser.first_name || 'Guest';
+    const displayName = getShortName(rawName);
 
     // 1. Update Profile Stats
     const elTc = document.getElementById('prof-tc');
@@ -1474,11 +1546,8 @@ function renderBalances() {
 
 function payWithBalance() {
     if (userData.usd >= 3.00) {
-        tg.showConfirm('Pay $3.00 from your balance for Gemini 1 Year?', (ok) => {
-            if (ok) {
-                tg.showAlert('Purchase request sent to server!');
-            }
-        });
+        // Process directly without confirmation
+        tg.showAlert('Purchase request sent to server!');
     } else {
         if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
         tg.showAlert('Insufficient Balance ($' + userData.usd.toFixed(2) + '). Please deposit funds.');
@@ -1707,8 +1776,7 @@ function buyPremiumAccount(accountId, type, price) {
         return;
     }
 
-    if (!confirm(`Buy ${type} account for ${price} TC?`)) return;
-
+    // Purchase directly without confirmation
     fetch('/api/accounts/buy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1890,71 +1958,68 @@ function buyAccountFromCategory(category) {
         return;
     }
 
-    tg.showConfirm(`Buy ${cat.name} for ${cat.price} Tokens?`, (ok) => {
-        if (!ok) return;
+    // Execute purchase directly without confirmation
+    const btn = document.getElementById('buyAccountBtn');
+    if (btn) {
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> PROCESSING...';
+        btn.style.pointerEvents = 'none';
+    }
 
-        const btn = document.getElementById('buyAccountBtn');
-        if (btn) {
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> PROCESSING...';
-            btn.style.pointerEvents = 'none';
-        }
+    fetch('/api/accounts/buy-category', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: userData.id, category: category, price: cat.price })
+    })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                userData.tokens = data.newBalance;
+                updateBalanceUI();
 
-        fetch('/api/accounts/buy-category', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: userData.id, category: category, price: cat.price })
-        })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    userData.tokens = data.newBalance;
-                    updateBalanceUI();
+                // Show credentials
+                const credBox = document.getElementById('accountCredentialsBox');
+                const emailEl = document.getElementById('accEmailText');
+                const passEl = document.getElementById('accPassText');
 
-                    // Show credentials
-                    const credBox = document.getElementById('accountCredentialsBox');
-                    const emailEl = document.getElementById('accEmailText');
-                    const passEl = document.getElementById('accPassText');
+                if (credBox) credBox.style.display = 'block';
+                if (emailEl) emailEl.textContent = data.account.email;
+                if (passEl) passEl.textContent = data.account.password;
 
-                    if (credBox) credBox.style.display = 'block';
-                    if (emailEl) emailEl.textContent = data.account.email;
-                    if (passEl) passEl.textContent = data.account.password;
-
-                    if (btn) {
-                        btn.innerHTML = '<i class="fas fa-check"></i> PURCHASED';
-                        btn.style.background = '#22c55e';
-                        btn.style.boxShadow = '0 8px 24px rgba(34,197,94,0.3)';
-                        btn.style.pointerEvents = 'none';
-                    }
-
-                    // Confetti
-                    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-                    if (typeof confetti !== 'undefined') {
-                        var duration = 3 * 1000;
-                        var animationEnd = Date.now() + duration;
-                        var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 99999 };
-                        var interval = setInterval(function () {
-                            var timeLeft = animationEnd - Date.now();
-                            if (timeLeft <= 0) return clearInterval(interval);
-                            var particleCount = 50 * (timeLeft / duration);
-                            confetti(Object.assign({}, defaults, { particleCount, origin: { x: Math.random(), y: Math.random() - 0.2 } }));
-                        }, 250);
-                    }
-                } else {
-                    tg.showAlert(data.message || 'Purchase failed.');
-                    if (btn) {
-                        btn.innerHTML = `<i class="fas fa-shopping-cart"></i> BUY FOR ${cat.price} TOKENS`;
-                        btn.style.pointerEvents = 'auto';
-                    }
+                if (btn) {
+                    btn.innerHTML = '<i class="fas fa-check"></i> PURCHASED';
+                    btn.style.background = '#22c55e';
+                    btn.style.boxShadow = '0 8px 24px rgba(34,197,94,0.3)';
+                    btn.style.pointerEvents = 'none';
                 }
-            })
-            .catch(() => {
-                tg.showAlert('Network error. Please try again.');
+
+                // Confetti
+                if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+                if (typeof confetti !== 'undefined') {
+                    var duration = 3 * 1000;
+                    var animationEnd = Date.now() + duration;
+                    var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 99999 };
+                    var interval = setInterval(function () {
+                        var timeLeft = animationEnd - Date.now();
+                        if (timeLeft <= 0) return clearInterval(interval);
+                        var particleCount = 50 * (timeLeft / duration);
+                        confetti(Object.assign({}, defaults, { particleCount, origin: { x: Math.random(), y: Math.random() - 0.2 } }));
+                    }, 250);
+                }
+            } else {
+                tg.showAlert(data.message || 'Purchase failed.');
                 if (btn) {
                     btn.innerHTML = `<i class="fas fa-shopping-cart"></i> BUY FOR ${cat.price} TOKENS`;
                     btn.style.pointerEvents = 'auto';
                 }
-            });
-    });
+            }
+        })
+        .catch(() => {
+            tg.showAlert('Network error. Please try again.');
+            if (btn) {
+                btn.innerHTML = `<i class="fas fa-shopping-cart"></i> BUY FOR ${cat.price} TOKENS`;
+                btn.style.pointerEvents = 'auto';
+            }
+        });
 }
 window.buyAccountFromCategory = buyAccountFromCategory;
 
@@ -2018,20 +2083,10 @@ function generateService(type) {
         return;
     }
 
-    tg.showPopup({
-        title: `Generate ${name}`,
-        message: `This will cost ${cost} TC from your balance.\n\nProceed?`,
-        buttons: [
-            { type: 'ok', id: 'confirm', text: 'GENERATE' },
-            { type: 'cancel', id: 'cancel' }
-        ]
-    }, (btnId) => {
-        if (btnId === 'confirm') {
-            userData.tokens -= cost;
-            renderBalances();
-            tg.showAlert(` ${name} generated successfully!\n\nYour balance: ${userData.tokens} TC`);
-        }
-    });
+    // Generate directly without confirmation
+    userData.tokens -= cost;
+    renderBalances();
+    tg.showAlert(` ${name} generated successfully!\n\nYour balance: ${userData.tokens} TC`);
 }
 
 // =============================================
@@ -2062,44 +2117,38 @@ function generateVirtualNumber() {
         tg.showAlert(`❌ Insufficient tokens!\n\nYou need ${cost} TC.\nYour balance: ${userData.tokens || 0} TC`);
         return;
     }
-    tg.showPopup({
-        title: '📱 Get Virtual Number',
-        message: `Platform: ${selectedNumPlatform.toUpperCase()}\nCost: ${cost} TC\n\nProceed?`,
-        buttons: [{ type: 'ok', id: 'ok', text: 'GET NUMBER' }, { type: 'cancel' }]
-    }, (btnId) => {
-        if (btnId !== 'ok') return;
-        const btn = document.getElementById('numGenerateBtn');
-        if (btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...'; btn.disabled = true; }
+    // Get number directly without confirmation
+    const btn = document.getElementById('numGenerateBtn');
+    if (btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...'; btn.disabled = true; }
 
-        fetch('/api/number/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: userData.id, platform: selectedNumPlatform, cost })
+    fetch('/api/number/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: userData.id, platform: selectedNumPlatform, cost })
+    })
+        .then(r => r.json())
+        .then(data => {
+            if (btn) { btn.innerHTML = '<i class="fas fa-phone-alt"></i> GET VIRTUAL NUMBER'; btn.disabled = false; }
+            if (data.success) {
+                userData.tokens -= cost;
+                renderBalances();
+                updateNumBalance();
+                currentNumSession = data;
+                document.getElementById('numResultValue').textContent = data.number || '+1 555 000 1234';
+                document.getElementById('numResultBox').style.display = 'block';
+                document.getElementById('numOtpBox').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Waiting for OTP...';
+                // Poll for OTP
+                if (numOtpPollInterval) clearInterval(numOtpPollInterval);
+                numOtpPollInterval = setInterval(pollForOTP, 5000);
+                addNumHistory(data.number);
+            } else {
+                tg.showAlert('❌ ' + (data.message || 'Failed to get number. Try again.'));
+            }
         })
-            .then(r => r.json())
-            .then(data => {
-                if (btn) { btn.innerHTML = '<i class="fas fa-phone-alt"></i> GET VIRTUAL NUMBER'; btn.disabled = false; }
-                if (data.success) {
-                    userData.tokens -= cost;
-                    renderBalances();
-                    updateNumBalance();
-                    currentNumSession = data;
-                    document.getElementById('numResultValue').textContent = data.number || '+1 555 000 1234';
-                    document.getElementById('numResultBox').style.display = 'block';
-                    document.getElementById('numOtpBox').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Waiting for OTP...';
-                    // Poll for OTP
-                    if (numOtpPollInterval) clearInterval(numOtpPollInterval);
-                    numOtpPollInterval = setInterval(pollForOTP, 5000);
-                    addNumHistory(data.number);
-                } else {
-                    tg.showAlert('❌ ' + (data.message || 'Failed to get number. Try again.'));
-                }
-            })
-            .catch(() => {
-                if (btn) { btn.innerHTML = '<i class="fas fa-phone-alt"></i> GET VIRTUAL NUMBER'; btn.disabled = false; }
-                tg.showAlert('❌ Network error. Please try again.');
-            });
-    });
+        .catch(() => {
+            if (btn) { btn.innerHTML = '<i class="fas fa-phone-alt"></i> GET VIRTUAL NUMBER'; btn.disabled = false; }
+            tg.showAlert('❌ Network error. Please try again.');
+        });
 }
 
 function pollForOTP() {
@@ -2313,12 +2362,9 @@ function renewTempMail(type) {
 }
 
 function deleteMail(type) {
-    tg.showConfirm(`Delete current ${type} address? Previous inbox will be lost.`, (ok) => {
-        if (ok) {
-            mailSessions[type] = null;
-            updateMailBalance(type);
-        }
-    });
+    // Delete directly without confirmation
+    mailSessions[type] = null;
+    updateMailBalance(type);
 }
 
 function refreshInbox(type) {

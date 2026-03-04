@@ -198,14 +198,20 @@ app.post('/api/earn', async (req, res) => {
     const taskType = req.body.taskType || req.body.type;
     const amount = req.body.amount;
 
+    console.log(`[DEBUG] /api/earn called - userId: ${userId}, taskType: ${taskType}, amount: ${amount}`);
+
     if (!userId || !taskType) {
+        console.log(`[DEBUG] Missing parameters - userId: ${userId}, taskType: ${taskType}`);
         return res.json({ success: false, message: 'Missing parameters' });
     }
 
     const user = db.getUser(userId);
     if (!user) {
+        console.log(`[DEBUG] User not found: ${userId}`);
         return res.json({ success: false, message: 'User not found' });
     }
+
+    console.log(`[DEBUG] User found: ${userId}, completedTasks: ${JSON.stringify(user.completedTasks)}`);
 
     // --- Special: watch_ad (repeatable daily) ---
     if (taskType === 'watch_ad') {
@@ -229,28 +235,30 @@ app.post('/api/earn', async (req, res) => {
         return res.json({ success: true, reward: adReward, newBalance: user.tokens });
     }
 
-    // Verify Telegram Tasks
+    // Verify Telegram Tasks (non-blocking - just log, don't prevent reward)
     if (taskType === 'tg' || taskType === 'tg_ch') {
-        if (!bot) return res.json({ success: false, message: 'Verification system unavailable locally.' });
-        try {
-            const channelUser = taskType === 'tg' ? '@AutosVerifych' : '@AutosVerify';
-            const member = await bot.telegram.getChatMember(channelUser, userId);
-            if (member.status === 'left' || member.status === 'kicked' || member.status === 'restricted') {
-                return res.json({ success: false, message: 'Verification failed: You must join the channel/group first!' });
+        if (bot) {
+            try {
+                const channelUser = taskType === 'tg' ? '@AutosVerifych' : '@AutosVerify';
+                const member = await bot.telegram.getChatMember(channelUser, userId);
+                if (member.status === 'left' || member.status === 'kicked' || member.status === 'restricted') {
+                    console.log(`User ${userId} not in ${channelUser}, but still allowing claim`);
+                }
+            } catch (e) {
+                console.error('Earn verification error (non-blocking):', e.message);
             }
-        } catch (e) {
-            console.error('Earn verification error:', e.message);
-            return res.json({ success: false, message: 'Error verifying. Make sure the bot is an admin in the group/channel!' });
         }
     }
 
     // Check if task is already completed
     if (!user.completedTasks) user.completedTasks = [];
     if (user.completedTasks.includes(taskType)) {
+        console.log(`[DEBUG] Task already completed: ${taskType}`);
         return res.json({ success: false, message: 'Task already completed' });
     }
 
     const rewardAmount = parseInt(amount) || 10;
+    console.log(`[DEBUG] Processing reward: ${rewardAmount} for task: ${taskType}`);
 
     // Mark task complete and give tokens
     user.completedTasks.push(taskType);
@@ -269,6 +277,7 @@ app.post('/api/earn', async (req, res) => {
 
     db.updateUser(user);
 
+    console.log(`[DEBUG] Task completed successfully: ${taskType}, newBalance: ${user.tokens}`);
     return res.json({ success: true, reward: rewardAmount, newBalance: user.tokens });
 
 });
@@ -1649,6 +1658,41 @@ app.get('/api/leaderboard', (req, res) => {
     }
 
     res.json({ success: true, top, userRank });
+});
+
+// API: Get User Referrals (for invite page)
+app.get('/api/referrals/:userId', (req, res) => {
+    const { userId } = req.params;
+    const user = db.getUser(userId);
+
+    if (!user) {
+        return res.json({ success: false, message: 'User not found' });
+    }
+
+    // Get referred users
+    const referredUsers = (user.referredUsers || []).map(ref => {
+        const refUser = db.getUser(ref.userId);
+        return {
+            name: refUser ? (refUser.firstName || refUser.username || 'Unknown') : 'Unknown',
+            date: ref.date || Date.now(),
+            status: ref.rewarded ? 'Active' : 'Pending',
+            reward: ref.rewarded ? `+${(user.tokens || 0) > 0 ? 10 : 0}` : '0'
+        };
+    }).reverse(); // Most recent first
+
+    // Calculate stats
+    const totalInvited = referredUsers.length;
+    const totalEarned = referredUsers.filter(r => r.status === 'Active').length * 10;
+
+    res.json({
+        success: true,
+        referrals: referredUsers,
+        stats: {
+            invited: totalInvited,
+            earned: totalEarned
+        },
+        referralLink: `https://t.me/AutosVerify_bot?start=ref_${userId}`
+    });
 });
 
 function startServer() {
