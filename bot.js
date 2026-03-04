@@ -213,14 +213,22 @@ bot.on('polling_error', (err) => {
     }
 });
 
-// Clean console logging - only show user activities
+// Force all logs to a file so we can see what the user sees
+const fsLog = require('fs');
+const logFile = require('path').join(__dirname, 'global_log.txt');
 const originalConsoleLog = console.log;
+const originalConsoleError = console.error;
+
 console.log = function (...args) {
-    const msg = args.join(' ');
-    // Filter out polling/technical messages, only show user activities
-    if (msg.includes('👤 User:') || msg.includes('💬 Chat:') || msg.includes('✅ Verification:') || msg.includes('📊 Activity:')) {
-        originalConsoleLog.apply(console, args);
-    }
+    const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ');
+    fsLog.appendFileSync(logFile, `[LOG] ${new Date().toISOString()} ${msg}\n`);
+    originalConsoleLog.apply(console, args);
+};
+
+console.error = function (...args) {
+    const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ');
+    fsLog.appendFileSync(logFile, `[ERR] ${new Date().toISOString()} ${msg}\n`);
+    originalConsoleError.apply(console, args);
 };
 
 console.log('🤖 Telegram Verification Bot Started');
@@ -235,9 +243,13 @@ bot.getMe().then(me => {
     // Silently handle connection errors
 });
 
+bot.on('message', (msg) => {
+    console.log(`[DEBUG] RAW MESSAGE RECEIVED from ${msg.from?.id}: ${msg.text}`);
+});
+
 // Global Error Handlers - silent
-process.on('unhandledRejection', () => { /* silent */ });
-process.on('uncaughtException', () => { /* silent */ });
+process.on('unhandledRejection', (e) => { console.error('unhandledRejection:', e); });
+process.on('uncaughtException', (e) => { console.error('uncaughtException:', e); });
 
 // Manage State 
 const userState = {};
@@ -448,10 +460,10 @@ function showMandatoryJoin(chatId, membership, msgId = null) {
 
     if (msgId) {
         bot.editMessageText(msg, { chat_id: chatId, message_id: msgId, ...opts }).catch(() => {
-            bot.sendMessage(chatId, msg, opts).catch(() => { });
+            bot.sendMessage(chatId, msg, opts).catch(e => console.error('Mandatory Join Msg Error:', e));
         });
     } else {
-        bot.sendMessage(chatId, msg, opts).catch(() => { });
+        bot.sendMessage(chatId, msg, opts).catch(e => console.error('Mandatory Join Msg Error:', e));
     }
 }
 
@@ -474,12 +486,12 @@ global.emitLog = (message, type = 'info') => {
 
 // /start
 bot.onText(/\/start/, async (msg) => {
-    const chatId = msg.chat.id;
-    const userId = msg.from.id;
-    const username = msg.from.username || msg.from.first_name || 'Unknown';
-    const user = db.getUser(userId);
-
     try {
+        const chatId = msg.chat.id;
+        const userId = msg.from.id;
+        const username = msg.from.username || msg.from.first_name || 'Unknown';
+        const user = db.getUser(userId);
+
         // Log user activity
         originalConsoleLog(`👤 User: ${userId} (${username}) | 🚀 Started bot | ⏰ ${new Date().toLocaleTimeString()}`);
 
@@ -522,7 +534,26 @@ bot.onText(/\/start/, async (msg) => {
     }
 });
 
-// Removed /admin and sendAdminMainMenu function per user request
+bot.onText(/\/admin/, async (msg) => {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+
+    if (!isAdmin(userId)) {
+        bot.sendMessage(chatId, "❌ You do not have permission to use this command.");
+        return;
+    }
+
+    const adminPanelUrl = `${config.PUBLIC_URL}/admin`;
+    const keyboard = {
+        reply_markup: {
+            inline_keyboard: [
+                [{ text: '🛠️ Open Admin Panel', web_app: { url: adminPanelUrl } }]
+            ]
+        }
+    };
+
+    bot.sendMessage(chatId, "👋 Welcome, Admin! Click below to open the Admin Dashboard.", keyboard).catch(e => console.error("Admin msg error:", e));
+});
 async function sendMainMenu(chatId, user, msgFrom) {
     const publicUrl = process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`;
 

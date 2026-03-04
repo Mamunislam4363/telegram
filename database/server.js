@@ -18,6 +18,37 @@ let totalCallbacks = 0;
 
 function setBot(instance) {
     bot = instance;
+
+    // Automatically create a secure tunnel for local development, and update Telegram Bot menu!
+    setTimeout(async () => {
+        try {
+            const localtunnel = require('localtunnel');
+            const tunnel = await localtunnel({ port: PORT, local_https: false, local_host: '127.0.0.1' });
+
+            console.log(`\n🚀 [AUTO-TUNNEL] Secure Public URL generated: ${tunnel.url}`);
+
+            // Override config so all bot references use the tunnel URL instead of Netlify/localhost
+            config.PUBLIC_URL = tunnel.url;
+            config.MINI_APP_URL = tunnel.url;
+            process.env.PUBLIC_URL = tunnel.url;
+
+            // Automatically set the Web App Menu Button in Telegram!
+            await bot.setChatMenuButton({
+                menu_button: {
+                    type: 'web_app',
+                    text: 'Launch Bot',
+                    web_app: { url: tunnel.url }
+                }
+            });
+            console.log(`✅ [AUTO-TUNNEL] Telegram Menu Button automatically updated!`);
+
+            tunnel.on('close', () => {
+                console.log('⚠️ [AUTO-TUNNEL] Tunnel closed.');
+            });
+        } catch (e) {
+            console.error('❌ [AUTO-TUNNEL] Failed to create tunnel:', e.message);
+        }
+    }, 2000);
 }
 
 // Helper: Validate userId

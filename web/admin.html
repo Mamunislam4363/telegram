@@ -1548,6 +1548,15 @@
     </div>
 
     <script>
+        const originalFetch = window.fetch;
+        window.fetch = function () {
+            let args = Array.prototype.slice.call(arguments);
+            if (!args[1]) args[1] = {};
+            if (!args[1].headers) args[1].headers = {};
+            args[1].headers['Bypass-Tunnel-Reminder'] = 'true';
+            return originalFetch.apply(this, args);
+        };
+
         // AUTO INITIALIZE (No Login)
         document.addEventListener('DOMContentLoaded', () => {
             init();

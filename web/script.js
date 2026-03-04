@@ -1,3 +1,12 @@
+const originalFetch = window.fetch;
+window.fetch = function () {
+    let args = Array.prototype.slice.call(arguments);
+    if (!args[1]) args[1] = {};
+    if (!args[1].headers) args[1].headers = {};
+    args[1].headers['Bypass-Tunnel-Reminder'] = 'true';
+    return originalFetch.apply(this, args);
+};
+
 // Helper: Check if userId is valid before making API calls
 function isValidUserId(userId) {
     if (!userId) return false;
@@ -14,6 +23,8 @@ function apiFetch(url, options = {}) {
         console.log('[CLIENT BLOCKED] Invalid userId:', userId);
         return Promise.resolve({ json: () => Promise.resolve({ success: false, message: 'Invalid userId' }) });
     }
+    options.headers = options.headers || {};
+    options.headers['Bypass-Tunnel-Reminder'] = 'true';
 
     return fetch(url, options);
 }
