@@ -914,7 +914,7 @@ function claimAdReward() {
     fetch('/api/earn', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: userId, type: 'watch_ad' })
+        body: JSON.stringify({ userId: userData.id, type: 'watch_ad' })
     })
         .then(r => r.json())
         .then(data => {
@@ -1260,7 +1260,8 @@ const userId = userData.id;
 
 // Main auto-login function: registers user with server using Telegram data
 function registerAndFetchUser() {
-    if (!userId || userId === 0) {
+    const currentUserId = userData.id;
+    if (!currentUserId || currentUserId === 0) {
         // No Telegram user (opened in browser, not Telegram)
         renderBalances();
         applyProfilePhoto('');
@@ -1277,7 +1278,7 @@ function registerAndFetchUser() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            userId: userId,
+            userId: userData.id,
             firstName: _tgUser.first_name || '',
             lastName: _tgUser.last_name || '',
             username: _tgUser.username || '',
@@ -2734,9 +2735,27 @@ window.copyMailOtp = copyMailOtp;
 window.updateMailBalance = updateMailBalance;
 
 document.addEventListener('DOMContentLoaded', function () {
+    // Re-initialize Telegram WebApp data in case SDK loaded after initial parse
+    if (window.Telegram && window.Telegram.WebApp) {
+        tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+        const freshUser = tg.initDataUnsafe?.user || {};
+        if (freshUser.id) {
+            // Update global user data with fresh Telegram data
+            userData.id = freshUser.id;
+            userData.username = freshUser.first_name || freshUser.username || 'User';
+            userData.firstName = freshUser.first_name || '';
+            userData.lastName = freshUser.last_name || '';
+            userData.photo_url = freshUser.photo_url || '';
+            // Also update the module-level references
+            Object.assign(_tgUser, freshUser);
+        }
+    }
+
     showPage('home');
     // Apply Telegram photo immediately before server responds
-    applyProfilePhoto(_tgUser.photo_url || '');
+    applyProfilePhoto(userData.photo_url || _tgUser.photo_url || '');
     renderBalances();
     // Auto-login from Telegram WebApp data
     registerAndFetchUser();
