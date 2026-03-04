@@ -914,11 +914,7 @@ function completeTaskReward(type, buttonElement, amount) {
                 if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
                 checkAllTasksCompleted();
 
-                tg.showAlert({
-                    title: 'TASK COMPLETE!',
-                    message: `You earned +${amount} Tokens!`,
-                    buttons: [{ type: 'ok' }]
-                });
+                tg.showAlert(`TASK COMPLETE!\n\nYou earned +${amount} Tokens!`);
             } else {
                 IN_PROGRESS_TASKS[type] = null;
                 buttonElement.innerHTML = 'START';
@@ -2514,7 +2510,7 @@ function pollForOTP() {
 function copyNumOtp(otp) {
     if (!otp) return;
     navigator.clipboard.writeText(otp).then(() => {
-        tg.showAlert({ message: 'OTP Copied: ' + otp });
+        tg.showAlert('OTP Copied: ' + otp);
         if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
     });
 }
