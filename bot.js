@@ -173,7 +173,16 @@ async function getSmtpLabsOtp(email, accountId = null, mailboxId = null, provide
 
 const bot = new TelegramBot(token, {
     polling: false, // Wait for DB load
-    polling_timeout: 10
+    polling_timeout: 10,
+    polling_options: {
+        allowed_updates: [
+            'message',
+            'callback_query',
+            'chat_member',
+            'my_chat_member',
+            'inline_query'
+        ]
+    }
 });
 
 // Start Polling ONLY after DB is ready (Unlocks Phase 1 & 2)
@@ -393,30 +402,57 @@ async function checkMembership(userId) {
     }
 }
 
-// Helper: Show mandatory join message
-function showMandatoryJoin(chatId, membership) {
-    const channelStatus = membership.channel ? '✅' : '❌';
-    const groupStatus = membership.group ? '✅' : '❌';
+// Helper: Show mandatory join message (smart - shows only missing items)
+function showMandatoryJoin(chatId, membership, msgId = null) {
+    const requiredChannel = (config.REQUIRED_CHANNEL || '').toString().trim();
+    const requiredGroup = (config.REQUIRED_GROUP || '').toString().trim();
 
-    const msg = `🚨 **Welcome to the Bot!**\n\n` +
-        `To use this bot, you **MUST** join our official channel and group:\n\n` +
-        `${channelStatus} **Channel:** ${config.REQUIRED_CHANNEL}\n` +
-        `${groupStatus} **Group:** ${config.REQUIRED_GROUP}\n\n` +
-        `⚠️ **Important:** You must stay joined to continue using the bot.\n\n` +
-        `After joining, click **✅ I Joined** to verify.`;
+    // Determine what's missing
+    const missingItems = [];
+    if (requiredChannel && !membership.channel) {
+        missingItems.push({ label: '📢 Channel', username: requiredChannel });
+    }
+    if (requiredGroup && !membership.group) {
+        missingItems.push({ label: '💬 Group', username: requiredGroup });
+    }
 
-    const buttons = [
-        [
-            { text: '📢 Join Channel', url: `https://t.me/${config.REQUIRED_CHANNEL.replace('@', '')}` },
-            { text: '💬 Join Group', url: `https://t.me/${config.REQUIRED_GROUP.replace('@', '')}` }
-        ],
-        [{ text: '✅ I Joined - Verify', callback_data: 'verify_membership' }]
-    ];
+    // Build message
+    let msg = `🚫 *Access Restricted!*\n\n`;
+    if (missingItems.length === 1) {
+        const item = missingItems[0];
+        msg += `You left our ${item.label} and your access has been *revoked*\n\n`;
+        msg += `Please rejoin to continue using the bot:\n\n`;
+        msg += `❌ ${item.label}: \`${item.username}\``;
+    } else {
+        msg += `You are not a member of our required communities.\n\n`;
+        msg += `Please join to use the bot:\n\n`;
+        missingItems.forEach(item => {
+            msg += `❌ ${item.label}: \`${item.username}\`\n`;
+        });
+    }
+    msg += `\n\n✅ After joining, click *I Joined* below to verify.`;
 
-    bot.sendMessage(chatId, msg, {
+    // Build join buttons (only for missing items)
+    const buttons = [];
+    const joinRow = missingItems.map(item => ({
+        text: `Join ${item.label}`,
+        url: `https://t.me/${item.username.replace('@', '')}`
+    }));
+    if (joinRow.length) buttons.push(joinRow);
+    buttons.push([{ text: '✅ I Joined - Verify Now', callback_data: 'verify_membership' }]);
+
+    const opts = {
         parse_mode: 'Markdown',
         reply_markup: { inline_keyboard: buttons }
-    });
+    };
+
+    if (msgId) {
+        bot.editMessageText(msg, { chat_id: chatId, message_id: msgId, ...opts }).catch(() => {
+            bot.sendMessage(chatId, msg, opts).catch(() => { });
+        });
+    } else {
+        bot.sendMessage(chatId, msg, opts).catch(() => { });
+    }
 }
 
 // Global Logger Override 
@@ -443,31 +479,82 @@ bot.onText(/\/start/, async (msg) => {
     const username = msg.from.username || msg.from.first_name || 'Unknown';
     const user = db.getUser(userId);
 
-    // Log user activity
-    originalConsoleLog(`👤 User: ${userId} (${username}) | 🚀 Started bot | ⏰ ${new Date().toLocaleTimeString()}`);
+    try {
+        // Log user activity
+        originalConsoleLog(`👤 User: ${userId} (${username}) | 🚀 Started bot | ⏰ ${new Date().toLocaleTimeString()}`);
 
-    // Referral Logic (Pending Verification)
-    const refMatch = msg.text.split(' ')[1];
-    if (refMatch && refMatch !== String(userId)) {
-        // Store pending referrer if not already referred
-        if (!user.referredBy && !user.pendingReferrer) {
-            user.pendingReferrer = refMatch;
-            db.updateUser(user);
+        // Referral Logic (Pending Verification)
+        const refMatch = msg.text.split(' ')[1];
+        if (refMatch) {
+            const cleanRef = String(refMatch).replace(/^ref_/, '');
+            if (cleanRef !== String(userId)) {
+                // Store pending referrer if not already referred
+                if (!user.referredBy && !user.pendingReferrer) {
+                    user.pendingReferrer = cleanRef;
+                    db.updateUser(user);
+                }
+            }
         }
+
+        // Check mandatory membership
+        const membership = await checkMembership(userId);
+
+        if (!membership.channel || !membership.group) {
+            // User not joined, show mandatory join screen
+            showMandatoryJoin(chatId, membership);
+            return;
+        }
+
+        // User is member, show main menu
+        await sendMainMenu(chatId, user, msg.from);
+    } catch (e) {
+        console.error('Error handling /start:', e);
+        bot.sendMessage(chatId, '❌ Bot error. Please try again in a moment.').catch(() => { });
     }
-
-    // Check mandatory membership
-    const membership = await checkMembership(userId);
-
-    if (!membership.channel || !membership.group) {
-        // User not joined, show mandatory join screen
-        showMandatoryJoin(chatId, membership);
-        return;
-    }
-
-    // User is member, show main menu
-    sendMainMenu(chatId, user, msg.from);
 });
+
+// /admin command - Admin Panel Access
+bot.onText(/\/admin/, async (msg) => {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+    const username = msg.from.username || msg.from.first_name || 'Unknown';
+
+    if (!isAdmin(userId)) return; // Silent for non-admins
+
+    await sendAdminMainMenu(chatId, username, userId);
+});
+
+// Send Admin Main Menu (2 buttons only)
+async function sendAdminMainMenu(chatId, username, userId) {
+    const publicUrl = process.env.PUBLIC_URL || config.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`;
+
+    // Generate auto-login token
+    let adminUrl = `${publicUrl}/admin`;
+    try {
+        const server = require('./database/server.js');
+        if (server.generateAdminToken) {
+            const token = server.generateAdminToken();
+            adminUrl = `${publicUrl}/admin?token=${token}`;
+        }
+    } catch (e) { /* fallback to normal URL */ }
+
+    const adminText = `👑 *Admin Panel*\n\n` +
+        `Hello Admin *${username || 'Admin'}*!\n\n` +
+        `🔐 *Auto-Login:* Click *Open Admin Panel* — no password needed!\n` +
+        `📋 *Telegram Menu:* Use *Menu Admin Panel* to control everything from here.\n\n` +
+        `*Admin ID:* \`${userId}\``;
+
+    await bot.sendMessage(chatId, adminText, {
+        parse_mode: 'Markdown',
+        reply_markup: {
+            inline_keyboard: [
+                [{ text: '🚀 Open Admin Panel', web_app: { url: adminUrl } }],
+                [{ text: '📋 Menu Admin Panel', callback_data: 'admin_menu' }]
+            ]
+        }
+    }).catch(e => console.error('Admin menu send error:', e));
+}
+
 
 async function sendMainMenu(chatId, user, msgFrom) {
     const publicUrl = process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`;
@@ -479,19 +566,20 @@ async function sendMainMenu(chatId, user, msgFrom) {
         (user.tokens || user.balance || 0);
 
     // Welcome message matching screenshot style
-    const welcomeText = `👋 *Welcome, ${firstName}!*\n\n` +
-        `💰 Balance: *${tokens} TC*\n` +
-        `🆔 Your ID: \`${user.id}\`\n\n` +
-        `Tap below to open the Mini App:`;
+    const welcomeText = `👋 *Hello, ${firstName}!*\n\n` +
+        `Welcome to Gemini Verified! 🚀\n\n` +
+        `Launch our Mini App to start earning rewards, invite friends, and manage your assets.`;
 
     const appUrl = `${publicUrl}`;
 
-    // Keyboard matching screenshot style - 2 buttons per row
+    // Keyboard matching screenshot style - vertical layout, 1 button per row
     const keyboard = {
         reply_markup: {
             inline_keyboard: [
                 [{ text: '🚀 Launch App', web_app: { url: appUrl } }],
-                [{ text: '👥 Invite Friends', callback_data: 'referral' }]
+                [{ text: '📢 Join Channel', url: `https://t.me/${(config.REQUIRED_CHANNEL || '').replace('@', '')}` }],
+                [{ text: '👥 Join Group', url: `https://t.me/${(config.REQUIRED_GROUP || '').replace('@', '')}` }],
+                [{ text: '📺 YouTube Channel', url: 'https://youtube.com/@MamunIslamyts' }]
             ]
         }
     };
@@ -527,10 +615,145 @@ bot.on('my_chat_member', (update) => {
 });
 
 // Update User Activity on Message (Any Type)
-bot.on('message', (msg) => {
+bot.on('message', async (msg) => {
     if (msg.from && msg.from.id) db.updateUserActivity(msg.from.id);
     if (['group', 'supergroup', 'channel'].includes(msg.chat.type)) {
         db.saveGroup(msg.chat.id, msg.chat.title, msg.chat.type);
+    }
+
+    // ── ADMIN STATE-BASED INPUTS ──
+    const userId = msg.from && msg.from.id;
+    if (!userId || !isAdmin(userId)) return;
+    const state = userState[userId];
+    if (!state || !state.step) return;
+    if (msg.text === '/cancel') {
+        delete userState[userId];
+        await bot.sendMessage(msg.chat.id, '❌ Cancelled.').catch(() => { });
+        return;
+    }
+
+    // Broadcast message
+    if (state.step === 'admin_broadcast_msg') {
+        delete userState[userId];
+        const text = msg.text;
+        const allUsers = db.getUsers();
+        let sent = 0, failed = 0;
+        await bot.sendMessage(msg.chat.id, `📢 Sending broadcast to ${allUsers.length} users...`).catch(() => { });
+        for (const u of allUsers) {
+            try {
+                await bot.sendMessage(u.id, text, { parse_mode: 'Markdown' });
+                sent++;
+                await new Promise(r => setTimeout(r, 50)); // Rate limit
+            } catch (e) { failed++; }
+        }
+        await bot.sendMessage(msg.chat.id, `✅ Broadcast done!\n✅ Sent: ${sent}\n❌ Failed: ${failed}`, {
+            reply_markup: { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'admin_menu' }]] }
+        }).catch(() => { });
+        return;
+    }
+
+    // Add tokens - step 1: get user ID
+    if (state.step === 'admin_addtokens_uid') {
+        userState[userId] = { step: 'admin_addtokens_amount', targetId: msg.text.trim() };
+        await bot.sendMessage(msg.chat.id, `💰 User ID: \`${msg.text.trim()}\`\n\nNow enter the amount of tokens to add:`, { parse_mode: 'Markdown' }).catch(() => { });
+        return;
+    }
+
+    // Add tokens - step 2: amount
+    if (state.step === 'admin_addtokens_amount') {
+        const targetId = state.targetId;
+        const amount = parseInt(msg.text.trim());
+        delete userState[userId];
+        if (!amount || amount <= 0) { await bot.sendMessage(msg.chat.id, '❌ Invalid amount.').catch(() => { }); return; }
+        const targetUser = db.getUser(targetId);
+        targetUser.tokens = (targetUser.tokens || 0) + amount;
+        db.updateUser(targetUser);
+        await bot.sendMessage(msg.chat.id, `✅ Added *${amount}* tokens to user \`${targetId}\`\nNew total: *${targetUser.tokens}*`, {
+            parse_mode: 'Markdown',
+            reply_markup: { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'admin_menu' }]] }
+        }).catch(() => { });
+        try { await bot.sendMessage(targetId, `🎉 *Admin Gift!*\n\n+${amount} tokens have been added to your account!\n💰 New balance: ${targetUser.tokens} tokens`, { parse_mode: 'Markdown' }); } catch (e) { }
+        return;
+    }
+
+    // Ban user
+    if (state.step === 'admin_ban_uid') {
+        const targetId = msg.text.trim();
+        delete userState[userId];
+        const targetUser = db.getUser(targetId);
+        targetUser.banned = true;
+        db.updateUser(targetUser);
+        await bot.sendMessage(msg.chat.id, `✅ User \`${targetId}\` has been *banned*.`, {
+            parse_mode: 'Markdown',
+            reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'admin_menu' }]] }
+        }).catch(() => { });
+        return;
+    }
+
+    // Unban user
+    if (state.step === 'admin_unban_uid') {
+        const targetId = msg.text.trim();
+        delete userState[userId];
+        const targetUser = db.getUser(targetId);
+        targetUser.banned = false;
+        db.updateUser(targetUser);
+        await bot.sendMessage(msg.chat.id, `✅ User \`${targetId}\` has been *unbanned*.`, {
+            parse_mode: 'Markdown',
+            reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'admin_menu' }]] }
+        }).catch(() => { });
+        return;
+    }
+
+    // Create promo code
+    if (state.step === 'admin_create_code_input') {
+        delete userState[userId];
+        const parts = msg.text.trim().split(' ');
+        if (parts.length < 2) { await bot.sendMessage(msg.chat.id, '❌ Format: CODE AMOUNT MAXUSES').catch(() => { }); return; }
+        const [code, amount, maxUses] = parts;
+        db.createCode(code.toUpperCase(), parseInt(amount) || 0, parseInt(maxUses) || 0);
+        await bot.sendMessage(msg.chat.id, `✅ *Code Created!*\n\nCode: \`${code.toUpperCase()}\`\nAmount: *${amount}* tokens\nMax Uses: *${maxUses || '∞'}*`, {
+            parse_mode: 'Markdown',
+            reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'admin_menu' }]] }
+        }).catch(() => { });
+        return;
+    }
+});
+
+// 🚨 Auto-detect when user leaves/is kicked from required channel or group
+bot.on('chat_member', async (update) => {
+    try {
+        const chatId = update.chat.id;
+        const chatUsername = update.chat.username ? '@' + update.chat.username : String(chatId);
+        const newStatus = update.new_chat_member.status;
+        const userId = update.new_chat_member.user.id;
+        const isBot = update.new_chat_member.user.is_bot;
+        if (isBot) return; // Ignore bot status changes
+
+        const requiredChannel = (config.REQUIRED_CHANNEL || '').toString().trim().toLowerCase();
+        const requiredGroup = (config.REQUIRED_GROUP || '').toString().trim().toLowerCase();
+        const chatTag = chatUsername.toLowerCase();
+
+        const isRequiredChat = (chatTag === requiredChannel || chatTag === requiredGroup ||
+            String(chatId) === requiredChannel || String(chatId) === requiredGroup);
+
+        if (!isRequiredChat) return; // Not a monitored chat
+
+        const leftStatuses = ['left', 'kicked', 'banned', 'restricted'];
+        if (!leftStatuses.includes(newStatus)) return; // User is still in (joined, etc)
+        if (newStatus === 'restricted' && update.new_chat_member.is_member) return; // Still member
+
+        // User left or was kicked from a required chat - notify them
+        originalConsoleLog(`🚨 User ${userId} left monitored chat: ${chatUsername}`);
+
+        // Re-check full membership status
+        const membership = await checkMembership(userId);
+
+        // Only notify if actually missing something
+        if (!membership.channel || !membership.group) {
+            showMandatoryJoin(userId, membership);
+        }
+    } catch (e) {
+        // Silently handle errors
     }
 });
 
@@ -568,33 +791,279 @@ bot.on('callback_query', async (query) => {
         const user = db.getUser(userId);
         const lang = getUserLanguage(userId, db);
 
+        // ============================================================
+        // ADMIN MENU CALLBACKS
+        // ============================================================
+        if (isAdmin(userId) && data.startsWith('admin_')) {
+            await bot.answerCallbackQuery(query.id).catch(() => { });
+
+            // ── MAIN ADMIN MENU ──
+            if (data === 'admin_menu') {
+                const menuText = `🛠 *Admin Control Panel*\n\nManage your bot from here:`;
+                await bot.sendMessage(chatId, menuText, {
+                    parse_mode: 'Markdown',
+                    reply_markup: {
+                        inline_keyboard: [
+                            [{ text: '💳 Manage Payments', callback_data: 'admin_payments' }, { text: '⚙️ Bot Settings', callback_data: 'admin_settings' }],
+                            [{ text: '🗄 Database / Storage', callback_data: 'admin_database' }, { text: '💾 Backup & Restore', callback_data: 'admin_backup' }],
+                            [{ text: '📢 Broadcast', callback_data: 'admin_do_broadcast' }, { text: '🔘 Button Management', callback_data: 'admin_buttons' }],
+                            [{ text: '👥 Manage Users', callback_data: 'admin_users' }, { text: '📋 Manage Tasks', callback_data: 'admin_tasks' }],
+                            [{ text: '🚔 Group Controller', callback_data: 'admin_groups' }, { text: '💳 Manage Cards', callback_data: 'admin_cards' }],
+                            [{ text: '🔒 Manage VPN', callback_data: 'admin_vpn' }, { text: '📫 Manage Gmails', callback_data: 'admin_gmails' }],
+                            [{ text: '📱 Manage Numbers', callback_data: 'admin_numbers' }, { text: '💰 Manage Costs', callback_data: 'admin_costs' }],
+                            [{ text: '🎫 Manage Promo Codes', callback_data: 'admin_codes' }, { text: '📊 Statistics', callback_data: 'admin_stats' }],
+                            [{ text: '🔙 Back', callback_data: 'admin_back' }]
+                        ]
+                    }
+                }).catch(() => { });
+                return;
+            }
+
+            // ── STATISTICS ──
+            if (data === 'admin_stats') {
+                const users = db.getUsers();
+                const total = users.length;
+                const now = Date.now();
+                const active24h = users.filter(u => u.lastActive && (now - u.lastActive) < 86400000).length;
+                const totalTokens = users.reduce((s, u) => s + (u.tokens || 0), 0);
+                const banned = users.filter(u => u.banned).length;
+                const settings = db.getSettings();
+                const statsText = `📊 *Bot Statistics*\n\n` +
+                    `👥 Total Users: *${total}*\n` +
+                    `✅ Active (24h): *${active24h}*\n` +
+                    `🪙 Total Tokens: *${totalTokens.toLocaleString()}*\n` +
+                    `🚫 Banned: *${banned}*\n` +
+                    `💰 Ref Bonus: *${settings.refBonus || 50}*\n` +
+                    `🕐 Time: *${new Date().toLocaleString()}*`;
+                await bot.sendMessage(chatId, statsText, {
+                    parse_mode: 'Markdown',
+                    reply_markup: { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'admin_menu' }]] }
+                }).catch(() => { });
+                return;
+            }
+
+            // ── USERS ──
+            if (data === 'admin_users') {
+                const users = db.getUsers();
+                const total = users.length;
+                const recent = users.slice(-5).reverse();
+                let msg = `👥 *User Management*\n\nTotal: *${total}* users\n\n*Recent Users:*\n`;
+                recent.forEach(u => {
+                    msg += `• ${u.firstName || u.username || 'User'} (\`${u.id}\`) — ${u.tokens || 0} tokens\n`;
+                });
+                await bot.sendMessage(chatId, msg, {
+                    parse_mode: 'Markdown',
+                    reply_markup: {
+                        inline_keyboard: [
+                            [{ text: '🚫 Ban User', callback_data: 'admin_ban_prompt' }, { text: '✅ Unban User', callback_data: 'admin_unban_prompt' }],
+                            [{ text: '💰 Add Tokens', callback_data: 'admin_addtokens_prompt' }],
+                            [{ text: '🔙 Back', callback_data: 'admin_menu' }]
+                        ]
+                    }
+                }).catch(() => { });
+                return;
+            }
+
+            // ── BROADCAST ──
+            if (data === 'admin_do_broadcast') {
+                userState[userId] = { step: 'admin_broadcast_msg' };
+                await bot.sendMessage(chatId, `📢 *Send Broadcast*\n\nType your message to send to ALL users:\n\n_(Send /cancel to cancel)_`, {
+                    parse_mode: 'Markdown',
+                    reply_markup: { inline_keyboard: [[{ text: '❌ Cancel', callback_data: 'admin_menu' }]] }
+                }).catch(() => { });
+                return;
+            }
+
+            // ── COSTS / PRICING ──
+            if (data === 'admin_costs') {
+                const settings = db.getSettings();
+                const costs = settings.costs || {};
+                let msg = `💰 *Service Costs*\n\n`;
+                Object.entries(costs).forEach(([k, v]) => { msg += `• ${k}: *${v}* tokens\n`; });
+                msg += `\nChange costs from ⚙️ *Bot Settings* → Web Panel`;
+                await bot.sendMessage(chatId, msg, {
+                    parse_mode: 'Markdown',
+                    reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'admin_menu' }]] }
+                }).catch(() => { });
+                return;
+            }
+
+            // ── PROMO CODES ──
+            if (data === 'admin_codes') {
+                const codes = db.data.codes || {};
+                const codeList = Object.keys(codes);
+                let msg = `🎫 *Promo Codes* (${codeList.length} active)\n\n`;
+                codeList.slice(0, 10).forEach(c => {
+                    msg += `\`${c}\` → ${codes[c].amount} tokens (${codes[c].uses || 0}/${codes[c].maxUses || '∞'} used)\n`;
+                });
+                if (!codeList.length) msg += '_No promo codes yet._';
+                await bot.sendMessage(chatId, msg, {
+                    parse_mode: 'Markdown',
+                    reply_markup: {
+                        inline_keyboard: [
+                            [{ text: '➕ Create Code', callback_data: 'admin_create_code' }],
+                            [{ text: '🔙 Back', callback_data: 'admin_menu' }]
+                        ]
+                    }
+                }).catch(() => { });
+                return;
+            }
+
+            // ── DATABASE ──
+            if (data === 'admin_database') {
+                const users = db.getUsers();
+                const dbSize = JSON.stringify(db.data).length;
+                const msg = `🗄 *Database Management*\n\n` +
+                    `👥 Users: *${users.length}*\n` +
+                    `💾 DB Size: *${(dbSize / 1024).toFixed(1)} KB*\n\n` +
+                    `Use the Web Admin Panel for Export/Import/Wipe.`;
+                await bot.sendMessage(chatId, msg, {
+                    parse_mode: 'Markdown',
+                    reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'admin_menu' }]] }
+                }).catch(() => { });
+                return;
+            }
+
+            // ── BACKUP ──
+            if (data === 'admin_backup') {
+                try {
+                    const backupData = JSON.stringify(db.data, null, 2);
+                    const buf = Buffer.from(backupData, 'utf8');
+                    const filename = `backup_${new Date().toISOString().slice(0, 10)}.json`;
+                    await bot.sendDocument(chatId, buf, { caption: `💾 *Database Backup*\n\n📅 ${new Date().toLocaleString()}` }, { filename, contentType: 'application/json' });
+                } catch (e) {
+                    await bot.sendMessage(chatId, '❌ Backup failed: ' + e.message).catch(() => { });
+                }
+                return;
+            }
+
+            // ── TASKS ──
+            if (data === 'admin_tasks') {
+                const tasks = db.data.tasks || {};
+                const taskList = Object.values(tasks);
+                let msg = `📋 *Tasks* (${taskList.length} total)\n\n`;
+                taskList.slice(0, 8).forEach(t => { msg += `• ${t.title} → ${t.reward} tokens\n`; });
+                if (!taskList.length) msg += '_No tasks created yet._';
+                await bot.sendMessage(chatId, msg, {
+                    parse_mode: 'Markdown',
+                    reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'admin_menu' }]] }
+                }).catch(() => { });
+                return;
+            }
+
+            // ── GROUPS ──
+            if (data === 'admin_groups') {
+                const groups = db.data.groups || {};
+                const groupList = Object.values(groups);
+                let msg = `🚔 *Group Controller* (${groupList.length} groups)\n\n`;
+                groupList.slice(0, 8).forEach(g => { msg += `• ${g.title || 'Group'} (\`${g.id}\`) — ${g.type}\n`; });
+                if (!groupList.length) msg += '_Bot not added to any groups yet._';
+                await bot.sendMessage(chatId, msg, {
+                    parse_mode: 'Markdown',
+                    reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'admin_menu' }]] }
+                }).catch(() => { });
+                return;
+            }
+
+            // ── SETTINGS ──
+            if (data === 'admin_settings') {
+                const s = db.getSettings();
+                const msg = `⚙️ *Bot Settings*\n\n` +
+                    `💰 Ref Bonus: *${s.refBonus || 50}* tokens\n` +
+                    `📅 Daily Bonus: *${s.dailyBonus || 10}* tokens\n` +
+                    `🔧 Maintenance: *${s.maintenance ? 'ON' : 'OFF'}*\n\n` +
+                    `_Full settings available in Web Admin Panel_`;
+                await bot.sendMessage(chatId, msg, {
+                    parse_mode: 'Markdown',
+                    reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'admin_menu' }]] }
+                }).catch(() => { });
+                return;
+            }
+
+            // ── PAYMENTS ──
+            if (data === 'admin_payments') {
+                const txns = db.data.transactions || [];
+                const totalTxn = txns.length;
+                const pending = txns.filter(t => t.status === 'pending').length;
+                const msg = `💳 *Payment Management*\n\n` +
+                    `📊 Total Transactions: *${totalTxn}*\n` +
+                    `⏳ Pending: *${pending}*\n\n` +
+                    `_Manage payments from the Web Admin Panel_`;
+                await bot.sendMessage(chatId, msg, {
+                    parse_mode: 'Markdown',
+                    reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'admin_menu' }]] }
+                }).catch(() => { });
+                return;
+            }
+
+            // ── CARDS / VPN / GMAILS / NUMBERS / BUTTONS ──
+            if (['admin_cards', 'admin_vpn', 'admin_gmails', 'admin_numbers', 'admin_buttons'].includes(data)) {
+                const labelMap = { admin_cards: '💳 Cards', admin_vpn: '🔒 VPN', admin_gmails: '📫 Gmails', admin_numbers: '📱 Numbers', admin_buttons: '🔘 Buttons' };
+                const msg = `${labelMap[data]}\n\nManage from the *Web Admin Panel* for full control.\n\nTap *Open Admin Panel* from /admin`;
+                await bot.sendMessage(chatId, msg, {
+                    parse_mode: 'Markdown',
+                    reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'admin_menu' }]] }
+                }).catch(() => { });
+                return;
+            }
+
+            // ── ADD TOKENS PROMPT ──
+            if (data === 'admin_addtokens_prompt') {
+                userState[userId] = { step: 'admin_addtokens_uid' };
+                await bot.sendMessage(chatId, '💰 *Add Tokens*\n\nSend the User ID to add tokens to:', { parse_mode: 'Markdown' }).catch(() => { });
+                return;
+            }
+
+            // ── BAN PROMPT ──
+            if (data === 'admin_ban_prompt') {
+                userState[userId] = { step: 'admin_ban_uid' };
+                await bot.sendMessage(chatId, '🚫 *Ban User*\n\nSend the User ID to ban:', { parse_mode: 'Markdown' }).catch(() => { });
+                return;
+            }
+
+            // ── UNBAN PROMPT ──
+            if (data === 'admin_unban_prompt') {
+                userState[userId] = { step: 'admin_unban_uid' };
+                await bot.sendMessage(chatId, '✅ *Unban User*\n\nSend the User ID to unban:', { parse_mode: 'Markdown' }).catch(() => { });
+                return;
+            }
+
+            // ── CREATE CODE PROMPT ──
+            if (data === 'admin_create_code') {
+                userState[userId] = { step: 'admin_create_code_input' };
+                await bot.sendMessage(chatId, '🎫 *Create Promo Code*\n\nSend in this format:\n`CODE AMOUNT MAXUSES`\n\nExample: `SUMMER2025 100 50`', { parse_mode: 'Markdown' }).catch(() => { });
+                return;
+            }
+
+            // ── BACK (re-show /admin menu) ──
+            if (data === 'admin_back') {
+                const uname = query.from.username || query.from.first_name || 'Admin';
+                await sendAdminMainMenu(chatId, uname, userId);
+                return;
+            }
+        }
+
         // VERIFY MEMBERSHIP (Mandatory Join Check)
         if (data === 'verify_membership') {
-            bot.answerCallbackQuery(query.id, { text: "🔍 Checking membership...", show_alert: false });
+            await bot.answerCallbackQuery(query.id, { text: "🔍 Checking membership...", show_alert: false }).catch(() => { });
 
             const membership = await checkMembership(userId);
+            const allJoined = membership.channel && membership.group;
 
-            if (!membership.channel || !membership.group) {
-                // Still not joined
-                bot.answerCallbackQuery(query.id, {
-                    text: "❌ You must join both Channel AND Group to continue!",
-                    show_alert: true
-                });
-
-                // Update the message with current status
-                bot.deleteMessage(chatId, msgId).catch(() => { });
-                showMandatoryJoin(chatId, membership);
+            if (!allJoined) {
+                // Still not joined - update existing message with accurate status
+                showMandatoryJoin(chatId, membership, msgId);
             } else {
                 // Successfully joined both
-                bot.answerCallbackQuery(query.id, {
-                    text: "✅ Verified! Welcome to the bot!",
+                await bot.answerCallbackQuery(query.id, {
+                    text: "✅ Verified! Welcome!",
                     show_alert: true
-                });
+                }).catch(() => { });
 
                 // PROCESS PENDING REFERRAL
                 if (user.pendingReferrer) {
                     if (db.handleReferral(userId, user.pendingReferrer)) {
-                        bot.sendMessage(user.pendingReferrer, `🎉 **Referral Bonus!**\n\nUser ${user.first_name || userId} has verified their account.\n💰 +${db.getSettings().refBonus} Credits added!`, { parse_mode: 'Markdown' });
+                        bot.sendMessage(user.pendingReferrer, `🎉 *Referral Bonus!*\n\nUser ${user.first_name || userId} joined and verified!\n💰 +${db.getSettings().refBonus} Credits added!`, { parse_mode: 'Markdown' }).catch(() => { });
                     }
                     user.pendingReferrer = null;
                     db.updateUser(user);

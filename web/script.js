@@ -1,6 +1,22 @@
-// ============================================
-// TELEGRAM WEBAPP AUTO-LOGIN
-// ============================================
+// Helper: Check if userId is valid before making API calls
+function isValidUserId(userId) {
+    if (!userId) return false;
+    const numericId = typeof userId === 'number' ? userId : parseInt(userId);
+    return !isNaN(numericId) && numericId > 0;
+}
+
+// Wrapper for fetch that blocks invalid userId calls
+function apiFetch(url, options = {}) {
+    const body = options.body ? JSON.parse(options.body) : {};
+    const userId = body.userId || userData.id;
+
+    if (!isValidUserId(userId)) {
+        console.log('[CLIENT BLOCKED] Invalid userId:', userId);
+        return Promise.resolve({ json: () => Promise.resolve({ success: false, message: 'Invalid userId' }) });
+    }
+
+    return fetch(url, options);
+}
 var tg = window.Telegram?.WebApp || {
     initDataUnsafe: { user: null, start_param: '' },
     ready: () => { },
@@ -11,7 +27,7 @@ var tg = window.Telegram?.WebApp || {
     },
     showAlert: (msg) => alert(msg),
     showConfirm: (msg, cb) => cb(confirm(msg)),
-    showPopup: (params, cb) => { const r = confirm(params.title + '\n' + params.message); if (cb && r) cb(params.buttons[0].id); },
+    showAlert: (params, cb) => { const r = confirm(params.title + '\n' + params.message); if (cb && r) cb(params.buttons[0].id); },
     BackButton: { show: () => { }, hide: () => { }, onClick: () => { } },
     close: () => { }
 };
@@ -46,20 +62,73 @@ var pageScrollPositions = {};
 var userStatus = 'active';
 
 // GLOBAL USER STATE - populated from Telegram + Server
+// DEMO MODE: If no Telegram user, create demo user with 5000 credits
+const isDemoMode = !_tgUser.id;
+if (isDemoMode) {
+    console.log('🎮 DEMO MODE: Creating demo user with 5000 credits');
+}
+
 var userData = {
-    id: _tgUser.id || 0,
-    username: _tgUser.first_name || _tgUser.username || 'User',
-    firstName: _tgUser.first_name || '',
-    lastName: _tgUser.last_name || '',
+    id: _tgUser.id || 999999, // Numeric demo ID
+    username: _tgUser.first_name || _tgUser.username || 'Demo User',
+    firstName: _tgUser.first_name || 'Demo',
+    lastName: _tgUser.last_name || 'User',
     photo_url: _tgUser.photo_url || '',
-    tokens: 0,
+    tokens: isDemoMode ? 5000 : 0, // 5000 credits for demo
     Gems: 0,
     usd: 0.00,
-    verified: false,
+    verified: true,
     dailyStreak: 0,
     lastDailyClaim: 0,
     completedTasks: []
 };
+
+// FEATURE FLAGS (Button Management)
+var featureFlags = null;
+function applyFeatureFlagsToHome() {
+    const ids = [
+        { key: 'home_verify', el: 'verifyServiceCard' },
+        { key: 'home_mail', el: 'mailServiceCard' },
+        { key: 'home_number', el: 'numberServiceCard' },
+        { key: 'home_gemini', el: 'geminiServiceCard' },
+        { key: 'home_chatgpt', el: 'chatgptServiceCard' }
+    ];
+    ids.forEach(item => {
+        const el = document.getElementById(item.el);
+        if (!el) return;
+        const enabled = !featureFlags || featureFlags[item.key] !== false;
+        el.style.display = enabled ? '' : 'none';
+    });
+}
+
+function loadFeatureFlags() {
+    return fetch('/api/features')
+        .then(r => r.json())
+        .then(data => {
+            if (data && data.success && data.features) {
+                featureFlags = data.features;
+                applyFeatureFlagsToHome();
+            }
+            return featureFlags;
+        })
+        .catch(() => featureFlags);
+}
+
+function ensureFeatureFlagsLoaded() {
+    if (featureFlags) return Promise.resolve(featureFlags);
+    return loadFeatureFlags();
+}
+
+function checkFeatureOrComingSoon(flagKey, title) {
+    // Default enabled when flags not loaded
+    const enabled = !featureFlags || featureFlags[flagKey] !== false;
+    if (enabled) return true;
+    // Use showAlert instead of showPopup for v6.0 compatibility
+    if (tg && typeof tg.showAlert === 'function') {
+        tg.showAlert('⏳ Coming soon: ' + (title || 'This feature') + ' is currently disabled by admin.');
+    }
+    return false;
+}
 
 // Show profile photo immediately from Telegram data
 function applyProfilePhoto(photoUrl) {
@@ -139,6 +208,14 @@ function handleHeaderClick() {
 function nav(p) {
     if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
 
+    // Feature gating (pre-check)
+    // Note: if flags aren't loaded yet, we allow navigation and will re-check inside showPage.
+    if (p === 'mailService' && !checkFeatureOrComingSoon('tempMail', 'Temp Mail')) return;
+    if (p === 'numberService' && !checkFeatureOrComingSoon('virtualNumber', 'Virtual Number')) return;
+    if (p === 'premiumMail' && !checkFeatureOrComingSoon('premiumMail', 'Premium Mail')) return;
+    if (p === 'accountsStore' && !checkFeatureOrComingSoon('accountsShop', 'Accounts Shop')) return;
+    if (p === 'vccCards' && !checkFeatureOrComingSoon('cardsVcc', 'Cards / VCC')) return;
+
     // Save current scroll position before navigating away
     try {
         const mainScroll = document.getElementById('mainScroll');
@@ -149,13 +226,7 @@ function nav(p) {
 
     // BAN CHECK (Moved to showPage for better centralization)
     if (userStatus === 'banned') {
-        tg.showPopup({
-            title: 'ACCOUNT BANNED',
-            message: 'You have been banned by the admin.\nPlease contact support to resolve this issue.',
-            buttons: [{ type: 'destructive', text: 'Contact Support', id: 'support' }, { type: 'close' }]
-        }, (btn) => {
-            if (btn === 'support') window.open('https://t.me/Onlin_Income_Support');
-        });
+        tg.showAlert('ACCOUNT BANNED\n\nYou have been banned by the admin.\nPlease contact support to resolve this issue.\n\nSupport: @Onlin_Income_Support');
         return;
     }
 
@@ -206,6 +277,13 @@ const PAGE_TITLES = {
 function showPage(targetId) {
     if (!targetId) return;
 
+    // Ensure flags are loaded once (non-blocking)
+    ensureFeatureFlagsLoaded().then(() => {
+        // If user is already on a disabled page, bounce them to home
+        if (currentPage === 'mailService' && featureFlags && featureFlags.tempMail === false) nav('home');
+        if (currentPage === 'numberService' && featureFlags && featureFlags.virtualNumber === false) nav('home');
+    });
+
     // Normalize calls that pass DOM page ids (e.g. 'mailServicePage') into logical ids
     if (typeof targetId === 'string' && targetId.endsWith('Page')) {
         targetId = targetId.slice(0, -4);
@@ -244,6 +322,23 @@ function showPage(targetId) {
     // Email Service availability check - after hide all pages
     if (targetId === 'emailService') {
         targetId = 'mailService'; // Use same page for now with different provider
+    }
+
+    // Enforce gating (authoritative)
+    if (targetId === 'mailService' && !checkFeatureOrComingSoon('tempMail', 'Temp Mail')) {
+        targetId = 'home';
+    }
+    if (targetId === 'numberService' && !checkFeatureOrComingSoon('virtualNumber', 'Virtual Number')) {
+        targetId = 'home';
+    }
+    if (targetId === 'premiumMail' && !checkFeatureOrComingSoon('premiumMail', 'Premium Mail')) {
+        targetId = 'home';
+    }
+    if (targetId === 'accountsStore' && !checkFeatureOrComingSoon('accountsShop', 'Accounts Shop')) {
+        targetId = 'home';
+    }
+    if (targetId === 'vccCards' && !checkFeatureOrComingSoon('cardsVcc', 'Cards / VCC')) {
+        targetId = 'home';
     }
 
     // Show target page
@@ -361,6 +456,7 @@ function showPage(targetId) {
         }
     } else if (servicePages.includes(targetId)) {
         // Service style: Back button + Title + theme toggle only
+        const pageTitle = PAGE_TITLES[targetId] || targetId.toUpperCase();
         if (headerContainer) headerContainer.style.display = 'block'; // Ensure visible for others
         if (avatar) avatar.style.display = 'none';
         if (headerBack) {
@@ -368,7 +464,7 @@ function showPage(targetId) {
             headerBack.innerHTML = '<i class="fas fa-arrow-left" style="color:#fff; font-size:16px;"></i>';
         }
         if (headerTitle) {
-            headerTitle.textContent = title || targetId.toUpperCase();
+            headerTitle.textContent = pageTitle;
             headerTitle.style.fontSize = '14px';
             headerTitle.style.fontWeight = '700';
             headerTitle.style.letterSpacing = '1px';
@@ -379,7 +475,7 @@ function showPage(targetId) {
         // Default style
         if (avatar) avatar.style.display = 'none';
         if (headerBack) headerBack.style.display = 'flex';
-        if (headerTitle) headerTitle.textContent = title || targetId.toUpperCase();
+        if (headerTitle) headerTitle.textContent = pageTitle;
         if (headerLeft) headerLeft.onclick = goBack;
         if (headerStatus) headerStatus.style.display = 'flex';
     }
@@ -464,11 +560,7 @@ function exchangeTokens() {
             updateExchangeBalances();
             updateExchangePreview();
 
-            tg.showPopup({
-                title: '✅ EXCHANGE SUCCESSFUL',
-                message: `${formatCurrencyAmount(amt, fromCur)} ➜ ${formatCurrencyAmount(res.toAmount ?? preview.toAmount, toCur)}`,
-                buttons: [{ type: 'ok' }]
-            });
+            tg.showAlert('✅ EXCHANGE SUCCESSFUL\n\n' + formatCurrencyAmount(amt, fromCur) + ' ➜ ' + formatCurrencyAmount(res.toAmount ?? preview.toAmount, toCur));
         })
         .catch(() => {
             tg.showAlert('Network error. Please try again.');
@@ -689,119 +781,193 @@ function submitPayment() {
         tg.showAlert('Please enter your Transaction ID to confirm payment.');
         return;
     }
-    tg.showPopup({
-        title: 'Payment Submitted!',
-        message: `Your payment has been submitted for review.\n\nTransaction ID: ${txnId}\n\nWe will verify and credit your account within 24 hours.`,
-        buttons: [{ type: 'ok', id: 'ok' }]
-    });
+    tg.showAlert('Payment Submitted!\n\nYour payment has been submitted for review.\n\nTransaction ID: ' + txnId + '\n\nWe will verify and credit your account within 24 hours.');
 }
 
 // TASK LOGIC
 const IN_PROGRESS_TASKS = {};
 
 function earn(buttonElement, type, amount) {
+    console.log(`[DEBUG] earn() called - type: ${type}, state: ${IN_PROGRESS_TASKS[type]}, userId: ${userData.id}`);
+
     if (IN_PROGRESS_TASKS[type] === 'completed') {
         tg.showAlert('You have already completed this task!');
         return;
     }
 
-    if (IN_PROGRESS_TASKS[type] === 'claiming') {
-        // User clicked CLAIM
-        fetch('/api/earn', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: userData.id, taskType: type, amount: amount })
-        })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    IN_PROGRESS_TASKS[type] = 'completed';
-                    buttonElement.innerHTML = '<i class="fas fa-check"></i> DONE';
-                    buttonElement.style.background = '#22c55e';
-                    buttonElement.style.color = '#fff';
-                    buttonElement.style.pointerEvents = 'none';
-
-                    // Update local balance
-                    userData.tokens = data.newBalance || (userData.tokens + amount);
-                    updateBalanceUI();
-
-                    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-
-                    // FIREWORKS ANIMATION (Bajimata Effect)
-                    var duration = 5 * 1000;
-                    var animationEnd = Date.now() + duration;
-                    var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 99999 };
-
-                    function randomInRange(min, max) {
-                        return Math.random() * (max - min) + min;
-                    }
-
-                    var interval = setInterval(function () {
-                        var timeLeft = animationEnd - Date.now();
-                        if (timeLeft <= 0) {
-                            return clearInterval(interval);
-                        }
-                        var particleCount = 50 * (timeLeft / duration);
-                        if (typeof confetti !== 'undefined') {
-                            confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
-                            confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
-                        }
-                    }, 250);
-
-                    tg.showPopup({
-                        title: 'MISSION COMPLETE!',
-                        message: `You earned +${amount} Tokens!\nAwesome work!`,
-                        buttons: [{ type: 'ok' }]
-                    });
-                } else {
-                    console.error('Task claim failed:', data.message);
-                    tg.showAlert(data.message || 'Error completing task.');
-                    IN_PROGRESS_TASKS[type] = null; // reset
-                    buttonElement.innerHTML = 'CLAIM';
-                }
-            })
-            .catch(err => {
-                console.error('Task claim error:', err);
-                tg.showAlert('Error: ' + (err.message || 'Could not connect to server. Please try again.'));
-                IN_PROGRESS_TASKS[type] = null; // reset
-                buttonElement.innerHTML = 'CLAIM';
-            });
+    if (IN_PROGRESS_TASKS[type] === 'checking') {
+        console.log(`[DEBUG] Already checking ${type}`);
         return;
     }
 
-    if (IN_PROGRESS_TASKS[type]) {
-        return; // Already started
+    // For Telegram tasks (tg and tg_ch), verify membership
+    if (type === 'tg' || type === 'tg_ch') {
+        const checkUrl = type === 'tg' ? 'https://t.me/AutosVerifych' : 'https://t.me/AutosVerify';
+
+        // Open the link first
+        window.open(checkUrl);
+
+        // Show checking state
+        IN_PROGRESS_TASKS[type] = 'checking';
+        buttonElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> CHECKING...';
+        buttonElement.style.pointerEvents = 'none';
+        buttonElement.style.background = '#333';
+
+        // Check membership after 15 seconds (give user time to join)
+        setTimeout(() => {
+            verifyAndComplete(type, buttonElement, amount);
+        }, 15000);
+
+        return;
     }
 
-    // Start mission directly without confirmation
-    // Open Link
-    if (type === 'yt') window.open('https://youtube.com/@MamunIslamyts');
-    else if (type === 'tg') window.open('https://t.me/AutosVerifych');
-    else if (type === 'tg_ch') window.open('https://t.me/AutosVerify');
+    // YouTube task - countdown then auto-complete (NO CLAIM BUTTON)
+    if (type === 'yt') {
+        window.open('https://youtube.com/@MamunIslamyts');
 
-    // Start 30s Countdown
-    IN_PROGRESS_TASKS[type] = 'waiting';
-    buttonElement.style.pointerEvents = 'none';
-    buttonElement.style.background = '#333';
-    buttonElement.style.color = '#aaa';
+        IN_PROGRESS_TASKS[type] = 'waiting';
+        buttonElement.style.pointerEvents = 'none';
+        buttonElement.style.background = '#333';
+        buttonElement.style.color = '#aaa';
 
-    let timeLeft = 30;
-    buttonElement.innerHTML = `${timeLeft}s...`;
+        let timeLeft = 30;
+        buttonElement.innerHTML = `${timeLeft}s...`;
 
-    const timer = setInterval(() => {
-        timeLeft--;
-        if (timeLeft <= 0) {
-            clearInterval(timer);
-            IN_PROGRESS_TASKS[type] = 'claiming';
+        const timer = setInterval(() => {
+            timeLeft--;
+            if (timeLeft <= 0) {
+                clearInterval(timer);
+                // Auto-complete after countdown (NO CLAIM)
+                verifyAndComplete(type, buttonElement, amount);
+            } else {
+                buttonElement.innerHTML = `${timeLeft}s...`;
+            }
+        }, 1000);
+    }
+}
+
+// Verify membership and auto-complete task
+function verifyAndComplete(type, buttonElement, amount) {
+    console.log(`[DEBUG] Verifying and completing ${type}`);
+
+    // For Telegram tasks, verify membership first
+    if (type === 'tg' || type === 'tg_ch') {
+        fetch('/api/verify-membership', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: userData.id,
+                taskType: type
+            })
+        })
+            .then(res => res.json())
+            .then(data => {
+                console.log(`[DEBUG] Membership check:`, data);
+
+                if (data.success && data.isMember) {
+                    // User joined - complete task
+                    completeTaskReward(type, buttonElement, amount);
+                } else {
+                    // Not joined - reset to START
+                    IN_PROGRESS_TASKS[type] = null;
+                    buttonElement.innerHTML = 'START';
+                    buttonElement.style.pointerEvents = 'auto';
+                    buttonElement.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+                    tg.showAlert('Please join the channel/group first, then click START again.');
+                }
+            })
+            .catch(err => {
+                console.error('Verify error:', err);
+                IN_PROGRESS_TASKS[type] = null;
+                buttonElement.innerHTML = 'START';
+                buttonElement.style.pointerEvents = 'auto';
+                buttonElement.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+                tg.showAlert('Error verifying. Please try again.');
+            });
+    } else {
+        // YouTube - direct complete
+        completeTaskReward(type, buttonElement, amount);
+    }
+}
+
+// Give reward and mark complete
+function completeTaskReward(type, buttonElement, amount) {
+    buttonElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> COMPLETING...';
+
+    fetch('/api/earn', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: userData.id, taskType: type, amount: amount })
+    })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                IN_PROGRESS_TASKS[type] = 'completed';
+                buttonElement.innerHTML = '<i class="fas fa-check"></i> DONE';
+                buttonElement.style.background = '#22c55e';
+                buttonElement.style.color = '#fff';
+                buttonElement.style.pointerEvents = 'none';
+
+                userData.tokens = data.newBalance || (userData.tokens + amount);
+                updateBalanceUI();
+
+                if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+                checkAllTasksCompleted();
+
+                tg.showAlert({
+                    title: 'TASK COMPLETE!',
+                    message: `You earned +${amount} Tokens!`,
+                    buttons: [{ type: 'ok' }]
+                });
+            } else {
+                IN_PROGRESS_TASKS[type] = null;
+                buttonElement.innerHTML = 'START';
+                buttonElement.style.pointerEvents = 'auto';
+                buttonElement.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+                tg.showAlert(data.message || 'Error completing task.');
+            }
+        })
+        .catch(err => {
+            console.error('Complete error:', err);
+            IN_PROGRESS_TASKS[type] = null;
+            buttonElement.innerHTML = 'START';
             buttonElement.style.pointerEvents = 'auto';
-            buttonElement.style.background = '#22c55e'; // Green claim button
-            buttonElement.style.color = '#fff';
-            buttonElement.innerHTML = 'CLAIM';
-            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-        } else {
-            buttonElement.innerHTML = `${timeLeft}s...`;
+            buttonElement.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+            tg.showAlert('Error. Please try again.');
+        });
+}
+
+// Check if all 3 tasks are completed and show overlay
+function checkAllTasksCompleted() {
+    const requiredTasks = ['yt', 'tg', 'tg_ch'];
+    const allCompleted = requiredTasks.every(task => IN_PROGRESS_TASKS[task] === 'completed');
+
+    if (allCompleted) {
+        // Create overlay if it doesn't exist
+        let overlay = document.getElementById('allTasksCompletedOverlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'allTasksCompletedOverlay';
+            overlay.style.cssText = 'display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.95); z-index:99999; justify-content:center; align-items:center; flex-direction:column;';
+            overlay.innerHTML = `
+                <div style="width:100px; height:100px; background:#22c55e; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-bottom:20px; animation:scaleIn 0.5s ease;">
+                    <i class="fas fa-check" style="font-size:50px; color:#fff;"></i>
+                </div>
+                <div style="font-size:22px; font-weight:900; color:#fff; margin-bottom:10px;">All Missions Complete!</div>
+                <div style="font-size:14px; color:#888; text-align:center; max-width:260px; line-height:1.5;">You have completed all tasks and earned bonus rewards!</div>
+                <button onclick="document.getElementById('allTasksCompletedOverlay').style.display='none'" style="margin-top:28px; padding:14px 28px; background:#f59e0b; border:none; border-radius:25px; color:#000; font-weight:800; font-size:15px; cursor:pointer;">Continue</button>
+            `;
+            document.body.appendChild(overlay);
         }
-    }, 1000);
+
+        // Show overlay
+        overlay.style.display = 'flex';
+
+        // Trigger confetti celebration
+        if (typeof confetti !== 'undefined') {
+            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ['#22c55e', '#f59e0b', '#3b82f6'] });
+        }
+    }
 }
 
 // ==========================================
@@ -1105,7 +1271,7 @@ function claimDaily() {
                     }
                 }, 250);
 
-                tg.showPopup({
+                tg.showAlert({
                     title: 'BONUS CLAIMED!',
                     message: `You received +${data.reward} Tokens!\nCome back in 24 hours for more.`,
                     buttons: [{ type: 'ok' }]
@@ -1136,6 +1302,8 @@ function renderLeaderboard() {
     const list = document.getElementById('leadList');
     if (!list) return;
 
+    list.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-sub);"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+
     fetch(`/api/leaderboard?userId=${userData.id}`)
         .then(r => r.json())
         .then(data => {
@@ -1144,6 +1312,8 @@ function renderLeaderboard() {
                 return;
             }
 
+            const medals = ['🥇', '🥈', '🥉'];
+
             list.innerHTML = data.top.map((u, i) => {
                 const rank = i + 1;
                 let rankClass = 'rank-other';
@@ -1151,14 +1321,17 @@ function renderLeaderboard() {
                 else if (rank === 2) rankClass = 'rank-2';
                 else if (rank === 3) rankClass = 'rank-3';
 
+                const medal = rank <= 3 ? medals[rank - 1] : rank;
+                const isMe = String(u.id) === String(userData.id);
+
                 return `
-            <div class="lead-row">
-                <div class="lead-rank ${rankClass}">${rank}</div>
+            <div class="lead-row" style="${isMe ? 'border: 1px solid #f59e0b; background: rgba(245,158,11,0.08);' : ''}">
+                <div class="lead-rank ${rankClass}">${medal}</div>
                 <div class="lead-avatar">
-                   <img src="${u.photo_url || `https://ui-avatars.com/api/?name=${u.name}&background=random`}" style="width:100%; height:100%; object-fit:cover;">
+                   <img src="${u.photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=random&color=fff&size=40`}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=f59e0b&color=000&size=40'">
                 </div>
                 <div class="lead-info">
-                    <div class="lead-name">${u.name}</div>
+                    <div class="lead-name">${u.name}${isMe ? ' <span style="color:#f59e0b;font-size:10px;">YOU</span>' : ''}</div>
                     <div class="lead-uid">ID: ${u.id}</div>
                 </div>
                 <div class="lead-count-box">
@@ -1173,6 +1346,12 @@ function renderLeaderboard() {
             if (rankEl && data.userRank) {
                 rankEl.textContent = `#${data.userRank}`;
             }
+
+            // Update my referral stats on leaderboard page if elements exist
+            const myRankEl = document.getElementById('my-leaderboard-rank');
+            const myRefsEl = document.getElementById('my-leaderboard-refs');
+            if (myRankEl) myRankEl.textContent = data.userRank ? `#${data.userRank}` : 'N/A';
+            if (myRefsEl) myRefsEl.textContent = data.userRefs || userData.invites || 0;
         })
         .catch(() => {
             list.innerHTML = '<div style="text-align:center; padding:20px; color:#ef4444;">Failed to load rankings.</div>';
@@ -1191,6 +1370,16 @@ function updateInviteUI() {
 function renderReferralHistory() {
     const container = document.getElementById('refHistoryList');
     if (!container) return;
+
+    // Check if userId is valid before making API call
+    if (!isValidUserId(userData.id)) {
+        container.innerHTML = `
+            <div style="text-align:center; padding:40px; color:var(--text-sub);">
+                <i class="fas fa-user-plus" style="font-size:32px; margin-bottom:10px; display:block; opacity:0.3;"></i>
+                <div style="font-size:12px;">Please login to view referrals</div>
+            </div>`;
+        return;
+    }
 
     // Show loading state
     container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-sub);"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
@@ -1240,14 +1429,40 @@ function renderReferralHistory() {
 
 // Load invite page stats
 function loadInviteStats() {
+    // Only load if userId is valid
+    if (!isValidUserId(userData.id)) {
+        console.log('[INVITE] Waiting for valid userId...');
+        // Try again after a short delay
+        setTimeout(() => {
+            if (isValidUserId(userData.id)) {
+                renderReferralHistory();
+                loadInviteStats();
+            }
+        }, 1000);
+        return;
+    }
+
     fetch(`/api/referrals/${userData.id}`)
         .then(r => r.json())
         .then(data => {
             if (data.success) {
-                // Update stats cards
-                const invitedEl = document.querySelector('.stat-card .mi-icon.blue + div div:last-child');
-                const earnedEl = document.querySelector('.stat-card .mi-icon.yellow + div div:last-child');
+                // Update stats cards - try multiple selector strategies
+                const statCards = document.querySelectorAll('.stat-card');
+                statCards.forEach(card => {
+                    const label = card.querySelector('.stat-label, .mi-label, [class*="label"]');
+                    const value = card.querySelector('.stat-value, .mi-value, [class*="value"]');
+                    if (!label || !value) return;
+                    const labelText = label.textContent.trim().toLowerCase();
+                    if (labelText.includes('invited') || labelText.includes('referral') || labelText.includes('friend')) {
+                        value.textContent = data.stats.invited;
+                    } else if (labelText.includes('earned') || labelText.includes('reward') || labelText.includes('bonus')) {
+                        value.textContent = data.stats.earned;
+                    }
+                });
 
+                // Fallback: try direct element IDs for stat numbers
+                const invitedEl = document.getElementById('stat-invited');
+                const earnedEl = document.getElementById('stat-earned');
                 if (invitedEl) invitedEl.textContent = data.stats.invited;
                 if (earnedEl) earnedEl.textContent = data.stats.earned;
 
@@ -1256,6 +1471,9 @@ function loadInviteStats() {
                 if (linkEl && data.referralLink) {
                     linkEl.textContent = data.referralLink;
                 }
+
+                // Update userData invites count
+                userData.invites = data.stats.invited;
             }
         })
         .catch(() => {
@@ -1263,11 +1481,44 @@ function loadInviteStats() {
         });
 }
 
+// Copy referral link
+function copyLink() {
+    const linkEl = document.getElementById('referralLink');
+    if (!linkEl) return;
+
+    const text = linkEl.textContent || linkEl.innerText;
+    navigator.clipboard.writeText(text).then(() => {
+        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+        tg.showAlert('✅ Referral link copied!');
+    }).catch(() => {
+        // Fallback for older browsers
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        tg.showAlert('✅ Referral link copied!');
+    });
+}
+
 // Update invite page when navigating to it
 const originalShowPage = showPage;
 showPage = function (targetId) {
     originalShowPage(targetId);
     if (targetId === 'invite') {
+        // Only load if userId is valid
+        if (!isValidUserId(userData.id)) {
+            console.log('[INVITE] Waiting for valid userId...');
+            // Try again after a short delay
+            setTimeout(() => {
+                if (isValidUserId(userData.id)) {
+                    renderReferralHistory();
+                    loadInviteStats();
+                }
+            }, 1000);
+            return;
+        }
         renderReferralHistory();
         loadInviteStats();
     }
@@ -1287,10 +1538,13 @@ window.handleHeaderClick = handleHeaderClick;
 window.claimDaily = claimDaily;
 window.exchangeTokens = exchangeTokens;
 window.earn = earn;
+window.verifyAndComplete = verifyAndComplete;
+window.completeTaskReward = completeTaskReward;
 window.selectPayMethod = selectPayMethod;
 window.submitPayment = submitPayment;
 window.payWithBalance = payWithBalance;
 window.selectPM = selectPM;
+window.copyLink = copyLink;
 
 // Services Page Toggle View
 function toggleServicesView() {
@@ -1330,10 +1584,18 @@ function registerAndFetchUser() {
         return;
     }
 
-    // Parse referrer from start_param (e.g. ref_123456789)
+    // Parse referrer from start_param
+    // Bot sends: ?start=USERID (raw userId, no prefix)
+    // Web SDK also might send: ?start=ref_USERID
     let referrer = null;
-    if (_startParam && _startParam.startsWith('ref_')) {
-        referrer = _startParam.replace('ref_', '');
+    if (_startParam) {
+        const raw = String(_startParam).trim();
+        if (raw.startsWith('ref_')) {
+            referrer = raw.replace('ref_', '');
+        } else if (/^\d+$/.test(raw) && raw !== String(currentUserId)) {
+            // Pure numeric userId as start_param (from bot's ?start=userId)
+            referrer = raw;
+        }
     }
 
     fetch('/api/register', {
@@ -1359,6 +1621,7 @@ function registerAndFetchUser() {
                 userData.dailyStreak = data.dailyStreak || 0;
                 userData.lastDailyClaim = data.lastClaim || 0;
                 userData.completedTasks = data.completedTasks || [];
+                userData.invites = data.invites || 0;
                 // Use Telegram name (always fresh from Telegram)
                 userData.username = _tgUser.first_name || data.firstName || data.username || 'User';
                 userData.firstName = _tgUser.first_name || data.firstName || '';
@@ -1422,40 +1685,69 @@ function loadRecentActivity() {
         });
 }
 
-// Load broadcast messages with real live data
+// Load broadcast messages with real live user activity data
 function loadBroadcast() {
     const track = document.getElementById('broadcastTrack');
     const badge = document.getElementById('broadcastBadge');
     if (!track) return;
 
-    // Default live messages
-    const messages = [
-        'New task available - Complete and earn 10 TC!',
-        'Invite friends and earn 50 TC per referral!',
-        'Daily bonus ready - Claim your rewards now!',
-        'Email service available - Generate temporary emails!',
-        'New accounts in stock - Buy premium accounts!'
+    // Default messages - with @ symbol and yellow username
+    const defaultMessages = [
+        '💰 <span class="bcp-user">@Riad</span> Netflix -50 TC',
+        '⭐ <span class="bcp-user">@Ali</span> +25 TC',
+        '🛒 <span class="bcp-user">@Mamun</span> Spotify -40 TC',
+        '⭐ <span class="bcp-user">@Karim</span> +10 TC',
+        '📧 <span class="bcp-user">@Hasan</span> Temp Mail -10 TC',
+        '💎 <span class="bcp-user">@Rahim</span> Gems -100 TC',
+        '🎯 <span class="bcp-user">@Jodu</span> Verify -20 TC',
+        '🚀 <span class="bcp-user">@Kodu</span> ChatGPT -15 TC'
     ];
 
-    // Try to get real live data from API
-    fetch('/api/admin/stats')
+    // Try to get real user activity from API
+    fetch('/api/user-activity')
         .then(r => r.json())
         .then(data => {
-            if (data.success) {
-                const liveMessages = [
-                    `${data.totalUsers || 0} users active on platform`,
-                    `${data.totalTokens || 0} tokens circulated`,
-                    'Live: Email and number services available now!',
-                    'System operational - All services running smoothly'
-                ];
-                track.innerHTML = liveMessages.map(m => `<span class="bcp-item">${m}</span>`).join('');
-                if (badge) badge.textContent = '@AUTOSVERIFY';
+            if (data.success && data.activities && data.activities.length > 0) {
+                // Convert activities to SHORT format messages
+                const activityMessages = data.activities.slice(0, 8).map(activity => {
+                    // Get username with @ symbol
+                    let user = activity.username || activity.user || 'User';
+                    user = user.replace(/^@/, ''); // Remove @ if exists
+
+                    const action = activity.action;
+                    const item = activity.item || '';
+                    const amount = activity.amount || 0;
+                    const currency = activity.currency || 'TC';
+
+                    // Format with @ symbol and yellow username
+                    const userSpan = `<span class="bcp-user">@${user}</span>`;
+
+                    // ULTRA SHORT format - icon + @username + item + sign + amount
+                    if (action === 'purchase' || action === 'spend') {
+                        // Short item names
+                        const shortItem = item.replace('purchased ', '').replace('bought ', '').replace('generated ', '');
+                        return `💰 ${userSpan} ${shortItem} -${amount} ${currency}`;
+                    } else if (action === 'earn' || action === 'reward') {
+                        return `⭐ ${userSpan} +${amount} ${currency}`;
+                    } else if (action === 'mail' || item.includes('mail')) {
+                        return `📧 ${userSpan} Temp Mail -${amount} ${currency}`;
+                    } else if (action === 'verify') {
+                        return `🎯 ${userSpan} Verify -${amount} ${currency}`;
+                    } else {
+                        return `🔥 ${userSpan} ${item} -${amount} ${currency}`;
+                    }
+                });
+
+                track.innerHTML = activityMessages.map(m => `<span class="bcp-item">${m}</span>`).join('');
+                if (badge) badge.style.display = 'none';
             } else {
-                track.innerHTML = messages.map(m => `<span class="bcp-item">${m}</span>`).join('');
+                track.innerHTML = defaultMessages.map(m => `<span class="bcp-item">${m}</span>`).join('');
+                if (badge) badge.style.display = 'none';
             }
         })
         .catch(() => {
-            track.innerHTML = messages.map(m => `<span class="bcp-item">${m}</span>`).join('');
+            track.innerHTML = defaultMessages.map(m => `<span class="bcp-item">${m}</span>`).join('');
+            if (badge) badge.style.display = 'none';
         });
 }
 
@@ -1543,6 +1835,31 @@ function renderBalances() {
 }
 
 
+
+// Copy User ID to clipboard with visual feedback
+function copyUserId() {
+    const uid = String(userData.id || '');
+    if (!uid) return;
+    try {
+        navigator.clipboard.writeText(uid).then(() => {
+            const icon = document.getElementById('copy-id-icon');
+            const btn = document.getElementById('copy-id-btn');
+            if (icon) { icon.className = 'fas fa-check-circle'; icon.style.color = '#22c55e'; }
+            if (btn) btn.style.background = 'rgba(34,197,94,0.2)';
+            setTimeout(() => {
+                if (icon) { icon.className = 'fas fa-copy'; icon.style.color = '#f59e0b'; }
+                if (btn) btn.style.background = 'rgba(255,255,255,0.12)';
+            }, 2000);
+        });
+    } catch (e) {
+        const ta = document.createElement('textarea');
+        ta.value = uid;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+    }
+}
 
 function payWithBalance() {
     if (userData.usd >= 3.00) {
@@ -2197,7 +2514,7 @@ function pollForOTP() {
 function copyNumOtp(otp) {
     if (!otp) return;
     navigator.clipboard.writeText(otp).then(() => {
-        tg.showPopup({ message: 'OTP Copied: ' + otp });
+        tg.showAlert({ message: 'OTP Copied: ' + otp });
         if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
     });
 }
@@ -2226,6 +2543,90 @@ function addNumHistory(number) {
     if (list.querySelector('.fa-history')) list.innerHTML = '';
     list.insertAdjacentHTML('afterbegin', item);
 }
+
+function copyNumberWithTick() {
+    const el = document.getElementById('numResultValue');
+    if (!el) {
+        console.log('copyNumberWithTick: numResultValue element not found');
+        return;
+    }
+
+    const text = el.textContent.trim();
+    console.log('copyNumberWithTick: Copying text:', text);
+
+    // Find the copy button - look for button near the numResultBox
+    const numResultBox = document.getElementById('numResultBox');
+    let copyBtn = null;
+
+    if (numResultBox) {
+        // Try to find button with onclick containing copyNumber
+        copyBtn = numResultBox.querySelector('button[onclick*="copyNumber"]');
+        // If not found, try any button inside numResultBox
+        if (!copyBtn) {
+            copyBtn = numResultBox.querySelector('button');
+        }
+    }
+
+    // Fallback: find any button with copy icon
+    if (!copyBtn) {
+        copyBtn = document.querySelector('button:has(.fa-copy), button i.fa-copy');
+    }
+
+    // Final fallback: look for button next to numResultValue
+    if (!copyBtn && numResultBox) {
+        const buttons = numResultBox.querySelectorAll('button');
+        for (let btn of buttons) {
+            if (btn.innerHTML.includes('copy') || btn.innerHTML.includes('Copy')) {
+                copyBtn = btn;
+                break;
+            }
+        }
+    }
+
+    console.log('copyNumberWithTick: Found button:', copyBtn);
+
+    navigator.clipboard.writeText(text).then(() => {
+        // Show tick icon on button
+        if (copyBtn) {
+            const originalIcon = copyBtn.innerHTML;
+            copyBtn.innerHTML = '<i class="fas fa-check"></i>';
+            copyBtn.style.background = '#10b981';
+            copyBtn.style.color = '#fff';
+            // Reset after 2 seconds
+            setTimeout(() => {
+                copyBtn.innerHTML = originalIcon || '<i class="fas fa-copy"></i>';
+                copyBtn.style.background = '';
+                copyBtn.style.color = '';
+            }, 2000);
+        }
+        tg.showAlert('✅ Number copied: ' + text);
+    }).catch((err) => {
+        console.log('copyNumberWithTick: Clipboard error', err);
+        // Fallback
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+
+        // Show tick even on fallback
+        if (copyBtn) {
+            const originalIcon = copyBtn.innerHTML;
+            copyBtn.innerHTML = '<i class="fas fa-check"></i>';
+            copyBtn.style.background = '#10b981';
+            copyBtn.style.color = '#fff';
+            setTimeout(() => {
+                copyBtn.innerHTML = originalIcon || '<i class="fas fa-copy"></i>';
+                copyBtn.style.background = '';
+                copyBtn.style.color = '';
+            }, 2000);
+        }
+        tg.showAlert('✅ Number copied: ' + text);
+    });
+}
+
+window.copyNumberWithTick = copyNumberWithTick;
 
 function copyText(elId) {
     const el = document.getElementById(elId);
@@ -2296,56 +2697,98 @@ function updateMailBalance(type) {
         if (noActive) noActive.style.display = "none";
         if (activeState) activeState.style.display = "block";
         const addrEl = document.getElementById(type + "MailAddr");
-        if (addrEl) addrEl.textContent = mailSessions[type].email;
+        if (addrEl) {
+            addrEl.textContent = mailSessions[type].email;
+            addrEl.style.fontStyle = "normal";
+            addrEl.style.opacity = "1";
+        }
     } else {
         // No session yet - still show the page with placeholder text
         if (noActive) noActive.style.display = "none"; // hide noActive (we use inline placeholder instead)
         if (activeState) activeState.style.display = "block"; // ALWAYS show the mail page
         const addrEl = document.getElementById(type + "MailAddr");
-        if (addrEl) addrEl.textContent = "Tap 'NEW GMAIL' to generate";
+        if (addrEl) { addrEl.textContent = "loading..."; addrEl.style.fontStyle = "italic"; addrEl.style.opacity = "0.7"; }
     }
 }
 
 function generateTempMail(type) {
     if (!type) type = 'temp';
-    const cost = type === "temp" ? 10 : 50;
+    const cost = type === "temp" ? 1 : 50;
+
+    // If no user login, use demo mode for testing
+    if (!userData.id || userData.id === 0) {
+        console.log('generateTempMail: No user login, using demo mode');
+        generateDemoTempMail(type, 0);
+        return;
+    }
+
     if ((userData.tokens || 0) < cost) {
         tg.showAlert(`❌ Insufficient tokens!\n\nYou need ${cost} TC.\nYour balance: ${userData.tokens || 0} TC`);
         return;
     }
 
-    const performGenerate = () => {
-        fetch("/api/mail/generate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userId: userData.id, cost, type })
-        })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    userData.tokens -= cost;
-                    renderBalances();
-                    if (mailSessions[type]) {
-                        previousMailSessions[type] = mailSessions[type];
-                    }
-                    mailSessions[type] = data;
-                    updateMailBalance(type);
-                    startInboxPolling(type);
-                    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-                } else {
-                    tg.showAlert("❌ " + (data.message || "Failed. Try again."));
-                }
-            })
-            .catch(() => {
-                tg.showAlert("❌ Server connection error. Please try again in a few moments.");
-            });
-    };
+    // Show loading state immediately
+    const addrEl = document.getElementById(type + "MailAddr");
+    if (addrEl) {
+        addrEl.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>generating...';
+        addrEl.style.fontStyle = "italic";
+        addrEl.style.opacity = "0.8";
+    }
 
-    performGenerate();
+    fetch("/api/mail/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: userData.id, cost, type })
+    })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                userData.tokens = (typeof data.newBalance === 'number') ? data.newBalance : ((userData.tokens || 0) - cost);
+                renderBalances();
+                if (mailSessions[type]) {
+                    previousMailSessions[type] = mailSessions[type];
+                }
+                mailSessions[type] = data;
+                // Reset style and show email
+                if (addrEl) {
+                    addrEl.style.fontStyle = "normal";
+                    addrEl.style.opacity = "1";
+                }
+                updateMailBalance(type);
+                startInboxPolling(type);
+                if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+            } else {
+                // API returned error - show error message, no demo
+                if (addrEl) {
+                    addrEl.innerHTML = '<span style="color:#f87171;">Failed. Tap NEW GMAIL to retry</span>';
+                    addrEl.style.fontStyle = "normal";
+                    addrEl.style.opacity = "1";
+                }
+                tg.showAlert("❌ " + (data.message || "Email generation failed. Please try again."));
+            }
+        })
+        .catch(() => {
+            // Network error - show error
+            if (addrEl) {
+                addrEl.innerHTML = '<span style="color:#f87171;">Network error. Tap NEW GMAIL to retry</span>';
+                addrEl.style.fontStyle = "normal";
+                addrEl.style.opacity = "1";
+            }
+            tg.showAlert("❌ Network error. Please check your connection and try again.");
+        });
 }
 
 function renewTempMail(type) {
     if (!type) type = 'temp';
+
+    // If no user login, use demo mode
+    if (!userData.id || userData.id === 0) {
+        console.log('renewTempMail: No user login, using demo mode');
+        // For demo, just generate a new email
+        generateDemoTempMail(type, 0);
+        return;
+    }
+
     if (!previousMailSessions[type]) {
         tg.showAlert(`❌ No previous ${type} session found to restore.`);
         return;
@@ -2369,17 +2812,44 @@ function deleteMail(type) {
 
 function refreshInbox(type) {
     if (!type) type = window._currentMailType || 'temp';
+
+    // If no session and no user login, just show demo inbox
+    if (!mailSessions[type] && (!userData.id || userData.id === 0)) {
+        console.log('refreshInbox: No session and no user login');
+        const listEl = document.getElementById(type + "InboxList");
+        if (listEl) {
+            listEl.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-sub);"><i class="fas fa-inbox" style="font-size:32px; margin-bottom:10px; opacity:0.3;"></i><div style="font-size:12px;">Generate email first to see inbox</div></div>`;
+        }
+        return;
+    }
+
     if (!mailSessions[type]) return;
+
+    // Deduct 1 token per inbox refresh (temp only)
+    const refreshCost = (type === 'temp') ? 1 : 0;
+    if (refreshCost > 0 && (userData.tokens || 0) < refreshCost) {
+        tg.showAlert(`❌ Insufficient tokens!\n\nYou need ${refreshCost} TC to refresh inbox.\nYour balance: ${userData.tokens || 0} TC`);
+        return;
+    }
 
     const listEl = document.getElementById(type + "InboxList");
     const refreshIcon = document.getElementById(type + "RefreshIcon");
     if (refreshIcon) refreshIcon.classList.add("fa-spin");
 
     const sessionId = mailSessions[type].id || mailSessions[type].sessionId;
-    fetch(`/api/mail/inbox?sessionId=${sessionId}&userId=${userData.id}`)
+    fetch(`/api/mail/inbox?sessionId=${sessionId}&userId=${userData.id}&cost=${refreshCost}`)
         .then(r => r.json())
         .then(data => {
             if (refreshIcon) refreshIcon.classList.remove("fa-spin");
+            if (refreshCost > 0 && data && typeof data.newBalance === 'number') {
+                userData.tokens = data.newBalance;
+                renderBalances();
+                updateMailBalance(type);
+            } else if (refreshCost > 0) {
+                userData.tokens = Math.max(0, (userData.tokens || 0) - refreshCost);
+                renderBalances();
+                updateMailBalance(type);
+            }
             renderInbox(data.messages || [], type);
         })
         .catch(() => {
@@ -2392,6 +2862,11 @@ function renderInbox(emails, type) {
     const listEl = document.getElementById(type + "InboxList");
     const otpListEl = document.getElementById(type + "OtpList");
     if (!listEl) return;
+
+    // Show at most 10 messages
+    if (Array.isArray(emails) && emails.length > 10) {
+        emails = emails.slice(0, 10);
+    }
 
     if (emails.length === 0) {
         listEl.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-sub);"><i class="fas fa-inbox" style="font-size:32px; margin-bottom:10px; opacity:0.3;"></i><div style="font-size:12px;">Waiting for incoming emails...</div></div>`;
@@ -2605,7 +3080,7 @@ function copyToClipboard(id) {
                     icon.className = 'fas fa-copy';
                     // Restore original color based on button type
                     if (id.includes('temp')) {
-                        btn.style.background = '#10b981';
+                        btn.style.background = '#f59e0b';
                     } else if (id.includes('premium')) {
                         btn.style.background = '#f59e0b';
                     }
@@ -2766,20 +3241,67 @@ window.submitCheckoutPayment = submitCheckoutPayment;
 
 // Export Email Functions
 function openTempMailDirect() {
+    if (!checkFeatureOrComingSoon('tempMail', 'Temp Mail')) return;
     nav('mailService');
-    if (!mailSessions.temp) {
+    window._currentMailType = 'temp';
+    updateMailBalance('temp');
+
+    // Check if email needs auto-generation (first time or 24hr expired)
+    const session = mailSessions.temp;
+    const now = Date.now();
+    const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+    if (!session || !session.email) {
+        // First time - no email exists, auto-generate
+        console.log('First time user - auto-generating email');
         setTimeout(() => {
             autoGenerateTempMail();
-        }, 300);
+        }, 500);
+    } else if (session.createdAt && (now - session.createdAt > TWENTY_FOUR_HOURS)) {
+        // 24 hours passed - auto-generate new email
+        console.log('24 hours passed - auto-generating new email');
+        mailSessions.temp = null; // Clear old session
+        setTimeout(() => {
+            autoGenerateTempMail();
+        }, 500);
     }
+    // Otherwise: Email exists and is fresh, user keeps current email
 }
 
 function autoGenerateTempMail() {
     const type = 'temp';
-    const cost = 10;
-    if ((userData.tokens || 0) < cost) {
+    const cost = 1;
+
+    // Check user login
+    if (!userData.id || userData.id === 0) {
+        console.log('AutoGenerate: No user login');
+        const addrEl = document.getElementById(type + "MailAddr");
+        if (addrEl) {
+            addrEl.innerHTML = '<span style="color:#f87171;">Please login first</span>';
+        }
         return;
     }
+
+    // Check tokens
+    if ((userData.tokens || 0) < cost) {
+        console.log('AutoGenerate: Insufficient tokens');
+        const addrEl = document.getElementById(type + "MailAddr");
+        if (addrEl) {
+            addrEl.innerHTML = '<span style="color:#f87171;">Need ' + cost + ' TC. Balance: ' + (userData.tokens || 0) + '</span>';
+        }
+        return;
+    }
+
+    // Show loading state
+    const addrEl = document.getElementById(type + "MailAddr");
+    if (addrEl) {
+        addrEl.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>generating...';
+        addrEl.style.fontStyle = "italic";
+        addrEl.style.opacity = "0.7";
+    }
+
+    console.log('AutoGenerate: Fetching live email for user', userData.id);
+
     fetch("/api/mail/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -2787,32 +3309,62 @@ function autoGenerateTempMail() {
     })
         .then(r => r.json())
         .then(data => {
-            if (data.success) {
-                userData.tokens -= cost;
+            console.log('AutoGenerate: Response', data);
+            if (data.success && data.email) {
+                // Success - real email from provider
+                userData.tokens = (typeof data.newBalance === 'number') ? data.newBalance : Math.max(0, (userData.tokens || 0) - cost);
                 renderBalances();
-                mailSessions[type] = data;
+                mailSessions[type] = { ...data, createdAt: Date.now() };
+                // Show email
+                if (addrEl) {
+                    addrEl.textContent = data.email;
+                    addrEl.style.fontStyle = "normal";
+                    addrEl.style.opacity = "1";
+                }
                 updateMailBalance(type);
                 refreshInbox(type);
+                if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
             } else {
-                generateDemoTempMail(type, cost);
+                // Failed - show error
+                console.log('AutoGenerate: Failed -', data.message);
+                if (addrEl) {
+                    addrEl.innerHTML = '<span style="color:#f87171;">Failed: ' + (data.message || 'Try again') + '</span>';
+                    addrEl.style.fontStyle = "normal";
+                }
             }
         })
-        .catch(() => {
-            generateDemoTempMail(type, cost);
+        .catch((err) => {
+            console.log('AutoGenerate: Network error', err);
+            if (addrEl) {
+                addrEl.innerHTML = '<span style="color:#f87171;">Network error. Tap NEW GMAIL</span>';
+                addrEl.style.fontStyle = "normal";
+            }
         });
 }
 
 function generateDemoTempMail(type, cost) {
-    const domains = type === "temp" ? ["tempmail.dev", "mailnull.com"] : ["premium-inbox.com", "private-mail.net"];
+    console.log('DemoMail: Generating demo email for', type);
+    const domains = type === "temp" ? ["tempmail.dev", "mailnull.com", "inboxkitten.com"] : ["premium-inbox.com", "private-mail.net"];
     const email = "user" + Math.floor(Math.random() * 99999) + "@" + domains[Math.floor(Math.random() * domains.length)];
+    console.log('DemoMail: Generated email', email);
     mailSessions[type] = { email, id: "demo_" + Date.now(), type, sessionId: "demo_" + Date.now() };
-    userData.tokens -= cost;
+    userData.tokens = Math.max(0, (userData.tokens || 0) - (parseInt(cost) || 0));
     renderBalances();
+    // Clear loading state and show email
+    const addrEl = document.getElementById(type + "MailAddr");
+    console.log('DemoMail: addrEl found?', !!addrEl);
+    if (addrEl) {
+        addrEl.innerHTML = email; // Use innerHTML to ensure display
+        addrEl.style.fontStyle = "normal";
+        addrEl.style.opacity = "1";
+        console.log('DemoMail: Email set to element');
+    }
     updateMailBalance(type);
     refreshInbox(type);
 }
 
 function openPremiumMailDirect() {
+    if (!checkFeatureOrComingSoon('premiumMail', 'Premium Mail')) return;
     nav('premiumMail');
     if (!mailSessions.premium) {
         setTimeout(() => {
@@ -2862,6 +3414,38 @@ function generateDemoPremiumMail(type, cost) {
     refreshInbox(type);
 }
 
+function changeMailEmail(type) {
+    // Clear current email and generate new one
+    mailSessions[type] = null;
+    generateTempMail(type);
+}
+
+function cancelMail(type) {
+    // Cancel/close mail service
+    mailSessions[type] = null;
+    updateMailBalance(type);
+    nav('home');
+}
+
+function copyMailEmail(type) {
+    const email = mailSessions[type]?.email;
+    if (email) {
+        copyText(email);
+        tg.showAlert('✅ Email copied: ' + email);
+    } else {
+        tg.showAlert('❌ No email to copy');
+    }
+}
+
+function copyMailOtp(otp) {
+    if (otp) {
+        copyText(otp);
+        tg.showAlert('✅ OTP copied: ' + otp);
+    } else {
+        tg.showAlert('❌ No OTP to copy');
+    }
+}
+
 window.openTempMailDirect = openTempMailDirect;
 window.generateTempMail = generateTempMail;
 window.renewTempMail = renewTempMail;
@@ -2877,7 +3461,172 @@ window.refreshInbox = refreshInbox;
 window.copyMailOtp = copyMailOtp;
 window.updateMailBalance = updateMailBalance;
 
-document.addEventListener('DOMContentLoaded', function () {
+// REQUIRED CHANNELS/GROUPS CONFIG
+const REQUIRED_JOINS = {
+    channel: {
+        id: '-1002188442004', // @AutosVerifych
+        username: 'AutosVerifych',
+        name: '📢 AutosVerify Channel'
+    },
+    group: {
+        id: '-1002088203586', // @AutosVerify
+        username: 'AutosVerify',
+        name: '💬 AutosVerify Group'
+    }
+};
+
+// Check if user joined required channels/groups
+async function checkRequiredJoins() {
+    if (!userData.id || userData.id === 0) {
+        // Demo mode - skip check
+        return { canProceed: true };
+    }
+
+    try {
+        const response = await fetch('/api/check-required-joins', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: userData.id,
+                channelId: REQUIRED_JOINS.channel.id,
+                groupId: REQUIRED_JOINS.group.id
+            })
+        });
+
+        const data = await response.json();
+        return data;
+    } catch (err) {
+        console.error('Join check error:', err);
+        // On error, allow proceed (fail open)
+        return { canProceed: true };
+    }
+}
+
+// Show join required modal
+function showJoinRequiredModal(missing) {
+    // Create modal if not exists
+    let modal = document.getElementById('joinRequiredModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'joinRequiredModal';
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        `;
+        document.body.appendChild(modal);
+    }
+
+    const missingItems = [];
+    if (!missing.channelJoined) missingItems.push(REQUIRED_JOINS.channel);
+    if (!missing.groupJoined) missingItems.push(REQUIRED_JOINS.group);
+
+    modal.innerHTML = `
+        <div style="
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border: 1px solid rgba(249,115,22,0.5);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        ">
+            <div style="font-size: 48px; margin-bottom: 15px;">🔒</div>
+            <h2 style="color: #f97316; margin-bottom: 10px; font-size: 22px;">Join Required</h2>
+            <p style="color: #aaa; margin-bottom: 25px; font-size: 14px;">
+                You must join our channel and group to use the web panel.
+            </p>
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
+                ${missingItems.map(item => `
+                    <a href="https://t.me/${item.username}" target="_blank" style="
+                        background: linear-gradient(135deg, #f59e0b, #d97706);
+                        color: #000;
+                        padding: 14px 20px;
+                        border-radius: 12px;
+                        text-decoration: none;
+                        font-weight: 600;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 8px;
+                    ">
+                        <span>Join ${item.name}</span>
+                        <span style="font-size: 18px;">→</span>
+                    </a>
+                `).join('')}
+            </div>
+            <button onclick="verifyJoinsAndProceed()" style="
+                background: linear-gradient(135deg, #22c55e, #16a34a);
+                color: #fff;
+                border: none;
+                padding: 14px 30px;
+                border-radius: 12px;
+                font-weight: 600;
+                font-size: 16px;
+                cursor: pointer;
+                width: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+            ">
+                <span>✓ I've Joined</span>
+            </button>
+            <p style="color: #666; margin-top: 15px; font-size: 12px;">
+                Click "I've Joined" after joining both
+            </p>
+        </div>
+    `;
+
+    modal.style.display = 'flex';
+}
+
+// Verify joins and proceed
+async function verifyJoinsAndProceed() {
+    const btn = document.querySelector('#joinRequiredModal button');
+    btn.innerHTML = '<span class="spinner" style="display:inline-block;width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;"></span> Checking...';
+    btn.disabled = true;
+
+    const result = await checkRequiredJoins();
+
+    if (result.canProceed) {
+        document.getElementById('joinRequiredModal').style.display = 'none';
+        // Continue with normal initialization
+        continueInitialization();
+    } else {
+        btn.innerHTML = '<span>✗ Not Joined Yet</span>';
+        btn.style.background = '#ef4444';
+        setTimeout(() => {
+            btn.innerHTML = '<span>✓ I\'ve Joined</span>';
+            btn.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
+            btn.disabled = false;
+        }, 2000);
+    }
+}
+
+// Continue with normal initialization after join check
+function continueInitialization() {
+    showPage('home');
+    applyProfilePhoto(userData.photo_url || _tgUser.photo_url || '');
+    renderBalances();
+    registerAndFetchUser();
+    loadBroadcast();
+    fetchEmailServiceConfig();
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    document.body.setAttribute('data-theme', savedTheme);
+    updateThemeIcon(savedTheme);
+}
+
+document.addEventListener('DOMContentLoaded', async function () {
     // Re-initialize Telegram WebApp data in case SDK loaded after initial parse
     if (window.Telegram && window.Telegram.WebApp) {
         tg = window.Telegram.WebApp;
@@ -2896,20 +3645,20 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    showPage('home');
-    // Apply Telegram photo immediately before server responds
-    applyProfilePhoto(userData.photo_url || _tgUser.photo_url || '');
-    renderBalances();
-    // Auto-login from Telegram WebApp data
-    registerAndFetchUser();
-    // Load real-time broadcast data
-    loadBroadcast();
-    // Fetch other configs
-    fetchEmailServiceConfig();
-    const savedTheme = localStorage.getItem('theme') || 'dark';
-    document.body.setAttribute('data-theme', savedTheme);
-    updateThemeIcon(savedTheme);
+    // Check if user joined required channel/group (MANDATORY)
+    const joinCheck = await checkRequiredJoins();
+
+    if (!joinCheck.canProceed) {
+        // Show join required modal - block access until joined
+        showJoinRequiredModal(joinCheck);
+        return; // Stop initialization until user joins
+    }
+
+    // User has joined - continue with normal initialization
+    continueInitialization();
 });
+
+window.verifyJoinsAndProceed = verifyJoinsAndProceed;
 
 function fetchEmailServiceConfig() {
     fetch('/api/admin/email-services')
@@ -2936,3 +3685,7 @@ function toggleAccountsView() {
         lv.style.display = 'flex';
     }
 }
+
+
+
+

@@ -370,16 +370,30 @@ class Database {
         return Object.values(this.data.users || {});
     }
 
+    // Helper: get canonical token balance
+    getTokenBalance(user) {
+        if (user.tokens !== undefined) return user.tokens;
+        if (user.balance_tokens !== undefined) return user.balance_tokens;
+        return user.balance || 0;
+    }
+
+    // Helper: set canonical token balance (keeps all fields in sync)
+    setTokenBalance(user, amount) {
+        const val = Math.max(0, Math.round(amount));
+        user.tokens = val;
+        user.balance_tokens = val;
+        user.balance = val;
+    }
+
     addCredit(userId, amount) {
         const user = this.getUser(userId);
         if (!user) return 0;
 
-        if (user.balance !== undefined) user.balance += amount;
-        if (user.balance_tokens !== undefined) user.balance_tokens += amount;
-        if (user.tokens !== undefined) user.tokens += amount;
+        const current = this.getTokenBalance(user);
+        this.setTokenBalance(user, current + amount);
 
         this.save();
-        return (user.balance_tokens || user.tokens || user.balance || 0);
+        return user.tokens;
     }
 
     setLanguage(userId, lang) {
@@ -392,41 +406,41 @@ class Database {
     handleReferral(newUserId, referrerId) {
         const newUser = this.getUser(newUserId);
         // If already referred or self-referral, ignore
-        if (newUser.referredBy || newUserId == referrerId) return false;
+        if (newUser.referredBy || String(newUserId) === String(referrerId)) return false;
 
         const referrer = this.getUser(referrerId);
         if (!referrer) return false;
 
         // Set referral relationship
-        newUser.referredBy = referrerId;
+        newUser.referredBy = String(referrerId);
 
         // Track in referrer's list
         if (!referrer.referredUsers) referrer.referredUsers = [];
         referrer.referredUsers.push({
-            userId: newUserId,
+            userId: String(newUserId),
             date: Date.now(),
-            rewarded: false
+            rewarded: true
         });
 
         // Increment count
         if (!referrer.referralCount) referrer.referralCount = 0;
         referrer.referralCount++;
 
-        // Add bonus to referrer (use new token fields)
-        const refBonus = this.data.settings.refBonus || 10;
-        if (referrer.balance_tokens !== undefined) referrer.balance_tokens += refBonus;
-        if (referrer.tokens !== undefined) referrer.tokens += refBonus;
-        referrer.balance += refBonus; // Legacy
+        // Add bonus to referrer (keep all balance fields in sync)
+        const refBonus = (this.data.settings && this.data.settings.refBonus) || 50;
+        const referrerBalance = this.getTokenBalance(referrer);
+        this.setTokenBalance(referrer, referrerBalance + refBonus);
 
         // Add welcome bonus to new user
-        if (newUser.balance_tokens !== undefined) newUser.balance_tokens += refBonus;
-        if (newUser.tokens !== undefined) newUser.tokens += refBonus;
-        newUser.balance += refBonus; // Legacy
+        const newUserBalance = this.getTokenBalance(newUser);
+        this.setTokenBalance(newUser, newUserBalance + refBonus);
 
         // Add to referrer's history
         if (!referrer.history) referrer.history = [];
         referrer.history.unshift({
             type: 'referral',
+            amount: refBonus,
+            currency: 'tokens',
             date: Date.now(),
             details: `Referred user #${newUserId}`,
             reward: `+${refBonus} Tokens`
@@ -436,16 +450,12 @@ class Database {
         if (!newUser.history) newUser.history = [];
         newUser.history.unshift({
             type: 'welcome_bonus',
+            amount: refBonus,
+            currency: 'tokens',
             date: Date.now(),
             details: `Joined via referral from #${referrerId}`,
             reward: `+${refBonus} Tokens`
         });
-
-        // Mark as rewarded
-        const refIndex = referrer.referredUsers.findIndex(r => r.userId === newUserId);
-        if (refIndex !== -1) {
-            referrer.referredUsers[refIndex].rewarded = true;
-        }
 
         // Add transaction record
         this.addTransaction(referrerId, 'referral', refBonus, 'Tokens', `Referral bonus from #${newUserId}`, 'user-plus');
@@ -469,12 +479,10 @@ class Database {
         const user = this.getUser(userId);
         if (!user) return false;
 
-        const currentBalance = (user.balance_tokens || user.tokens || user.balance || 0);
+        const currentBalance = this.getTokenBalance(user);
         if (currentBalance < amount) return false;
 
-        if (user.balance !== undefined) user.balance -= amount;
-        if (user.balance_tokens !== undefined) user.balance_tokens -= amount;
-        if (user.tokens !== undefined) user.tokens -= amount;
+        this.setTokenBalance(user, currentBalance - amount);
 
         this.save();
         return true;
@@ -524,12 +532,22 @@ class Database {
         if (user.redeemed && user.redeemed.includes(code)) return { success: false, msg: "Already redeemed" };
 
         c.uses++;
-        user.balance += c.amount;
+        const currentBalance = this.getTokenBalance(user);
+        this.setTokenBalance(user, currentBalance + c.amount);
         if (!user.redeemed) user.redeemed = [];
         user.redeemed.push(code);
 
+        if (!user.history) user.history = [];
+        user.history.unshift({
+            type: 'redeem',
+            amount: c.amount,
+            currency: 'tokens',
+            date: Date.now(),
+            details: `Redeemed code: ${code}`
+        });
+
         this.save();
-        return { success: true, amount: c.amount };
+        return { success: true, amount: c.amount, newBalance: user.tokens };
     }
 
     // Daily
@@ -543,7 +561,10 @@ class Database {
 
         // Check if 24h passed
         if (lastClaim > 0 && (now - lastClaim < oneDay)) {
-            return { success: false, message: "You already claimed your reward for today!" };
+            const remaining = oneDay - (now - lastClaim);
+            const hours = Math.floor(remaining / 3600000);
+            const mins = Math.floor((remaining % 3600000) / 60000);
+            return { success: false, msg: `Come back in ${hours}h ${mins}m`, message: `Come back in ${hours}h ${mins}m` };
         }
 
         // Streak Logic: Reset if missed a day (more than 48h)
@@ -557,18 +578,28 @@ class Database {
         user.lastDaily = now;
 
         // Reward Calculation
-        const rewards = [10, 20, 30, 40, 50, 60, 100];
-        const reward = rewards[user.dailyStreak - 1];
+        const dailyBonus = (this.data.settings && this.data.settings.dailyBonus) || 50;
+        const rewards = [dailyBonus, dailyBonus * 2, dailyBonus * 3, dailyBonus * 4, dailyBonus * 5, dailyBonus * 6, dailyBonus * 10];
+        const reward = rewards[user.dailyStreak - 1] || dailyBonus;
 
-        if (user.balance_tokens !== undefined) user.balance_tokens += reward;
-        else user.tokens = (user.tokens || 0) + reward;
+        const currentBalance = this.getTokenBalance(user);
+        this.setTokenBalance(user, currentBalance + reward);
+
+        if (!user.history) user.history = [];
+        user.history.unshift({
+            type: 'daily_bonus',
+            amount: reward,
+            currency: 'tokens',
+            date: now
+        });
 
         this.save();
         return {
             success: true,
+            amount: reward,
             reward: reward,
             newStreak: user.dailyStreak,
-            newBalance: user.balance_tokens || user.tokens || 0
+            newBalance: user.tokens
         };
     }
 

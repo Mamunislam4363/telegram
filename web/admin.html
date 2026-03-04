@@ -182,6 +182,8 @@
                 <div class="nav-item" onclick="nav('tasks')"><i class="fas fa-tasks w-5"></i> Tasks</div>
                 <div class="nav-item" onclick="nav('apps')"><i class="fas fa-mobile-alt w-5"></i> Apps</div>
                 <div class="nav-item" onclick="nav('services')"><i class="fas fa-cogs w-5"></i> Services</div>
+                <div class="nav-item" onclick="nav('buttons')"><i class="fas fa-toggle-on w-5"></i> Button Management
+                </div>
                 <div class="nav-item" onclick="nav('accounts')"><i class="fas fa-user-shield w-5"></i> Accounts</div>
                 <div class="nav-item" onclick="nav('premiumemail')"><i class="fas fa-envelope w-5"></i> Premium Email
                 </div>
@@ -190,6 +192,8 @@
                 <div class="nav-item" onclick="nav('storage')"><i class="fas fa-hdd w-5"></i> Storage (Drive)</div>
                 <div class="nav-item" onclick="nav('adnetworks')"><i class="fas fa-ad w-5"></i> Ad Networks</div>
                 <div class="nav-item" onclick="nav('settings')"><i class="fas fa-cog w-5"></i> Settings</div>
+                <div class="nav-item" onclick="nav('database')"><i class="fas fa-database w-5"></i> Database Management
+                </div>
             </nav>
 
             <button onclick="logout()" class="nav-item mt-4 text-red-400 hover:text-red-300 hover:bg-red-500/10"><i
@@ -294,6 +298,108 @@
                 </div>
             </div>
 
+            <!-- BUTTON MANAGEMENT -->
+            <div id="page-buttons" class="page">
+                <div class="glass-card p-6 rounded-2xl mb-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="font-bold text-lg">Button Management</h3>
+                            <p class="text-sm text-gray-400">Turn features ON/OFF. Disabled features will show <b>Coming
+                                    soon</b> to users.</p>
+                        </div>
+                        <button onclick="saveFeatureFlags()"
+                            class="gold-gradient px-4 py-2 rounded-xl font-bold text-sm">Save Changes</button>
+                    </div>
+                    <div id="featureFlagsStatus" class="text-xs text-gray-400 mt-3"></div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="glass-card p-6 rounded-2xl">
+                        <h4 class="font-bold mb-4 flex items-center gap-2"><i
+                                class="fas fa-layer-group text-orange-400"></i> Core Services</h4>
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="font-bold">Temp Mail</div>
+                                    <div class="text-xs text-gray-400">TEMP MAIL page + NEW/RENEW/REFRESH</div>
+                                </div>
+                                <input id="ff-tempMail" type="checkbox" class="w-5 h-5 accent-orange-500" />
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="font-bold">Virtual Number</div>
+                                    <div class="text-xs text-gray-400">Number service page</div>
+                                </div>
+                                <input id="ff-virtualNumber" type="checkbox" class="w-5 h-5 accent-orange-500" />
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="font-bold">Premium Mail</div>
+                                    <div class="text-xs text-gray-400">Premium email page</div>
+                                </div>
+                                <input id="ff-premiumMail" type="checkbox" class="w-5 h-5 accent-orange-500" />
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="font-bold">Accounts Shop</div>
+                                    <div class="text-xs text-gray-400">Accounts store / buy section</div>
+                                </div>
+                                <input id="ff-accountsShop" type="checkbox" class="w-5 h-5 accent-orange-500" />
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="font-bold">Cards / VCC</div>
+                                    <div class="text-xs text-gray-400">Cards/VCC section</div>
+                                </div>
+                                <input id="ff-cardsVcc" type="checkbox" class="w-5 h-5 accent-orange-500" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-card p-6 rounded-2xl">
+                        <h4 class="font-bold mb-4 flex items-center gap-2"><i class="fas fa-home text-blue-400"></i>
+                            Home Service Cards</h4>
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="font-bold">Verify Card</div>
+                                    <div class="text-xs text-gray-400">Home: Verification</div>
+                                </div>
+                                <input id="ff-home_verify" type="checkbox" class="w-5 h-5 accent-orange-500" />
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="font-bold">Mail Card</div>
+                                    <div class="text-xs text-gray-400">Home: Mail Service</div>
+                                </div>
+                                <input id="ff-home_mail" type="checkbox" class="w-5 h-5 accent-orange-500" />
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="font-bold">Number Card</div>
+                                    <div class="text-xs text-gray-400">Home: Number Service</div>
+                                </div>
+                                <input id="ff-home_number" type="checkbox" class="w-5 h-5 accent-orange-500" />
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="font-bold">Gemini Card</div>
+                                    <div class="text-xs text-gray-400">Home: Gemini</div>
+                                </div>
+                                <input id="ff-home_gemini" type="checkbox" class="w-5 h-5 accent-orange-500" />
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="font-bold">ChatGPT Card</div>
+                                    <div class="text-xs text-gray-400">Home: ChatGPT</div>
+                                </div>
+                                <input id="ff-home_chatgpt" type="checkbox" class="w-5 h-5 accent-orange-500" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- STORAGE PAGE -->
             <div id="page-storage" class="page">
                 <div class="glass-card p-6 rounded-2xl mb-8">
@@ -385,6 +491,38 @@
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+                </div>
+
+                <!-- User History Panel -->
+                <div class="glass-card p-6 rounded-2xl mt-6">
+                    <h3 class="font-bold mb-4 flex items-center gap-2">
+                        <i class="fas fa-history text-purple-400"></i> User History & Activity
+                        <span class="text-xs text-gray-400 font-normal ml-2">Search by Telegram ID to view all
+                            data</span>
+                    </h3>
+                    <div class="flex gap-3 mb-4">
+                        <input id="historySearchId" type="number" placeholder="Enter Telegram User ID..."
+                            class="flex-1 bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white text-sm">
+                        <button onclick="loadUserHistory()"
+                            class="bg-purple-600 hover:bg-purple-500 text-white px-5 py-2 rounded-lg font-bold text-sm transition-all">
+                            <i class="fas fa-search mr-1"></i> Search
+                        </button>
+                    </div>
+                    <div id="userHistoryResult" class="hidden">
+                        <!-- Profile Card -->
+                        <div id="uhProfileCard"
+                            class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 p-4 bg-white/5 rounded-xl border border-white/10">
+                        </div>
+                        <!-- Activity Timeline -->
+                        <h4 class="text-sm font-bold text-gray-300 mb-2 flex items-center gap-2">
+                            <i class="fas fa-stream text-yellow-400"></i> Activity Log (Latest 50)
+                        </h4>
+                        <div id="uhHistoryList" class="space-y-2 max-h-96 overflow-y-auto pr-1">
+                        </div>
+                    </div>
+                    <div id="userHistoryEmpty" class="text-center text-gray-500 py-6 text-sm">
+                        Enter a user ID above to view their complete activity history.
                     </div>
                 </div>
 
@@ -811,742 +949,914 @@
                 </div>
             </div>
 
+
+            <!-- SERVICES MANAGEMENT -->
+            <div id="page-services" class="page">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Add Service Form -->
+                    <div class="glass-card p-6 rounded-2xl">
+                        <h3 class="font-bold mb-4 flex items-center gap-2"><i
+                                class="fas fa-plus-circle text-yellow-400"></i>
+                            Add / Edit Service</h3>
+                        <div class="space-y-3">
+                            <input type="hidden" id="svc-edit-id">
+                            <div>
+                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Service ID (unique,
+                                    no spaces)</label>
+                                <input id="svc-id" placeholder="e.g. gemini"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Name</label>
+                                <input id="svc-name" placeholder="Gemini Card"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Description</label>
+                                <input id="svc-desc" placeholder="Generate custom cards"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                            </div>
+                            <div>
+                                <div>
+                                    <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Image URL
+                                        (logo)</label>
+                                    <div class="flex gap-2">
+                                        <input id="svc-img" placeholder="https://..."
+                                            class="flex-1 bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                                        <label
+                                            class="bg-white/10 border border-white/10 rounded-lg px-3 flex items-center justify-center cursor-pointer hover:bg-white/20 transition-all w-12"
+                                            title="Upload Image">
+                                            <i class="fas fa-upload text-gray-400"></i>
+                                            <input type="file" id="svc-img-upload" accept="image/*" class="hidden"
+                                                onchange="uploadAdminImage(this, 'svc-img')">
+                                        </label>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Fallback Icon
+                                        (FontAwesome class)</label>
+                                    <input id="svc-icon" placeholder="fas fa-gem"
+                                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Cost
+                                            (Tokens)</label>
+                                        <input id="svc-cost" type="number" placeholder="10"
+                                            class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Gradient
+                                            Colors</label>
+                                        <input id="svc-color" placeholder="#1e3a5f,#2563eb"
+                                            class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Page
+                                        Target</label>
+                                    <select id="svc-page"
+                                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                                        <option value="serviceGenerate">Generate Page (show GENERATE NOW)</option>
+                                        <option value="verify">Verify Page</option>
+                                        <option value="numberService">Number Service Page</option>
+                                        <option value="mailService">Mail Service Page</option>
+                                    </select>
+                                </div>
+                                <button onclick="saveService()"
+                                    class="w-full gold-gradient py-3 rounded-xl font-bold text-black">SAVE
+                                    SERVICE</button>
+                                <button onclick="clearServiceForm()"
+                                    class="w-full bg-white/5 border border-white/10 py-2 rounded-xl text-sm text-gray-400">Clear
+                                    Form</button>
+                            </div>
+                        </div>
+                        <!-- Services List -->
+                        <div class="glass-card p-6 rounded-2xl">
+                            <h3 class="font-bold mb-4 flex items-center gap-2"><i class="fas fa-list text-blue-400"></i>
+                                Current Services</h3>
+                            <div id="admin-services-list" class="space-y-3 max-h-96 overflow-y-auto"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DATABASE MANAGEMENT -->
+                <div id="page-database" class="page">
+                    <div class="glass-card p-6 rounded-2xl mb-6">
+                        <h3 class="text-xl font-bold mb-4 text-white flex items-center"><i
+                                class="fas fa-database text-blue-400 mr-2"></i> Database Management</h3>
+                        <p class="text-sm text-gray-400 mb-6">Backup all bot data to Telegram, upload backups to restore
+                            the
+                            database, or completely wipe existing data.</p>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div
+                                class="glass-card p-6 rounded-2xl border border-blue-500/20 flex flex-col items-center justify-center text-center">
+                                <i class="fas fa-download text-4xl text-blue-400 mb-4"></i>
+                                <h4 class="font-bold mb-2">Export Data</h4>
+                                <p class="text-xs text-gray-400 mb-4">Generate and send a complete backup of the
+                                    database to
+                                    your Telegram account instantly.</p>
+                                <button onclick="exportDatabase()"
+                                    class="w-full bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-xl transition font-bold shadow-lg shadow-blue-500/20">Generate
+                                    Data</button>
+                            </div>
+
+                            <div
+                                class="glass-card p-6 rounded-2xl border border-green-500/20 flex flex-col items-center justify-center text-center">
+                                <i class="fas fa-upload text-4xl text-green-400 mb-4"></i>
+                                <h4 class="font-bold mb-2">Import Data</h4>
+                                <p class="text-xs text-gray-400 mb-4">Upload a database JSON file to restore or merge
+                                    with the
+                                    current database.</p>
+                                <input type="file" id="importDbFile" accept=".json" class="hidden"
+                                    onchange="importDatabase(this)">
+                                <button onclick="document.getElementById('importDbFile').click()"
+                                    class="w-full bg-green-600 hover:bg-green-500 text-white py-2 rounded-xl transition font-bold shadow-lg shadow-green-500/20">Upload
+                                    Data</button>
+                            </div>
+
+                            <div
+                                class="glass-card p-6 rounded-2xl border border-red-500/20 flex flex-col items-center justify-center text-center">
+                                <i class="fas fa-trash-alt text-4xl text-red-500 mb-4"></i>
+                                <h4 class="font-bold mb-2">Wipe Database</h4>
+                                <p class="text-xs text-gray-400 mb-4">Permanently delete all user data, test data, and
+                                    demo data
+                                    from the database.</p>
+                                <button onclick="wipeDatabase()"
+                                    class="w-full bg-red-600 hover:bg-red-500 text-white py-2 rounded-xl transition font-bold shadow-lg shadow-red-500/20">Wipe
+                                    Data</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SHOP MANAGEMENT -->
+                <div id="page-shopmanage" class="page">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Add Shop Item Form -->
+                        <div class="glass-card p-6 rounded-2xl">
+                            <h3 class="font-bold mb-4 flex items-center gap-2"><i
+                                    class="fas fa-plus-circle text-yellow-400"></i>
+                                Add / Edit Shop Item</h3>
+                            <div class="space-y-3">
+                                <input type="hidden" id="shop-edit-id">
+                                <div>
+                                    <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Item ID
+                                        (unique)</label>
+                                    <input id="shop-id" placeholder="e.g. gemini1y"
+                                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Name</label>
+                                    <input id="shop-name" placeholder="GEMINI 1 YEAR"
+                                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Price</label>
+                                    <input id="shop-price" placeholder="$3.00"
+                                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                                </div>
+                                <div>
+                                    <div>
+                                        <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Item
+                                            Image</label>
+                                        <div class="flex gap-2">
+                                            <input type="text" id="shop-img" placeholder="https://..."
+                                                class="flex-1 bg-black/30 border border-white/10 p-3 rounded-lg text-white text-sm">
+                                            <label
+                                                class="bg-white/10 border border-white/10 rounded-lg px-3 flex items-center justify-center cursor-pointer hover:bg-white/20 transition-all w-12"
+                                                title="Upload Image">
+                                                <i class="fas fa-upload text-gray-400"></i>
+                                                <input type="file" id="shop-img-upload" accept="image/*" class="hidden"
+                                                    onchange="uploadAdminImage(this, 'shop-img')">
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label
+                                                class="text-xs text-gray-400 font-bold uppercase block mb-1">Background
+                                                Color</label>
+                                            <input id="shop-bg" placeholder="#0d0d0d"
+                                                class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                                        </div>
+                                        <div>
+                                            <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Button
+                                                Color</label>
+                                            <input id="shop-btn" placeholder="#f59e0b"
+                                                class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                                        </div>
+                                    </div>
+                                    <button onclick="saveShopItem()"
+                                        class="w-full gold-gradient py-3 rounded-xl font-bold text-black">SAVE
+                                        ITEM</button>
+                                    <button onclick="clearShopForm()"
+                                        class="w-full bg-white/5 border border-white/10 py-2 rounded-xl text-sm text-gray-400">Clear
+                                        Form</button>
+                                </div>
+                            </div>
+                            <!-- Shop Items List -->
+                            <div class="glass-card p-6 rounded-2xl">
+                                <h3 class="font-bold mb-4 flex items-center gap-2"><i
+                                        class="fas fa-store text-green-400"></i>
+                                    Current Shop Items</h3>
+                                <div id="admin-shop-list" class="space-y-3 max-h-96 overflow-y-auto"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TRADING CONTROL -->
+                    <div id="page-trading" class="page">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                            <!-- Mode Card -->
+                            <div class="glass-card p-6 rounded-2xl col-span-2">
+                                <h3 class="text-lg font-bold mb-2 flex items-center gap-2">
+                                    <i class="fas fa-chart-line text-green-400"></i> Trade Outcome Control
+                                </h3>
+                                <p class="text-gray-400 text-sm mb-6">Control whether users win or lose their binary
+                                    trades.
+                                    This affects all active users in real-time.</p>
+
+                                <div class="grid grid-cols-3 gap-4 mb-6">
+                                    <!-- Random -->
+                                    <div id="mode-random" onclick="setTradeMode('random')"
+                                        class="cursor-pointer rounded-xl p-4 border-2 border-yellow-500 bg-yellow-500/10 text-center transition-all">
+                                        <i class="fas fa-random text-yellow-400 text-2xl mb-2 block"></i>
+                                        <div class="font-bold text-yellow-400">RANDOM</div>
+                                        <div class="text-xs text-gray-400 mt-1">50/50 fair market</div>
+                                    </div>
+                                    <!-- Always Win -->
+                                    <div id="mode-win" onclick="setTradeMode('win')"
+                                        class="cursor-pointer rounded-xl p-4 border-2 border-gray-600 bg-gray-800/50 text-center transition-all hover:border-green-500">
+                                        <i class="fas fa-trophy text-green-400 text-2xl mb-2 block"></i>
+                                        <div class="font-bold text-green-400">ALWAYS WIN</div>
+                                        <div class="text-xs text-gray-400 mt-1">All users win trades</div>
+                                    </div>
+                                    <!-- Always Lose -->
+                                    <div id="mode-lose" onclick="setTradeMode('lose')"
+                                        class="cursor-pointer rounded-xl p-4 border-2 border-gray-600 bg-gray-800/50 text-center transition-all hover:border-red-500">
+                                        <i class="fas fa-skull text-red-400 text-2xl mb-2 block"></i>
+                                        <div class="font-bold text-red-400">ALWAYS LOSE</div>
+                                        <div class="text-xs text-gray-400 mt-1">All users lose trades</div>
+                                    </div>
+                                </div>
+
+                                <div class="bg-black/30 rounded-xl p-4 border border-white/10">
+                                    <div class="text-xs text-gray-400 font-bold uppercase mb-2">Current Mode</div>
+                                    <div id="currentModeDisplay" class="text-xl font-bold text-yellow-400">🎲 RANDOM
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Stats Card -->
+                            <div class="glass-card p-6 rounded-2xl">
+                                <h3 class="text-sm font-bold uppercase text-gray-400 mb-4">Trading Stats</h3>
+                                <div class="space-y-4">
+                                    <div>
+                                        <div class="text-xs text-gray-400">Payout Rate</div>
+                                        <div class="text-2xl font-bold text-green-400">80%</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs text-gray-400">Trade Duration</div>
+                                        <div class="text-2xl font-bold">60s</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs text-gray-400">Min Trade</div>
+                                        <div class="text-2xl font-bold text-yellow-400">1 TC</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Payout Settings -->
+                        <div class="glass-card p-6 rounded-2xl max-w-2xl">
+                            <h3 class="font-bold mb-4">Payout Settings</h3>
+                            <div class="flex gap-4 items-end">
+                                <div class="flex-1">
+                                    <label class="text-xs text-gray-400 font-bold uppercase block mb-2">Win Payout Rate
+                                        (%)</label>
+                                    <input type="number" id="payoutInput" value="80" min="1" max="200"
+                                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white font-bold text-lg">
+                                </div>
+                                <button onclick="savePayout()"
+                                    class="gold-gradient px-6 py-3 rounded-xl font-bold text-black">SAVE</button>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-2">Example: 80% means user wins 80 TC for every 100 TC
+                                traded.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- PREMIUM EMAIL SECTION -->
+                    <div id="page-premiumemail" class="page">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <!-- Add Premium Email Form -->
+                            <div class="glass-card p-6 rounded-2xl">
+                                <h3 class="font-bold mb-4 flex items-center gap-2"><i
+                                        class="fas fa-envelope text-pink-400"></i>
+                                    Add Premium Email</h3>
+                                <div class="space-y-3">
+                                    <input type="hidden" id="premiumemail-edit-id">
+                                    <div>
+                                        <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Email
+                                            Address</label>
+                                        <input id="premiumemail-address" type="email" placeholder="example@gmail.com"
+                                            class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Password /
+                                            App
+                                            Password</label>
+                                        <input id="premiumemail-password" type="password" placeholder="••••••••"
+                                            class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Provider
+                                            (IMAP
+                                            Server)</label>
+                                        <select id="premiumemail-provider"
+                                            class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                                            <option value="gmail">Gmail (imap.gmail.com)</option>
+                                            <option value="yahoo">Yahoo (imap.mail.yahoo.com)</option>
+                                            <option value="outlook">Outlook (outlook.office365.com)</option>
+                                            <option value="custom">Custom</option>
+                                        </select>
+                                    </div>
+                                    <div id="custom-imap-container" class="hidden">
+                                        <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Custom IMAP
+                                            Server</label>
+                                        <input id="premiumemail-imap" placeholder="imap.example.com"
+                                            class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                                    </div>
+                                    <button onclick="savePremiumEmail()"
+                                        class="w-full bg-pink-500 hover:bg-pink-600 py-3 rounded-xl font-bold text-white">ADD
+                                        EMAIL</button>
+                                    <button onclick="clearPremiumEmailForm()"
+                                        class="w-full bg-white/5 border border-white/10 py-2 rounded-xl text-sm text-gray-400">Clear
+                                        Form</button>
+                                </div>
+                            </div>
+
+                            <!-- Email List & Inbox -->
+                            <div class="glass-card p-6 rounded-2xl">
+                                <h3 class="font-bold mb-4 flex items-center gap-2"><i
+                                        class="fas fa-inbox text-blue-400"></i>
+                                    Premium Emails & Inbox</h3>
+                                <div id="premiumemail-list" class="space-y-3 max-h-96 overflow-y-auto">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- OTP Display Box -->
+                        <div class="glass-card p-6 rounded-2xl mt-6">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="font-bold flex items-center gap-2"><i class="fas fa-key text-yellow-400"></i>
+                                    Latest OTP / Messages</h3>
+                                <button onclick="refreshPremiumEmailInbox()"
+                                    class="bg-blue-500/20 text-blue-400 px-4 py-2 rounded-lg text-sm font-bold">
+                                    <i class="fas fa-sync-alt"></i> Refresh
+                                </button>
+                            </div>
+                            <div id="premiumemail-otp-box"
+                                class="bg-black/30 rounded-xl p-4 border border-white/10 min-h-[150px]">
+                                <div class="text-center text-gray-500 py-8">
+                                    <i class="fas fa-envelope-open-text text-4xl mb-3 block"></i>
+                                    Select an email and click refresh to view OTP/messages
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BROADCAST PAGE -->
+                    <div id="page-broadcast" class="page">
+                        <div class="glass-card p-8 rounded-2xl max-w-3xl mx-auto">
+                            <div class="flex items-center gap-4 mb-6">
+                                <div
+                                    class="w-12 h-12 bg-pink-500/20 rounded-xl flex items-center justify-center text-pink-400">
+                                    <i class="fas fa-bullhorn text-2xl"></i>
+                                </div>
+                                <div>
+                                    <h2 class="text-2xl font-bold">Advanced Broadcast</h2>
+                                    <p class="text-gray-400 text-sm">Send messages to Users, Groups, or Both</p>
+                                </div>
+                            </div>
+
+                            <div class="space-y-6">
+                                <!-- TARGET -->
+                                <div>
+                                    <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Target
+                                        Audience</label>
+                                    <select id="bc-target"
+                                        class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-pink-500 outline-none">
+                                        <option value="users">👤 Private Users (Bot)</option>
+                                        <option value="groups">📢 Telegram Groups & Channels</option>
+                                        <option value="all">🌐 All (Users + Groups)</option>
+                                    </select>
+                                </div>
+
+                                <!-- MESSAGE -->
+                                <div>
+                                    <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Message
+                                        Text</label>
+                                    <textarea id="bc-message" rows="4" placeholder="Enter your broadcast message..."
+                                        class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-pink-500 outline-none"></textarea>
+                                </div>
+
+                                <!-- MEDIA -->
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Media
+                                            Type</label>
+                                        <select id="bc-media-type" onchange="toggleMediaInput()"
+                                            class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-pink-500 outline-none">
+                                            <option value="none">None (Text Only)</option>
+                                            <option value="photo">📸 Photo</option>
+                                            <option value="video">🎥 Video</option>
+                                        </select>
+                                    </div>
+                                    <div id="bc-media-input" style="display:none;">
+                                        <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Media
+                                            URL</label>
+                                        <input id="bc-media-url" type="text" placeholder="https://example.com/image.jpg"
+                                            class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-pink-500 outline-none">
+                                    </div>
+                                </div>
+
+                                <!-- BUTTONS -->
+                                <div>
+                                    <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Buttons
+                                        (Optional)</label>
+                                    <textarea id="bc-buttons" rows="3"
+                                        placeholder="Button Label | https://link.com&#10;Another Button | https://link2.com"
+                                        class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-pink-500 outline-none font-mono text-sm"></textarea>
+                                    <p class="text-xs text-gray-500 mt-1">Format: Label | URL (One per line)</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AD NETWORKS PAGE -->
+                    <div id="page-adnetworks" class="page">
+                        <div class="glass-card p-6 rounded-2xl mb-6">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div
+                                    class="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center text-yellow-400">
+                                    <i class="fas fa-ad text-xl"></i>
+                                </div>
+                                <div>
+                                    <h2 class="text-xl font-bold">Ad Network Integration</h2>
+                                    <p class="text-gray-400 text-sm">Add your Publisher ID / Ad Unit ID to enable ads in
+                                        the
+                                        mini app. Users will see ads when clicking WATCH in the Earn section.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                            <!-- MoneyTag -->
+                            <div class="glass-card p-6 rounded-2xl border border-white/10">
+                                <div class="flex items-center gap-3 mb-4">
+                                    <div class="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center">
+                                        <i class="fas fa-tag text-green-400 text-lg"></i>
+                                    </div>
+                                    <div>
+                                        <div class="font-bold">MoneyTag</div>
+                                        <div class="text-xs text-gray-400">monetag.com</div>
+                                    </div>
+                                    <div class="ml-auto">
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" id="ad-moneytag-enabled" class="sr-only peer"
+                                                checked>
+                                            <div
+                                                class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500">
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Publisher
+                                            ID</label>
+                                        <input id="ad-moneytag-publisher" type="text" placeholder="e.g. 9429271"
+                                            class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white focus:border-green-500 outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Ad Zone ID /
+                                            Unit
+                                            ID</label>
+                                        <input id="ad-moneytag-unit" type="text" placeholder="e.g. 123456"
+                                            class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white focus:border-green-500 outline-none">
+                                    </div>
+                                    <p class="text-xs text-gray-500">Interstitial / OnClick ad will show when user taps
+                                        WATCH.
+                                    </p>
+                                    <button onclick="saveAdNetwork('moneytag')"
+                                        class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2.5 rounded-xl transition-all">
+                                        <i class="fas fa-save mr-2"></i> Save MoneyTag
+                                    </button>
+                                </div>
+                                <div id="ad-moneytag-status" class="mt-3 text-xs text-center text-gray-500"></div>
+                            </div>
+
+                            <!-- Google AdSense -->
+                            <div class="glass-card p-6 rounded-2xl border border-white/10">
+                                <div class="flex items-center gap-3 mb-4">
+                                    <div class="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                                        <i class="fab fa-google text-blue-400 text-lg"></i>
+                                    </div>
+                                    <div>
+                                        <div class="font-bold">Google AdSense</div>
+                                        <div class="text-xs text-gray-400">adsense.google.com</div>
+                                    </div>
+                                    <div class="ml-auto">
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" id="ad-adsense-enabled" class="sr-only peer" checked>
+                                            <div
+                                                class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500">
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Publisher ID
+                                            (ca-pub-...)</label>
+                                        <input id="ad-adsense-publisher" type="text"
+                                            placeholder="ca-pub-XXXXXXXXXXXXXXXXX"
+                                            class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white focus:border-blue-500 outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Ad Slot /
+                                            Unit
+                                            ID</label>
+                                        <input id="ad-adsense-unit" type="text" placeholder="e.g. 1234567890"
+                                            class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white focus:border-blue-500 outline-none">
+                                    </div>
+                                    <p class="text-xs text-gray-500">Display ad will render inside the WATCH section.
+                                    </p>
+                                    <button onclick="saveAdNetwork('adsense')"
+                                        class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2.5 rounded-xl transition-all">
+                                        <i class="fas fa-save mr-2"></i> Save AdSense
+                                    </button>
+                                </div>
+                                <div id="ad-adsense-status" class="mt-3 text-xs text-center text-gray-500"></div>
+                            </div>
+
+                            <!-- Adsterra -->
+                            <div class="glass-card p-6 rounded-2xl border border-white/10">
+                                <div class="flex items-center gap-3 mb-4">
+                                    <div class="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                                        <i class="fas fa-chart-bar text-purple-400 text-lg"></i>
+                                    </div>
+                                    <div>
+                                        <div class="font-bold">Adsterra</div>
+                                        <div class="text-xs text-gray-400">adsterra.com</div>
+                                    </div>
+                                    <div class="ml-auto">
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" id="ad-adsterra-enabled" class="sr-only peer"
+                                                checked>
+                                            <div
+                                                class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500">
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Publisher
+                                            ID</label>
+                                        <input id="ad-adsterra-publisher" type="text" placeholder="e.g. 12345678"
+                                            class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white focus:border-purple-500 outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Banner /
+                                            Zone
+                                            ID</label>
+                                        <input id="ad-adsterra-unit" type="text" placeholder="e.g. abcdef1234567890"
+                                            class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white focus:border-purple-500 outline-none">
+                                    </div>
+                                    <p class="text-xs text-gray-500">Social Bar / Banner will display in the WATCH
+                                        section.</p>
+                                    <button onclick="saveAdNetwork('adsterra')"
+                                        class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-2.5 rounded-xl transition-all">
+                                        <i class="fas fa-save mr-2"></i> Save Adsterra
+                                    </button>
+                                </div>
+                                <div id="ad-adsterra-status" class="mt-3 text-xs text-center text-gray-500"></div>
+                            </div>
+
+                        </div>
+
+                        <!-- Active Ad Preview -->
+                        <div class="glass-card p-6 rounded-2xl mt-6">
+                            <h3 class="font-bold mb-4 flex items-center gap-2">
+                                <i class="fas fa-eye text-yellow-400"></i> Current Active Ad Config
+                            </h3>
+                            <div id="ad-config-preview" class="text-gray-400 text-sm">Loading...</div>
+                            <button onclick="loadAdNetworks()"
+                                class="mt-4 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-sm font-bold transition-all">
+                                <i class="fas fa-sync-alt mr-2"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+
+        </main>
     </div>
 
-    <!-- SERVICES MANAGEMENT -->
-    <div id="page-services" class="page">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Add Service Form -->
-            <div class="glass-card p-6 rounded-2xl">
-                <h3 class="font-bold mb-4 flex items-center gap-2"><i class="fas fa-plus-circle text-yellow-400"></i>
-                    Add / Edit Service</h3>
-                <div class="space-y-3">
-                    <input type="hidden" id="svc-edit-id">
-                    <div>
-                        <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Service ID (unique,
-                            no spaces)</label>
-                        <input id="svc-id" placeholder="e.g. gemini"
-                            class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
-                    </div>
-                    <div>
-                        <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Name</label>
-                        <input id="svc-name" placeholder="Gemini Card"
-                            class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
-                    </div>
-                    <div>
-                        <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Description</label>
-                        <input id="svc-desc" placeholder="Generate custom cards"
-                            class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
-                    </div>
-                    <div>
-                        <div>
-                            <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Image URL (logo)</label>
-                            <div class="flex gap-2">
-                                <input id="svc-img" placeholder="https://..."
-                                    class="flex-1 bg-black/30 border border-white/10 p-3 rounded-lg text-white">
-                                <label
-                                    class="bg-white/10 border border-white/10 rounded-lg px-3 flex items-center justify-center cursor-pointer hover:bg-white/20 transition-all w-12"
-                                    title="Upload Image">
-                                    <i class="fas fa-upload text-gray-400"></i>
-                                    <input type="file" id="svc-img-upload" accept="image/*" class="hidden"
-                                        onchange="uploadAdminImage(this, 'svc-img')">
-                                </label>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Fallback Icon
-                                (FontAwesome class)</label>
-                            <input id="svc-icon" placeholder="fas fa-gem"
-                                class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
-                        </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Cost
-                                    (Tokens)</label>
-                                <input id="svc-cost" type="number" placeholder="10"
-                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
-                            </div>
-                            <div>
-                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Gradient
-                                    Colors</label>
-                                <input id="svc-color" placeholder="#1e3a5f,#2563eb"
-                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Page Target</label>
-                            <select id="svc-page"
-                                class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
-                                <option value="serviceGenerate">Generate Page (show GENERATE NOW)</option>
-                                <option value="verify">Verify Page</option>
-                                <option value="numberService">Number Service Page</option>
-                                <option value="mailService">Mail Service Page</option>
-                            </select>
-                        </div>
-                        <button onclick="saveService()"
-                            class="w-full gold-gradient py-3 rounded-xl font-bold text-black">SAVE SERVICE</button>
-                        <button onclick="clearServiceForm()"
-                            class="w-full bg-white/5 border border-white/10 py-2 rounded-xl text-sm text-gray-400">Clear
-                            Form</button>
-                    </div>
-                </div>
-                <!-- Services List -->
-                <div class="glass-card p-6 rounded-2xl">
-                    <h3 class="font-bold mb-4 flex items-center gap-2"><i class="fas fa-list text-blue-400"></i>
-                        Current Services</h3>
-                    <div id="admin-services-list" class="space-y-3 max-h-96 overflow-y-auto"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- SHOP MANAGEMENT -->
-        <div id="page-shopmanage" class="page">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- Add Shop Item Form -->
-                <div class="glass-card p-6 rounded-2xl">
-                    <h3 class="font-bold mb-4 flex items-center gap-2"><i
-                            class="fas fa-plus-circle text-yellow-400"></i>
-                        Add / Edit Shop Item</h3>
-                    <div class="space-y-3">
-                        <input type="hidden" id="shop-edit-id">
-                        <div>
-                            <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Item ID
-                                (unique)</label>
-                            <input id="shop-id" placeholder="e.g. gemini1y"
-                                class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
-                        </div>
-                        <div>
-                            <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Name</label>
-                            <input id="shop-name" placeholder="GEMINI 1 YEAR"
-                                class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
-                        </div>
-                        <div>
-                            <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Price</label>
-                            <input id="shop-price" placeholder="$3.00"
-                                class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
-                        </div>
-                        <div>
-                            <div>
-                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Item Image</label>
-                                <div class="flex gap-2">
-                                    <input type="text" id="shop-img" placeholder="https://..."
-                                        class="flex-1 bg-black/30 border border-white/10 p-3 rounded-lg text-white text-sm">
-                                    <label
-                                        class="bg-white/10 border border-white/10 rounded-lg px-3 flex items-center justify-center cursor-pointer hover:bg-white/20 transition-all w-12"
-                                        title="Upload Image">
-                                        <i class="fas fa-upload text-gray-400"></i>
-                                        <input type="file" id="shop-img-upload" accept="image/*" class="hidden"
-                                            onchange="uploadAdminImage(this, 'shop-img')">
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Background
-                                        Color</label>
-                                    <input id="shop-bg" placeholder="#0d0d0d"
-                                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
-                                </div>
-                                <div>
-                                    <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Button
-                                        Color</label>
-                                    <input id="shop-btn" placeholder="#f59e0b"
-                                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
-                                </div>
-                            </div>
-                            <button onclick="saveShopItem()"
-                                class="w-full gold-gradient py-3 rounded-xl font-bold text-black">SAVE ITEM</button>
-                            <button onclick="clearShopForm()"
-                                class="w-full bg-white/5 border border-white/10 py-2 rounded-xl text-sm text-gray-400">Clear
-                                Form</button>
-                        </div>
-                    </div>
-                    <!-- Shop Items List -->
-                    <div class="glass-card p-6 rounded-2xl">
-                        <h3 class="font-bold mb-4 flex items-center gap-2"><i class="fas fa-store text-green-400"></i>
-                            Current Shop Items</h3>
-                        <div id="admin-shop-list" class="space-y-3 max-h-96 overflow-y-auto"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- TRADING CONTROL -->
-            <div id="page-trading" class="page">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    <!-- Mode Card -->
-                    <div class="glass-card p-6 rounded-2xl col-span-2">
-                        <h3 class="text-lg font-bold mb-2 flex items-center gap-2">
-                            <i class="fas fa-chart-line text-green-400"></i> Trade Outcome Control
-                        </h3>
-                        <p class="text-gray-400 text-sm mb-6">Control whether users win or lose their binary trades.
-                            This affects all active users in real-time.</p>
-
-                        <div class="grid grid-cols-3 gap-4 mb-6">
-                            <!-- Random -->
-                            <div id="mode-random" onclick="setTradeMode('random')"
-                                class="cursor-pointer rounded-xl p-4 border-2 border-yellow-500 bg-yellow-500/10 text-center transition-all">
-                                <i class="fas fa-random text-yellow-400 text-2xl mb-2 block"></i>
-                                <div class="font-bold text-yellow-400">RANDOM</div>
-                                <div class="text-xs text-gray-400 mt-1">50/50 fair market</div>
-                            </div>
-                            <!-- Always Win -->
-                            <div id="mode-win" onclick="setTradeMode('win')"
-                                class="cursor-pointer rounded-xl p-4 border-2 border-gray-600 bg-gray-800/50 text-center transition-all hover:border-green-500">
-                                <i class="fas fa-trophy text-green-400 text-2xl mb-2 block"></i>
-                                <div class="font-bold text-green-400">ALWAYS WIN</div>
-                                <div class="text-xs text-gray-400 mt-1">All users win trades</div>
-                            </div>
-                            <!-- Always Lose -->
-                            <div id="mode-lose" onclick="setTradeMode('lose')"
-                                class="cursor-pointer rounded-xl p-4 border-2 border-gray-600 bg-gray-800/50 text-center transition-all hover:border-red-500">
-                                <i class="fas fa-skull text-red-400 text-2xl mb-2 block"></i>
-                                <div class="font-bold text-red-400">ALWAYS LOSE</div>
-                                <div class="text-xs text-gray-400 mt-1">All users lose trades</div>
-                            </div>
-                        </div>
-
-                        <div class="bg-black/30 rounded-xl p-4 border border-white/10">
-                            <div class="text-xs text-gray-400 font-bold uppercase mb-2">Current Mode</div>
-                            <div id="currentModeDisplay" class="text-xl font-bold text-yellow-400">🎲 RANDOM</div>
-                        </div>
-                    </div>
-
-                    <!-- Stats Card -->
-                    <div class="glass-card p-6 rounded-2xl">
-                        <h3 class="text-sm font-bold uppercase text-gray-400 mb-4">Trading Stats</h3>
-                        <div class="space-y-4">
-                            <div>
-                                <div class="text-xs text-gray-400">Payout Rate</div>
-                                <div class="text-2xl font-bold text-green-400">80%</div>
-                            </div>
-                            <div>
-                                <div class="text-xs text-gray-400">Trade Duration</div>
-                                <div class="text-2xl font-bold">60s</div>
-                            </div>
-                            <div>
-                                <div class="text-xs text-gray-400">Min Trade</div>
-                                <div class="text-2xl font-bold text-yellow-400">1 TC</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Payout Settings -->
-                <div class="glass-card p-6 rounded-2xl max-w-2xl">
-                    <h3 class="font-bold mb-4">Payout Settings</h3>
-                    <div class="flex gap-4 items-end">
-                        <div class="flex-1">
-                            <label class="text-xs text-gray-400 font-bold uppercase block mb-2">Win Payout Rate
-                                (%)</label>
-                            <input type="number" id="payoutInput" value="80" min="1" max="200"
-                                class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white font-bold text-lg">
-                        </div>
-                        <button onclick="savePayout()"
-                            class="gold-gradient px-6 py-3 rounded-xl font-bold text-black">SAVE</button>
-                    </div>
-                    <p class="text-xs text-gray-500 mt-2">Example: 80% means user wins 80 TC for every 100 TC traded.
-                    </p>
-                </div>
-            </div>
-
-            <!-- PREMIUM EMAIL SECTION -->
-            <div id="page-premiumemail" class="page">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <!-- Add Premium Email Form -->
-                    <div class="glass-card p-6 rounded-2xl">
-                        <h3 class="font-bold mb-4 flex items-center gap-2"><i class="fas fa-envelope text-pink-400"></i>
-                            Add Premium Email</h3>
-                        <div class="space-y-3">
-                            <input type="hidden" id="premiumemail-edit-id">
-                            <div>
-                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Email
-                                    Address</label>
-                                <input id="premiumemail-address" type="email" placeholder="example@gmail.com"
-                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
-                            </div>
-                            <div>
-                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Password / App
-                                    Password</label>
-                                <input id="premiumemail-password" type="password" placeholder="••••••••"
-                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
-                            </div>
-                            <div>
-                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Provider (IMAP
-                                    Server)</label>
-                                <select id="premiumemail-provider"
-                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
-                                    <option value="gmail">Gmail (imap.gmail.com)</option>
-                                    <option value="yahoo">Yahoo (imap.mail.yahoo.com)</option>
-                                    <option value="outlook">Outlook (outlook.office365.com)</option>
-                                    <option value="custom">Custom</option>
-                                </select>
-                            </div>
-                            <div id="custom-imap-container" class="hidden">
-                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Custom IMAP
-                                    Server</label>
-                                <input id="premiumemail-imap" placeholder="imap.example.com"
-                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
-                            </div>
-                            <button onclick="savePremiumEmail()"
-                                class="w-full bg-pink-500 hover:bg-pink-600 py-3 rounded-xl font-bold text-white">ADD
-                                EMAIL</button>
-                            <button onclick="clearPremiumEmailForm()"
-                                class="w-full bg-white/5 border border-white/10 py-2 rounded-xl text-sm text-gray-400">Clear
-                                Form</button>
-                        </div>
-                    </div>
-
-                    <!-- Email List & Inbox -->
-                    <div class="glass-card p-6 rounded-2xl">
-                        <h3 class="font-bold mb-4 flex items-center gap-2"><i class="fas fa-inbox text-blue-400"></i>
-                            Premium Emails & Inbox</h3>
-                        <div id="premiumemail-list" class="space-y-3 max-h-96 overflow-y-auto">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- OTP Display Box -->
-                <div class="glass-card p-6 rounded-2xl mt-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="font-bold flex items-center gap-2"><i class="fas fa-key text-yellow-400"></i>
-                            Latest OTP / Messages</h3>
-                        <button onclick="refreshPremiumEmailInbox()"
-                            class="bg-blue-500/20 text-blue-400 px-4 py-2 rounded-lg text-sm font-bold">
-                            <i class="fas fa-sync-alt"></i> Refresh
-                        </button>
-                    </div>
-                    <div id="premiumemail-otp-box"
-                        class="bg-black/30 rounded-xl p-4 border border-white/10 min-h-[150px]">
-                        <div class="text-center text-gray-500 py-8">
-                            <i class="fas fa-envelope-open-text text-4xl mb-3 block"></i>
-                            Select an email and click refresh to view OTP/messages
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- BROADCAST PAGE -->
-            <div id="page-broadcast" class="page">
-                <div class="glass-card p-8 rounded-2xl max-w-3xl mx-auto">
-                    <div class="flex items-center gap-4 mb-6">
-                        <div class="w-12 h-12 bg-pink-500/20 rounded-xl flex items-center justify-center text-pink-400">
-                            <i class="fas fa-bullhorn text-2xl"></i>
-                        </div>
-                        <div>
-                            <h2 class="text-2xl font-bold">Advanced Broadcast</h2>
-                            <p class="text-gray-400 text-sm">Send messages to Users, Groups, or Both</p>
-                        </div>
-                    </div>
-
-                    <div class="space-y-6">
-                        <!-- TARGET -->
-                        <div>
-                            <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Target Audience</label>
-                            <select id="bc-target"
-                                class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-pink-500 outline-none">
-                                <option value="users">👤 Private Users (Bot)</option>
-                                <option value="groups">📢 Telegram Groups & Channels</option>
-                                <option value="all">🌐 All (Users + Groups)</option>
-                            </select>
-                        </div>
-
-                        <!-- MESSAGE -->
-                        <div>
-                            <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Message Text</label>
-                            <textarea id="bc-message" rows="4" placeholder="Enter your broadcast message..."
-                                class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-pink-500 outline-none"></textarea>
-                        </div>
-
-                        <!-- MEDIA -->
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Media Type</label>
-                                <select id="bc-media-type" onchange="toggleMediaInput()"
-                                    class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-pink-500 outline-none">
-                                    <option value="none">None (Text Only)</option>
-                                    <option value="photo">📸 Photo</option>
-                                    <option value="video">🎥 Video</option>
-                                </select>
-                            </div>
-                            <div id="bc-media-input" style="display:none;">
-                                <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Media URL</label>
-                                <input id="bc-media-url" type="text" placeholder="https://example.com/image.jpg"
-                                    class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-pink-500 outline-none">
-                            </div>
-                        </div>
-
-                        <!-- BUTTONS -->
-                        <div>
-                            <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Buttons
-                                (Optional)</label>
-                            <textarea id="bc-buttons" rows="3"
-                                placeholder="Button Label | https://link.com&#10;Another Button | https://link2.com"
-                                class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-pink-500 outline-none font-mono text-sm"></textarea>
-                            <p class="text-xs text-gray-500 mt-1">Format: Label | URL (One per line)</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- AD NETWORKS PAGE -->
-            <div id="page-adnetworks" class="page">
-                <div class="glass-card p-6 rounded-2xl mb-6">
-                    <div class="flex items-center gap-3 mb-2">
-                        <div
-                            class="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center text-yellow-400">
-                            <i class="fas fa-ad text-xl"></i>
-                        </div>
-                        <div>
-                            <h2 class="text-xl font-bold">Ad Network Integration</h2>
-                            <p class="text-gray-400 text-sm">Add your Publisher ID / Ad Unit ID to enable ads in the
-                                mini app. Users will see ads when clicking WATCH in the Earn section.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-                    <!-- MoneyTag -->
-                    <div class="glass-card p-6 rounded-2xl border border-white/10">
-                        <div class="flex items-center gap-3 mb-4">
-                            <div class="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center">
-                                <i class="fas fa-tag text-green-400 text-lg"></i>
-                            </div>
-                            <div>
-                                <div class="font-bold">MoneyTag</div>
-                                <div class="text-xs text-gray-400">monetag.com</div>
-                            </div>
-                            <div class="ml-auto">
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="ad-moneytag-enabled" class="sr-only peer" checked>
-                                    <div
-                                        class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500">
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
-                        <div class="space-y-3">
-                            <div>
-                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Publisher ID</label>
-                                <input id="ad-moneytag-publisher" type="text" placeholder="e.g. 9429271"
-                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white focus:border-green-500 outline-none">
-                            </div>
-                            <div>
-                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Ad Zone ID / Unit
-                                    ID</label>
-                                <input id="ad-moneytag-unit" type="text" placeholder="e.g. 123456"
-                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white focus:border-green-500 outline-none">
-                            </div>
-                            <p class="text-xs text-gray-500">Interstitial / OnClick ad will show when user taps WATCH.
-                            </p>
-                            <button onclick="saveAdNetwork('moneytag')"
-                                class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2.5 rounded-xl transition-all">
-                                <i class="fas fa-save mr-2"></i> Save MoneyTag
-                            </button>
-                        </div>
-                        <div id="ad-moneytag-status" class="mt-3 text-xs text-center text-gray-500"></div>
-                    </div>
-
-                    <!-- Google AdSense -->
-                    <div class="glass-card p-6 rounded-2xl border border-white/10">
-                        <div class="flex items-center gap-3 mb-4">
-                            <div class="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                                <i class="fab fa-google text-blue-400 text-lg"></i>
-                            </div>
-                            <div>
-                                <div class="font-bold">Google AdSense</div>
-                                <div class="text-xs text-gray-400">adsense.google.com</div>
-                            </div>
-                            <div class="ml-auto">
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="ad-adsense-enabled" class="sr-only peer" checked>
-                                    <div
-                                        class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500">
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
-                        <div class="space-y-3">
-                            <div>
-                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Publisher ID
-                                    (ca-pub-...)</label>
-                                <input id="ad-adsense-publisher" type="text" placeholder="ca-pub-XXXXXXXXXXXXXXXXX"
-                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white focus:border-blue-500 outline-none">
-                            </div>
-                            <div>
-                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Ad Slot / Unit
-                                    ID</label>
-                                <input id="ad-adsense-unit" type="text" placeholder="e.g. 1234567890"
-                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white focus:border-blue-500 outline-none">
-                            </div>
-                            <p class="text-xs text-gray-500">Display ad will render inside the WATCH section.</p>
-                            <button onclick="saveAdNetwork('adsense')"
-                                class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2.5 rounded-xl transition-all">
-                                <i class="fas fa-save mr-2"></i> Save AdSense
-                            </button>
-                        </div>
-                        <div id="ad-adsense-status" class="mt-3 text-xs text-center text-gray-500"></div>
-                    </div>
-
-                    <!-- Adsterra -->
-                    <div class="glass-card p-6 rounded-2xl border border-white/10">
-                        <div class="flex items-center gap-3 mb-4">
-                            <div class="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
-                                <i class="fas fa-chart-bar text-purple-400 text-lg"></i>
-                            </div>
-                            <div>
-                                <div class="font-bold">Adsterra</div>
-                                <div class="text-xs text-gray-400">adsterra.com</div>
-                            </div>
-                            <div class="ml-auto">
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="ad-adsterra-enabled" class="sr-only peer" checked>
-                                    <div
-                                        class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500">
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
-                        <div class="space-y-3">
-                            <div>
-                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Publisher ID</label>
-                                <input id="ad-adsterra-publisher" type="text" placeholder="e.g. 12345678"
-                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white focus:border-purple-500 outline-none">
-                            </div>
-                            <div>
-                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Banner / Zone
-                                    ID</label>
-                                <input id="ad-adsterra-unit" type="text" placeholder="e.g. abcdef1234567890"
-                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white focus:border-purple-500 outline-none">
-                            </div>
-                            <p class="text-xs text-gray-500">Social Bar / Banner will display in the WATCH section.</p>
-                            <button onclick="saveAdNetwork('adsterra')"
-                                class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-2.5 rounded-xl transition-all">
-                                <i class="fas fa-save mr-2"></i> Save Adsterra
-                            </button>
-                        </div>
-                        <div id="ad-adsterra-status" class="mt-3 text-xs text-center text-gray-500"></div>
-                    </div>
-
-                </div>
-
-                <!-- Active Ad Preview -->
-                <div class="glass-card p-6 rounded-2xl mt-6">
-                    <h3 class="font-bold mb-4 flex items-center gap-2">
-                        <i class="fas fa-eye text-yellow-400"></i> Current Active Ad Config
-                    </h3>
-                    <div id="ad-config-preview" class="text-gray-400 text-sm">Loading...</div>
-                    <button onclick="loadAdNetworks()"
-                        class="mt-4 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-sm font-bold transition-all">
-                        <i class="fas fa-sync-alt mr-2"></i> Refresh
-                    </button>
-                </div>
-            </div>
-
-            </main>
-        </div>
-
-        <script>
-            // LOGIN
-            function login() {
-                const pass = document.getElementById('password').value;
-                fetch('/api/admin/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password: pass })
+    <script>
+        // LOGIN
+        function login() {
+            const pass = document.getElementById('password').value;
+            fetch('/api/admin/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: pass })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('login-overlay').classList.add('hidden');
+                        document.getElementById('app-container').classList.remove('hidden');
+                        init();
+                    } else {
+                        document.getElementById('error-msg').classList.remove('hidden');
+                    }
                 })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success) {
-                            document.getElementById('login-overlay').classList.add('hidden');
-                            document.getElementById('app-container').classList.remove('hidden');
-                            init();
+                .catch(() => document.getElementById('error-msg').classList.remove('hidden'));
+        }
+
+        // AUTO-LOGIN via token in URL (from Telegram bot)
+        (function autoLoginCheck() {
+            const params = new URLSearchParams(window.location.search);
+            const token = params.get('token');
+            if (!token) return;
+            // Remove token from URL (clean up)
+            history.replaceState({}, '', '/admin');
+            // Submit token login
+            fetch('/api/admin/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: token })
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('login-overlay').classList.add('hidden');
+                        document.getElementById('app-container').classList.remove('hidden');
+                        init();
+                    }
+                    // If token invalid, show normal login screen (already visible)
+                })
+                .catch(() => { }); // Silently fall through to normal login
+        })();
+
+        function logout() { location.reload(); }
+
+        // NAV
+        function nav(p) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            if (event && event.currentTarget) event.currentTarget.classList.add('active');
+            document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+            const target = document.getElementById('page-' + p);
+            if (target) target.classList.add('active');
+
+            const titles = {
+                'dashboard': 'Dashboard', 'users': 'User Management',
+                'codes': 'Promo Codes', 'tasks': 'Tasks',
+                'settings': 'Configuration', 'cards': 'Cards',
+                'vpn': 'VPN', 'broadcast': 'Broadcast',
+                'apps': 'App Store', 'trading': 'Trading Control',
+                'services': 'Services Management', 'shopmanage': 'Shop Management',
+                'buttons': 'Button Management',
+                'accounts': 'Premium Accounts', 'storage': 'Storage (Drive)',
+                'groups': 'Groups', 'premiumemail': 'Premium Email',
+                'adnetworks': 'Ad Network Integration', 'database': 'Database Management'
+            };
+            if (titles[p]) document.getElementById('page-title').innerText = titles[p];
+            if (p === 'trading') initTradingAdmin();
+            if (p === 'services') renderAdminServices();
+            if (p === 'shopmanage') renderAdminShopItems();
+            if (p === 'users') loadUsers();
+            if (p === 'accounts') loadAccounts();
+            if (p === 'storage') loadStorageStatus();
+            if (p === 'premiumemail') loadPremiumEmails();
+            if (p === 'adnetworks') loadAdNetworks();
+            if (p === 'buttons') loadFeatureFlags();
+        }
+
+        // AD NETWORKS
+        function loadAdNetworks() {
+            fetch('/api/admin/ads')
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.success) return;
+                    const ads = data.ads || {};
+                    const networks = ['moneytag', 'adsense', 'adsterra'];
+                    networks.forEach(net => {
+                        const cfg = ads[net] || {};
+                        const pubEl = document.getElementById('ad-' + net + '-publisher');
+                        const unitEl = document.getElementById('ad-' + net + '-unit');
+                        const enEl = document.getElementById('ad-' + net + '-enabled');
+                        if (pubEl) pubEl.value = cfg.publisherId || '';
+                        if (unitEl) unitEl.value = cfg.adUnitId || '';
+                        if (enEl) enEl.checked = cfg.enabled !== false;
+                    });
+                    // Preview
+                    const preview = document.getElementById('ad-config-preview');
+                    if (preview) {
+                        const entries = Object.entries(ads);
+                        if (!entries.length) {
+                            preview.innerHTML = '<span class="text-gray-500">No ad networks configured yet.</span>';
                         } else {
-                            document.getElementById('error-msg').classList.remove('hidden');
-                        }
-                    })
-                    .catch(() => document.getElementById('error-msg').classList.remove('hidden'));
-            }
-            function logout() { location.reload(); }
-
-            // NAV
-            function nav(p) {
-                document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-                if (event && event.currentTarget) event.currentTarget.classList.add('active');
-                document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
-                const target = document.getElementById('page-' + p);
-                if (target) target.classList.add('active');
-
-                const titles = {
-                    'dashboard': 'Dashboard', 'users': 'User Management',
-                    'codes': 'Promo Codes', 'tasks': 'Tasks',
-                    'settings': 'Configuration', 'cards': 'Cards',
-                    'vpn': 'VPN', 'broadcast': 'Broadcast',
-                    'apps': 'App Store', 'trading': 'Trading Control',
-                    'services': 'Services Management', 'shopmanage': 'Shop Management',
-                    'accounts': 'Premium Accounts', 'storage': 'Storage (Drive)',
-                    'groups': 'Groups', 'premiumemail': 'Premium Email',
-                    'adnetworks': 'Ad Network Integration'
-                };
-                if (titles[p]) document.getElementById('page-title').innerText = titles[p];
-                if (p === 'trading') initTradingAdmin();
-                if (p === 'services') renderAdminServices();
-                if (p === 'shopmanage') renderAdminShopItems();
-                if (p === 'users') loadUsers();
-                if (p === 'accounts') loadAccounts();
-                if (p === 'storage') loadStorageStatus();
-                if (p === 'premiumemail') loadPremiumEmails();
-                if (p === 'adnetworks') loadAdNetworks();
-            }
-
-            // AD NETWORKS
-            function loadAdNetworks() {
-                fetch('/api/admin/ads')
-                    .then(r => r.json())
-                    .then(data => {
-                        if (!data.success) return;
-                        const ads = data.ads || {};
-                        const networks = ['moneytag', 'adsense', 'adsterra'];
-                        networks.forEach(net => {
-                            const cfg = ads[net] || {};
-                            const pubEl = document.getElementById('ad-' + net + '-publisher');
-                            const unitEl = document.getElementById('ad-' + net + '-unit');
-                            const enEl = document.getElementById('ad-' + net + '-enabled');
-                            if (pubEl) pubEl.value = cfg.publisherId || '';
-                            if (unitEl) unitEl.value = cfg.adUnitId || '';
-                            if (enEl) enEl.checked = cfg.enabled !== false;
-                        });
-                        // Preview
-                        const preview = document.getElementById('ad-config-preview');
-                        if (preview) {
-                            const entries = Object.entries(ads);
-                            if (!entries.length) {
-                                preview.innerHTML = '<span class="text-gray-500">No ad networks configured yet.</span>';
-                            } else {
-                                preview.innerHTML = entries.map(([net, cfg]) =>
-                                    `<div class="flex items-center gap-3 py-2 border-b border-white/5">
+                            preview.innerHTML = entries.map(([net, cfg]) =>
+                                `<div class="flex items-center gap-3 py-2 border-b border-white/5">
                                         <span class="font-bold text-white capitalize">${net}</span>
                                         <span class="text-gray-400">Publisher: <code class="text-yellow-400">${cfg.publisherId || '-'}</code></span>
                                         <span class="text-gray-400">Unit: <code class="text-blue-400">${cfg.adUnitId || '-'}</code></span>
                                         <span class="ml-auto px-2 py-0.5 rounded text-xs font-bold ${cfg.enabled ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">${cfg.enabled ? 'ENABLED' : 'DISABLED'}</span>
                                     </div>`
-                                ).join('');
-                            }
+                            ).join('');
                         }
-                    }).catch(() => { });
-            }
-
-            function saveAdNetwork(network) {
-                const publisherId = document.getElementById('ad-' + network + '-publisher').value.trim();
-                const adUnitId = document.getElementById('ad-' + network + '-unit').value.trim();
-                const enabled = document.getElementById('ad-' + network + '-enabled').checked;
-                const statusEl = document.getElementById('ad-' + network + '-status');
-                statusEl.textContent = 'Saving...';
-                statusEl.style.color = '#888';
-                fetch('/api/admin/ads', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ network, publisherId, adUnitId, enabled })
-                }).then(r => r.json()).then(data => {
-                    if (data.success) {
-                        statusEl.textContent = '✅ Saved successfully!';
-                        statusEl.style.color = '#4ade80';
-                        loadAdNetworks();
-                    } else {
-                        statusEl.textContent = '❌ Error saving';
-                        statusEl.style.color = '#f87171';
                     }
-                    setTimeout(() => { statusEl.textContent = ''; }, 3000);
-                }).catch(() => {
-                    statusEl.textContent = '❌ Network error';
+                }).catch(() => { });
+        }
+
+        function saveAdNetwork(network) {
+            const publisherId = document.getElementById('ad-' + network + '-publisher').value.trim();
+            const adUnitId = document.getElementById('ad-' + network + '-unit').value.trim();
+            const enabled = document.getElementById('ad-' + network + '-enabled').checked;
+            const statusEl = document.getElementById('ad-' + network + '-status');
+            statusEl.textContent = 'Saving...';
+            statusEl.style.color = '#888';
+            fetch('/api/admin/ads', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ network, publisherId, adUnitId, enabled })
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    statusEl.textContent = '✅ Saved successfully!';
+                    statusEl.style.color = '#4ade80';
+                    loadAdNetworks();
+                } else {
+                    statusEl.textContent = '❌ Error saving';
                     statusEl.style.color = '#f87171';
-                });
-            }
-
-            // INIT
-            function init() {
-                loadAdminStats();
-                initChart();
-            }
-
-            // STATS
-            function loadAdminStats() {
-                fetch('/api/admin/stats')
-                    .then(r => r.json())
-                    .then(data => {
-                        if (!data.success) return;
-                        const map = {
-                            'dash-total-users': data.totalUsers,
-                            'dash-active': data.activeToday,
-                            'dash-total-tokens': data.totalTokens,
-                            'dash-verified': data.verifiedUsers,
-                            'dash-shop-items': data.shopItems,
-                            'dash-accounts': data.accounts,
-                            'dash-gmails': data.gmailsUsed,
-                            'dash-vpns': data.totalVpns,
-                            'dash-cards': data.totalCards
-                        };
-                        Object.entries(map).forEach(([id, val]) => {
-                            const el = document.getElementById(id);
-                            if (el) el.textContent = val?.toLocaleString() || '0';
-                        });
-                    }).catch(() => { });
-            }
-
-            // CHART
-            function initChart() {
-                const ctx = document.getElementById('mainChart');
-                if (!ctx) return;
-                new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                        datasets: [{
-                            label: 'Active Users',
-                            data: [65, 78, 90, 81, 86, 95, 88],
-                            borderColor: '#f59e0b',
-                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                            fill: true,
-                            tension: 0.4
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        scales: {
-                            y: { beginAtZero: true, grid: { color: 'rgba(255, 255, 255, 0.1)' }, ticks: { color: '#94a3b8' } },
-                            x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
-                        }
-                    }
-                });
-            }
-
-            // USERS
-            let allUsersData = [];
-            function loadUsers() {
-                const tbody = document.getElementById('usersTable');
-                if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-center text-gray-500 py-8">Loading...</td></tr>';
-                fetch('/api/admin/users')
-                    .then(r => r.json())
-                    .then(data => {
-                        if (!data.success) return;
-                        allUsersData = data.users;
-                        renderUsersTable(allUsersData);
-                    })
-                    .catch(() => {
-                        if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-center text-red-400 py-8">Failed to load</td></tr>';
-                    });
-            }
-
-            function renderUsersTable(users) {
-                const tbody = document.getElementById('usersTable');
-                if (!tbody) return;
-                if (!users.length) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-gray-500 py-8">No users found</td></tr>';
-                    return;
                 }
-                tbody.innerHTML = users.map(u => `
+                setTimeout(() => { statusEl.textContent = ''; }, 3000);
+            }).catch(() => {
+                statusEl.textContent = '❌ Network error';
+                statusEl.style.color = '#f87171';
+            });
+        }
+
+        // INIT
+        function init() {
+            loadAdminStats();
+            initChart();
+            loadFeatureFlags();
+        }
+
+        // FEATURE FLAGS (Button Management)
+        function setFeatureFlagsStatus(msg, ok) {
+            const el = document.getElementById('featureFlagsStatus');
+            if (!el) return;
+            el.textContent = msg || '';
+            el.style.color = ok ? '#4ade80' : '#f87171';
+        }
+
+        function loadFeatureFlags() {
+            setFeatureFlagsStatus('Loading feature flags...', false);
+            fetch('/api/admin/features')
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.success) {
+                        setFeatureFlagsStatus('Failed to load feature flags', false);
+                        return;
+                    }
+                    const f = data.features || {};
+                    const keys = ['tempMail', 'virtualNumber', 'premiumMail', 'accountsShop', 'cardsVcc', 'home_verify', 'home_mail', 'home_number', 'home_gemini', 'home_chatgpt'];
+                    keys.forEach(k => {
+                        const el = document.getElementById('ff-' + k);
+                        if (el) el.checked = f[k] !== false;
+                    });
+                    setFeatureFlagsStatus('Loaded ✅', true);
+                    setTimeout(() => setFeatureFlagsStatus('', true), 1500);
+                })
+                .catch(() => setFeatureFlagsStatus('Network error loading feature flags', false));
+        }
+
+        function saveFeatureFlags() {
+            setFeatureFlagsStatus('Saving...', false);
+            const payload = {
+                tempMail: document.getElementById('ff-tempMail')?.checked === true,
+                virtualNumber: document.getElementById('ff-virtualNumber')?.checked === true,
+                premiumMail: document.getElementById('ff-premiumMail')?.checked === true,
+                accountsShop: document.getElementById('ff-accountsShop')?.checked === true,
+                cardsVcc: document.getElementById('ff-cardsVcc')?.checked === true,
+                home_verify: document.getElementById('ff-home_verify')?.checked === true,
+                home_mail: document.getElementById('ff-home_mail')?.checked === true,
+                home_number: document.getElementById('ff-home_number')?.checked === true,
+                home_gemini: document.getElementById('ff-home_gemini')?.checked === true,
+                home_chatgpt: document.getElementById('ff-home_chatgpt')?.checked === true
+            };
+
+            fetch('/api/admin/features', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        setFeatureFlagsStatus('Saved ✅', true);
+                        setTimeout(() => setFeatureFlagsStatus('', true), 2000);
+                    } else {
+                        setFeatureFlagsStatus('Save failed', false);
+                    }
+                })
+                .catch(() => setFeatureFlagsStatus('Network error saving feature flags', false));
+        }
+
+        // STATS
+        function loadAdminStats() {
+            fetch('/api/admin/stats')
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.success) return;
+                    const map = {
+                        'dash-total-users': data.totalUsers,
+                        'dash-active': data.activeToday,
+                        'dash-total-tokens': data.totalTokens,
+                        'dash-verified': data.verifiedUsers,
+                        'dash-shop-items': data.shopItems,
+                        'dash-accounts': data.accounts,
+                        'dash-gmails': data.gmailsUsed,
+                        'dash-vpns': data.totalVpns,
+                        'dash-cards': data.totalCards
+                    };
+                    Object.entries(map).forEach(([id, val]) => {
+                        const el = document.getElementById(id);
+                        if (el) el.textContent = val?.toLocaleString() || '0';
+                    });
+                }).catch(() => { });
+        }
+
+        // CHART
+        function initChart() {
+            const ctx = document.getElementById('mainChart');
+            if (!ctx) return;
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'Active Users',
+                        data: [65, 78, 90, 81, 86, 95, 88],
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: 'rgba(255, 255, 255, 0.1)' }, ticks: { color: '#94a3b8' } },
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                    }
+                }
+            });
+        }
+
+        // USERS
+        let allUsersData = [];
+        function loadUsers() {
+            const tbody = document.getElementById('usersTable');
+            if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-center text-gray-500 py-8">Loading...</td></tr>';
+            fetch('/api/admin/users')
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.success) return;
+                    allUsersData = data.users;
+                    renderUsersTable(allUsersData);
+                })
+                .catch(() => {
+                    if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-center text-red-400 py-8">Failed to load</td></tr>';
+                });
+        }
+
+        function renderUsersTable(users) {
+            const tbody = document.getElementById('usersTable');
+            if (!tbody) return;
+            if (!users.length) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-gray-500 py-8">No users found</td></tr>';
+                return;
+            }
+            tbody.innerHTML = users.map(u => `
             <tr>
                 <td>
                     <div class="font-bold">${u.firstName || u.username || 'Unknown'}</div>
@@ -1563,158 +1873,308 @@
                     </div>
                 </td>
             </tr>`).join('');
+        }
+
+        function filterUsers() {
+            const q = document.getElementById('userSearch')?.value?.toLowerCase() || '';
+            const filtered = allUsersData.filter(u =>
+                (u.username || '').toLowerCase().includes(q) ||
+                (u.firstName || '').toLowerCase().includes(q) ||
+                String(u.id).includes(q)
+            );
+            renderUsersTable(filtered);
+        }
+
+        async function loadUserHistory() {
+            const uid = document.getElementById('historySearchId')?.value?.trim();
+            if (!uid) { alert('Please enter a User ID.'); return; }
+
+            const resultEl = document.getElementById('userHistoryResult');
+            const emptyEl = document.getElementById('userHistoryEmpty');
+            const profileCard = document.getElementById('uhProfileCard');
+            const historyList = document.getElementById('uhHistoryList');
+
+            emptyEl.textContent = 'Loading...';
+            resultEl.classList.add('hidden');
+
+            try {
+                const res = await fetch('/api/admin/user-detail/' + uid, { headers: { 'Authorization': ADMIN_TOKEN } });
+                const data = await res.json();
+
+                if (!data.success || !data.user) {
+                    emptyEl.textContent = 'User not found with ID: ' + uid;
+                    return;
+                }
+
+                const u = data.user;
+                const history = data.history || [];
+
+                // Profile card
+                profileCard.innerHTML = `
+                        <div>
+                            <div class="text-xs text-gray-400 mb-1">Name</div>
+                            <div class="font-bold text-white">${u.firstName || u.first_name || 'N/A'}</div>
+                            <div class="text-xs text-gray-400">@${u.username || 'N/A'}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-400 mb-1">Telegram ID</div>
+                            <div class="font-bold text-yellow-400 font-mono">${uid}</div>
+                            <div class="text-xs ${u.banned ? 'text-red-400' : 'text-green-400'}">${u.banned ? '🚫 Banned' : '✅ Active'}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-400 mb-1">Balances</div>
+                            <div class="text-sm">🪙 <b>${(u.tokens || u.balance_tokens || 0).toLocaleString()}</b> Tokens</div>
+                            <div class="text-sm">👥 <b>${u.referralCount || u.invites || 0}</b> Referrals</div>
+                            <div class="text-sm">📅 Joined: ${u.joinDate ? new Date(u.joinDate).toLocaleDateString() : 'N/A'}</div>
+                        </div>
+                    `;
+
+                // History timeline
+                if (!history.length) {
+                    historyList.innerHTML = '<div class="text-center text-gray-500 py-6 text-sm">No activity history found.</div>';
+                } else {
+                    const typeIcon = {
+                        'verification': '🔐', 'daily': '🎁', 'redeem': '🎫', 'tasks': '✅',
+                        'referral': '👥', 'number': '📞', 'mail': '📧', 'email': '📧',
+                        'gmail': '📨', 'deposit': '💰', 'transfer': '💸', 'support': '🆘',
+                        'service': '⚡', 'purchase': '🛒', 'bonus': '🎉'
+                    };
+                    historyList.innerHTML = history.slice(0, 50).map(h => {
+                        const icon = typeIcon[h.type] || '📌';
+                        const date = h.date ? new Date(h.date).toLocaleString() : '';
+                        const reward = h.reward || h.amount || '';
+                        const detail = h.detail || h.service || h.code || '';
+                        return `<div class="flex items-start gap-3 p-3 bg-white/5 rounded-lg border border-white/5">
+                                <span class="text-xl">${icon}</span>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex justify-between items-center">
+                                        <span class="font-bold text-white capitalize text-sm">${h.type || 'activity'}</span>
+                                        <span class="text-xs text-gray-500">${date}</span>
+                                    </div>
+                                    <div class="text-xs text-gray-400 mt-0.5">
+                                        ${reward ? '<span class="text-yellow-400 font-bold mr-2">' + reward + '</span>' : ''}
+                                        ${detail ? '<span>' + detail + '</span>' : ''}
+                                    </div>
+                                </div>
+                            </div>`;
+                    }).join('');
+                }
+
+                resultEl.classList.remove('hidden');
+                emptyEl.textContent = '';
+            } catch (e) {
+                emptyEl.textContent = 'Error loading user data: ' + e.message;
             }
+        }
 
-            function filterUsers() {
-                const q = document.getElementById('userSearch')?.value?.toLowerCase() || '';
-                const filtered = allUsersData.filter(u =>
-                    (u.username || '').toLowerCase().includes(q) ||
-                    (u.firstName || '').toLowerCase().includes(q) ||
-                    String(u.id).includes(q)
-                );
-                renderUsersTable(filtered);
-            }
+        function openEditUser(userId) {
+            const u = allUsersData.find(user => user.id == userId);
+            if (!u) return;
+            document.getElementById('editUserId').value = userId;
+            document.getElementById('editUserName').textContent = (u.firstName || u.username || 'User') + ' (@' + (u.username || 'N/A') + ')';
+            document.getElementById('editUserBalance').value = u.tokens || 0;
+            document.getElementById('editUserRefs').value = u.referralCount || 0;
+            document.getElementById('editUserVerified').value = u.verified ? 'true' : 'false';
+            document.getElementById('editUserModal').style.display = 'flex';
+        }
 
-            function openEditUser(userId) {
-                const u = allUsersData.find(user => user.id == userId);
-                if (!u) return;
-                document.getElementById('editUserId').value = userId;
-                document.getElementById('editUserName').textContent = (u.firstName || u.username || 'User') + ' (@' + (u.username || 'N/A') + ')';
-                document.getElementById('editUserBalance').value = u.tokens || 0;
-                document.getElementById('editUserRefs').value = u.referralCount || 0;
-                document.getElementById('editUserVerified').value = u.verified ? 'true' : 'false';
-                document.getElementById('editUserModal').style.display = 'flex';
-            }
+        function saveUserChanges() {
+            const userId = document.getElementById('editUserId').value;
+            const balance = document.getElementById('editUserBalance').value;
+            const refs = document.getElementById('editUserRefs').value;
+            const verified = document.getElementById('editUserVerified').value === 'true';
 
-            function saveUserChanges() {
-                const userId = document.getElementById('editUserId').value;
-                const balance = document.getElementById('editUserBalance').value;
-                const refs = document.getElementById('editUserRefs').value;
-                const verified = document.getElementById('editUserVerified').value === 'true';
+            fetch(`/api/admin/users/${userId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ balance: parseInt(balance), referralCount: parseInt(refs), verified: verified })
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('editUserModal').style.display = 'none';
+                        loadUsers();
+                        alert('User updated!');
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                });
+        }
 
-                fetch(`/api/admin/users/${userId}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ balance: parseInt(balance), referralCount: parseInt(refs), verified: verified })
-                })
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.success) {
-                            document.getElementById('editUserModal').style.display = 'none';
-                            loadUsers();
-                            alert('User updated!');
-                        } else {
-                            alert('Error: ' + data.message);
-                        }
-                    });
-            }
+        function toggleBanUser(userId, ban) {
+            if (!confirm(`${ban ? 'Ban' : 'Unban'} this user?`)) return;
+            fetch(`/api/admin/users/${userId}/ban`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ banned: ban })
+            }).then(() => loadUsers());
+        }
 
-            function toggleBanUser(userId, ban) {
-                if (!confirm(`${ban ? 'Ban' : 'Unban'} this user?`)) return;
-                fetch(`/api/admin/users/${userId}/ban`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ banned: ban })
-                }).then(() => loadUsers());
-            }
+        function deleteUser(userId) {
+            if (!confirm('⚠️ Permanently delete this user?')) return;
+            fetch(`/api/admin/users/${userId}`, { method: 'DELETE' }).then(() => loadUsers());
+        }
 
-            function deleteUser(userId) {
-                if (!confirm('⚠️ Permanently delete this user?')) return;
-                fetch(`/api/admin/users/${userId}`, { method: 'DELETE' }).then(() => loadUsers());
-            }
-
-            // CODES
-            function renderCodes() {
-                fetch('/api/admin/codes').then(r => r.json()).then(data => {
-                    const tbody = document.getElementById('codesTable');
-                    if (!tbody) return;
-                    tbody.innerHTML = (data.codes || []).map(c => `
+        // CODES
+        function renderCodes() {
+            fetch('/api/admin/codes').then(r => r.json()).then(data => {
+                const tbody = document.getElementById('codesTable');
+                if (!tbody) return;
+                tbody.innerHTML = (data.codes || []).map(c => `
                 <tr>
                     <td class="font-mono text-orange-400">${c.code}</td>
                     <td>${c.amount}</td>
                     <td>${c.used}/${c.maxUses}</td>
                     <td><button onclick="deleteCode('${c.code}')" class="text-red-400 hover:text-red-300"><i class="fas fa-trash"></i></button></td>
                 </tr>`).join('') || '<tr><td colspan="4" class="text-center text-gray-500 py-4">No codes</td></tr>';
+            });
+        }
+
+        function addCode() {
+            const code = document.getElementById('code-code').value.trim();
+            const amount = parseInt(document.getElementById('code-amount').value) || 0;
+            const maxUses = parseInt(document.getElementById('code-uses').value) || 1;
+            if (!code || !amount) return alert('Code and amount required');
+
+            fetch('/api/admin/codes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code, amount, maxUses })
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        closeModal();
+                        renderCodes();
+                    } else {
+                        alert(data.message || 'Failed to create code');
+                    }
                 });
-            }
+        }
 
-            function addCode() {
-                const code = document.getElementById('code-code').value.trim();
-                const amount = parseInt(document.getElementById('code-amount').value) || 0;
-                const maxUses = parseInt(document.getElementById('code-uses').value) || 1;
-                if (!code || !amount) return alert('Code and amount required');
+        function deleteCode(code) {
+            if (!confirm('Delete promo code ' + code + '?')) return;
+            fetch('/api/admin/codes/' + code, { method: 'DELETE' }).then(() => renderCodes());
+        }
 
-                fetch('/api/admin/codes', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ code, amount, maxUses })
-                })
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.success) {
-                            closeModal();
-                            renderCodes();
-                        } else {
-                            alert(data.message || 'Failed to create code');
-                        }
-                    });
-            }
-
-            function deleteCode(code) {
-                if (!confirm('Delete promo code ' + code + '?')) return;
-                fetch('/api/admin/codes/' + code, { method: 'DELETE' }).then(() => renderCodes());
-            }
-
-            // TASKS
-            function loadTasks() {
-                fetch('/api/admin/tasks').then(r => r.json()).then(data => {
-                    const tbody = document.getElementById('tasksTable');
-                    if (!tbody) return;
-                    tbody.innerHTML = (data.tasks || []).map(t => `
+        // TASKS
+        function loadTasks() {
+            fetch('/api/admin/tasks').then(r => r.json()).then(data => {
+                const tbody = document.getElementById('tasksTable');
+                if (!tbody) return;
+                tbody.innerHTML = (data.tasks || []).map(t => `
                 <tr>
                     <td>${t.name}</td>
                     <td>${t.reward}</td>
                     <td><button onclick="deleteTask(${t.id})" class="text-red-400 hover:text-red-300"><i class="fas fa-trash"></i></button></td>
                 </tr>`).join('') || '<tr><td colspan="3" class="text-center text-gray-500 py-4">No tasks</td></tr>';
+            });
+        }
+
+        function addTask() {
+            const name = document.getElementById('task-name').value.trim();
+            const reward = parseInt(document.getElementById('task-reward').value) || 0;
+            const url = document.getElementById('task-url').value.trim();
+            if (!name || !reward) return alert('Name and reward required');
+
+            fetch('/api/admin/tasks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, reward, url })
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        closeModal();
+                        loadTasks();
+                    } else {
+                        alert(data.message || 'Failed to create task');
+                    }
                 });
+        }
+
+        function deleteTask(id) {
+            if (!confirm('Delete task?')) return;
+            fetch('/api/admin/tasks/' + id, { method: 'DELETE' }).then(() => loadTasks());
+        }
+
+        // MODAL
+        function showModal(type) {
+            document.getElementById('modal-' + type).style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
+        }
+
+        async function exportDatabase() {
+            try {
+                const res = await fetch('/api/admin/db/export', { headers: { 'Authorization': ADMIN_TOKEN } });
+                const data = await res.json();
+                if (data.success) {
+                    alert('Data generated and sent to your Telegram account successfully!');
+                } else {
+                    alert('Export failed: ' + (data.message || 'Unknown error'));
+                }
+            } catch (err) {
+                alert('Error exporting database: ' + err.message);
             }
+        }
 
-            function addTask() {
-                const name = document.getElementById('task-name').value.trim();
-                const reward = parseInt(document.getElementById('task-reward').value) || 0;
-                const url = document.getElementById('task-url').value.trim();
-                if (!name || !reward) return alert('Name and reward required');
+        function importDatabase(input) {
+            const file = input.files[0];
+            if (!file) return;
 
-                fetch('/api/admin/tasks', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, reward, url })
-                })
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.success) {
-                            closeModal();
-                            loadTasks();
-                        } else {
-                            alert(data.message || 'Failed to create task');
-                        }
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const dbData = JSON.parse(e.target.result);
+                    const confirmImport = confirm('Are you sure you want to upload and merge this data? This might modify current data.');
+                    if (!confirmImport) return;
+
+                    const res = await fetch('/api/admin/db/import', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': ADMIN_TOKEN,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ data: dbData })
                     });
-            }
+                    const data = await res.json();
+                    if (data.success) {
+                        alert('Data uploaded and merged successfully!');
+                        window.location.reload();
+                    } else {
+                        alert('Import failed: ' + (data.message || 'Unknown error'));
+                    }
+                } catch (err) {
+                    alert('Invalid JSON file or error: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+            input.value = ''; // Reset input
+        }
 
-            function deleteTask(id) {
-                if (!confirm('Delete task?')) return;
-                fetch('/api/admin/tasks/' + id, { method: 'DELETE' }).then(() => loadTasks());
-            }
+        async function wipeDatabase() {
+            const conf1 = confirm('WARNING: Are you sure you want to completely WIPE all user, test, and demo data?');
+            if (!conf1) return;
+            const conf2 = prompt('To confirm wiping the database, type "WIPE":');
+            if (conf2 !== 'WIPE') return;
 
-            // MODAL
-            function showModal(type) {
-                document.getElementById('modal-' + type).style.display = 'flex';
+            try {
+                const res = await fetch('/api/admin/db/wipe', { method: 'POST', headers: { 'Authorization': ADMIN_TOKEN } });
+                const data = await res.json();
+                if (data.success) {
+                    alert('Database wiped successfully!');
+                    window.location.reload();
+                } else {
+                    alert('Wiping failed: ' + (data.message || 'Unknown error'));
+                }
+            } catch (err) {
+                alert('Error wiping database: ' + err.message);
             }
-
-            function closeModal() {
-                document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
-            }
-        </script>
+        }
+    </script>
 </body>
 
 </html>

@@ -20,9 +20,37 @@ function setBot(instance) {
     bot = instance;
 }
 
+// Helper: Validate userId
+function isValidUserId(userId) {
+    if (!userId) return false;
+    const numericId = typeof userId === 'number' ? userId : parseInt(userId);
+    return !isNaN(numericId) && numericId > 0;
+}
+
 // Request counter middleware
 app.use((req, res, next) => {
     totalCallbacks++;
+    next();
+});
+
+// Additional middleware to block invalid userId early
+app.use((req, res, next) => {
+    // Extract userId from various request sources
+    let userId = req.params.userId || req.body?.userId || req.query?.userId;
+
+    // Skip validation for non-user endpoints
+    const skipPaths = ['/', '/admin', '/api/admin/login', '/api/services', '/api/ads/config'];
+    if (skipPaths.includes(req.path)) return next();
+
+    // Skip for static files and GET requests without userId
+    if (!userId) return next();
+
+    // Validate userId if present
+    if (!isValidUserId(userId)) {
+        console.log(`[BLOCKED] Invalid userId in ${req.method} ${req.path}: ${userId}`);
+        return res.status(400).json({ success: false, message: 'Invalid userId' });
+    }
+
     next();
 });
 
@@ -47,13 +75,42 @@ app.get('/admin', (req, res) => {
 
 // API: Admin Login Check
 app.post('/api/admin/login', (req, res) => {
-    const { password } = req.body;
+    const { password, token } = req.body;
+    // Token-based login (for bot auto-login)
+    if (token) {
+        const validToken = generateAdminToken();
+        // We check against stored pending tokens
+        if (global._pendingAdminTokens && global._pendingAdminTokens[token] && Date.now() < global._pendingAdminTokens[token]) {
+            delete global._pendingAdminTokens[token];
+            return res.json({ success: true, token: 'admin-session-' + Date.now() });
+        }
+        return res.json({ success: false, message: 'Invalid or expired token' });
+    }
+    // Password-based login
     if (password === (config.ADMIN_PASSWORD || 'admin123')) {
         res.json({ success: true, token: 'fake-jwt-token-' + Date.now() });
     } else {
         res.json({ success: false, message: 'Invalid password' });
     }
 });
+
+// Generate a one-time admin auto-login token (valid 5 min)
+function generateAdminToken() {
+    const crypto = require('crypto');
+    const token = crypto.randomBytes(20).toString('hex');
+    if (!global._pendingAdminTokens) global._pendingAdminTokens = {};
+    global._pendingAdminTokens[token] = Date.now() + 5 * 60 * 1000; // 5 min
+    // Cleanup old tokens
+    const now = Date.now();
+    Object.keys(global._pendingAdminTokens).forEach(t => {
+        if (global._pendingAdminTokens[t] < now) delete global._pendingAdminTokens[t];
+    });
+    return token;
+}
+
+// Expose token generator for bot.js
+module.exports.generateAdminToken = generateAdminToken;
+
 
 // Stats route consolidated below at line ~672 – removed duplicate here
 
@@ -95,12 +152,12 @@ app.post('/api/admin/users/:userId', (req, res) => {
     if (!user) return res.json({ success: false, message: 'User not found' });
 
     if (balance !== undefined) {
-        if (user.tokens !== undefined) user.tokens = parseInt(balance);
-        else user.balance_tokens = parseInt(balance);
+        // sync all balance fields
+        db.setTokenBalance(user, parseInt(balance));
     }
     if (Gems !== undefined) {
-        if (user.Gems !== undefined) user.Gems = parseInt(Gems);
-        else user.balance_Gems = parseInt(Gems);
+        user.Gems = parseInt(Gems);
+        user.balance_Gems = parseInt(Gems);
     }
     if (referralCount !== undefined) user.referralCount = parseInt(referralCount);
     if (verified !== undefined) user.verified = (verified === true || verified === 'true');
@@ -151,14 +208,22 @@ app.post('/api/register', (req, res) => {
     if (photo_url) user.photo_url = photo_url;
     user.lastActive = Date.now();
 
-    // Handle referral on first registration
-    if (referrer && !user.referredBy && String(referrer) !== String(userId)) {
-        db.handleReferral(userId, referrer);
+    // Sync all balance fields on every login
+    const currentBalance = db.getTokenBalance(user);
+    db.setTokenBalance(user, currentBalance); // ensures all 3 fields are in sync
+
+    // Handle referral on first registration - referrer is raw userId (no prefix)
+    if (referrer && !user.referredBy) {
+        const cleanReferrer = String(referrer).replace(/^ref_/, ''); // strip ref_ prefix if present
+        if (cleanReferrer && cleanReferrer !== String(userId)) {
+            db.handleReferral(userId, cleanReferrer);
+        }
     }
 
     db.updateUser(user);
 
-    const tokens = user.balance_tokens !== undefined ? user.balance_tokens : (user.tokens || 0);
+    // Always return the synced balance
+    const tokens = db.getTokenBalance(user);
 
     res.json({
         success: true,
@@ -168,6 +233,7 @@ app.post('/api/register', (req, res) => {
         username: user.username || '',
         photo_url: user.photo_url || '',
         tokens,
+        balance_tokens: tokens,
         Gems: user.balance_Gems || user.Gems || 0,
         invites: user.referralCount || 0,
         lastClaim: user.lastDaily || 0,
@@ -404,7 +470,46 @@ app.post('/api/generate/:service', (req, res) => {
     });
 });
 
-// API: Verify Gemini Link
+// API: Verify Telegram Membership
+app.post('/api/verify-membership', async (req, res) => {
+    const { userId, taskType } = req.body;
+
+    if (!userId || !taskType) {
+        return res.json({ success: false, message: 'Missing parameters' });
+    }
+
+    // Only for Telegram tasks
+    if (taskType !== 'tg' && taskType !== 'tg_ch') {
+        return res.json({ success: false, message: 'Invalid task type' });
+    }
+
+    const channelUser = taskType === 'tg' ? '@AutosVerifych' : '@AutosVerify';
+
+    if (!bot) {
+        return res.json({ success: false, message: 'Bot not available' });
+    }
+
+    try {
+        const member = await bot.telegram.getChatMember(channelUser, userId);
+        const validStatuses = ['creator', 'administrator', 'member', 'restricted'];
+        const isMember = validStatuses.includes(member.status);
+
+        console.log(`[VERIFY] User ${userId} in ${channelUser}: ${member.status} -> isMember: ${isMember}`);
+
+        return res.json({
+            success: true,
+            isMember: isMember,
+            status: member.status
+        });
+    } catch (e) {
+        console.error('[VERIFY] Error checking membership:', e.message);
+        return res.json({
+            success: false,
+            message: 'Error checking membership',
+            error: e.message
+        });
+    }
+});
 app.post('/api/verify', (req, res) => {
     const { userId, link } = req.body;
 
@@ -437,47 +542,26 @@ app.post('/api/verify', (req, res) => {
 app.post('/api/redeem', (req, res) => {
     const { userId, code } = req.body;
 
-    const user = db.getUser(userId);
-    if (!user) {
-        return res.json({ success: false, message: 'User not found' });
+    if (!userId || !code) {
+        return res.json({ success: false, message: 'Missing parameters' });
     }
 
-    // Simple code validation (you can enhance this)
-    const validCodes = {
-        'WELCOME100': { tokens: 100 },
-        'BONUS50': { tokens: 50 }
-    };
+    const result = db.redeemCode(userId, code);
 
-    if (!validCodes[code]) {
-        return res.json({ success: false, message: 'Invalid code' });
+    if (result && result.success) {
+        res.json({
+            success: true,
+            message: 'Code redeemed successfully',
+            reward: result.amount,
+            newTokens: result.newBalance,
+            newBalance: result.newBalance
+        });
+    } else {
+        res.json({
+            success: false,
+            message: result ? result.msg : 'Invalid code'
+        });
     }
-
-    // Check if already redeemed
-    if (!user.redeemedCodes) user.redeemedCodes = [];
-    if (user.redeemedCodes.includes(code)) {
-        return res.json({ success: false, message: 'Code already used' });
-    }
-
-    const reward = validCodes[code];
-    user.tokens = (user.tokens || 0) + reward.tokens;
-    user.redeemedCodes.push(code);
-
-    // Add to history
-    if (!user.history) user.history = [];
-    user.history.unshift({
-        type: 'redeem',
-        date: new Date().toISOString(),
-        reward: `+${reward.tokens} Tokens`
-    });
-
-    db.saveUsers(users);
-
-    res.json({
-        success: true,
-        message: 'Code redeemed successfully',
-        reward: reward,
-        newTokens: user.tokens
-    });
 });
 
 // Redundant daily-claim endpoint removed (use /api/daily)
@@ -607,9 +691,10 @@ app.post('/api/mail/generate', async (req, res) => {
         emailData = await tempMail.createAccount();
     } catch (e) { console.error('TempMail createAccount error:', e.message); }
 
-    // Require live email data
+    // If all providers failed, return error (no demo for live system)
     if (!emailData || !emailData.email) {
-        return res.json({ success: false, message: 'Real-time email generation failed. Please try again in 5 minutes.' });
+        console.error('❌ All tempmail providers failed');
+        return res.json({ success: false, message: 'All email providers temporarily unavailable. Please try again later.' });
     }
 
     if (user.tokens !== undefined) user.tokens -= tokenCost;
@@ -629,9 +714,33 @@ app.post('/api/mail/generate', async (req, res) => {
 // API: Check Mail Inbox
 app.get('/api/mail/inbox', async (req, res) => {
     const { sessionId } = req.query;
+    const userId = req.query.userId;
+    const cost = parseInt(req.query.cost) || 0;
     const sessions = db.data.mailSessions || {};
     const session = sessions[sessionId];
     if (!session) return res.json({ success: false, messages: [] });
+
+    // Optional billing per refresh (used by temp mail)
+    if (cost > 0 && userId) {
+        try {
+            const users = getUsersObj();
+            const user = users[userId];
+            if (!user) return res.json({ success: false, message: 'User not found', messages: [] });
+
+            const field = user.tokens !== undefined ? 'tokens' : 'balance_tokens';
+            const bal = user[field] || 0;
+            if (bal < cost) {
+                return res.json({ success: false, message: 'Insufficient tokens', newBalance: bal, messages: [] });
+            }
+
+            user[field] = bal - cost;
+            if (!user.history) user.history = [];
+            user.history.unshift({ type: 'mail_inbox_refresh', amount: cost, currency: 'tokens', date: Date.now() });
+            saveUsersObj(users);
+        } catch (e) {
+            // If billing fails, do not block inbox view
+        }
+    }
 
     try {
         const tempMail = require('../services/tempmail-providers');
@@ -645,7 +754,17 @@ app.get('/api/mail/inbox', async (req, res) => {
             time: m.date ? new Date(m.date).toLocaleTimeString() : '',
             otp: m.text ? (m.text.match(/\b\d{4,8}\b/) || [])[0] : null
         }));
-        res.json({ success: true, messages: formatted });
+        let newBalance;
+        if (cost > 0 && userId) {
+            try {
+                const users = getUsersObj();
+                const user = users[userId];
+                if (user) {
+                    newBalance = user.tokens !== undefined ? user.tokens : user.balance_tokens;
+                }
+            } catch (e) { }
+        }
+        res.json({ success: true, messages: formatted, newBalance });
     } catch (e) {
         console.error('Inbox fetch error:', e.message);
         res.json({ success: true, messages: [] });
@@ -704,6 +823,36 @@ app.delete('/api/admin/users/:userId', (req, res) => {
     delete users[userId];
     saveUsersObj(users);
     res.json({ success: true });
+});
+
+// API: Admin - User Detail + Full History
+app.get('/api/admin/user-detail/:userId', (req, res) => {
+    const { userId } = req.params;
+    const users = getUsersObj();
+    const u = users[userId];
+    if (!u) return res.json({ success: false, message: 'User not found' });
+
+    const userProfile = {
+        id: userId,
+        firstName: u.firstName || u.first_name || '',
+        username: u.username || '',
+        tokens: u.tokens || u.balance_tokens || 0,
+        Gems: u.Gems || 0,
+        usd: u.usd || 0,
+        referralCount: u.referralCount || u.invites || 0,
+        verified: u.verified || false,
+        banned: u.banned || u.blocked || false,
+        joinDate: u.joinDate || u.joinedAt || null,
+        lastActive: u.lastActive || null,
+        completedTasks: u.completedTasks || [],
+        redeemedCodes: u.redeemedCodes || [],
+        referredBy: u.referredBy || null,
+        pendingReferrer: u.pendingReferrer || null,
+    };
+
+    const history = Array.isArray(u.history) ? u.history : [];
+
+    res.json({ success: true, user: userProfile, history });
 });
 
 // API: Admin - Dashboard Stats
@@ -1036,6 +1185,93 @@ app.post('/api/admin/db/reset', (req, res) => {
     db.data.transactions = [];
     db.save();
     res.json({ success: true, message: 'Transactions cleared' });
+});
+
+// API: Database Export (Send to Admin)
+app.get('/api/admin/db/export', async (req, res) => {
+    try {
+        const adminId = process.env.ADMIN_ID;
+        if (!adminId) return res.json({ success: false, message: 'ADMIN_ID not configured' });
+
+        const backupFile = './backups/manual_backup_' + Date.now() + '.json';
+        const fs = require('fs');
+        if (!fs.existsSync('./backups')) fs.mkdirSync('./backups');
+
+        fs.writeFileSync(backupFile, JSON.stringify(db.data, null, 2));
+
+        if (bot && bot.telegram) {
+            await bot.telegram.sendDocument(adminId, { source: backupFile }, {
+                caption: '📦 <b>Manual Database Backup</b>\n\nGenerated via Web Admin Panel.',
+                parse_mode: 'HTML'
+            });
+            res.json({ success: true, message: 'Backup sent to Telegram' });
+        } else {
+            res.json({ success: false, message: 'Bot Telegram instance not available' });
+        }
+    } catch (e) {
+        console.error('Export error:', e);
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// API: Database Import
+app.post('/api/admin/db/import', async (req, res) => {
+    try {
+        const newData = req.body.data;
+        if (!newData || typeof newData !== 'object') {
+            return res.json({ success: false, message: 'Invalid JSON data' });
+        }
+
+        // Merge or Replace core objects
+        db.data.users = { ...(db.data.users || {}), ...(newData.users || {}) };
+        if (newData.settings) db.data.settings = { ...(db.data.settings || {}), ...newData.settings };
+        if (newData.cardPrices) db.data.cardPrices = { ...(db.data.cardPrices || {}), ...newData.cardPrices };
+        if (newData.vpnPrices) db.data.vpnPrices = { ...(db.data.vpnPrices || {}), ...newData.vpnPrices };
+        if (newData.cards) db.data.cards = { ...(db.data.cards || {}), ...newData.cards };
+        if (newData.vpnAccounts) db.data.vpnAccounts = { ...(db.data.vpnAccounts || {}), ...newData.vpnAccounts };
+        if (newData.tasks) db.data.tasks = { ...(db.data.tasks || {}), ...newData.tasks };
+        Object.keys(newData).forEach(key => {
+            if (!db.data[key]) db.data[key] = newData[key];
+        });
+
+        db.save();
+
+        const adminId = process.env.ADMIN_ID;
+        if (bot && bot.telegram && adminId) {
+            await bot.telegram.sendMessage(adminId, '✅ <b>Database Imported & Merged</b>\n\nA new JSON database file was uploaded via Web Admin.', { parse_mode: 'HTML' });
+        }
+
+        res.json({ success: true, message: 'Database updated successfully' });
+    } catch (e) {
+        console.error('Import error:', e);
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// API: Database Wipe
+app.post('/api/admin/db/wipe', async (req, res) => {
+    try {
+        // Resetting the data to empty objects for test and user data
+        db.data.users = {};
+        db.data.transactions = [];
+        db.data.payments = [];
+        db.data.tickets = [];
+        db.data.mailSessions = {};
+        db.data.numberSessions = {};
+        db.data.gmails = [];
+
+        db.save();
+
+        const adminId = process.env.ADMIN_ID;
+        if (bot && bot.telegram && adminId) {
+            await bot.telegram.sendMessage(adminId, '⚠️ <b>Database Wiped</b>\n\nAll users, test, and demo data were permanently deleted via Web Admin.', { parse_mode: 'HTML' });
+        }
+
+        res.json({ success: true, message: 'Database wiped successfully' });
+    } catch (e) {
+        console.error('Wipe error:', e);
+        res.json({ success: false, message: e.message });
+    }
 });
 
 // API: Admin - Provider Management
@@ -1404,8 +1640,6 @@ app.post('/api/admin/settings', (req, res) => {
         if (gems.enabled !== undefined) db.data.adminSettings.gems.enabled = (gems.enabled === true || gems.enabled === 'true');
     }
 
-    db.save();
-    res.json({ success: true });
 });
 
 // API: Admin - Update API Keys
@@ -1422,6 +1656,65 @@ app.post('/api/admin/apikeys', (req, res) => {
 
     db.save();
     res.json({ success: true, message: 'API Keys updated successfully' });
+});
+
+// =============================================
+// FEATURE FLAGS (BUTTON MANAGEMENT)
+// =============================================
+function getDefaultFeatureFlags() {
+    return {
+        // Core services
+        tempMail: true,
+        virtualNumber: true,
+        premiumMail: true,
+        accountsShop: true,
+        cardsVcc: true,
+
+        // Home service cards
+        home_verify: true,
+        home_mail: true,
+        home_number: true,
+        home_gemini: true,
+        home_chatgpt: true
+    };
+}
+
+function getFeatureFlags() {
+    if (!db.data.featureFlags) db.data.featureFlags = {};
+    const defaults = getDefaultFeatureFlags();
+    // Merge defaults (keeps newly added keys enabled by default)
+    db.data.featureFlags = { ...defaults, ...db.data.featureFlags };
+    return db.data.featureFlags;
+}
+
+// Public endpoint: mini app fetches enabled/disabled features
+app.get('/api/features', (req, res) => {
+    const flags = getFeatureFlags();
+    res.json({ success: true, features: flags });
+});
+
+// Admin: get feature flags
+app.get('/api/admin/features', (req, res) => {
+    const flags = getFeatureFlags();
+    res.json({ success: true, features: flags });
+});
+
+// Admin: update feature flags (partial update allowed)
+app.post('/api/admin/features', (req, res) => {
+    const incoming = req.body || {};
+    const current = getFeatureFlags();
+    const updated = { ...current };
+
+    Object.keys(incoming).forEach((k) => {
+        // Accept booleans or 'true'/'false'
+        const v = incoming[k];
+        if (typeof v === 'boolean') updated[k] = v;
+        else if (v === 'true' || v === 'false') updated[k] = (v === 'true');
+    });
+
+    db.data.featureFlags = updated;
+    db.save();
+    res.json({ success: true, features: updated });
 });
 
 // API: Admin - Get System Metrics
@@ -1614,6 +1907,155 @@ app.get('/auth/google/callback', async (req, res) => {
     }
 });
 
+// =============================================
+// MISSING API ENDPOINTS (Added to fix 404 errors)
+// =============================================
+
+// API: Check Required Joins (Telegram Channel/Group verification)
+app.post('/api/check-required-joins', async (req, res) => {
+    const { userId } = req.body;
+
+    if (!userId) {
+        return res.json({ success: false, message: 'User ID required' });
+    }
+
+    // Channel and Group IDs
+    const requiredChannel = '-1002188442004'; // @AutosVerifych
+    const requiredGroup = '-1002088203586';   // @AutosVerify
+
+    try {
+        let channelJoined = false;
+        let groupJoined = false;
+
+        if (bot) {
+            try {
+                const channelMember = await bot.telegram.getChatMember(requiredChannel, userId);
+                const validStatuses = ['creator', 'administrator', 'member', 'restricted'];
+                channelJoined = validStatuses.includes(channelMember.status);
+            } catch (e) {
+                console.log('[JOIN CHECK] Channel check failed:', e.message);
+            }
+
+            try {
+                const groupMember = await bot.telegram.getChatMember(requiredGroup, userId);
+                const validStatuses = ['creator', 'administrator', 'member', 'restricted'];
+                groupJoined = validStatuses.includes(groupMember.status);
+            } catch (e) {
+                console.log('[JOIN CHECK] Group check failed:', e.message);
+            }
+        }
+
+        // If bot not available, allow access (fail-open for better UX)
+        if (!bot) {
+            return res.json({
+                success: true,
+                allJoined: true,
+                channelJoined: true,
+                groupJoined: true,
+                message: 'Bot not available - allowing access'
+            });
+        }
+
+        res.json({
+            success: true,
+            allJoined: channelJoined && groupJoined,
+            channelJoined: channelJoined,
+            groupJoined: groupJoined,
+            channelLink: 'https://t.me/AutosVerifych',
+            groupLink: 'https://t.me/AutosVerify'
+        });
+    } catch (error) {
+        console.error('[JOIN CHECK] Error:', error);
+        // Fail-open: allow access on error
+        res.json({
+            success: true,
+            allJoined: true,
+            channelJoined: true,
+            groupJoined: true,
+            message: 'Error occurred - allowing access'
+        });
+    }
+});
+
+// API: User Activity (for broadcast ticker)
+app.get('/api/user-activity', (req, res) => {
+    try {
+        // Get recent user activities from database
+        const users = db.getUsers();
+        const activities = [];
+
+        // Collect recent purchase/activity data from user histories
+        users.slice(0, 20).forEach(user => {
+            if (user.history && user.history.length > 0) {
+                const recentHistory = user.history.slice(0, 2); // Last 2 activities per user
+                recentHistory.forEach(h => {
+                    let action = 'purchase';
+                    let item = h.type || 'item';
+                    let amount = 0;
+
+                    // Parse amount from reward string
+                    if (h.reward) {
+                        const match = h.reward.match(/-?(\d+)/);
+                        if (match) amount = parseInt(match[1]);
+                    }
+
+                    // Determine action type
+                    if (h.reward && h.reward.includes('+')) {
+                        action = 'earn';
+                    } else if (h.type === 'mail') {
+                        action = 'mail';
+                        item = 'Temp Mail';
+                    } else if (h.type === 'number') {
+                        action = 'purchase';
+                        item = 'Number';
+                    } else if (h.type === 'account_purchase') {
+                        action = 'purchase';
+                        item = h.category || 'Account';
+                    } else if (h.type === 'verification') {
+                        action = 'verify';
+                        item = 'Verify';
+                    }
+
+                    activities.push({
+                        username: user.username || user.firstName || 'User',
+                        user: user.username || user.firstName || 'User',
+                        action: action,
+                        item: item,
+                        amount: amount,
+                        currency: 'TC',
+                        date: h.date || Date.now()
+                    });
+                });
+            }
+        });
+
+        // Sort by date (newest first) and take top 10
+        activities.sort((a, b) => (b.date || 0) - (a.date || 0));
+        const recentActivities = activities.slice(0, 10);
+
+        // If no activities found, return empty success
+        if (recentActivities.length === 0) {
+            return res.json({
+                success: true,
+                activities: [],
+                message: 'No recent activities found'
+            });
+        }
+
+        res.json({
+            success: true,
+            activities: recentActivities
+        });
+    } catch (error) {
+        console.error('[USER ACTIVITY] Error:', error);
+        res.json({
+            success: false,
+            message: 'Error fetching user activity',
+            activities: []
+        });
+    }
+});
+
 // API: Get Google Drive Status (For Admin)
 app.get('/api/admin/storage/status', async (req, res) => {
     const driveStorage = require('./google-drive-storage');
@@ -1645,44 +2087,59 @@ app.get('/api/leaderboard', (req, res) => {
     const { userId } = req.query; // Optional: to get personal rank
     const top = db.getTopReferrers(10).map(u => ({
         id: u.id,
-        name: u.username || u.firstName || 'User',
+        name: u.firstName || u.username || `User ${String(u.id).slice(-4)}`,
         refs: u.referralCount || 0,
-        photo_url: u.photo_url || ''
+        photo_url: u.photo_url || '',
+        tokens: db.getTokenBalance(u)
     }));
 
     let userRank = null;
+    let userRefs = 0;
     if (userId) {
         const allUsers = Object.values(db.data.users)
             .sort((a, b) => (b.referralCount || 0) - (a.referralCount || 0));
-        userRank = allUsers.findIndex(u => u.id.toString() === userId.toString()) + 1;
+        const idx = allUsers.findIndex(u => String(u.id) === String(userId));
+        userRank = idx >= 0 ? idx + 1 : null;
+        const thisUser = db.data.users[String(userId)];
+        if (thisUser) userRefs = thisUser.referralCount || 0;
     }
 
-    res.json({ success: true, top, userRank });
+    res.json({ success: true, top, userRank, userRefs });
 });
 
 // API: Get User Referrals (for invite page)
 app.get('/api/referrals/:userId', (req, res) => {
     const { userId } = req.params;
+
+    // Validate userId
+    const numericId = typeof userId === 'number' ? userId : parseInt(userId);
+    if (isNaN(numericId) || numericId <= 0) {
+        return res.status(400).json({ success: false, message: 'Invalid userId' });
+    }
+
     const user = db.getUser(userId);
 
     if (!user) {
         return res.json({ success: false, message: 'User not found' });
     }
 
+    const refBonus = (db.data.settings && db.data.settings.refBonus) || 50;
+    const botUsername = (db.data.settings && db.data.settings.botUsername) || 'AutosVerify_bot';
+
     // Get referred users
     const referredUsers = (user.referredUsers || []).map(ref => {
         const refUser = db.getUser(ref.userId);
         return {
-            name: refUser ? (refUser.firstName || refUser.username || 'Unknown') : 'Unknown',
+            name: refUser ? (refUser.firstName || refUser.username || `User ${String(ref.userId).slice(-4)}`) : `User ${String(ref.userId).slice(-4)}`,
             date: ref.date || Date.now(),
             status: ref.rewarded ? 'Active' : 'Pending',
-            reward: ref.rewarded ? `+${(user.tokens || 0) > 0 ? 10 : 0}` : '0'
+            reward: ref.rewarded ? `+${refBonus}` : '0'
         };
     }).reverse(); // Most recent first
 
     // Calculate stats
     const totalInvited = referredUsers.length;
-    const totalEarned = referredUsers.filter(r => r.status === 'Active').length * 10;
+    const totalEarned = referredUsers.filter(r => r.status === 'Active').length * refBonus;
 
     res.json({
         success: true,
@@ -1691,7 +2148,7 @@ app.get('/api/referrals/:userId', (req, res) => {
             invited: totalInvited,
             earned: totalEarned
         },
-        referralLink: `https://t.me/AutosVerify_bot?start=ref_${userId}`
+        referralLink: `https://t.me/${botUsername}?start=${userId}`
     });
 });
 
@@ -1723,3 +2180,4 @@ if (require.main === module) {
 }
 
 module.exports = { startServer, setBot };
+
