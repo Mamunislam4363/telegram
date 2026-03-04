@@ -490,7 +490,7 @@ app.post('/api/verify-membership', async (req, res) => {
     }
 
     try {
-        const member = await bot.telegram.getChatMember(channelUser, userId);
+        const member = await bot.getChatMember(channelUser, userId);
         const validStatuses = ['creator', 'administrator', 'member', 'restricted'];
         const isMember = validStatuses.includes(member.status);
 

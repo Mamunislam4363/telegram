@@ -6,6 +6,22 @@
 [build.environment]
   NODE_VERSION = "18"
 
+# VERY IMPORTANT: If your bot is running on a VPS or another server (like ngrok),
+# you must replace 'YOUR_BACKEND_URL' with your real backend link (e.g., http://123.45.67.89:3000)
+# Netlify will proxy all traffic to your backend API, saving you from needing an SSL certificate on the backend!
+
+[[redirects]]
+  from = "/api/*"
+  to = "YOUR_BACKEND_URL/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/uploads/*"
+  to = "YOUR_BACKEND_URL/uploads/:splat"
+  status = 200
+  force = true
+
 # Redirect rules for SPA (Single Page Application) behavior
 [[redirects]]
   from = "/*"
