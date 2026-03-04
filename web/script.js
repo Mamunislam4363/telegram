@@ -2149,13 +2149,17 @@ function updateMailBalance(type) {
     const activeState = document.getElementById(type + "MailActive");
 
     if (mailSessions[type]) {
+        // Session active - show email address
         if (noActive) noActive.style.display = "none";
         if (activeState) activeState.style.display = "block";
         const addrEl = document.getElementById(type + "MailAddr");
         if (addrEl) addrEl.textContent = mailSessions[type].email;
     } else {
-        if (noActive) noActive.style.display = "block";
-        if (activeState) activeState.style.display = "none";
+        // No session yet - still show the page with placeholder text
+        if (noActive) noActive.style.display = "none"; // hide noActive (we use inline placeholder instead)
+        if (activeState) activeState.style.display = "block"; // ALWAYS show the mail page
+        const addrEl = document.getElementById(type + "MailAddr");
+        if (addrEl) addrEl.textContent = "Tap 'NEW GMAIL' to generate";
     }
 }
 
