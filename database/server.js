@@ -306,7 +306,7 @@ app.post('/api/earn', async (req, res) => {
         if (bot) {
             try {
                 const channelUser = taskType === 'tg' ? '@AutosVerifych' : '@AutosVerify';
-                const member = await bot.telegram.getChatMember(channelUser, userId);
+                const member = await bot.getChatMember(channelUser, userId);
                 if (member.status === 'left' || member.status === 'kicked' || member.status === 'restricted') {
                     console.log(`User ${userId} not in ${channelUser}, but still allowing claim`);
                 }
@@ -567,8 +567,12 @@ app.post('/api/redeem', (req, res) => {
 // Redundant daily-claim endpoint removed (use /api/daily)
 
 // API: Complete Task / Earn
-app.post('/api/complete-task', (req, res) => {
-    const { userId, taskId, reward } = req.body;
+app.post(['/api/complete-task', '/api/earn'], (req, res) => {
+    const { userId, taskId, reward, taskType, amount } = req.body;
+
+    // Support both frontend variable names
+    const finalTaskId = taskId || taskType;
+    const finalReward = reward || amount;
 
     const users = getUsersObj();
     const user = users[userId];
@@ -580,17 +584,17 @@ app.post('/api/complete-task', (req, res) => {
     // Prevent duplicate task completion (simple implementation)
     if (!user.completedTasks) user.completedTasks = [];
 
-    const oneTimeTasks = ['join_channel', 'follow_twitter', 'subscribe_youtube'];
-    if (oneTimeTasks.includes(taskId) && user.completedTasks.includes(taskId)) {
+    const oneTimeTasks = ['join_channel', 'follow_twitter', 'subscribe_youtube', 'yt', 'tg', 'tg_ch'];
+    if (oneTimeTasks.includes(finalTaskId) && user.completedTasks.includes(finalTaskId)) {
         return res.json({ success: false, message: 'Task already completed' });
     }
 
     // Add reward
-    if (user.tokens !== undefined) user.tokens = (user.tokens || 0) + (parseInt(reward) || 0);
-    else user.balance_tokens = (user.balance_tokens || 0) + (parseInt(reward) || 0);
+    if (user.tokens !== undefined) user.tokens = (user.tokens || 0) + (parseInt(finalReward) || 0);
+    else user.balance_tokens = (user.balance_tokens || 0) + (parseInt(finalReward) || 0);
 
-    if (oneTimeTasks.includes(taskId)) {
-        user.completedTasks.push(taskId);
+    if (oneTimeTasks.includes(finalTaskId)) {
+        user.completedTasks.push(finalTaskId);
     }
 
     // History
@@ -598,8 +602,8 @@ app.post('/api/complete-task', (req, res) => {
     user.history.unshift({
         type: 'tasks',
         date: new Date().toISOString(),
-        reward: `+${reward} Tokens`,
-        detail: taskId
+        reward: `+${finalReward} Tokens`,
+        detail: finalTaskId
     });
 
     saveUsersObj(users);
@@ -607,7 +611,7 @@ app.post('/api/complete-task', (req, res) => {
     res.json({
         success: true,
         message: 'Task Completed!',
-        reward: reward,
+        reward: finalReward,
         newBalance: user.tokens !== undefined ? user.tokens : user.balance_tokens
     });
 });
@@ -1199,9 +1203,9 @@ app.get('/api/admin/db/export', async (req, res) => {
 
         fs.writeFileSync(backupFile, JSON.stringify(db.data, null, 2));
 
-        if (bot && bot.telegram) {
-            await bot.telegram.sendDocument(adminId, { source: backupFile }, {
-                caption: '📦 <b>Manual Database Backup</b>\n\nGenerated via Web Admin Panel.',
+        if (bot) {
+            await bot.sendDocument(adminId, backupFile, {
+                caption: '📥 Automated Database Backup\n\nGenerated from Web Admin panel.',
                 parse_mode: 'HTML'
             });
             res.json({ success: true, message: 'Backup sent to Telegram' });
@@ -1237,8 +1241,8 @@ app.post('/api/admin/db/import', async (req, res) => {
         db.save();
 
         const adminId = process.env.ADMIN_ID;
-        if (bot && bot.telegram && adminId) {
-            await bot.telegram.sendMessage(adminId, '✅ <b>Database Imported & Merged</b>\n\nA new JSON database file was uploaded via Web Admin.', { parse_mode: 'HTML' });
+        if (bot && adminId) {
+            await bot.sendMessage(adminId, '✅ <b>Database Imported & Merged</b>\n\nA new JSON database file was uploaded via Web Admin.', { parse_mode: 'HTML' });
         }
 
         res.json({ success: true, message: 'Database updated successfully' });
@@ -1263,8 +1267,8 @@ app.post('/api/admin/db/wipe', async (req, res) => {
         db.save();
 
         const adminId = process.env.ADMIN_ID;
-        if (bot && bot.telegram && adminId) {
-            await bot.telegram.sendMessage(adminId, '⚠️ <b>Database Wiped</b>\n\nAll users, test, and demo data were permanently deleted via Web Admin.', { parse_mode: 'HTML' });
+        if (bot && adminId) {
+            await bot.sendMessage(adminId, '⚠️ <b>Database Wiped</b>\n\nAll users, test, and demo data were permanently deleted via Web Admin.', { parse_mode: 'HTML' });
         }
 
         res.json({ success: true, message: 'Database wiped successfully' });
@@ -1929,7 +1933,7 @@ app.post('/api/check-required-joins', async (req, res) => {
 
         if (bot) {
             try {
-                const channelMember = await bot.telegram.getChatMember(requiredChannel, userId);
+                const channelMember = await bot.getChatMember(requiredChannel, userId);
                 const validStatuses = ['creator', 'administrator', 'member', 'restricted'];
                 channelJoined = validStatuses.includes(channelMember.status);
             } catch (e) {
@@ -1937,7 +1941,7 @@ app.post('/api/check-required-joins', async (req, res) => {
             }
 
             try {
-                const groupMember = await bot.telegram.getChatMember(requiredGroup, userId);
+                const groupMember = await bot.getChatMember(requiredGroup, userId);
                 const validStatuses = ['creator', 'administrator', 'member', 'restricted'];
                 groupJoined = validStatuses.includes(groupMember.status);
             } catch (e) {
