@@ -688,10 +688,6 @@ function submitPayment() {
     });
 }
 
-function payWithBalance() {
-    tg.showAlert('Balance payment coming soon!');
-}
-
 // TASK LOGIC
 const IN_PROGRESS_TASKS = {};
 
@@ -2764,17 +2760,6 @@ function fetchEmailServiceConfig() {
 }
 
 
-function toggleServicesView() {
-    const gv = document.getElementById('servicesGridView');
-    const lv = document.querySelector('.service-cards-container');
-    if (gv.style.display === 'none') {
-        gv.style.display = 'grid';
-        lv.style.display = 'none';
-    } else {
-        gv.style.display = 'none';
-        lv.style.display = 'flex';
-    }
-}
 
 function toggleAccountsView() {
     const gv = document.getElementById('accountsGridView');
