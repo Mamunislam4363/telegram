@@ -122,14 +122,59 @@ app.get('/api/user/:userId', (req, res) => {
         success: true,
         userId: userId,
         username: user.username || user.firstName || 'User',
-        firstName: user.firstName || 'User',
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        photo_url: user.photo_url || '',
         tokens: user.balance_tokens !== undefined ? user.balance_tokens : (user.tokens || 0),
         Gems: user.balance_Gems !== undefined ? user.balance_Gems : (user.Gems || 0),
         invites: user.referralCount || user.invites || 0,
         lastClaim: user.lastDaily || 0,
         dailyStreak: user.dailyStreak || 0,
         completedTasks: user.completedTasks || [],
-        verified: user.successfulVerifications > 0 || user.verified || false
+        verified: user.successfulVerifications > 0 || user.verified || false,
+        banned: user.banned || user.blocked || false
+    });
+});
+
+// API: Register / Sync user from Telegram WebApp
+app.post('/api/register', (req, res) => {
+    const { userId, firstName, lastName, username, photo_url, referrer } = req.body;
+    if (!userId) return res.json({ success: false, message: 'userId required' });
+
+    const user = db.getUser(userId); // creates if not exists
+    if (!user) return res.json({ success: false, message: 'Failed to create user' });
+
+    // Update Telegram profile data
+    if (firstName) user.firstName = firstName;
+    if (lastName !== undefined) user.lastName = lastName;
+    if (username) user.username = username;
+    if (photo_url) user.photo_url = photo_url;
+    user.lastActive = Date.now();
+
+    // Handle referral on first registration
+    if (referrer && !user.referredBy && String(referrer) !== String(userId)) {
+        db.handleReferral(userId, referrer);
+    }
+
+    db.updateUser(user);
+
+    const tokens = user.balance_tokens !== undefined ? user.balance_tokens : (user.tokens || 0);
+
+    res.json({
+        success: true,
+        userId,
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        username: user.username || '',
+        photo_url: user.photo_url || '',
+        tokens,
+        Gems: user.balance_Gems || user.Gems || 0,
+        invites: user.referralCount || 0,
+        lastClaim: user.lastDaily || 0,
+        dailyStreak: user.dailyStreak || 0,
+        completedTasks: user.completedTasks || [],
+        verified: user.successfulVerifications > 0 || user.verified || false,
+        banned: user.banned || user.blocked || false
     });
 });
 
@@ -147,10 +192,13 @@ app.get('/api/history/:userId', (req, res) => {
 });
 
 // API: Earn Task Completion
-app.post('/api/earn', (req, res) => {
-    const { userId, taskType, amount } = req.body;
+app.post('/api/earn', async (req, res) => {
+    // Support both 'taskType' and 'type' field names
+    const { userId } = req.body;
+    const taskType = req.body.taskType || req.body.type;
+    const amount = req.body.amount;
 
-    if (!userId || !taskType || !amount) {
+    if (!userId || !taskType) {
         return res.json({ success: false, message: 'Missing parameters' });
     }
 
@@ -159,22 +207,61 @@ app.post('/api/earn', (req, res) => {
         return res.json({ success: false, message: 'User not found' });
     }
 
+    // --- Special: watch_ad (repeatable daily) ---
+    if (taskType === 'watch_ad') {
+        const costs = db.data.costs || {};
+        const adReward = parseInt(costs.adReward) || 5;
+        const now = Date.now();
+        const lastWatched = user.lastAdWatch || 0;
+        const cooldownMs = 5 * 60 * 1000; // 5 minutes cooldown per ad
+
+        if (now - lastWatched < cooldownMs) {
+            const waitMin = Math.ceil((cooldownMs - (now - lastWatched)) / 60000);
+            return res.json({ success: false, message: `Please wait ${waitMin} more minute(s) before watching another ad.` });
+        }
+
+        user.lastAdWatch = now;
+        user.tokens = (user.tokens || user.balance_tokens || 0) + adReward;
+        if (user.balance_tokens !== undefined) user.balance_tokens = user.tokens;
+        if (!user.history) user.history = [];
+        user.history.unshift({ type: 'ad_reward', amount: adReward, currency: 'tokens', date: now });
+        db.updateUser(user);
+        return res.json({ success: true, reward: adReward, newBalance: user.tokens });
+    }
+
+    // Verify Telegram Tasks
+    if (taskType === 'tg' || taskType === 'tg_ch') {
+        if (!bot) return res.json({ success: false, message: 'Verification system unavailable locally.' });
+        try {
+            const channelUser = taskType === 'tg' ? '@AutosVerifych' : '@AutosVerify';
+            const member = await bot.telegram.getChatMember(channelUser, userId);
+            if (member.status === 'left' || member.status === 'kicked' || member.status === 'restricted') {
+                return res.json({ success: false, message: 'Verification failed: You must join the channel/group first!' });
+            }
+        } catch (e) {
+            console.error('Earn verification error:', e.message);
+            return res.json({ success: false, message: 'Error verifying. Make sure the bot is an admin in the group/channel!' });
+        }
+    }
+
     // Check if task is already completed
     if (!user.completedTasks) user.completedTasks = [];
     if (user.completedTasks.includes(taskType)) {
         return res.json({ success: false, message: 'Task already completed' });
     }
 
+    const rewardAmount = parseInt(amount) || 10;
+
     // Mark task complete and give tokens
     user.completedTasks.push(taskType);
-    user.tokens = (user.tokens || user.balance_tokens || 0) + parseInt(amount);
+    user.tokens = (user.tokens || user.balance_tokens || 0) + rewardAmount;
     if (user.balance_tokens !== undefined) user.balance_tokens = user.tokens;
 
     // Add to history
     if (!user.history) user.history = [];
     user.history.unshift({
         type: 'mission_reward',
-        amount: parseInt(amount),
+        amount: rewardAmount,
         currency: 'tokens',
         taskId: taskType,
         date: Date.now()
@@ -182,7 +269,8 @@ app.post('/api/earn', (req, res) => {
 
     db.updateUser(user);
 
-    return res.json({ success: true, newBalance: user.tokens });
+    return res.json({ success: true, reward: rewardAmount, newBalance: user.tokens });
+
 });
 
 // API: Buy Account by Category
@@ -1402,6 +1490,36 @@ app.post('/api/admin/email-services', (req, res) => {
 
     db.save();
     res.json({ success: true, emailServices: db.data.emailServices });
+});
+
+// API: Ad Network Settings (GET & POST)
+app.get('/api/admin/ads', (req, res) => {
+    const ads = db.data.adSettings || {};
+    res.json({ success: true, ads });
+});
+
+app.post('/api/admin/ads', (req, res) => {
+    const { network, publisherId, adUnitId, enabled } = req.body;
+    if (!network) return res.json({ success: false, message: 'Network required' });
+    if (!db.data.adSettings) db.data.adSettings = {};
+    db.data.adSettings[network] = {
+        publisherId: publisherId || '',
+        adUnitId: adUnitId || '',
+        enabled: enabled !== false
+    };
+    db.save();
+    res.json({ success: true, adSettings: db.data.adSettings });
+});
+
+// Public endpoint - mini app fetches active ad config
+app.get('/api/ads/config', (req, res) => {
+    const ads = db.data.adSettings || {};
+    // Return only enabled networks
+    const active = {};
+    Object.entries(ads).forEach(([network, cfg]) => {
+        if (cfg.enabled) active[network] = cfg;
+    });
+    res.json({ success: true, ads: active });
 });
 
 // API: Admin - Services

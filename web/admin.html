@@ -188,6 +188,7 @@
                 <div class="nav-item" onclick="nav('shopmanage')"><i class="fas fa-store w-5"></i> Shop Items</div>
                 <div class="nav-item" onclick="nav('broadcast')"><i class="fas fa-bullhorn w-5"></i> Broadcast</div>
                 <div class="nav-item" onclick="nav('storage')"><i class="fas fa-hdd w-5"></i> Storage (Drive)</div>
+                <div class="nav-item" onclick="nav('adnetworks')"><i class="fas fa-ad w-5"></i> Ad Networks</div>
                 <div class="nav-item" onclick="nav('settings')"><i class="fas fa-cog w-5"></i> Settings</div>
             </nav>
 
@@ -1186,6 +1187,162 @@
                     </div>
                 </div>
             </div>
+
+            <!-- AD NETWORKS PAGE -->
+            <div id="page-adnetworks" class="page">
+                <div class="glass-card p-6 rounded-2xl mb-6">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div
+                            class="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center text-yellow-400">
+                            <i class="fas fa-ad text-xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold">Ad Network Integration</h2>
+                            <p class="text-gray-400 text-sm">Add your Publisher ID / Ad Unit ID to enable ads in the
+                                mini app. Users will see ads when clicking WATCH in the Earn section.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                    <!-- MoneyTag -->
+                    <div class="glass-card p-6 rounded-2xl border border-white/10">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center">
+                                <i class="fas fa-tag text-green-400 text-lg"></i>
+                            </div>
+                            <div>
+                                <div class="font-bold">MoneyTag</div>
+                                <div class="text-xs text-gray-400">monetag.com</div>
+                            </div>
+                            <div class="ml-auto">
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="ad-moneytag-enabled" class="sr-only peer" checked>
+                                    <div
+                                        class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500">
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Publisher ID</label>
+                                <input id="ad-moneytag-publisher" type="text" placeholder="e.g. 9429271"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white focus:border-green-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Ad Zone ID / Unit
+                                    ID</label>
+                                <input id="ad-moneytag-unit" type="text" placeholder="e.g. 123456"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white focus:border-green-500 outline-none">
+                            </div>
+                            <p class="text-xs text-gray-500">Interstitial / OnClick ad will show when user taps WATCH.
+                            </p>
+                            <button onclick="saveAdNetwork('moneytag')"
+                                class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2.5 rounded-xl transition-all">
+                                <i class="fas fa-save mr-2"></i> Save MoneyTag
+                            </button>
+                        </div>
+                        <div id="ad-moneytag-status" class="mt-3 text-xs text-center text-gray-500"></div>
+                    </div>
+
+                    <!-- Google AdSense -->
+                    <div class="glass-card p-6 rounded-2xl border border-white/10">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                                <i class="fab fa-google text-blue-400 text-lg"></i>
+                            </div>
+                            <div>
+                                <div class="font-bold">Google AdSense</div>
+                                <div class="text-xs text-gray-400">adsense.google.com</div>
+                            </div>
+                            <div class="ml-auto">
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="ad-adsense-enabled" class="sr-only peer" checked>
+                                    <div
+                                        class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500">
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Publisher ID
+                                    (ca-pub-...)</label>
+                                <input id="ad-adsense-publisher" type="text" placeholder="ca-pub-XXXXXXXXXXXXXXXXX"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white focus:border-blue-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Ad Slot / Unit
+                                    ID</label>
+                                <input id="ad-adsense-unit" type="text" placeholder="e.g. 1234567890"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white focus:border-blue-500 outline-none">
+                            </div>
+                            <p class="text-xs text-gray-500">Display ad will render inside the WATCH section.</p>
+                            <button onclick="saveAdNetwork('adsense')"
+                                class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2.5 rounded-xl transition-all">
+                                <i class="fas fa-save mr-2"></i> Save AdSense
+                            </button>
+                        </div>
+                        <div id="ad-adsense-status" class="mt-3 text-xs text-center text-gray-500"></div>
+                    </div>
+
+                    <!-- Adsterra -->
+                    <div class="glass-card p-6 rounded-2xl border border-white/10">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                                <i class="fas fa-chart-bar text-purple-400 text-lg"></i>
+                            </div>
+                            <div>
+                                <div class="font-bold">Adsterra</div>
+                                <div class="text-xs text-gray-400">adsterra.com</div>
+                            </div>
+                            <div class="ml-auto">
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="ad-adsterra-enabled" class="sr-only peer" checked>
+                                    <div
+                                        class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500">
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Publisher ID</label>
+                                <input id="ad-adsterra-publisher" type="text" placeholder="e.g. 12345678"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white focus:border-purple-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Banner / Zone
+                                    ID</label>
+                                <input id="ad-adsterra-unit" type="text" placeholder="e.g. abcdef1234567890"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white focus:border-purple-500 outline-none">
+                            </div>
+                            <p class="text-xs text-gray-500">Social Bar / Banner will display in the WATCH section.</p>
+                            <button onclick="saveAdNetwork('adsterra')"
+                                class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-2.5 rounded-xl transition-all">
+                                <i class="fas fa-save mr-2"></i> Save Adsterra
+                            </button>
+                        </div>
+                        <div id="ad-adsterra-status" class="mt-3 text-xs text-center text-gray-500"></div>
+                    </div>
+
+                </div>
+
+                <!-- Active Ad Preview -->
+                <div class="glass-card p-6 rounded-2xl mt-6">
+                    <h3 class="font-bold mb-4 flex items-center gap-2">
+                        <i class="fas fa-eye text-yellow-400"></i> Current Active Ad Config
+                    </h3>
+                    <div id="ad-config-preview" class="text-gray-400 text-sm">Loading...</div>
+                    <button onclick="loadAdNetworks()"
+                        class="mt-4 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-sm font-bold transition-all">
+                        <i class="fas fa-sync-alt mr-2"></i> Refresh
+                    </button>
+                </div>
+            </div>
+
             </main>
         </div>
 
@@ -1228,7 +1385,8 @@
                     'apps': 'App Store', 'trading': 'Trading Control',
                     'services': 'Services Management', 'shopmanage': 'Shop Management',
                     'accounts': 'Premium Accounts', 'storage': 'Storage (Drive)',
-                    'groups': 'Groups', 'premiumemail': 'Premium Email'
+                    'groups': 'Groups', 'premiumemail': 'Premium Email',
+                    'adnetworks': 'Ad Network Integration'
                 };
                 if (titles[p]) document.getElementById('page-title').innerText = titles[p];
                 if (p === 'trading') initTradingAdmin();
@@ -1238,6 +1396,71 @@
                 if (p === 'accounts') loadAccounts();
                 if (p === 'storage') loadStorageStatus();
                 if (p === 'premiumemail') loadPremiumEmails();
+                if (p === 'adnetworks') loadAdNetworks();
+            }
+
+            // AD NETWORKS
+            function loadAdNetworks() {
+                fetch('/api/admin/ads')
+                    .then(r => r.json())
+                    .then(data => {
+                        if (!data.success) return;
+                        const ads = data.ads || {};
+                        const networks = ['moneytag', 'adsense', 'adsterra'];
+                        networks.forEach(net => {
+                            const cfg = ads[net] || {};
+                            const pubEl = document.getElementById('ad-' + net + '-publisher');
+                            const unitEl = document.getElementById('ad-' + net + '-unit');
+                            const enEl = document.getElementById('ad-' + net + '-enabled');
+                            if (pubEl) pubEl.value = cfg.publisherId || '';
+                            if (unitEl) unitEl.value = cfg.adUnitId || '';
+                            if (enEl) enEl.checked = cfg.enabled !== false;
+                        });
+                        // Preview
+                        const preview = document.getElementById('ad-config-preview');
+                        if (preview) {
+                            const entries = Object.entries(ads);
+                            if (!entries.length) {
+                                preview.innerHTML = '<span class="text-gray-500">No ad networks configured yet.</span>';
+                            } else {
+                                preview.innerHTML = entries.map(([net, cfg]) =>
+                                    `<div class="flex items-center gap-3 py-2 border-b border-white/5">
+                                        <span class="font-bold text-white capitalize">${net}</span>
+                                        <span class="text-gray-400">Publisher: <code class="text-yellow-400">${cfg.publisherId || '-'}</code></span>
+                                        <span class="text-gray-400">Unit: <code class="text-blue-400">${cfg.adUnitId || '-'}</code></span>
+                                        <span class="ml-auto px-2 py-0.5 rounded text-xs font-bold ${cfg.enabled ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">${cfg.enabled ? 'ENABLED' : 'DISABLED'}</span>
+                                    </div>`
+                                ).join('');
+                            }
+                        }
+                    }).catch(() => { });
+            }
+
+            function saveAdNetwork(network) {
+                const publisherId = document.getElementById('ad-' + network + '-publisher').value.trim();
+                const adUnitId = document.getElementById('ad-' + network + '-unit').value.trim();
+                const enabled = document.getElementById('ad-' + network + '-enabled').checked;
+                const statusEl = document.getElementById('ad-' + network + '-status');
+                statusEl.textContent = 'Saving...';
+                statusEl.style.color = '#888';
+                fetch('/api/admin/ads', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ network, publisherId, adUnitId, enabled })
+                }).then(r => r.json()).then(data => {
+                    if (data.success) {
+                        statusEl.textContent = '✅ Saved successfully!';
+                        statusEl.style.color = '#4ade80';
+                        loadAdNetworks();
+                    } else {
+                        statusEl.textContent = '❌ Error saving';
+                        statusEl.style.color = '#f87171';
+                    }
+                    setTimeout(() => { statusEl.textContent = ''; }, 3000);
+                }).catch(() => {
+                    statusEl.textContent = '❌ Network error';
+                    statusEl.style.color = '#f87171';
+                });
             }
 
             // INIT

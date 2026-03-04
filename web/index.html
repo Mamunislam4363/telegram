@@ -21,8 +21,8 @@
     <link rel="dns-prefetch" href="https://ui-avatars.com">
 
     <!-- Preload critical resources -->
-    <link rel="preload" href="style.css" as="style">
-    <link rel="preload" href="script.js?v=3.5" as="script">
+    <link rel="preload" href="style.css?v=2.1" as="style">
+    <link rel="preload" href="script.js?v=4.1" as="script">
     <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style">
 
     <title>Gemini Verified Bot</title>
@@ -34,7 +34,7 @@
 
     <!-- Stylesheets -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="all">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=2.1">
     <style>
         /* CSS PATCH FOR NEW FEATURES */
 
@@ -1298,7 +1298,9 @@
                 <div class="cb-left" id="headerLeft" onclick="handleHeaderClick()">
                     <!-- Avatar Logic (Home Only) -->
                     <div class="cb-avatar" id="headerAvatar">
-                        <i class="fas fa-user" style="font-size: 20px;"></i>
+                        <img id="home-avatar" class="wc-avatar"
+                            src="https://ui-avatars.com/api/?name=U&background=fbbf24&color=000&size=80&bold=true&rounded=true"
+                            alt="Avatar" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">
                     </div>
                     <!-- Back Button Logic (Other Pages) -->
                     <div class="cb-back" id="headerBack"
@@ -1403,7 +1405,7 @@
                         <div class="grid-btn-text" data-i18n="deposit">Deposit</div>
                     </div>
 
-                    <div class="grid-btn" onclick="nav('tasks')">
+                    <div class="grid-btn" onclick="nav('earnMenuPage')">
                         <div class="grid-btn-icon"><i class="fas fa-sack-dollar"></i></div>
                         <div class="grid-btn-text" data-i18n="earn">Earn</div>
                     </div>
@@ -1928,8 +1930,9 @@
                         style="margin-bottom: 6px; position: relative; z-index: 2; text-align: center;">
                         <!-- Avatar Added Here -->
                         <div style="width: 65px; height: 65px; margin: 0 auto 8px; position: relative;">
-                            <img src="https://ui-avatars.com/api/?name=User&background=random" class="pui-avatar"
-                                style="width:100%; height:100%; border-radius:50%; border: 2.5px solid var(--wc-border); padding:2px;">
+                            <img id="profile-avatar-img" class="pui-avatar prof-avatar"
+                                src="https://ui-avatars.com/api/?name=U&background=fbbf24&color=000&size=80&bold=true&rounded=true"
+                                style="width:100%; height:100%; border-radius:50%; border: 2.5px solid var(--wc-border,#fbbf24); padding:2px; object-fit:cover;">
                         </div>
 
                         <!-- Name (Increased Size) -->
@@ -2189,7 +2192,7 @@
                                 onerror="this.parentElement.innerHTML='<i class=\'fab fa-telegram\' style=\'color:#229ed9; font-size:22px\'></i>'">
                         </div>
                         <div class="tcn-info">
-                            <h4>SparklyDeep Group</h4>
+                            <h4>Telegram Group</h4>
                             <div class="tcn-rewards">
                                 <div class="tcn-badge" style="color:#fbbf24"><i class="fas fa-coins"></i> +10</div>
                                 <div class="tcn-badge" style="color:#38bdf8"><i class="fas fa-gem"></i> +1</div>
@@ -2899,16 +2902,48 @@
                         <div class="em-badge">NEW</div>
                         <div class="em-icon" style="color:#f59e0b"><i class="fas fa-dice"></i></div>
                         <div class="em-title">SCRATCH</div>
-                        <div class="em-desc">Scratch virtual cards & win rewards</div>
+                        <div class="em-desc">Scratch virtual cards &amp; win rewards</div>
                     </div>
-                    <div class="em-card" onclick="nav('tasks')">
+                    <div class="em-card" onclick="showAdAndEarn()">
                         <div class="em-icon" style="color:#38bdf8"><i class="fas fa-play-circle"></i></div>
                         <div class="em-title">WATCH</div>
-                        <div class="em-desc">Watch short videos and earn tokens</div>
+                        <div class="em-desc">Watch a short ad and earn tokens</div>
                     </div>
                 </div>
 
                 <div class="em-btn-coming">MORE EARNING WAYS COMING SOON!</div>
+
+                <!-- Ad Viewer Modal -->
+                <div id="adViewerModal"
+                    style="display:none; position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); align-items:center; justify-content:center;">
+                    <div
+                        style="background:var(--bg-card,#1a1a1a); border-radius:20px; padding:24px; max-width:360px; width:92%; margin:auto; position:relative; border:1px solid rgba(255,255,255,0.1);">
+                        <div
+                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                            <div style="font-size:15px; font-weight:800; color:var(--text-main,#fff);">📺 Watch Ad &amp;
+                                Earn</div>
+                            <button id="adCloseBtn" onclick="closeAdModal()"
+                                style="display:none; background:rgba(255,255,255,0.1); border:none; color:#fff; border-radius:8px; padding:4px 10px; cursor:pointer; font-size:12px;">✕
+                                Close</button>
+                        </div>
+                        <div id="adContainer"
+                            style="min-height:120px; background:#000; border-radius:12px; display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:16px;">
+                            <div id="adLoadingMsg" style="color:#888; font-size:13px; text-align:center; padding:20px;">
+                                <i class="fas fa-spinner fa-spin"
+                                    style="font-size:24px; color:#f59e0b; display:block; margin-bottom:8px;"></i>
+                                Loading Ad...
+                            </div>
+                        </div>
+                        <div style="text-align:center;">
+                            <div id="adTimerText"
+                                style="font-size:13px; color:#f59e0b; font-weight:700; margin-bottom:10px;"></div>
+                            <button id="adClaimBtn" onclick="claimAdReward()"
+                                style="display:none; width:100%; background:linear-gradient(135deg,#f59e0b,#d97706); color:#000; font-weight:800; border:none; border-radius:12px; padding:14px; font-size:15px; cursor:pointer;">
+                                🎁 Claim Reward
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- OTHER PAGES -->
@@ -2952,12 +2987,6 @@
                             <i class="fas fa-shield-alt"></i>
                         </div>
                         <span>VPN</span>
-                    </div>
-                    <div class="sg-card" onclick="nav('accountsStore')">
-                        <div class="sg-card-icon" style="background:linear-gradient(135deg,#ef4444,#dc2626)">
-                            <i class="fas fa-user-circle"></i>
-                        </div>
-                        <span>Accounts</span>
                     </div>
                 </div>
 
@@ -3010,18 +3039,6 @@
                         </div>
                         <div class="sc-arrow"><i class="fas fa-chevron-right"></i></div>
                     </div>
-
-                    <!-- Accounts Card -->
-                    <div class="service-card" onclick="nav('accountsStore')">
-                        <div class="sc-icon" style="background:linear-gradient(135deg,#ef4444,#dc2626)">
-                            <i class="fas fa-user-circle"></i>
-                        </div>
-                        <div class="sc-info">
-                            <h3>Premium Accounts</h3>
-                            <p>NETFLIX, SPOTIFY, CHATGPT & MORE</p>
-                        </div>
-                        <div class="sc-arrow"><i class="fas fa-chevron-right"></i></div>
-                    </div>
                 </div>
 
                 <!-- Info Banner -->
@@ -3058,7 +3075,7 @@
         </div>
 
         <div id="redeemPage" class="page"
-            style="display:none; flex-direction:column; justify-content:flex-start; padding-top:20px; padding-bottom:100px">
+            style="display:none; flex-direction:column; justify-content:flex-start; padding-top:20px; padding-bottom:20px">
             <div class="section-title" style="margin-bottom:24px">REDEEM COUPON</div>
             <div class="gv-input-box"
                 style="margin-bottom:24px; background:var(--bg-card); padding:10px; border-radius:16px; border:1px solid var(--border-color)">
@@ -3072,17 +3089,64 @@
         </div>
 
         <!-- ACCOUNTS STORE PAGE -->
-        <div id="accountsStorePage" class="page" style="padding-bottom: 180px; padding-top: 0; margin-top: -110px;">
+        <div id="accountsStorePage" class="page" style="padding-bottom: 115px; padding-top: 0; margin-top: -110px;">
             <div style="text-align:center; margin-bottom: 25px;">
-                <div style="font-size:22px; font-weight:800; color:var(--text-main); margin-bottom:8px">Premium Accounts
+                <div style="font-size:22px; font-weight:800; color:var(--text-main); margin-bottom:8px">Premium
+                    Accounts
                 </div>
                 <div style="color:#888; font-size:12px; max-width:280px; margin:0 auto; line-height:1.5">
                     Purchase verified premium accounts instantly. Email &amp; password delivered on purchase.
                 </div>
             </div>
 
-            <!-- Account Categories List -->
-            <div style="display:flex; flex-direction:column; gap:12px;">
+            <!-- Explore Categories Toggle -->
+            <div class="explore-categories">
+                <div class="ec-title">PREMIUM CATEGORIES</div>
+                <div class="ec-grid-icon" onclick="toggleAccountsView()"><i class="fas fa-th"></i></div>
+            </div>
+
+            <!-- Grid View (Hidden by default) -->
+            <div id="accountsGridView" class="services-grid" style="display:none;">
+                <div class="sg-card" onclick="nav('accountDetail'); showAccountCategory('gmail')">
+                    <div class="sg-card-icon" style="background:linear-gradient(135deg,#ea4335,#c5221f)">
+                        <i class="fas fa-envelope"></i>
+                    </div>
+                    <span>Gmail</span>
+                </div>
+                <div class="sg-card" onclick="nav('accountDetail'); showAccountCategory('netflix')">
+                    <div class="sg-card-icon" style="background:linear-gradient(135deg,#e50914,#b81d24)">
+                        <i class="fas fa-film"></i>
+                    </div>
+                    <span>Netflix</span>
+                </div>
+                <div class="sg-card" onclick="nav('accountDetail'); showAccountCategory('spotify')">
+                    <div class="sg-card-icon" style="background:linear-gradient(135deg,#1db954,#15873d)">
+                        <i class="fab fa-spotify"></i>
+                    </div>
+                    <span>Spotify</span>
+                </div>
+                <div class="sg-card" onclick="nav('accountDetail'); showAccountCategory('disney')">
+                    <div class="sg-card-icon" style="background:linear-gradient(135deg,#113ccf,#0b25a0)">
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <span>Disney+</span>
+                </div>
+                <div class="sg-card" onclick="nav('accountDetail'); showAccountCategory('youtube')">
+                    <div class="sg-card-icon" style="background:linear-gradient(135deg,#ff0000,#cc0000)">
+                        <i class="fab fa-youtube"></i>
+                    </div>
+                    <span>YouTube</span>
+                </div>
+                <div class="sg-card" onclick="nav('accountDetail'); showAccountCategory('amazon')">
+                    <div class="sg-card-icon" style="background:linear-gradient(135deg,#ff9900,#cc7a00)">
+                        <i class="fab fa-amazon"></i>
+                    </div>
+                    <span>Amazon</span>
+                </div>
+            </div>
+
+            <!-- List View (Default) -->
+            <div id="accountsListView" style="display:flex; flex-direction:column; gap:12px;">
                 <!-- Gmail Accounts -->
                 <div class="service-card" onclick="nav('accountDetail'); showAccountCategory('gmail')">
                     <div class="sc-icon" style="background:linear-gradient(135deg,#ea4335,#c5221f)">
@@ -3367,7 +3431,8 @@
                         onerror="this.parentElement.innerHTML='<i class=\'fas fa-gem\' style=\'font-size:28px; color:#4285f4\'></i>'">
                 </div>
                 <div style="flex:1;">
-                    <div style="font-size:18px; font-weight:800; color:var(--text-main); margin-bottom:4px;">GEMINI
+                    <div style="font-size:18px; font-weight:800; color:var(--text-main); margin-bottom:4px;">
+                        GEMINI
                         1
                         YEAR</div>
                     <div style="font-size:20px; font-weight:800; color:#22c55e;">$3.00</div>
@@ -3695,14 +3760,17 @@
         </style>
         <!-- Navigation Restored -->
         <div class="bottom-nav">
-            <div class="nav-item active" data-page="home" onclick="nav('home')"><i class="fas fa-home"></i></div>
+            <div class="nav-item active" data-page="home" onclick="nav('home')"><i class="fas fa-home"></i>
+            </div>
             <div class="nav-item" data-page="tasks" onclick="nav('tasks')"><i class="fas fa-tasks"></i></div>
-            <div class="nav-center" data-page="shop" onclick="nav('shop')"><i class="fas fa-shopping-bag"></i></div>
-            <div class="nav-item" data-page="invite" onclick="nav('invite')"><i class="fas fa-user-plus"></i></div>
+            <div class="nav-center" data-page="shop" onclick="nav('shop')"><i class="fas fa-shopping-bag"></i>
+            </div>
+            <div class="nav-item" data-page="invite" onclick="nav('invite')"><i class="fas fa-user-plus"></i>
+            </div>
             <div class="nav-item" data-page="profile" onclick="nav('profile')"><i class="fas fa-user"></i></div>
         </div>
 
-        <script src="script.js?v=3.5"></script>
+        <script src="script.js?v=4.1"></script>
 
         <!-- ====== LANGUAGE MODAL ====== -->
         <div id="languageModal" style="
@@ -3710,7 +3778,8 @@
             z-index:99999; align-items:flex-end; justify-content:center;
         " onclick="if(event.target===this) closeLanguageModal()">
             <!-- Backdrop -->
-            <div style="position:absolute; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(6px);"></div>
+            <div style="position:absolute; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(6px);">
+            </div>
             <!-- Sheet -->
             <div id="langSheet" style="
                 position:relative; z-index:1;
@@ -3738,7 +3807,8 @@
                         </div>
                         <div>
                             <div id="langModalTitle"
-                                style="font-size:18px; font-weight:800; color:var(--text-main,#fff);">Select Language
+                                style="font-size:18px; font-weight:800; color:var(--text-main,#fff);">Select
+                                Language
                             </div>
                             <div id="langModalSub"
                                 style="font-size:10px; color:var(--text-sub,#888); font-weight:600; text-transform:uppercase; margin-top:2px;">

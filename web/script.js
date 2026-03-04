@@ -1,30 +1,28 @@
-// Telegram WebApp Safe Init
+// ============================================
+// TELEGRAM WEBAPP AUTO-LOGIN
+// ============================================
 var tg = window.Telegram?.WebApp || {
-    initDataUnsafe: {
-        user: {
-            first_name: 'Test',
-            last_name: 'User',
-            id: 999999999,
-            username: 'test_user',
-            photo_url: ''
-        }
-    },
-    ready: () => console.log('TG Ready'),
-    expand: () => console.log('TG Expand'),
+    initDataUnsafe: { user: null, start_param: '' },
+    ready: () => { },
+    expand: () => { },
     HapticFeedback: {
-        impactOccurred: (s) => console.log('Haptic:', s),
-        notificationOccurred: (s) => console.log('Haptic Notif:', s)
+        impactOccurred: (s) => { },
+        notificationOccurred: (s) => { }
     },
     showAlert: (msg) => alert(msg),
     showConfirm: (msg, cb) => cb(confirm(msg)),
     showPopup: (params, cb) => { const r = confirm(params.title + '\n' + params.message); if (cb && r) cb(params.buttons[0].id); },
     BackButton: { show: () => { }, hide: () => { }, onClick: () => { } },
-    close: () => console.log('TG Close')
+    close: () => { }
 };
 tg.ready();
 tg.expand();
 
-// APP CONFIG (Admin Control Simulation)
+// Extract Telegram user from WebApp
+const _tgUser = tg.initDataUnsafe?.user || {};
+const _startParam = tg.initDataUnsafe?.start_param || '';
+
+// APP CONFIG
 var appConfig = {
     dailyReward: 10,
     dailyGems: 0,
@@ -39,43 +37,50 @@ var emailServiceConfig = {
     tempMailEnabled: true
 };
 
-// LIVE MODE - Set to false for production
 const DEMO_MODE = false;
 const DEMO_BALANCE = 0;
 
-// Fetch email service config from server
-function fetchEmailServiceConfig() {
-    fetch('/api/admin/email-services')
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
-                emailServiceConfig.emailServiceEnabled = data.emailServiceEnabled !== false;
-                emailServiceConfig.tempMailEnabled = data.tempMailEnabled !== false;
-            }
-        })
-        .catch(() => {
-            // Use defaults if server error
-            console.log('Using default email service config');
-        });
-}
-
 var currentPage = 'home';
-
 var historyStack = ['home'];
 var pageScrollPositions = {};
-var userStatus = 'verified'; // 'banned' to test
+var userStatus = 'active';
 
-// GLOBAL USER STATE
+// GLOBAL USER STATE - populated from Telegram + Server
 var userData = {
-    id: tg.initDataUnsafe?.user?.id || 0,
-    username: tg.initDataUnsafe?.user?.first_name || tg.initDataUnsafe?.user?.username || 'User',
+    id: _tgUser.id || 0,
+    username: _tgUser.first_name || _tgUser.username || 'User',
+    firstName: _tgUser.first_name || '',
+    lastName: _tgUser.last_name || '',
+    photo_url: _tgUser.photo_url || '',
     tokens: 0,
     Gems: 0,
     usd: 0.00,
     verified: false,
     dailyStreak: 0,
-    lastDailyClaim: 0
+    lastDailyClaim: 0,
+    completedTasks: []
 };
+
+// Show profile photo immediately from Telegram data
+function applyProfilePhoto(photoUrl) {
+    const name = encodeURIComponent(userData.firstName || userData.username || 'U');
+    const fallback = `https://ui-avatars.com/api/?name=${name}&background=fbbf24&color=000&size=80&bold=true&rounded=true`;
+    const src = (photoUrl && photoUrl.trim()) ? photoUrl : fallback;
+
+    // Target all possible avatar img elements
+    const selectors = ['#home-avatar', '#profile-avatar-img', '.wc-avatar', '.prof-avatar', '.pui-avatar'];
+    selectors.forEach(sel => {
+        document.querySelectorAll(sel).forEach(el => {
+            if (el.tagName === 'IMG') {
+                el.src = src;
+                el.onerror = function () { this.src = fallback; };
+            } else if (el.style !== undefined) {
+                el.style.backgroundImage = `url('${src}')`;
+            }
+        });
+    });
+}
+
 
 // THEME MANAGEMENT
 function toggleTheme() {
@@ -165,6 +170,7 @@ const PAGE_TITLES = {
     'home': 'AUTOVERIFY',
     'tasks': 'TASKS',
     'earn': 'EARN',
+    'earnMenu': 'EARN REWARDS',
     'invite': 'INVITE',
     'profile': 'PROFILE',
     'shop': 'SHOP',
@@ -764,9 +770,9 @@ function earn(buttonElement, type, amount) {
     tg.showConfirm('Start this mission?', (ok) => {
         if (ok) {
             // Open Link
-            if (type === 'yt') window.open('https://youtube.com');
-            else if (type === 'tg') window.open('https://t.me/SparklyDeep');
-            else if (type === 'tg_ch') window.open('https://t.me/SparklyDeep');
+            if (type === 'yt') window.open('https://youtube.com/@MamunIslamyts');
+            else if (type === 'tg') window.open('https://t.me/AutosVerifych');
+            else if (type === 'tg_ch') window.open('https://t.me/AutosVerify');
 
             // Start 30s Countdown
             IN_PROGRESS_TASKS[type] = 'waiting';
@@ -794,6 +800,149 @@ function earn(buttonElement, type, amount) {
         }
     });
 }
+
+// ==========================================
+// ==========================================
+// AD VIEWER (Watch & Earn)
+// ==========================================
+
+let adWatchTimer = null;
+let adRewardClaimed = false;
+
+function showAdAndEarn() {
+    const modal = document.getElementById('adViewerModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    adRewardClaimed = false;
+
+    const container = document.getElementById('adContainer');
+    const loadingMsg = document.getElementById('adLoadingMsg');
+    const timerText = document.getElementById('adTimerText');
+    const claimBtn = document.getElementById('adClaimBtn');
+    const closeBtn = document.getElementById('adCloseBtn');
+
+    claimBtn.style.display = 'none';
+    closeBtn.style.display = 'none';
+    timerText.textContent = '';
+    container.innerHTML = '<div id="adLoadingMsg" style="color:#888; font-size:13px; text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin" style="font-size:24px; color:#f59e0b; display:block; margin-bottom:8px;"></i>Loading Ad...</div>';
+
+    // Fetch ad config from server
+    fetch('/api/ads/config')
+        .then(r => r.json())
+        .then(data => {
+            const ads = data.ads || {};
+            let adInjected = false;
+
+            // Priority: moneytag > adsense > adsterra
+            if (!adInjected && ads.moneytag && ads.moneytag.publisherId) {
+                adInjected = true;
+                const cfg = ads.moneytag;
+                container.innerHTML = '';
+                // MoneyTag interstitial via invoke endpoint
+                const script = document.createElement('script');
+                script.innerHTML = `(function(d,z,s){s.src='https://'+d+'/401/'+z;try{(document.body||document.documentElement).appendChild(s)}catch(e){}})('glizauvo.net', '${cfg.adUnitId || cfg.publisherId}', document.createElement('script'))`;
+                container.innerHTML = '<div style="padding:16px; color:#888; font-size:12px; text-align:center;">Ad loading... Please wait.</div>';
+                document.body.appendChild(script);
+            }
+
+            if (!adInjected && ads.adsense && ads.adsense.publisherId) {
+                adInjected = true;
+                const cfg = ads.adsense;
+                container.innerHTML = `
+                    <ins class="adsbygoogle"
+                        style="display:block; width:100%; min-height:90px;"
+                        data-ad-client="${cfg.publisherId}"
+                        data-ad-slot="${cfg.adUnitId}"></ins>`;
+                const adScript = document.createElement('script');
+                adScript.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${cfg.publisherId}`;
+                adScript.crossOrigin = 'anonymous';
+                adScript.async = true;
+                document.head.appendChild(adScript);
+                setTimeout(() => { try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) { } }, 500);
+            }
+
+            if (!adInjected && ads.adsterra && ads.adsterra.publisherId) {
+                adInjected = true;
+                const cfg = ads.adsterra;
+                container.innerHTML = `<div style="padding:16px; text-align:center; color:#888; font-size:12px;">Ad loading...</div>`;
+                const atScript = document.createElement('script');
+                atScript.async = true;
+                atScript.setAttribute('data-cfasync', 'false');
+                atScript.src = `//pl${cfg.adUnitId}.profitableratecpm.com/${cfg.publisherId}/invoke.js`;
+                container.innerHTML = '';
+                container.appendChild(atScript);
+            }
+
+            if (!adInjected) {
+                // No ad configured — show placeholder
+                container.innerHTML = `<div style="padding:30px; text-align:center; color:#888; font-size:13px;">
+                    <i class="fas fa-tv" style="font-size:36px; color:#444; display:block; margin-bottom:10px;"></i>
+                    No ads configured yet.<br>Admin needs to set up an ad network.
+                </div>`;
+            }
+
+            // Start 30s countdown regardless
+            let timeLeft = 30;
+            timerText.textContent = `⏱ Please wait ${timeLeft}s...`;
+            clearInterval(adWatchTimer);
+            adWatchTimer = setInterval(() => {
+                timeLeft--;
+                if (timeLeft > 0) {
+                    timerText.textContent = `⏱ Please wait ${timeLeft}s...`;
+                } else {
+                    clearInterval(adWatchTimer);
+                    timerText.textContent = '✅ Ad watched! Claim your reward.';
+                    claimBtn.style.display = 'block';
+                    closeBtn.style.display = 'block';
+                }
+            }, 1000);
+        })
+        .catch(() => {
+            container.innerHTML = '<div style="color:#f87171; text-align:center; padding:20px;">Failed to load ad. Please try again.</div>';
+            closeBtn.style.display = 'block';
+        });
+}
+
+function closeAdModal() {
+    const modal = document.getElementById('adViewerModal');
+    if (modal) modal.style.display = 'none';
+    clearInterval(adWatchTimer);
+}
+
+function claimAdReward() {
+    if (adRewardClaimed) return;
+    adRewardClaimed = true;
+    const claimBtn = document.getElementById('adClaimBtn');
+    if (claimBtn) { claimBtn.disabled = true; claimBtn.textContent = 'Claiming...'; }
+
+    fetch('/api/earn', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: userId, type: 'watch_ad' })
+    })
+        .then(r => r.json())
+        .then(data => {
+            closeAdModal();
+            if (data.success) {
+                if (window.confetti) confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+                tg.showAlert(`🎉 +${data.reward} tokens earned! Keep watching to earn more.`);
+                userData.tokens = (userData.tokens || 0) + (data.reward || 0);
+                updateBalanceUI();
+            } else {
+                tg.showAlert(data.message || 'Could not claim reward. Try again later.');
+                adRewardClaimed = false;
+            }
+        })
+        .catch(() => {
+            closeAdModal();
+            tg.showAlert('Network error. Please try again.');
+            adRewardClaimed = false;
+        });
+}
+
+window.showAdAndEarn = showAdAndEarn;
+window.closeAdModal = closeAdModal;
+window.claimAdReward = claimAdReward;
 
 // ==========================================
 // DAILY BONUS SYSTEM (PREMIUM)
@@ -1113,29 +1262,58 @@ window.toggleServicesView = toggleServicesView;
 
 const userId = userData.id;
 
-function fetchUserData() {
-    fetch(`/api/user/${userId}`)
+// Main auto-login function: registers user with server using Telegram data
+function registerAndFetchUser() {
+    if (!userId || userId === 0) {
+        // No Telegram user (opened in browser, not Telegram)
+        renderBalances();
+        applyProfilePhoto('');
+        return;
+    }
+
+    // Parse referrer from start_param (e.g. ref_123456789)
+    let referrer = null;
+    if (_startParam && _startParam.startsWith('ref_')) {
+        referrer = _startParam.replace('ref_', '');
+    }
+
+    fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            userId: userId,
+            firstName: _tgUser.first_name || '',
+            lastName: _tgUser.last_name || '',
+            username: _tgUser.username || '',
+            photo_url: _tgUser.photo_url || '',
+            referrer: referrer
+        })
+    })
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                userData.tokens = data.tokens;
-                userData.Gems = data.Gems;
-                userData.verified = data.verified;
-                // Use server name, fallback to Telegram name, then generic
-                userData.username = data.username || data.firstName ||
-                    tg.initDataUnsafe?.user?.first_name ||
-                    tg.initDataUnsafe?.user?.username || 'User';
+                // Sync from server
+                userData.tokens = data.tokens || 0;
+                userData.Gems = data.Gems || 0;
                 userData.usd = data.usd || (data.tokens / 100);
+                userData.verified = data.verified || false;
                 userData.dailyStreak = data.dailyStreak || 0;
                 userData.lastDailyClaim = data.lastClaim || 0;
                 userData.completedTasks = data.completedTasks || [];
+                // Use Telegram name (always fresh from Telegram)
+                userData.username = _tgUser.first_name || data.firstName || data.username || 'User';
+                userData.firstName = _tgUser.first_name || data.firstName || '';
+                userData.photo_url = _tgUser.photo_url || data.photo_url || '';
 
-                // Hide or mark done missions in UI
+                // Handle banned users
+                userStatus = data.banned ? 'banned' : 'active';
+
+                // Mark completed tasks in UI
                 if (userData.completedTasks.length > 0) {
                     userData.completedTasks.forEach(taskId => {
                         IN_PROGRESS_TASKS[taskId] = 'completed';
-                        // Use proper quoting to prevent substring collisions (e.g. 'tg' vs 'tg_ch')
-                        const btn = document.querySelector(`button[onclick*="'${taskId}',"]`) || document.querySelector(`button[onclick*="'${taskId}', "]`);
+                        const btn = document.querySelector(`button[onclick*="'${taskId}',"]`) ||
+                            document.querySelector(`button[onclick*="'${taskId}', "]`);
                         if (btn) {
                             btn.innerHTML = '<i class="fas fa-check"></i> DONE';
                             btn.style.background = '#22c55e';
@@ -1145,37 +1323,35 @@ function fetchUserData() {
                     });
                 }
 
+                applyProfilePhoto(userData.photo_url);
                 renderBalances();
+
                 if (currentPage === 'daily') {
                     renderDailyGrid();
                     startDailyCountdown();
                 }
             } else {
-                // Server error but we can still show Telegram name
-                if (!userData.username || userData.username === 'User') {
-                    userData.username = tg.initDataUnsafe?.user?.first_name ||
-                        tg.initDataUnsafe?.user?.username || 'Guest';
-                    renderBalances();
-                }
+                // Server returned error - still show Telegram data
+                applyProfilePhoto(_tgUser.photo_url || '');
+                renderBalances();
             }
         })
         .catch(err => {
-            console.error('API Error:', err);
-            // Fallback: use Telegram data on network error
-            if (!userData.username || userData.username === 'User') {
-                userData.username = tg.initDataUnsafe?.user?.first_name ||
-                    tg.initDataUnsafe?.user?.username || 'Guest';
-                renderBalances();
-            }
+            console.warn('Register API error (offline?):', err);
+            applyProfilePhoto(_tgUser.photo_url || '');
+            renderBalances();
         });
 }
 
-function saveWallet() {
-    renderBalances();
-}
+// Legacy alias kept for compatibility
+function fetchUserData() { registerAndFetchUser(); }
+
+function saveWallet() { renderBalances(); }
+
+function updateBalanceUI() { renderBalances(); }
 
 function renderBalances() {
-    const displayName = userData.username || tg.initDataUnsafe?.user?.first_name || 'Guest';
+    const displayName = userData.firstName || userData.username || _tgUser.first_name || 'Guest';
 
     // 1. Update Profile Stats
     const elTc = document.getElementById('prof-tc');
@@ -1186,7 +1362,7 @@ function renderBalances() {
 
     if (elTc) elTc.innerText = (userData.tokens || 0).toLocaleString();
     if (elJs) elJs.innerText = (userData.Gems || 0).toLocaleString();
-    if (elUsd) elUsd.innerText = '$' + (userData.usd || 0).toFixed(2);
+    if (elUsd) elUsd.innerText = '$' + ((userData.tokens || 0) / 100).toFixed(2);
     if (elProfName) elProfName.innerText = displayName;
     if (elProfId) elProfId.innerText = '#' + userData.id;
 
@@ -1199,6 +1375,8 @@ function renderBalances() {
     if (hJs) hJs.innerText = (userData.Gems || 0).toLocaleString();
     if (hName) hName.innerText = displayName;
 }
+
+
 
 function payWithBalance() {
     if (userData.usd >= 3.00) {
@@ -2295,12 +2473,13 @@ function copyToClipboard(id) {
 
 
 
-// Initial Render & Fetch
+// Initial Render & Auto Login
 renderBalances();
-fetchUserData(); // Fetch real data on load
+applyProfilePhoto(_tgUser.photo_url || ''); // Immediately show photo from Telegram
+registerAndFetchUser(); // Sync with server
 
-// Poll for updates (every 10s)
-setInterval(fetchUserData, 10000);
+// Poll for balance updates (every 30s)
+setInterval(registerAndFetchUser, 30000);
 setInterval(syncAdminData, 30000);
 
 
@@ -2556,8 +2735,51 @@ window.updateMailBalance = updateMailBalance;
 
 document.addEventListener('DOMContentLoaded', function () {
     showPage('home');
-    fetchUserData();
+    // Apply Telegram photo immediately before server responds
+    applyProfilePhoto(_tgUser.photo_url || '');
+    renderBalances();
+    // Auto-login from Telegram WebApp data
+    registerAndFetchUser();
+    // Fetch other configs
+    fetchEmailServiceConfig();
     const savedTheme = localStorage.getItem('theme') || 'dark';
     document.body.setAttribute('data-theme', savedTheme);
     updateThemeIcon(savedTheme);
 });
+
+function fetchEmailServiceConfig() {
+    fetch('/api/admin/email-services')
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                emailServiceConfig.emailServiceEnabled = data.emailServiceEnabled !== false;
+                emailServiceConfig.tempMailEnabled = data.tempMailEnabled !== false;
+            }
+        })
+        .catch(() => { });
+}
+
+
+function toggleServicesView() {
+    const gv = document.getElementById('servicesGridView');
+    const lv = document.querySelector('.service-cards-container');
+    if (gv.style.display === 'none') {
+        gv.style.display = 'grid';
+        lv.style.display = 'none';
+    } else {
+        gv.style.display = 'none';
+        lv.style.display = 'flex';
+    }
+}
+
+function toggleAccountsView() {
+    const gv = document.getElementById('accountsGridView');
+    const lv = document.getElementById('accountsListView');
+    if (gv.style.display === 'none') {
+        gv.style.display = 'grid';
+        lv.style.display = 'none';
+    } else {
+        gv.style.display = 'none';
+        lv.style.display = 'flex';
+    }
+}

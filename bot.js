@@ -466,20 +466,29 @@ bot.onText(/\/start/, async (msg) => {
     }
 
     // User is member, show main menu
-    sendMainMenu(chatId, user);
+    sendMainMenu(chatId, user, msg.from);
 });
 
-async function sendMainMenu(chatId, user) {
-    const lang = user.language || 'en';
+async function sendMainMenu(chatId, user, msgFrom) {
     const publicUrl = process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`;
 
-    const welcomeText = `👋 Welcome, ${user.first_name || 'User'}!\n\n💰 Balance: ${user.balance || 0} Credits\n🆔 ID: ${user.id}\n\nTap the button below to open the app:`;
+    // Get fresh name from Telegram message context if available, else use stored
+    const firstName = (msgFrom && msgFrom.first_name) ? msgFrom.first_name :
+        (user.firstName || user.first_name || 'Friend');
+    const tokens = user.balance_tokens !== undefined ? user.balance_tokens :
+        (user.tokens || user.balance || 0);
 
-    const cacheBusterUrl = `${publicUrl}?v=${Date.now()}`;
+    const welcomeText = `👋 *Welcome, ${firstName}!*\n\n` +
+        `💰 Balance: *${tokens} TC*\n` +
+        `🆔 Your ID: \`${user.id}\`\n\n` +
+        `Tap below to open the Mini App:`;
+
+    const appUrl = `${publicUrl}`;
     const keyboard = {
         reply_markup: {
             inline_keyboard: [
-                [{ text: '🚀 Open App', web_app: { url: cacheBusterUrl } }]
+                [{ text: '🚀 Open App', web_app: { url: appUrl } }],
+                [{ text: '👥 Invite Friends', callback_data: 'referral' }]
             ]
         }
     };

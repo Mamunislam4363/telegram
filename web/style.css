@@ -383,8 +383,6 @@ body {
     display: none;
     animation: fadeIn 0.3s ease;
     width: 100%;
-    min-height: calc(100vh - 80px);
-    /* overflow-y: auto; REMOVED to prevent double scrollbar */
 }
 
 .page.active {
