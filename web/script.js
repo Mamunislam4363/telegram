@@ -2268,7 +2268,7 @@ function renderInbox(emails, type) {
             if (matches) {
                 matches.forEach(code => {
                     if (!otps.some(o => o.code === code)) {
-                        otps.push({ code, from: email.sender });
+                        otps.push({ code, from: email.from || email.sender || 'Unknown' });
                     }
                 });
             }
@@ -2295,7 +2295,7 @@ function renderInbox(emails, type) {
             <div class="ii-icon"><i class="fas fa-envelope"></i></div>
             <div class="ii-body">
                 <div class="ii-top">
-                    <div class="ii-sender">${email.sender}</div>
+                    <div class="ii-sender">${email.from || email.sender || 'Unknown'}</div>
                     <div class="ii-time">${email.time || ''}</div>
                 </div>
                 <div class="ii-subject">${email.subject}</div>
@@ -2361,7 +2361,7 @@ function openEmailMessage(msgId, type) {
     if (!msg) return;
 
     document.getElementById("mdSubject").textContent = msg.subject;
-    document.getElementById("mdFrom").textContent = msg.sender;
+    document.getElementById("mdFrom").textContent = msg.from || msg.sender || "Unknown";
     document.getElementById("mdTo").textContent = mailSessions[type] ? mailSessions[type].email : "...";
     document.getElementById("mdDate").textContent = msg.time || "Recent";
     document.getElementById("mdBody").innerHTML = msg.body || msg.preview;
