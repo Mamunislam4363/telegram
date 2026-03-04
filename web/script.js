@@ -1322,6 +1322,7 @@ function registerAndFetchUser() {
 
                 applyProfilePhoto(userData.photo_url);
                 renderBalances();
+                loadRecentActivity(); // Load real activity data
 
                 if (currentPage === 'daily') {
                     renderDailyGrid();
@@ -1342,6 +1343,102 @@ function registerAndFetchUser() {
 
 // Legacy alias kept for compatibility
 function fetchUserData() { registerAndFetchUser(); }
+
+// Load and render real recent activity from user history
+function loadRecentActivity() {
+    if (!userData.id || userData.id === 0) return;
+
+    fetch(`/api/history/${userData.id}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.history && data.history.length > 0) {
+                renderRecentActivity(data.history.slice(0, 3)); // Show last 3 activities
+            }
+        })
+        .catch(() => {
+            // Silently fail - show empty state
+        });
+}
+
+// Load broadcast messages with real live data
+function loadBroadcast() {
+    const track = document.getElementById('broadcastTrack');
+    const badge = document.getElementById('broadcastBadge');
+    if (!track) return;
+
+    // Default live messages
+    const messages = [
+        'New task available - Complete and earn 10 TC!',
+        'Invite friends and earn 50 TC per referral!',
+        'Daily bonus ready - Claim your rewards now!',
+        'Email service available - Generate temporary emails!',
+        'New accounts in stock - Buy premium accounts!'
+    ];
+
+    // Try to get real live data from API
+    fetch('/api/admin/stats')
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                const liveMessages = [
+                    `${data.totalUsers || 0} users active on platform`,
+                    `${data.totalTokens || 0} tokens circulated`,
+                    'Live: Email and number services available now!',
+                    'System operational - All services running smoothly'
+                ];
+                track.innerHTML = liveMessages.map(m => `<span class="bcp-item">${m}</span>`).join('');
+                if (badge) badge.textContent = '@AUTOSVERIFY';
+            } else {
+                track.innerHTML = messages.map(m => `<span class="bcp-item">${m}</span>`).join('');
+            }
+        })
+        .catch(() => {
+            track.innerHTML = messages.map(m => `<span class="bcp-item">${m}</span>`).join('');
+        });
+}
+
+// Render recent activity cards
+function renderRecentActivity(history) {
+    const container = document.getElementById('recentActivityList');
+    if (!container) return;
+
+    const typeConfig = {
+        'ad_reward': { icon: 'fas fa-play', color: '#f59e0b', name: 'Watch and Earn' },
+        'mission_reward': { icon: 'fas fa-check-circle', color: '#22c55e', name: 'Task Completed' },
+        'account_purchase': { icon: 'fas fa-shopping-cart', color: '#3b82f6', name: 'Account Purchase' },
+        'mail': { icon: 'fas fa-envelope', color: '#ef4444', name: 'Email Generated' },
+        'number': { icon: 'fas fa-phone', color: '#9333ea', name: 'Virtual Number' },
+        'redeem': { icon: 'fas fa-ticket-alt', color: '#22c55e', name: 'Code Redeemed' },
+        'daily_bonus': { icon: 'fas fa-gift', color: '#fbbf24', name: 'Daily Bonus' },
+        'verification': { icon: 'fas fa-shield-alt', color: '#10b981', name: 'Verification' }
+    };
+
+    container.innerHTML = history.map(item => {
+        const config = typeConfig[item.type] || { icon: 'fas fa-check', color: '#9ca3af', name: item.type || 'Activity' };
+        const date = item.date ? new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+        const time = item.date ? new Date(item.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '';
+        const amount = item.amount || 0;
+        const isPositive = item.type === 'ad_reward' || item.type === 'mission_reward' || item.type === 'redeem' || item.type === 'daily_bonus';
+        const gems = item.currency === 'gems' || item.Gems ? (item.Gems || item.gems || 0) : 0;
+
+        return `
+        <div class="activity-card">
+            <div class="activity-left">
+                <div class="activity-icon" style="background:rgba(${config.color.replace('#', '')}, 0.1); color:${config.color}">
+                    <i class="${config.icon}"></i>
+                </div>
+                <div class="activity-info">
+                    <div class="activity-name">${config.name}</div>
+                    <div class="activity-meta">${date} • ${time}</div>
+                </div>
+            </div>
+            <div class="activity-reward">
+                ${amount > 0 ? `<div class="activity-reward-${isPositive ? 'tokens' : 'Gems'}">${isPositive ? '+' : '-'}${amount} ${item.currency === 'tokens' || !item.currency ? 'Tokens' : item.currency.toUpperCase()}</div>` : ''}
+                ${gems > 0 ? `<div class="activity-reward-Gems">+${gems} Gems</div>` : ''}
+            </div>
+        </div>`;
+    }).join('');
+}
 
 function saveWallet() { renderBalances(); }
 
@@ -2759,6 +2856,8 @@ document.addEventListener('DOMContentLoaded', function () {
     renderBalances();
     // Auto-login from Telegram WebApp data
     registerAndFetchUser();
+    // Load real-time broadcast data
+    loadBroadcast();
     // Fetch other configs
     fetchEmailServiceConfig();
     const savedTheme = localStorage.getItem('theme') || 'dark';

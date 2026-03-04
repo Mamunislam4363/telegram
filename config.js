@@ -32,8 +32,8 @@ module.exports = {
     MINI_APP_URL: process.env.MINI_APP_URL || 'https://mamunislam.netlify.app',  // Telegram Mini App subdomain
 
     // Mandatory Channel & Group (users MUST join to use the bot)
-    REQUIRED_CHANNEL: '@AutosVerifyCh',  // Channel username or ID
-    REQUIRED_GROUP: '@AutosVerify',  // Group username or ID
+    REQUIRED_CHANNEL: '@AutosVerify',  // Channel username or ID
+    REQUIRED_GROUP: '@AutosVerifyCh',  // Group username or ID
 
     // Payment Methods (Enable/Disable)
     PAYMENT_METHODS: {
