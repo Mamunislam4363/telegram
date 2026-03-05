@@ -454,7 +454,12 @@ async function getMessages(sessionId, email) {
     // Check if we can get the session info from the database
     try {
         const db = require('../db');
-        const session = db.data.mailSessions ? db.data.mailSessions[sessionId] : null;
+        let session = db.data.mailSessions ? db.data.mailSessions[sessionId] : null;
+
+        if (!session && db.data.mailSessions) {
+            // If the passed sessionId is actually a token, find by token or id
+            session = Object.values(db.data.mailSessions).find(s => s.token === sessionId || s.id === sessionId);
+        }
 
         if (session && (session.provider === 'smtplabs' || session.provider === 'smtplabs_gateway')) {
             let apiBase = SMTP_API_BASE;
