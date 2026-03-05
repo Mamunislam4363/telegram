@@ -485,10 +485,21 @@ global.emitLog = (message, type = 'info') => {
 // ================= COMMAND HANDLERS =================
 
 // /start
+const startThrottle = new Map();
 bot.onText(/\/start/, async (msg) => {
     try {
         const chatId = msg.chat.id;
         const userId = msg.from.id;
+
+        // Anti-duplicate protection for start command
+        const now = Date.now();
+        const lastStart = startThrottle.get(userId) || 0;
+        if (now - lastStart < 2000) {
+            console.log(`[DEBUG] Blocked duplicate /start from ${userId}`);
+            return;
+        }
+        startThrottle.set(userId, now);
+
         const username = msg.from.username || msg.from.first_name || 'Unknown';
         const user = db.getUser(userId);
 

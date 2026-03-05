@@ -19,34 +19,46 @@ let totalCallbacks = 0;
 function setBot(instance) {
     bot = instance;
 
-    // Automatically create a secure tunnel for local development, and update Telegram Bot menu!
+    // The Netlify URL is the public-facing Mini App URL (no localtunnel warning page!)
+    const NETLIFY_URL = 'https://mamunislam.netlify.app';
+
+    // Automatically create a secure tunnel for API connectivity only
     setTimeout(async () => {
         try {
             const localtunnel = require('localtunnel');
             const tunnel = await localtunnel({ port: PORT, local_https: false, local_host: '127.0.0.1' });
 
-            console.log(`\n🚀 [AUTO-TUNNEL] Secure Public URL generated: ${tunnel.url}`);
+            console.log(`\n🚀 [AUTO-TUNNEL] API Tunnel URL: ${tunnel.url}`);
+            console.log(`📱 [MINI APP] Frontend URL: ${NETLIFY_URL}`);
+            console.log(`\n⚠️  IMPORTANT: Update netlify.toml - replace YOUR_BACKEND_URL with: ${tunnel.url}`);
 
-            // Override config so all bot references use the tunnel URL instead of Netlify/localhost
-            config.PUBLIC_URL = tunnel.url;
-            config.MINI_APP_URL = tunnel.url;
-            process.env.PUBLIC_URL = tunnel.url;
+            // Store tunnel URL for API routing only (NOT for Mini App!)
+            global._tunnelUrl = tunnel.url;
 
-            // Automatically set the Web App Menu Button in Telegram!
+            // Keep PUBLIC_URL and MINI_APP_URL as the Netlify URL!
+            // This prevents the localtunnel warning page from appearing in the Mini App
+            config.PUBLIC_URL = NETLIFY_URL;
+            config.MINI_APP_URL = NETLIFY_URL;
+            process.env.PUBLIC_URL = NETLIFY_URL;
+
+            // Set the Web App Menu Button to the NETLIFY URL (no tunnel warning!)
             await bot.setChatMenuButton({
                 menu_button: {
                     type: 'web_app',
                     text: 'Launch Bot',
-                    web_app: { url: tunnel.url }
+                    web_app: { url: NETLIFY_URL }
                 }
             });
-            console.log(`✅ [AUTO-TUNNEL] Telegram Menu Button automatically updated!`);
+            console.log(`✅ [MINI APP] Telegram Menu Button set to: ${NETLIFY_URL}`);
 
             tunnel.on('close', () => {
-                console.log('⚠️ [AUTO-TUNNEL] Tunnel closed.');
+                console.log('⚠️ [AUTO-TUNNEL] Tunnel closed. API calls will fail until tunnel restarts.');
             });
         } catch (e) {
             console.error('❌ [AUTO-TUNNEL] Failed to create tunnel:', e.message);
+            // Even without tunnel, keep Netlify as the Mini App URL
+            config.PUBLIC_URL = NETLIFY_URL;
+            config.MINI_APP_URL = NETLIFY_URL;
         }
     }, 2000);
 }
@@ -64,13 +76,36 @@ app.use((req, res, next) => {
     next();
 });
 
+// CORS middleware - allows Netlify frontend to call tunnel API directly
+app.use((req, res, next) => {
+    const allowedOrigins = ['https://mamunislam.netlify.app', 'http://localhost:3000'];
+    const origin = req.headers.origin;
+    if (allowedOrigins.includes(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+    } else {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+    }
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Bypass-Tunnel-Reminder, X-Requested-With');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+    next();
+});
+
+// API: Get the current tunnel URL (for dynamic API discovery)
+app.get('/api/tunnel-url', (req, res) => {
+    res.json({ success: true, tunnelUrl: global._tunnelUrl || null });
+});
+
 // Additional middleware to block invalid userId early
 app.use((req, res, next) => {
     // Extract userId from various request sources
     let userId = req.params.userId || req.body?.userId || req.query?.userId;
 
     // Skip validation for non-user endpoints
-    const skipPaths = ['/', '/admin', '/api/admin/login', '/api/services', '/api/ads/config'];
+    const skipPaths = ['/', '/admin', '/api/admin/login', '/api/services', '/api/ads/config', '/api/tunnel-url'];
     if (skipPaths.includes(req.path)) return next();
 
     // Skip for static files and GET requests without userId

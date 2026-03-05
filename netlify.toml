@@ -6,9 +6,11 @@
 [build.environment]
   NODE_VERSION = "18"
 
-# VERY IMPORTANT: If your bot is running on a VPS or another server (like ngrok),
-# you must replace 'YOUR_BACKEND_URL' with your real backend link (e.g., http://123.45.67.89:3000)
-# Netlify will proxy all traffic to your backend API, saving you from needing an SSL certificate on the backend!
+# VERY IMPORTANT: Replace 'YOUR_BACKEND_URL' below with your REAL backend URL.
+# Example: If your bot runs on a VPS at http://123.45.67.89:3000, use that URL.
+# Example: If you use localtunnel/ngrok, use the tunnel URL (e.g. https://xxxx.loca.lt)
+# Without this, ALL API calls will fail with 404 errors!
+# After running `node bot.js`, the console will show your tunnel URL - use that.
 
 [[redirects]]
   from = "/api/*"

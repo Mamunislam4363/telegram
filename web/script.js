@@ -1,11 +1,56 @@
+// ==========================================
+// DYNAMIC BACKEND URL DISCOVERY
+// ==========================================
+// The frontend runs on Netlify, but the API runs on a tunnel (localtunnel/ngrok).
+// We need to discover the tunnel URL dynamically and route API calls there.
+
+var _backendUrl = ''; // Will be set to the tunnel URL once discovered
+
+// Try to discover the backend tunnel URL
+async function discoverBackendUrl() {
+    // Method 1: Check if netlify.toml proxy is configured (try a known endpoint)
+    try {
+        const testRes = await window._originalFetch('/api/tunnel-url', {
+            headers: { 'Bypass-Tunnel-Reminder': 'true' },
+            signal: AbortSignal.timeout(3000)
+        });
+        if (testRes.ok) {
+            const data = await testRes.json();
+            if (data.tunnelUrl) {
+                _backendUrl = data.tunnelUrl;
+                console.log('🔗 Backend discovered via proxy:', _backendUrl);
+                return;
+            }
+        }
+    } catch (e) { /* proxy not configured, try direct */ }
+
+    // Method 2: If we're inside Telegram WebApp, the bot may have set a tunnel URL
+    // (This is the fallback - user's bot prints the tunnel URL in console)
+    console.log('⚠️ Backend URL not discovered. API calls will use relative paths.');
+    console.log('ℹ️ Make sure your bot is running and netlify.toml has the correct backend URL.');
+}
+
+// Store the original fetch before overriding
+window._originalFetch = window.fetch;
+
 const originalFetch = window.fetch;
 window.fetch = function () {
     let args = Array.prototype.slice.call(arguments);
+    let url = args[0];
+
+    // If we have a backend URL and this is an API call, rewrite the URL
+    if (_backendUrl && typeof url === 'string' && url.startsWith('/api/')) {
+        args[0] = _backendUrl + url;
+    }
+
     if (!args[1]) args[1] = {};
     if (!args[1].headers) args[1].headers = {};
     args[1].headers['Bypass-Tunnel-Reminder'] = 'true';
     return originalFetch.apply(this, args);
 };
+
+// Start backend discovery
+discoverBackendUrl();
 
 // Helper: Check if userId is valid before making API calls
 function isValidUserId(userId) {
@@ -454,7 +499,7 @@ function showPage(targetId) {
         }
         if (headerTitle) {
             const normalizedId = targetId.includes('emailMessage') ? 'emailMessage' : targetId;
-            headerTitle.textContent = PAGE_TITLES[normalizedId] || (title || targetId.toUpperCase());
+            headerTitle.textContent = PAGE_TITLES[normalizedId] || targetId.toUpperCase();
             headerTitle.style.fontSize = '14px';
             headerTitle.style.fontWeight = '700';
             headerTitle.style.letterSpacing = '1px';
@@ -486,7 +531,7 @@ function showPage(targetId) {
         // Default style
         if (avatar) avatar.style.display = 'none';
         if (headerBack) headerBack.style.display = 'flex';
-        if (headerTitle) headerTitle.textContent = pageTitle;
+        if (headerTitle) headerTitle.textContent = PAGE_TITLES[targetId] || targetId.toUpperCase();
         if (headerLeft) headerLeft.onclick = goBack;
         if (headerStatus) headerStatus.style.display = 'flex';
     }
@@ -2110,7 +2155,7 @@ function buyPremiumAccount(accountId, type, price) {
         .then(res => {
             if (res.success) {
                 userData.tokens = res.newBalance;
-                updateBalanceDisplay();
+                renderBalances();
 
                 // Show account details
                 alert(`✅ Account purchased!\n\nEmail: ${res.account.email}\nPassword: ${res.account.password}${res.account.instructions ? '\nNotes: ' + res.account.instructions : ''}\n\nPlease save these details!`);
@@ -2511,11 +2556,18 @@ function pollForOTP() {
                         <button onclick="copyNumOtp('${extracted}')" style="background:#22c55e; color:#fff; border:none; border-radius:10px; padding:8px 20px; font-size:12px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:8px;">
                             <i class="fas fa-copy"></i> COPY OTP
                         </button>
-                        <div id="emailServiceCard" onclick="openPremiumMailDirect()" style="font-size:11px; color:#22c55e; font-weight:700; margin-top:10px; text-transform:uppercase;">EXTRACTED CODE ✅</div>
+                        <div style="font-size:11px; color:#22c55e; font-weight:700; margin-top:10px; text-transform:uppercase;">EXTRACTED CODE ✅</div>
                     </div>`;
                 }
             }
         }).catch(() => { });
+}
+
+// Helper: Extract OTP from text
+function extractOtp(text) {
+    if (!text) return null;
+    const otpMatch = text.match(/\b\d{4,8}\b/);
+    return otpMatch ? otpMatch[0] : null;
 }
 
 function copyNumOtp(otp) {
@@ -2635,7 +2687,7 @@ function copyNumberWithTick() {
 
 window.copyNumberWithTick = copyNumberWithTick;
 
-function copyText(elId) {
+function copyTextById(elId) {
     const el = document.getElementById(elId);
     if (!el) return;
     navigator.clipboard.writeText(el.textContent).then(() => {
@@ -2833,7 +2885,7 @@ function refreshInbox(type) {
     if (!mailSessions[type]) return;
 
     // Deduct 1 token per inbox refresh (temp only)
-    const refreshCost = (type === 'temp') ? 1 : 0;
+    const refreshCost = 0; // Auto-poll should not charge tokens
     if (refreshCost > 0 && (userData.tokens || 0) < refreshCost) {
         tg.showAlert(`❌ Insufficient tokens!\n\nYou need ${refreshCost} TC to refresh inbox.\nYour balance: ${userData.tokens || 0} TC`);
         return;
@@ -3152,10 +3204,10 @@ function checkEmailServicesAndNavigate() {
     handleEmailMenuNavigation();
 }
 
-// Fetch config on load
-fetchEmailServiceConfig();
+// Fetch config on load (fetchEmailServiceConfig is defined below)
+if (typeof fetchEmailServiceConfig === 'function') fetchEmailServiceConfig();
 // Refresh config periodically
-setInterval(fetchEmailServiceConfig, 60000);
+setInterval(function () { if (typeof fetchEmailServiceConfig === 'function') fetchEmailServiceConfig(); }, 60000);
 
 // --------------------------------------------------------
 // CHECKOUT PAGE FUNCTIONS
@@ -3693,6 +3745,40 @@ function toggleAccountsView() {
     }
 }
 
+// Alias for legacy calls
+function updateBalanceDisplay() { renderBalances(); }
 
+// ==========================================
+// MISSING WINDOW EXPORTS (for onclick handlers)
+// ==========================================
+window.generateService = generateService;
+window.generateVirtualNumber = generateVirtualNumber;
+window.selectNumPlatform = selectNumPlatform;
+window.refreshOTP = refreshOTP;
+window.cancelNumber = cancelNumber;
+window.openService = openService;
+window.copyText = copyText;
+window.copyTextById = copyTextById;
+window.copySimpleText = copySimpleText;
+window.copyRichText = copyRichText;
+window.copyToClipboard = copyToClipboard;
+window.renderLeaderboard = renderLeaderboard;
+window.closeReceiptModal = closeReceiptModal;
+window.copyReceiptField = copyReceiptField;
+window.openEmailMessage = openEmailMessage;
+window.quickCopyEmailContent = quickCopyEmailContent;
+window.deleteMail = deleteMail;
+window.changeMailEmail = changeMailEmail;
+window.renderAccounts = renderAccounts;
+window.buyPremiumAccount = buyPremiumAccount;
+window.toggleAccountsView = toggleAccountsView;
+window.updateBalanceDisplay = updateBalanceDisplay;
+window.renderCards = renderCards;
+window.renderVPN = renderVPN;
+window.renderServicesList = renderServicesList;
+window.renderShopItems = renderShopItems;
+window.copyUserId = copyUserId;
+window.copyNumOtp = copyNumOtp;
+window.extractOtp = extractOtp;
 
 
