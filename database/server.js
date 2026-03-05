@@ -29,15 +29,7 @@ function setBot(instance) {
             config.MINI_APP_URL = NETLIFY_URL;
             process.env.PUBLIC_URL = NETLIFY_URL;
 
-            // Set the Web App Menu Button to the NETLIFY URL
-            await bot.setChatMenuButton({
-                menu_button: {
-                    type: 'web_app',
-                    text: 'Launch Bot',
-                    web_app: { url: NETLIFY_URL }
-                }
-            });
-            console.log(`✅ [MINI APP] Telegram Menu Button set to: ${NETLIFY_URL}`);
+            // Intentionally do not set a persistent Telegram menu button.
         } catch (e) {
             console.error('❌ Failed to set Telegram Menu Button:', e.message);
         }

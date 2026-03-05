@@ -494,7 +494,8 @@ bot.onText(/\/start/, async (msg) => {
         // Anti-duplicate protection for start command
         const now = Date.now();
         const lastStart = startThrottle.get(userId) || 0;
-        if (now - lastStart < 2000) {
+        // Telegram clients sometimes deliver /start twice; keep a wider window
+        if (now - lastStart < 7000) {
             console.log(`[DEBUG] Blocked duplicate /start from ${userId}`);
             return;
         }
@@ -545,26 +546,6 @@ bot.onText(/\/start/, async (msg) => {
     }
 });
 
-bot.onText(/\/admin/, async (msg) => {
-    const chatId = msg.chat.id;
-    const userId = msg.from.id;
-
-    if (!isAdmin(userId)) {
-        bot.sendMessage(chatId, "❌ You do not have permission to use this command.");
-        return;
-    }
-
-    const adminPanelUrl = `${config.PUBLIC_URL}/admin`;
-    const keyboard = {
-        reply_markup: {
-            inline_keyboard: [
-                [{ text: '🛠️ Open Admin Panel', web_app: { url: adminPanelUrl } }]
-            ]
-        }
-    };
-
-    bot.sendMessage(chatId, "👋 Welcome, Admin! Click below to open the Admin Dashboard.", keyboard).catch(e => console.error("Admin msg error:", e));
-});
 async function sendMainMenu(chatId, user, msgFrom) {
     const publicUrl = process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`;
 
@@ -594,11 +575,31 @@ async function sendMainMenu(chatId, user, msgFrom) {
     };
 
     try {
-        await bot.sendMessage(chatId, welcomeText, { parse_mode: 'Markdown', ...keyboard });
+        const now = Date.now();
+        const existing = lastMainMenuByChat.get(chatId);
+
+        // If we recently sent the menu, edit it instead of sending again
+        if (existing && existing.messageId && (now - existing.ts) < MAIN_MENU_DEDUP_MS) {
+            await bot.editMessageText(welcomeText, {
+                chat_id: chatId,
+                message_id: existing.messageId,
+                parse_mode: 'Markdown',
+                reply_markup: keyboard.reply_markup
+            });
+            lastMainMenuByChat.set(chatId, { messageId: existing.messageId, ts: now });
+            return;
+        }
+
+        const sent = await bot.sendMessage(chatId, welcomeText, { parse_mode: 'Markdown', ...keyboard });
+        lastMainMenuByChat.set(chatId, { messageId: sent.message_id, ts: now });
     } catch (e) {
         console.error('Error sending main menu:', e);
     }
 }
+
+// Prevent duplicate main menu messages (e.g., /start delivered twice)
+const MAIN_MENU_DEDUP_MS = 8000;
+const lastMainMenuByChat = new Map();
 
 // Debounce Maps
 const callbackThrottle = new Map();
