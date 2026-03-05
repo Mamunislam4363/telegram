@@ -1,57 +1,3 @@
-// ==========================================
-// DYNAMIC BACKEND URL DISCOVERY
-// ==========================================
-// The frontend runs on Netlify, but the API runs on a tunnel (localtunnel/ngrok).
-// We need to discover the tunnel URL dynamically and route API calls there.
-
-var _backendUrl = ''; // Will be set to the tunnel URL once discovered
-
-// Try to discover the backend tunnel URL
-async function discoverBackendUrl() {
-    // Method 1: Check if netlify.toml proxy is configured (try a known endpoint)
-    try {
-        const testRes = await window._originalFetch('/api/tunnel-url', {
-            headers: { 'Bypass-Tunnel-Reminder': 'true' },
-            signal: AbortSignal.timeout(3000)
-        });
-        if (testRes.ok) {
-            const data = await testRes.json();
-            if (data.tunnelUrl) {
-                _backendUrl = data.tunnelUrl;
-                console.log('🔗 Backend discovered via proxy:', _backendUrl);
-                return;
-            }
-        }
-    } catch (e) { /* proxy not configured, try direct */ }
-
-    // Method 2: If we're inside Telegram WebApp, the bot may have set a tunnel URL
-    // (This is the fallback - user's bot prints the tunnel URL in console)
-    console.log('⚠️ Backend URL not discovered. API calls will use relative paths.');
-    console.log('ℹ️ Make sure your bot is running and netlify.toml has the correct backend URL.');
-}
-
-// Store the original fetch before overriding
-window._originalFetch = window.fetch;
-
-const originalFetch = window.fetch;
-window.fetch = function () {
-    let args = Array.prototype.slice.call(arguments);
-    let url = args[0];
-
-    // If we have a backend URL and this is an API call, rewrite the URL
-    if (_backendUrl && typeof url === 'string' && url.startsWith('/api/')) {
-        args[0] = _backendUrl + url;
-    }
-
-    if (!args[1]) args[1] = {};
-    if (!args[1].headers) args[1].headers = {};
-    args[1].headers['Bypass-Tunnel-Reminder'] = 'true';
-    return originalFetch.apply(this, args);
-};
-
-// Start backend discovery
-discoverBackendUrl();
-
 // Helper: Check if userId is valid before making API calls
 function isValidUserId(userId) {
     if (!userId) return false;
@@ -68,8 +14,6 @@ function apiFetch(url, options = {}) {
         console.log('[CLIENT BLOCKED] Invalid userId:', userId);
         return Promise.resolve({ json: () => Promise.resolve({ success: false, message: 'Invalid userId' }) });
     }
-    options.headers = options.headers || {};
-    options.headers['Bypass-Tunnel-Reminder'] = 'true';
 
     return fetch(url, options);
 }
