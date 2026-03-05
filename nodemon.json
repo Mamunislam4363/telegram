@@ -1,0 +1,9 @@
+{
+    "ignore": [
+        "backups/*",
+        "database.json",
+        "global_log.txt",
+        "*.log"
+    ],
+    "delay": "2500"
+}

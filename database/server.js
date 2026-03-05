@@ -29,7 +29,15 @@ function setBot(instance) {
             config.MINI_APP_URL = NETLIFY_URL;
             process.env.PUBLIC_URL = NETLIFY_URL;
 
-            // Intentionally do not set a persistent Telegram menu button.
+            // Set the Web App Menu Button to the NETLIFY URL
+            await bot.setChatMenuButton({
+                menu_button: {
+                    type: 'web_app',
+                    text: 'Launch Bot',
+                    web_app: { url: NETLIFY_URL }
+                }
+            });
+            console.log(`✅ [MINI APP] Telegram Menu Button set to: ${NETLIFY_URL}`);
         } catch (e) {
             console.error('❌ Failed to set Telegram Menu Button:', e.message);
         }
@@ -127,6 +135,221 @@ app.post('/api/admin/login', (req, res) => {
         res.json({ success: false, message: 'Invalid password' });
     }
 });
+
+// ---------------- DB AUTO BACKUP SCHEDULER ----------------
+
+function _ensureAdminSettings() {
+    if (!db.data.adminSettings) db.data.adminSettings = {};
+    if (!db.data.adminSettings.dbAutoBackup) {
+        db.data.adminSettings.dbAutoBackup = {
+            enabled: false,
+            intervalHours: 6,
+            dailyTime: '',
+            keep: 30,
+            lastBackupAt: 0,
+            lastBackupFile: ''
+        };
+        db.save();
+    }
+    return db.data.adminSettings.dbAutoBackup;
+}
+
+function _parseDailyTimeToMs(dailyTime) {
+    if (!dailyTime || typeof dailyTime !== 'string') return null;
+    const m = dailyTime.trim().match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return null;
+    const hh = parseInt(m[1], 10);
+    const mm = parseInt(m[2], 10);
+    if (isNaN(hh) || isNaN(mm) || hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
+    return { hh, mm };
+}
+
+function _computeNextBackupAt(schedule) {
+    const now = Date.now();
+    const last = schedule.lastBackupAt || 0;
+    const intervalHours = Math.max(1, parseInt(schedule.intervalHours || 6));
+
+    const daily = _parseDailyTimeToMs(schedule.dailyTime);
+    if (daily) {
+        const d = new Date();
+        d.setSeconds(0, 0);
+        d.setHours(daily.hh, daily.mm, 0, 0);
+        let t = d.getTime();
+        if (t <= now) t += 24 * 60 * 60 * 1000;
+        return t;
+    }
+
+    if (!last) return now + intervalHours * 60 * 60 * 1000;
+    return last + intervalHours * 60 * 60 * 1000;
+}
+
+function _getBackupsDir() {
+    const path = require('path');
+    return path.join(process.cwd(), 'backups');
+}
+
+function _listBackupFiles() {
+    const fs = require('fs');
+    const path = require('path');
+    const dir = _getBackupsDir();
+    if (!fs.existsSync(dir)) return [];
+    const files = fs.readdirSync(dir)
+        .filter(f => f.endsWith('.json'))
+        .map(f => {
+            const full = path.join(dir, f);
+            const st = fs.statSync(full);
+            return { file: f, fullPath: full, size: st.size, mtime: st.mtimeMs };
+        })
+        .sort((a, b) => b.mtime - a.mtime);
+    return files;
+}
+
+async function _runBackup(reason = 'auto') {
+    const fs = require('fs');
+    const path = require('path');
+    const schedule = _ensureAdminSettings();
+
+    const dir = _getBackupsDir();
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+    const ts = Date.now();
+    const fileName = `${reason}_backup_${ts}.json`;
+    const fullPath = path.join(dir, fileName);
+
+    fs.writeFileSync(fullPath, JSON.stringify(db.data, null, 2));
+
+    schedule.lastBackupAt = ts;
+    schedule.lastBackupFile = fileName;
+    db.data.adminSettings.dbAutoBackup = schedule;
+    db.save();
+
+    // Trim old backups
+    const keep = Math.max(1, parseInt(schedule.keep || 30));
+    const files = _listBackupFiles();
+    if (files.length > keep) {
+        files.slice(keep).forEach(f => {
+            try { fs.unlinkSync(f.fullPath); } catch (e) { }
+        });
+    }
+
+    // Optional: send to Telegram admin
+    const adminId = process.env.ADMIN_ID;
+    if (bot && adminId) {
+        try {
+            await bot.sendDocument(adminId, fullPath, {
+                caption: `📦 <b>Database Backup</b> (${reason})\n\nFile: <code>${fileName}</code>`,
+                parse_mode: 'HTML'
+            });
+        } catch (e) {
+            console.error('Auto backup sendDocument error:', e.message);
+        }
+    }
+
+    return { fileName, ts };
+}
+
+// API: Get DB Auto Backup Schedule
+app.get('/api/admin/db/schedule', (req, res) => {
+    const schedule = _ensureAdminSettings();
+    const nextBackupAt = _computeNextBackupAt(schedule);
+    res.json({
+        success: true,
+        schedule: {
+            enabled: schedule.enabled === true,
+            intervalHours: schedule.intervalHours || 6,
+            dailyTime: schedule.dailyTime || '',
+            keep: schedule.keep || 30
+        },
+        lastBackupAt: schedule.lastBackupAt || 0,
+        nextBackupAt
+    });
+});
+
+// API: Update DB Auto Backup Schedule
+app.post('/api/admin/db/schedule', (req, res) => {
+    try {
+        const schedule = _ensureAdminSettings();
+        const enabled = req.body.enabled === true;
+        const intervalHours = Math.max(1, parseInt(req.body.intervalHours || schedule.intervalHours || 6));
+        const dailyTime = (req.body.dailyTime || '').trim();
+        const keep = Math.max(1, parseInt(req.body.keep || schedule.keep || 30));
+
+        schedule.enabled = enabled;
+        schedule.intervalHours = intervalHours;
+        schedule.dailyTime = dailyTime;
+        schedule.keep = keep;
+        db.data.adminSettings.dbAutoBackup = schedule;
+        db.save();
+
+        res.json({ success: true });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// API: List available backup files
+app.get('/api/admin/db/backups', (req, res) => {
+    try {
+        const files = _listBackupFiles().map(f => ({ file: f.file, size: f.size, mtime: f.mtime }));
+        const schedule = _ensureAdminSettings();
+        res.json({
+            success: true,
+            files,
+            lastBackupFile: schedule.lastBackupFile || ''
+        });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// API: Restore/Merge from a selected backup file
+app.post('/api/admin/db/restore', (req, res) => {
+    try {
+        const fs = require('fs');
+        const path = require('path');
+        const file = (req.body.file || '').trim();
+        if (!file) return res.json({ success: false, message: 'file is required' });
+
+        const dir = _getBackupsDir();
+        const full = path.join(dir, file);
+        if (!full.startsWith(dir)) return res.json({ success: false, message: 'Invalid file path' });
+        if (!fs.existsSync(full)) return res.json({ success: false, message: 'Backup file not found' });
+
+        const parsed = JSON.parse(fs.readFileSync(full, 'utf8'));
+        if (!parsed || typeof parsed !== 'object') return res.json({ success: false, message: 'Invalid backup JSON' });
+
+        // Merge strategy similar to import
+        db.data.users = { ...(db.data.users || {}), ...(parsed.users || {}) };
+        if (parsed.settings) db.data.settings = { ...(db.data.settings || {}), ...parsed.settings };
+        if (parsed.cardPrices) db.data.cardPrices = { ...(db.data.cardPrices || {}), ...parsed.cardPrices };
+        if (parsed.vpnPrices) db.data.vpnPrices = { ...(db.data.vpnPrices || {}), ...parsed.vpnPrices };
+        if (parsed.cards) db.data.cards = { ...(db.data.cards || {}), ...parsed.cards };
+        if (parsed.vpnAccounts) db.data.vpnAccounts = { ...(db.data.vpnAccounts || {}), ...parsed.vpnAccounts };
+        if (parsed.tasks) db.data.tasks = { ...(db.data.tasks || {}), ...parsed.tasks };
+        Object.keys(parsed).forEach(key => {
+            if (!db.data[key]) db.data[key] = parsed[key];
+        });
+
+        db.save();
+        res.json({ success: true, message: 'Database restored/merged successfully' });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// Timer: check every minute
+setInterval(async () => {
+    try {
+        const schedule = _ensureAdminSettings();
+        if (!schedule.enabled) return;
+        const nextAt = _computeNextBackupAt(schedule);
+        if (Date.now() >= nextAt) {
+            await _runBackup('auto');
+        }
+    } catch (e) {
+        console.error('Auto backup scheduler error:', e.message);
+    }
+}, 60 * 1000);
 
 // Generate a one-time admin auto-login token (valid 5 min)
 function generateAdminToken() {
@@ -1311,6 +1534,9 @@ app.post('/api/admin/db/wipe', async (req, res) => {
         res.json({ success: false, message: e.message });
     }
 });
+
+// Duplicate database routes removed to resolve conflicts and prevent server restart loops.
+// The primary implementations remain active at lines 252-288.
 
 // API: Admin - Provider Management
 app.get('/api/admin/providers', (req, res) => {

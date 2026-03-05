@@ -486,6 +486,7 @@ global.emitLog = (message, type = 'info') => {
 
 // /start
 const startThrottle = new Map();
+const startChatSendLock = new Map();
 bot.onText(/\/start/, async (msg) => {
     try {
         const chatId = msg.chat.id;
@@ -494,12 +495,19 @@ bot.onText(/\/start/, async (msg) => {
         // Anti-duplicate protection for start command
         const now = Date.now();
         const lastStart = startThrottle.get(userId) || 0;
-        // Telegram clients sometimes deliver /start twice; keep a wider window
-        if (now - lastStart < 7000) {
+        if (now - lastStart < 5000) {
             console.log(`[DEBUG] Blocked duplicate /start from ${userId}`);
             return;
         }
         startThrottle.set(userId, now);
+
+        // Extra guard: sometimes Telegram delivers updates twice; block duplicate sends per chat
+        const lastChatSend = startChatSendLock.get(chatId) || 0;
+        if (now - lastChatSend < 5000) {
+            console.log(`[DEBUG] Blocked duplicate /start send to chat ${chatId}`);
+            return;
+        }
+        startChatSendLock.set(chatId, now);
 
         const username = msg.from.username || msg.from.first_name || 'Unknown';
         const user = db.getUser(userId);
@@ -546,6 +554,48 @@ bot.onText(/\/start/, async (msg) => {
     }
 });
 
+// /admin command - Admin Panel Access
+bot.onText(/\/admin/, async (msg) => {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+    const username = msg.from.username || msg.from.first_name || 'Unknown';
+
+    // Check if user is admin - silently ignore for non-admins
+    if (!isAdmin(userId)) {
+        return;
+    }
+
+    const publicUrl = process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`;
+    const adminUrl = `${publicUrl}/admin`;
+
+    const adminText = `👑 *Admin Panel Access*\n\n` +
+        `Hello Admin *${username}*!\n\n` +
+        `🚀 *Launch Admin Panel to:*\n` +
+        `• Manage users & balances\n` +
+        `• Add/remove accounts\n` +
+        `• View analytics & stats\n` +
+        `• Broadcast messages\n` +
+        `• Configure settings\n\n` +
+        `*Admin ID:* \`${userId}\``;
+
+    const adminKeyboard = {
+        reply_markup: {
+            inline_keyboard: [
+                [{ text: '🚀 Open Admin Panel', web_app: { url: adminUrl } }],
+                [{ text: '📊 Quick Stats', callback_data: 'admin_stats' }],
+                [{ text: '📢 Broadcast', callback_data: 'admin_broadcast' }],
+                [{ text: '💰 Add Tokens', callback_data: 'admin_add_tokens' }]
+            ]
+        }
+    };
+
+    try {
+        await bot.sendMessage(chatId, adminText, { parse_mode: 'Markdown', ...adminKeyboard });
+        console.log(`[ADMIN] Admin ${username} (${userId}) accessed admin panel`);
+    } catch (e) {
+        console.error('Error sending admin panel:', e);
+    }
+});
 async function sendMainMenu(chatId, user, msgFrom) {
     const publicUrl = process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`;
 
@@ -575,31 +625,11 @@ async function sendMainMenu(chatId, user, msgFrom) {
     };
 
     try {
-        const now = Date.now();
-        const existing = lastMainMenuByChat.get(chatId);
-
-        // If we recently sent the menu, edit it instead of sending again
-        if (existing && existing.messageId && (now - existing.ts) < MAIN_MENU_DEDUP_MS) {
-            await bot.editMessageText(welcomeText, {
-                chat_id: chatId,
-                message_id: existing.messageId,
-                parse_mode: 'Markdown',
-                reply_markup: keyboard.reply_markup
-            });
-            lastMainMenuByChat.set(chatId, { messageId: existing.messageId, ts: now });
-            return;
-        }
-
-        const sent = await bot.sendMessage(chatId, welcomeText, { parse_mode: 'Markdown', ...keyboard });
-        lastMainMenuByChat.set(chatId, { messageId: sent.message_id, ts: now });
+        await bot.sendMessage(chatId, welcomeText, { parse_mode: 'Markdown', ...keyboard });
     } catch (e) {
         console.error('Error sending main menu:', e);
     }
 }
-
-// Prevent duplicate main menu messages (e.g., /start delivered twice)
-const MAIN_MENU_DEDUP_MS = 8000;
-const lastMainMenuByChat = new Map();
 
 // Debounce Maps
 const callbackThrottle = new Map();
@@ -8256,7 +8286,8 @@ setInterval(() => {
     }
 }, 12 * 60 * 60 * 1000); // 12 hours
 
-// Create initial backup on startup
+// Initial backup on startup DISABLED to prevent nodemon restart loops
+/*
 setTimeout(() => {
     try {
         console.log('🔄 Creating initial backup on startup...');
@@ -8268,7 +8299,8 @@ setTimeout(() => {
     } catch (error) {
         console.error('❌ Initial backup failed:', error);
     }
-}, 5000); // 5 seconds after startup
+}, 5000); 
+*/
 
 console.log('💾 Auto backup system started (every 12 hours)');
 
@@ -8337,9 +8369,9 @@ if (config.BACKUP_BOT_TOKEN) {
     // Schedule: Every 15 Days
     const BACKUP_INTERVAL = 15 * 24 * 60 * 60 * 1000; // 15 Days
     setInterval(runAutoBackup, BACKUP_INTERVAL);
-    console.log(`🛡️ Auto-Backup Service initialized (Interval: 15 days).`);
+    // console.log(`🛡️ Auto-Backup Service initialized (Interval: 15 days).`);
 } else {
-    console.warn('⚠️ BACKUP_BOT_TOKEN missing. Auto-Backup disabled.');
+    // console.warn('⚠️ BACKUP_BOT_TOKEN missing. Auto-Backup disabled.');
 }
 
 // Export bot for web panel notifications
