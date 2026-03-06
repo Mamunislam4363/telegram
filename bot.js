@@ -1,4 +1,5 @@
 const TelegramBot = require('node-telegram-bot-api');
+process.env.NTBA_FIX_350 = 1;
 const axios = require('axios');
 const { verifySheerID } = require('./verifier');
 const config = require('./config');
@@ -658,7 +659,30 @@ bot.on('message', async (msg) => {
         db.saveGroup(msg.chat.id, msg.chat.title, msg.chat.type);
     }
 
-    // Admin inputs removed per user request
+    // Chat reward logic: Award 5 tokens per message in the required group
+    const requiredGroup = (config.REQUIRED_GROUP || '').replace('@', '').toLowerCase();
+    const chatUsername = (msg.chat && msg.chat.username) ? msg.chat.username.toLowerCase() : '';
+
+    if (chatUsername === requiredGroup && msg.from && !msg.from.is_bot) {
+        const userId = msg.from.id;
+        const user = db.getUser(userId);
+        if (user) {
+            const reward = 5;
+            user.tokens = (user.tokens || user.balance_tokens || 0) + reward;
+            if (user.balance_tokens !== undefined) user.balance_tokens = user.tokens;
+            
+            if (!user.history) user.history = [];
+            user.history.unshift({
+                type: 'chat_reward',
+                amount: reward,
+                currency: 'tokens',
+                date: Date.now(),
+                detail: 'Message reward'
+            });
+            db.updateUser(user);
+            console.log(`[REWARD] User ${userId} earned 5 tokens for chatting in group.`);
+        }
+    }
 }); // Fix: Close the message handler here!
 
 // 🚨 Auto-detect when user leaves/is kicked from required channel or group

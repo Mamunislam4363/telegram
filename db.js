@@ -106,6 +106,7 @@ const defaultData = {
     numberServices: {},
     services: {},
     shopItems: {},
+    itemSales: {}, // NEW: User item submissions for selling
     // Generic API Providers (New System)
     providers: {}, // { id: { title, type, apiUrl, apiKey (enc), priority, status, healthStats... } }
     broadcasts: [], // Ensure broadcast storage structure
@@ -116,6 +117,15 @@ const defaultData = {
         gateio: { name: "Gate.io", details: "12345678", email: "", qr: "", status: "active" },
         usdt: { name: "Web3 (USDT TRC20)", details: "TR7NHqkeu71v7otNDV352u653nqYBg7KkZ", email: "", qr: "", status: "active" },
         bitcoin: { name: "Web3 (Bitcoin)", details: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa", email: "", qr: "", status: "active" }
+    },
+    sellingRewards: {
+        "Gmail": 50,
+        "TikTok": 100,
+        "Facebook": 80,
+        "Telegram": 120,
+        "Discord": 150,
+        "Other": 40,
+        "2faMultiplier": 1.5 // 50% bonus
     }
 };
 

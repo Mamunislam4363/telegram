@@ -140,9 +140,24 @@
             box-shadow: 0 8px 20px rgba(251, 191, 36, 0.4) !important;
         }
 
-        .nav-item i,
-        .nav-center i {
-            font-size: 20px !important;
+        .toast-notify {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 16px;
+            font-size: 13px;
+            font-weight: 700;
+            z-index: 9999999;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.1);
+            display: none;
+            text-align: center;
+            min-width: 200px;
         }
 
         .pay-method-card {
@@ -1403,56 +1418,37 @@
                         <div class="grid-btn-icon"><i class="fas fa-user-plus"></i></div>
                         <div class="grid-btn-text" data-i18n="invite">Invite</div>
                     </div>
-                    <div class="grid-btn" onclick="nav('history')">
-                        <div class="grid-btn-icon"><i class="fas fa-history"></i></div>
-                        <div class="grid-btn-text" data-i18n="history">History</div>
+                    <div class="grid-btn" onclick="nav('earnMenuPage')">
+                        <div class="grid-btn-icon"><i class="fas fa-sack-dollar"></i></div>
+                        <div class="grid-btn-text" data-i18n="earn">Earn</div>
                     </div>
                     <div class="grid-btn" onclick="nav('deposit')">
                         <div class="grid-btn-icon"><i class="fas fa-wallet"></i></div>
                         <div class="grid-btn-text" data-i18n="deposit">Deposit</div>
                     </div>
 
-                    <div class="grid-btn" onclick="nav('earnMenuPage')">
-                        <div class="grid-btn-icon"><i class="fas fa-sack-dollar"></i></div>
-                        <div class="grid-btn-text" data-i18n="earn">Earn</div>
+                    <div class="grid-btn" onclick="nav('numberService')">
+                        <div class="grid-btn-icon" style="background: linear-gradient(135deg,#4a044e,#9333ea);"><i class="fas fa-phone"></i></div>
+                        <div class="grid-btn-text" data-i18n="number">Number</div>
+                    </div>
+
+                    <div class="grid-btn" onclick="nav('emailMenu')">
+                        <div class="grid-btn-icon" style="background: linear-gradient(135deg,#7f1d1d,#dc2626);"><i class="fas fa-envelope"></i></div>
+                        <div class="grid-btn-text" data-i18n="email">Email</div>
+                    </div>
+
+                    <div class="grid-btn" onclick="nav('itemSell')">
+                        <div class="grid-btn-icon" style="background: linear-gradient(135deg,#1e3a8a,#1d4ed8);"><i class="fas fa-shopping-basket"></i></div>
+                        <div class="grid-btn-text" data-i18n="itemSell">Item Sell</div>
                     </div>
                     <div class="grid-btn" onclick="nav('accountsStore')">
-                        <div class="grid-btn-icon"><i class="fas fa-users"></i></div>
+                        <div class="grid-btn-icon" style="background: linear-gradient(135deg,#f59e0b,#d97706);"><i class="fas fa-user-shield"></i></div>
                         <div class="grid-btn-text" data-i18n="accounts">Accounts</div>
                     </div>
-                </div>
-
-                <!-- Quick Service Boxes -->
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
-
-                    <!-- Number Box -->
-                    <div onclick="nav('numberService')"
-                        style="background:var(--bg-card); border-radius:20px; padding:28px 12px; border:1px solid var(--border-color); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px; cursor:pointer; transition:0.2s; min-height:160px;"
-                        onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'">
-                        <div
-                            style="width:60px; height:60px; background:linear-gradient(135deg,#4a044e,#9333ea); border-radius:18px; display:flex; align-items:center; justify-content:center; font-size:28px; color:#fff; box-shadow:0 8px 24px rgba(147,51,234,0.3);">
-                            <i class="fas fa-phone"></i>
-                        </div>
-                        <div
-                            style="font-size:15px; font-weight:900; color:var(--text-main); text-align:center; text-transform:uppercase; letter-spacing:0.5px;">
-                            <span data-i18n="number">Number</span>
-                        </div>
+                    <div class="grid-btn" onclick="nav('history')">
+                        <div class="grid-btn-icon" style="background: linear-gradient(135deg,#6366f1,#4338ca);"><i class="fas fa-history"></i></div>
+                        <div class="grid-btn-text" data-i18n="history">History</div>
                     </div>
-
-                    <!-- Email Box -->
-                    <div onclick="nav('emailMenu')"
-                        style="background:var(--bg-card); border-radius:20px; padding:28px 12px; border:1px solid var(--border-color); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px; cursor:pointer; transition:0.2s; min-height:160px;"
-                        onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'">
-                        <div
-                            style="width:60px; height:60px; background:linear-gradient(135deg,#7f1d1d,#dc2626); border-radius:18px; display:flex; align-items:center; justify-content:center; font-size:28px; color:#fff; box-shadow:0 8px 24px rgba(220,38,38,0.3);">
-                            <i class="fas fa-envelope"></i>
-                        </div>
-                        <div
-                            style="font-size:15px; font-weight:900; color:var(--text-main); text-align:center; text-transform:uppercase; letter-spacing:0.5px;">
-                            <span data-i18n="email">Email</span>
-                        </div>
-                    </div>
-
                 </div>
 
                 <!-- Redeem Banner -->
@@ -1981,16 +1977,16 @@
                         <i class="fas fa-chevron-right" style="color:var(--text-sub); font-size:12px;"></i>
                     </div>
 
-                    <!-- History -->
-                    <div class="menu-item" onclick="nav('history')">
+                    <!-- Invite & Earn (Moved UP) -->
+                    <div class="menu-item" onclick="nav('invite')">
                         <div class="mi-left">
-                            <div class="mi-icon purple"><i class="fas fa-history"></i></div>
-                            <div class="mi-t" data-i18n="history">History</div>
+                            <div class="mi-icon pink"><i class="fas fa-share-alt"></i></div>
+                            <div class="mi-t" data-i18n="inviteEarn">Invite & Earn</div>
                         </div>
                         <i class="fas fa-chevron-right" style="color:var(--text-sub); font-size:12px;"></i>
                     </div>
 
-                    <!-- Verify (Moved from Security) -->
+                    <!-- Verification (Moved UP) -->
                     <div class="menu-item" onclick="nav('verify')">
                         <div class="mi-left">
                             <div class="mi-icon blue"><i class="fas fa-check-circle"></i></div>
@@ -2063,11 +2059,11 @@
                         <i class="fas fa-chevron-right" style="color:var(--text-sub); font-size:12px;"></i>
                     </div>
 
-                    <!-- Invite & Earn -->
-                    <div class="menu-item" onclick="nav('invite')">
+                    <!-- History (Moved DOWN) -->
+                    <div class="menu-item" onclick="nav('history')">
                         <div class="mi-left">
-                            <div class="mi-icon pink"><i class="fas fa-share-alt"></i></div>
-                            <div class="mi-t" data-i18n="inviteEarn">Invite & Earn</div>
+                            <div class="mi-icon purple"><i class="fas fa-history"></i></div>
+                            <div class="mi-t" data-i18n="history">History</div>
                         </div>
                         <i class="fas fa-chevron-right" style="color:var(--text-sub); font-size:12px;"></i>
                     </div>
@@ -2852,16 +2848,21 @@
                 </div>
 
                 <div class="earn-menu-grid">
-                    <div class="em-card" onclick="alert('Coming Soon!')">
+                    <div class="em-card" onclick="startQuizFlow()">
+                        <div class="em-icon" style="color:#22c55e"><i class="fas fa-question-circle"></i></div>
+                        <div class="em-title">QUIZ</div>
+                        <div class="em-desc">Play quiz and earn 10 tokens</div>
+                    </div>
+                    <div class="em-card" onclick="showAdAndEarn('watch_ad')">
+                        <div class="em-icon" style="color:#38bdf8"><i class="fas fa-play-circle"></i></div>
+                        <div class="em-title">WISH AD</div>
+                        <div class="em-desc">Watch a short ad and earn 5 tokens</div>
+                    </div>
+                    <div class="em-card" onclick="startScratchFlow()">
                         <div class="em-badge">NEW</div>
                         <div class="em-icon" style="color:#f59e0b"><i class="fas fa-dice"></i></div>
                         <div class="em-title">SCRATCH</div>
                         <div class="em-desc">Scratch virtual cards &amp; win rewards</div>
-                    </div>
-                    <div class="em-card" onclick="showAdAndEarn()">
-                        <div class="em-icon" style="color:#38bdf8"><i class="fas fa-play-circle"></i></div>
-                        <div class="em-title">WATCH</div>
-                        <div class="em-desc">Watch a short ad and earn tokens</div>
                     </div>
                 </div>
 
@@ -2874,8 +2875,7 @@
                         style="background:var(--bg-card,#1a1a1a); border-radius:20px; padding:24px; max-width:360px; width:92%; margin:auto; position:relative; border:1px solid rgba(255,255,255,0.1);">
                         <div
                             style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                            <div style="font-size:15px; font-weight:800; color:var(--text-main,#fff);">?? Watch Ad &amp;
-                                Earn</div>
+                            <div style="font-size:15px; font-weight:800; color:var(--text-main,#fff);">📺 Watch Ad &amp; Earn</div>
                             <button id="adCloseBtn" onclick="closeAdModal()"
                                 style="display:none; background:rgba(255,255,255,0.1); border:none; color:#fff; border-radius:8px; padding:4px 10px; cursor:pointer; font-size:12px;">?
                                 Close</button>
@@ -2896,6 +2896,72 @@
                                 ?? Claim Reward
                             </button>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- QUIZ PAGE -->
+            <div id="quizPage" class="page">
+                <div class="content-body" style="padding:24px; text-align:center;">
+                    <div style="background:var(--bg-card); border-radius:24px; padding:30px; border:1px solid var(--border-color); margin-bottom:24px;">
+                        <div style="width:60px; height:60px; background:rgba(34,197,94,0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:24px; color:#22c55e;">
+                            <i class="fas fa-brain"></i>
+                        </div>
+                        <div id="quizQuestion" style="font-size:18px; font-weight:800; color:#fff; line-height:1.4; margin-bottom:24px;">
+                            Loading Question...
+                        </div>
+                        <div id="quizOptions" style="display:flex; flex-direction:column; gap:12px;">
+                            <!-- JS WILL POPULATE -->
+                        </div>
+                    </div>
+                    <button class="gv-btn" onclick="nav('quizLeaderboard')" style="background:rgba(255,255,255,0.05); color:#fff; border:1px solid rgba(255,255,255,0.1);">
+                        <i class="fas fa-trophy"></i> View Leaderboard
+                    </button>
+                    <div style="margin-top:20px; font-size:11px; color:var(--text-sub); font-weight:700; text-transform:uppercase;">
+                        Correct: +10 TC | Wrong: +5 TC
+                    </div>
+                </div>
+            </div>
+
+            <!-- QUIZ LEADERBOARD PAGE -->
+            <div id="quizLeaderboardPage" class="page">
+                <div class="content-body" style="padding:20px;">
+                    <div style="background:linear-gradient(135deg, #22c55e, #16a34a); border-radius:24px; padding:24px; text-align:center; color:#fff; margin-bottom:24px; box-shadow:0 10px 30px rgba(34,197,94,0.2);">
+                        <i class="fas fa-crown" style="font-size:32px; margin-bottom:12px; display:block;"></i>
+                        <div style="font-size:20px; font-weight:900;">QUIZ KINGS</div>
+                        <div style="font-size:11px; opacity:0.8; font-weight:700;">TOP 20 SCHOLARS</div>
+                    </div>
+                    <div id="quizLeaderboardList" style="background:var(--bg-card); border-radius:24px; border:1px solid var(--border-color); overflow:hidden;">
+                        <!-- JS WILL POPULATE -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCRATCH PAGE -->
+            <div id="scratchPage" class="page">
+                <div class="content-body" style="padding:24px; text-align:center;">
+                    <div style="font-size:20px; font-weight:900; color:#fff; margin-bottom:30px;">LUCKY SCRATCH</div>
+                    
+                    <div style="position:relative; width:280px; height:280px; margin:0 auto 30px; border-radius:24px; overflow:hidden; box-shadow:0 10px 40px rgba(0,0,0,0.5); border:4px solid #f59e0b;">
+                        <!-- Result displayed behind canvas -->
+                        <div id="scratchResult" style="position:absolute; inset:0; background:#1a1a1a; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:1;">
+                            <div id="scratchValue" style="font-size:48px; font-weight:900; color:#f59e0b;">?</div>
+                            <div style="font-size:13px; font-weight:800; color:#fff;">TOKENS</div>
+                        </div>
+                        <!-- Drawing canvas -->
+                        <canvas id="scratchCanvas" width="280" height="280" style="position:absolute; inset:0; z-index:2; cursor:crosshair;"></canvas>
+                    </div>
+
+                    <div id="scratchInstructions" style="font-size:13px; color:var(--text-sub); font-weight:700; background:rgba(255,255,255,0.03); padding:12px; border-radius:12px; margin-bottom:24px;">
+                        Gently scratch the card to reveal your prize!
+                    </div>
+
+                    <button id="newScratchBtn" class="gv-btn" onclick="showAdAndEarn('scratch_retry')" style="display:none; background:linear-gradient(135deg,#f59e0b,#d97706); color:#000;">
+                        Try Again (1 Ad)
+                    </button>
+                    
+                    <div style="margin-top:20px; font-size:10px; color:var(--text-sub); font-weight:700; text-transform:uppercase;">
+                        Win 1, 5, or 10 Tokens!
                     </div>
                 </div>
             </div>
@@ -3448,10 +3514,128 @@
                 <div class="scc-arrow" style="margin-left:auto; background:transparent; color:#f59e0b"><i
                         class="fas fa-paper-plane"></i></div>
             </div>
-        </div>
+        </div>            <!-- Item Sell Page -->
+            <div id="itemSellPage" class="page">
+                <div class="content-body" style="padding:20px; padding-bottom:140px;">
+                    <div class="adc-header" style="margin-bottom: 24px;">
+                        <h2 style="font-size:24px; font-weight:800; color:#fff; text-align:center; text-transform: uppercase; letter-spacing: 1px;">Sell Your Items</h2>
+                        <p style="text-align:center; color:var(--text-sub); font-size:13px; margin-top:4px;">Turn your verified accounts into Tokens/Gems</p>
+                    </div>
 
-        <!-- CHECKOUT PAGE -->
-        <div id="checkoutPage" class="page">
+                    <!-- Category Selection Grid -->
+                    <div id="itemSellCategoryGrid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:24px;">
+                        <div class="sell-cat-card" onclick="selectSellCategory('Gmail', 'fas fa-envelope', 'linear-gradient(135deg, #ea4335, #b21f14)')">
+                            <div class="scc-icon" style="background: linear-gradient(135deg, #ea4335, #b21f14);"><i class="fas fa-envelope"></i></div>
+                            <div class="scc-name">Gmail</div>
+                        </div>
+                        <div class="sell-cat-card" onclick="selectSellCategory('TikTok', 'fab fa-tiktok', 'linear-gradient(135deg, #000, #333)')">
+                            <div class="scc-icon" style="background: linear-gradient(135deg, #000, #333);"><i class="fab fa-tiktok"></i></div>
+                            <div class="scc-name">TikTok Account</div>
+                        </div>
+                        <div class="sell-cat-card" onclick="selectSellCategory('Facebook', 'fab fa-facebook', 'linear-gradient(135deg, #1877f2, #0d47a1)')">
+                            <div class="scc-icon" style="background: linear-gradient(135deg, #1877f2, #0d47a1);"><i class="fab fa-facebook"></i></div>
+                            <div class="scc-name">Facebook Account</div>
+                        </div>
+                        <div class="sell-cat-card" onclick="selectSellCategory('Telegram', 'fab fa-telegram', 'linear-gradient(135deg, #229ed9, #0077b5)')">
+                            <div class="scc-icon" style="background: linear-gradient(135deg, #229ed9, #0077b5);"><i class="fab fa-telegram"></i></div>
+                            <div class="scc-name">Telegram Session</div>
+                        </div>
+                        <div class="sell-cat-card" onclick="selectSellCategory('Discord', 'fab fa-discord', 'linear-gradient(135deg, #5865f2, #2c3491)')">
+                            <div class="scc-icon" style="background: linear-gradient(135deg, #5865f2, #2c3491);"><i class="fab fa-discord"></i></div>
+                            <div class="scc-name">Discord Token</div>
+                        </div>
+                        <div class="sell-cat-card" onclick="selectSellCategory('Other', 'fas fa-plus', 'linear-gradient(135deg, #10b981, #059669)')">
+                            <div class="scc-icon" style="background: linear-gradient(135deg, #10b981, #059669);"><i class="fas fa-plus"></i></div>
+                            <div class="scc-name">Other Items</div>
+                        </div>
+                    </div>
+
+                    <!-- Selling Form (Initially Hidden) -->
+                    <div id="itemSellFormContainer" style="display:none; animation: slideUp 0.3s ease-out;">
+                        <div style="background:var(--bg-card); border-radius:24px; padding:24px; border:1px solid var(--border-color); position:relative; overflow:hidden;">
+                            <!-- Selected Category Header -->
+                            <div style="display:flex; align-items:center; gap:16px; margin-bottom:24px; padding-bottom:16px; border-bottom:1px solid var(--border-color);">
+                                <div id="selectedCatIcon" style="width:50px; height:50px; border-radius:14px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:22px; box-shadow:0 8px 16px rgba(0,0,0,0.3);"></div>
+                                <div>
+                                    <div style="font-size:12px; color:var(--text-sub); text-transform:uppercase; font-weight:700;">Selling Category</div>
+                                    <div id="selectedCatName" style="font-size:20px; font-weight:900; color:#fff;"></div>
+                                </div>
+                                <button onclick="resetSellCategory()" style="margin-left:auto; background:rgba(255,255,255,0.05); border:none; width:36px; height:36px; border-radius:50%; color:var(--text-sub); cursor:pointer;"><i class="fas fa-times"></i></button>
+                            </div>
+
+                            <input type="hidden" id="selItemCategory">
+
+                            <div style="margin-bottom:16px;">
+                                <label style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px; letter-spacing:0.5px;">Login Email / Username</label>
+                                <input type="text" id="selItemEmail" placeholder="e.g. user@example.com"
+                                    style="width:100%; height:54px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:14px; color:#fff; padding:0 16px; font-weight:600; outline:none; font-size:15px; transition:0.2s;"
+                                    onfocus="this.style.borderColor='var(--accent-color)'; this.style.background='rgba(0,0,0,0.4)';"
+                                    onblur="this.style.borderColor='var(--border-color)'; this.style.background='rgba(0,0,0,0.2)';">
+                            </div>
+
+                            <div style="margin-bottom:16px;">
+                                <label style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px; letter-spacing:0.5px;">Password</label>
+                                <input type="password" id="selItemPassword" placeholder="Required for verification"
+                                    style="width:100%; height:54px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:14px; color:#fff; padding:0 16px; font-weight:600; outline:none; font-size:15px; transition:0.2s;"
+                                    onfocus="this.style.borderColor='var(--accent-color)'; this.style.background='rgba(0,0,0,0.4)';"
+                                    onblur="this.style.borderColor='var(--border-color)'; this.style.background='rgba(0,0,0,0.2)';">
+                            </div>
+
+                            <!-- 2FA Toggle -->
+                            <div style="background:rgba(0,0,0,0.2); border-radius:14px; padding:16px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; border:1px solid var(--border-color);">
+                                <div>
+                                    <div style="font-size:14px; font-weight:800; color:#fff;">2FA ENABLED</div>
+                                    <div style="font-size:11px; color:#10b981; font-weight:700;">+50% BONUS REWARD</div>
+                                </div>
+                                <label class="switch-modern">
+                                    <input type="checkbox" id="selItem2FA" onchange="updateSellRewardPreview()">
+                                    <span class="slider-modern round"></span>
+                                </label>
+                            </div>
+
+                            <div style="margin-bottom:24px;">
+                                <label style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px; letter-spacing:0.5px;">Additional Info (Optional)</label>
+                                <textarea id="selItemNote" placeholder="Backup codes, recovery email, etc."
+                                    style="width:100%; height:90px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:14px; color:#fff; padding:12px 16px; font-weight:600; outline:none; resize:none; font-size:14px; transition:0.2s;"
+                                    onfocus="this.style.borderColor='var(--accent-color)'; this.style.background='rgba(0,0,0,0.4)';"
+                                    onblur="this.style.borderColor='var(--border-color)'; this.style.background='rgba(0,0,0,0.2)';"></textarea>
+                            </div>
+
+                            <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.2); border-radius:14px; padding:16px; margin-bottom:24px; display:flex; justify-content:space-between; align-items:center;">
+                                <div style="font-size:13px; font-weight:700; color:var(--text-sub);">ESTIMATED REWARD</div>
+                                <div id="sellRewardPreview" style="font-size:20px; font-weight:900; color:#10b981;">0 TC</div>
+                            </div>
+
+                            <button onclick="submitItemForSale()"
+                                style="width:100%; height:58px; background:linear-gradient(135deg, #10b981, #059669); border:none; border-radius:16px; color:#fff; font-size:16px; font-weight:900; box-shadow:0 8px 24px rgba(16,185,129,0.3); letter-spacing:1px; cursor:pointer;"
+                                onmousedown="this.style.transform='scale(0.98)'" onmouseup="this.style.transform='scale(1)'">
+                                CONFIRM & SUBMIT
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- My Submissions -->
+                    <div style="margin-top:34px; margin-bottom:20px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                            <div style="font-size:12px; font-weight:800; color:var(--text-sub); text-transform:uppercase; letter-spacing:1.5px;">My Submissions</div>
+                            <button onclick="loadMySales()" style="background:none; border:none; color:var(--accent-color); font-size:11px; font-weight:800; cursor:pointer;"><i class="fas fa-sync-alt"></i> REFRESH</button>
+                        </div>
+                        <div id="mySalesList" style="display:flex; flex-direction:column; gap:12px;">
+                            <!-- Filled by JS -->
+                        </div>
+                        <div id="noSalesPlaceholder"
+                            style="text-align:center; padding:50px 20px; background:rgba(255,255,255,0.02); border:1px dashed var(--border-color); border-radius:18px; color:var(--text-sub);">
+                            <i class="fas fa-boxes"
+                                style="font-size:32px; display:block; margin-bottom:12px; opacity:0.3;"></i>
+                            <div style="font-size:13px; font-weight:600;">No items submitted yet</div>
+                            <div style="font-size:11px; margin-top:4px; opacity:0.6;">Your submitted items will appear here</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CHECKOUT PAGE -->
+            <div id="checkoutPage" class="page">
             <!-- Checkout Header -->
             <div
                 style="background:linear-gradient(135deg,#4a044e,#9333ea); border-radius:24px; padding:16px 20px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between;">
@@ -3990,6 +4174,7 @@
                     missionCenter: 'MISSION CENTER', howToEarn: 'HOW TO EARN',
                     yourInboxEmpty: 'Your inbox is empty', waitingEmails: 'Waiting for incoming emails',
                     close: 'CLOSE', copyAll: 'COPY ALL',
+                    itemSell: 'Item Sell',
                 },
                 bn: {
                     appName: '??? ???????', welcomeBack: '?????? ????,', tokensLabel: '?????', gemsLabel: '???',
@@ -4012,6 +4197,7 @@
                     missionCenter: '???? ???????', howToEarn: '?????? ??????? ?????',
                     yourInboxEmpty: '?????? ????', waitingEmails: '??????? ?????????',
                     close: '???? ????', copyAll: '?? ??? ????',
+                    itemSell: 'আইটেম সেল',
                 },
                 ar: {
                     appName: '?????? ????????', welcomeBack: '?????? ???????', tokensLabel: '????', gemsLabel: '?????',
@@ -4388,7 +4574,20 @@
                     });
                 });
             });
+            // Toast system replacement for blocking alerts
+            function showToast(msg) {
+                const el = document.getElementById('app-toast');
+                if (!el) return;
+                el.textContent = msg;
+                el.style.display = 'block';
+                el.style.animation = 'fadeInDown 0.3s ease';
+                setTimeout(() => { 
+                    el.style.display = 'none'; 
+                }, 2500);
+            }
+            window.showToast = showToast;
         </script>
+        <div id="app-toast" class="toast-notify"></div>
 </body>
 
 

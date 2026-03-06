@@ -412,6 +412,50 @@ function _cleanupUserHistory() {
     }
 }
 
+// Helper: Clean up old upload files (> 12 hours) and bogus broadcast data
+function _cleanupUploads() {
+    try {
+        // 1. Physical Files Cleanup
+        const uploadDir = path.join(__dirname, '..', 'web', 'uploads');
+        if (fs.existsSync(uploadDir)) {
+            const files = fs.readdirSync(uploadDir);
+            const now = Date.now();
+            const maxAge = 12 * 60 * 60 * 1000; // 12 hours
+
+            let count = 0;
+            files.forEach(f => {
+                const fullPath = path.join(uploadDir, f);
+                const st = fs.statSync(fullPath);
+                if (now - st.mtimeMs > maxAge) {
+                    fs.unlinkSync(fullPath);
+                    count++;
+                }
+            });
+            if (count > 0) console.log(`[CLEANUP] Removed ${count} expired files from uploads.`);
+        }
+
+        // 2. Bogus Data Cleanup (Broadcasts/Logs)
+        let dataChanged = false;
+        if (db.data.broadcasts && db.data.broadcasts.length > 0) {
+            db.data.broadcasts = [];
+            dataChanged = true;
+        }
+        if (db.data.scheduledBroadcasts && db.data.scheduledBroadcasts.length > 0) {
+            // Only keep future ones, but user said "all bogust data delete"
+            // Let's clear completed ones or just clear all if it's a "log"
+            db.data.scheduledBroadcasts = db.data.scheduledBroadcasts.filter(b => b.time > Date.now());
+            dataChanged = true;
+        }
+
+        if (dataChanged) {
+            db.save();
+            console.log(`[CLEANUP] Bogus broadcast/scheduled data cleared.`);
+        }
+    } catch (e) {
+        console.error('[CLEANUP] Uploads error:', e.message);
+    }
+}
+
 // Timer: check every minute
 setInterval(async () => {
     try {
@@ -428,6 +472,7 @@ setInterval(async () => {
         const h = new Date().getHours();
         if (!global._lastHistoryCleanupHour || global._lastHistoryCleanupHour !== h) {
             _cleanupUserHistory();
+            _cleanupUploads(); // NEW: Periodic uploads cleanup
             global._lastHistoryCleanupHour = h;
         }
     } catch (e) {
@@ -599,6 +644,72 @@ app.get('/api/history/:userId', (req, res) => {
     res.json({ success: true, history: history });
 });
 
+// API: Quiz Submit
+app.post('/api/quiz/submit', (req, res) => {
+    const { userId, correct, reward } = req.body;
+    const user = db.getUser(userId);
+    if (!user) return res.json({ success: false, message: 'User not found' });
+
+    user.tokens = (user.tokens || user.balance_tokens || 0) + parseInt(reward);
+    if (user.balance_tokens !== undefined) user.balance_tokens = user.tokens;
+    
+    if (correct) {
+        user.quizCorrectCount = (user.quizCorrectCount || 0) + 1;
+        user.quizPoints = (user.quizPoints || 0) + 10;
+    } else {
+        user.quizPoints = (user.quizPoints || 0) + 5;
+    }
+
+    if (!user.history) user.history = [];
+    user.history.unshift({
+        type: 'quiz_reward',
+        amount: parseInt(reward),
+        currency: 'tokens',
+        date: Date.now(),
+        detail: correct ? 'Quiz Correct' : 'Quiz Wrong'
+    });
+
+    db.updateUser(user);
+    res.json({ success: true, newBalance: user.tokens });
+});
+
+// API: Quiz Leaderboard
+app.get('/api/quiz/leaderboard', (req, res) => {
+    const users = Object.values(db.data.users || {});
+    const leaderboard = users
+        .filter(u => u.quizPoints > 0)
+        .map(u => ({
+            name: u.firstName || u.username || 'User',
+            points: u.quizPoints || 0,
+            correctCount: u.quizCorrectCount || 0
+        }))
+        .sort((a, b) => b.points - a.points)
+        .slice(0, 20);
+
+    res.json({ success: true, leaderboard });
+});
+
+// API: Scratch Claim
+app.post('/api/scratch/claim', (req, res) => {
+    const { userId, reward } = req.body;
+    const user = db.getUser(userId);
+    if (!user) return res.json({ success: false, message: 'User not found' });
+
+    user.tokens = (user.tokens || user.balance_tokens || 0) + parseInt(reward);
+    if (user.balance_tokens !== undefined) user.balance_tokens = user.tokens;
+
+    if (!user.history) user.history = [];
+    user.history.unshift({
+        type: 'scratch_reward',
+        amount: parseInt(reward),
+        currency: 'tokens',
+        date: Date.now()
+    });
+
+    db.updateUser(user);
+    res.json({ success: true, newBalance: user.tokens });
+});
+
 // API: Earn Task Completion
 app.post('/api/earn', async (req, res) => {
     // Support both 'taskType' and 'type' field names
@@ -623,13 +734,14 @@ app.post('/api/earn', async (req, res) => {
 
     // --- Special: watch_ad (repeatable daily) ---
     if (taskType === 'watch_ad') {
-        const costs = db.data.costs || {};
-        const adReward = parseInt(costs.adReward) || 5;
+        const settings = db.data.settings || {};
+        const adReward = (req.body.context === 'zero_balance_trigger') ? 5 : (parseInt(settings.adReward) || 5);
         const now = Date.now();
         const lastWatched = user.lastAdWatch || 0;
         const cooldownMs = 5 * 60 * 1000; // 5 minutes cooldown per ad
 
-        if (now - lastWatched < cooldownMs) {
+        // Bypass cooldown for zero balance trigger
+        if (req.body.context !== 'zero_balance_trigger' && (now - lastWatched < cooldownMs)) {
             const waitMin = Math.ceil((cooldownMs - (now - lastWatched)) / 60000);
             return res.json({ success: false, message: `Please wait ${waitMin} more minute(s) before watching another ad.` });
         }
@@ -638,7 +750,13 @@ app.post('/api/earn', async (req, res) => {
         user.tokens = (user.tokens || user.balance_tokens || 0) + adReward;
         if (user.balance_tokens !== undefined) user.balance_tokens = user.tokens;
         if (!user.history) user.history = [];
-        user.history.unshift({ type: 'ad_reward', amount: adReward, currency: 'tokens', date: now });
+        user.history.unshift({ 
+            type: 'ad_reward', 
+            amount: adReward, 
+            currency: 'tokens', 
+            date: now,
+            detail: req.body.context === 'quiz_direct' ? 'Quiz Ad' : (req.body.context === 'zero_balance_trigger' ? 'Zero Balance Ad' : (req.body.context === 'scratch_ad' ? 'Scratch Ad' : 'Watch Ad'))
+        });
         db.updateUser(user);
         return res.json({ success: true, reward: adReward, newBalance: user.tokens });
     }
@@ -708,9 +826,10 @@ app.post('/api/accounts/buy-category', (req, res) => {
         return res.json({ success: false, message: 'Insufficient tokens' });
     }
 
-    // Deduct tokens
-    if (user.tokens !== undefined) user.tokens -= parseInt(price);
-    if (user.balance_tokens !== undefined) user.balance_tokens -= parseInt(price);
+    // Deduct tokens safely
+    const priceInt = parseInt(price);
+    if (user.tokens !== undefined) user.tokens = Math.max(0, user.tokens - priceInt);
+    if (user.balance_tokens !== undefined) user.balance_tokens = Math.max(0, user.balance_tokens - priceInt);
 
     // Generate account credentials (admin can add real ones later)
     const accountData = {
@@ -792,7 +911,7 @@ app.post('/api/generate/:service', (req, res) => {
     }
 
     // Deduct tokens
-    if (user.tokens !== undefined) user.tokens -= cost;
+    if (user.tokens !== undefined) user.tokens = Math.max(0, user.tokens - cost);
     else user.balance_tokens = (user.balance_tokens || 0) - cost;
 
     // Add to history
@@ -997,7 +1116,7 @@ app.post('/api/number/generate', async (req, res) => {
         sessionId = 'demo_' + sessionId;
     }
 
-    if (user.tokens !== undefined) user.tokens -= tokenCost;
+    if (user.tokens !== undefined) user.tokens = Math.max(0, user.tokens - tokenCost);
     else user.balance_tokens = (user.balance_tokens || 0) - tokenCost;
     if (!user.history) user.history = [];
     user.history.unshift({ type: 'number', date: new Date().toISOString(), reward: `-${tokenCost} Tokens`, detail: number });
@@ -1043,7 +1162,7 @@ app.post('/api/mail/generate', async (req, res) => {
         return res.json({ success: false, message: 'All email providers temporarily unavailable. Please try again later.' });
     }
 
-    if (user.tokens !== undefined) user.tokens -= tokenCost;
+    if (user.tokens !== undefined) user.tokens = Math.max(0, user.tokens - tokenCost);
     else user.balance_tokens = (user.balance_tokens || 0) - tokenCost;
     if (!user.history) user.history = [];
     user.history.unshift({ type: 'mail', date: new Date().toISOString(), reward: `-${tokenCost} Tokens`, detail: emailData.email });
@@ -1461,7 +1580,7 @@ app.get('/api/admin/stats', (req, res) => {
     usersList.forEach(u => {
         if (u.history) {
             u.history.forEach(h => {
-                if (h.type === 'email' || h.type === 'gmail') gmailsUsed++;
+                if (h.type === 'email' || h.type === 'gmail' || h.type === 'mail') gmailsUsed++;
             });
         }
     });
@@ -1685,52 +1804,56 @@ app.post('/api/admin/groups/leave', async (req, res) => {
 app.get('/api/admin/costs', (req, res) => {
     const settings = db.getSettings();
     const adminSettings = db.data.adminSettings || {};
+    const costs = settings.costs || {};
 
     res.json({
         success: true,
-        settings: {
-            dailyBonus: settings.dailyBonus || 0,
-            refBonus: settings.refBonus || 0,
-            welcomeCredits: adminSettings.welcomeCredits || 0,
-            transferFee: settings.transferCost || settings.transferFee || 0
-        },
         costs: {
-            services: settings.costs || {},
-            cards: db.data.cardPrices || {},
-            vpns: db.data.vpnPrices || {}
+            dailyReward: settings.dailyBonus || 0,
+            inviteBonus: settings.refBonus || 0,
+            welcomeBonus: adminSettings.welcomeCredits || 0,
+            adReward: settings.adReward || 5,
+            transferFee: settings.transferFee || 0,
+            supportCost: settings.supportCost || 0,
+            gmailCost: costs.gmail || 0,
+            verificationCost: costs.verification || 0,
+            numberCost: costs.number || 0,
+            mailCost: costs.mail || 0
         },
+        sellingRewards: db.data.sellingRewards || {},
         dbSize: (fs.existsSync(db.DB_FILE) ? (fs.statSync(db.DB_FILE).size / 1024).toFixed(2) : 0) + ' KB'
     });
 });
 
-// API: Cost Management (Save - Consolidated)
+// API: Cost Management (Save)
 app.post('/api/admin/costs', (req, res) => {
-    // Structure from admin.html payload
-    const { settings, costs } = req.body;
+    const payload = req.body;
+    if (!payload) return res.json({ success: false, message: 'Invalid payload' });
 
     if (!db.data.settings) db.data.settings = {};
 
-    if (settings) {
-        if (settings.dailyBonus !== undefined) db.data.settings.dailyBonus = parseInt(settings.dailyBonus);
-        if (settings.refBonus !== undefined) db.data.settings.refBonus = parseInt(settings.refBonus);
-        if (settings.transferFee !== undefined) db.data.settings.transferCost = parseInt(settings.transferFee);
-
-        if (settings.welcomeCredits !== undefined) {
-            if (!db.data.adminSettings) db.data.adminSettings = {};
-            db.data.adminSettings.welcomeCredits = parseInt(settings.welcomeCredits);
-        }
+    // Base Settings & Rewards
+    if (payload.dailyReward !== undefined) db.data.settings.dailyBonus = parseInt(payload.dailyReward);
+    if (payload.inviteBonus !== undefined) db.data.settings.refBonus = parseInt(payload.inviteBonus);
+    if (payload.adReward !== undefined) db.data.settings.adReward = parseInt(payload.adReward);
+    if (payload.transferFee !== undefined) db.data.settings.transferFee = parseInt(payload.transferFee);
+    if (payload.supportCost !== undefined) db.data.settings.supportCost = parseInt(payload.supportCost);
+    
+    if (payload.welcomeBonus !== undefined) {
+        if (!db.data.adminSettings) db.data.adminSettings = {};
+        db.data.adminSettings.welcomeCredits = parseInt(payload.welcomeBonus);
     }
 
-    if (costs) {
-        if (costs.services) {
-            db.data.settings.costs = { ...db.data.settings.costs, ...costs.services };
-        }
-        if (costs.cards) {
-            db.data.cardPrices = { ...db.data.cardPrices, ...costs.cards };
-        }
-        if (costs.vpns) {
-            db.data.vpnPrices = { ...db.data.vpnPrices, ...costs.vpns };
-        }
+    // Service Costs (Nested in costs.services)
+    if (!db.data.settings.costs) db.data.settings.costs = {};
+    if (payload.gmailCost !== undefined) db.data.settings.costs.gmail = parseInt(payload.gmailCost);
+    if (payload.verificationCost !== undefined) db.data.settings.costs.verification = parseInt(payload.verificationCost);
+    if (payload.numberCost !== undefined) db.data.settings.costs.number = parseInt(payload.numberCost);
+    if (payload.mailCost !== undefined) db.data.settings.costs.mail = parseInt(payload.mailCost);
+
+    // Selling Rewards
+    if (payload.sellingRewards) {
+        db.data.sellingRewards = { ...db.data.sellingRewards, ...payload.sellingRewards };
     }
 
     db.save();
@@ -1908,12 +2031,12 @@ app.post('/api/admin/broadcast', async (req, res) => {
 
     if (target === 'users' || target === 'all') {
         const users = db.getUsers();
-        targetIds.push(...users.map(u => u.id));
+        if (users.length > 0) targetIds.push(...users.map(u => u.id));
     }
 
     if (target === 'groups' || target === 'all') {
         const groups = db.getGroups();
-        targetIds.push(...groups.map(g => g.id));
+        if (groups.length > 0) targetIds.push(...groups.map(g => g.id));
     }
 
     // Unique IDs only
@@ -1933,6 +2056,12 @@ app.post('/api/admin/broadcast', async (req, res) => {
                 bUrl = 'https://t.me/' + bUrl.slice(1);
             } else if (bUrl && !bUrl.includes('://')) {
                 bUrl = 'https://' + bUrl;
+            }
+
+            // Fix: Replace localhost with PUBLIC_URL for Telegram buttons
+            if (bUrl.includes('localhost:') || bUrl.includes('127.0.0.1:')) {
+                const publicUrl = config.PUBLIC_URL || 'https://mamunislam.netlify.app';
+                bUrl = bUrl.replace(/https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/, publicUrl);
             }
 
             currentRow.push({ text: btn.text, url: bUrl });
@@ -1986,6 +2115,19 @@ app.post('/api/admin/broadcast', async (req, res) => {
         }
 
         res.json({ success: true, sent: successCount, failed: failCount, total: targetIds.length });
+
+        // NEW: Immediate cleanup of broadcast media file
+        if (mediaUrl && mediaUrl.startsWith('/uploads/')) {
+            const filePath = path.join(__dirname, '..', 'web', mediaUrl);
+            if (fs.existsSync(filePath)) {
+                try {
+                    fs.unlinkSync(filePath);
+                    console.log(`[CLEANUP] Broadcast media deleted immediately: ${filePath}`);
+                } catch (err) {
+                    console.error(`[CLEANUP] Immediate delete failed: ${err.message}`);
+                }
+            }
+        }
 
     } catch (e) {
         console.error('Broadcast Error:', e);
@@ -2119,10 +2261,11 @@ app.post('/api/accounts/buy', (req, res) => {
     }
 
     // Deduct tokens
+    const price = parseInt(account.price || 0);
     if (user.tokens !== undefined) {
-        user.tokens -= account.price;
+        user.tokens = Math.max(0, user.tokens - price);
     } else {
-        user.balance_tokens -= account.price;
+        user.balance_tokens = Math.max(0, (user.balance_tokens || 0) - price);
     }
 
     // Mark sold
@@ -2760,6 +2903,119 @@ app.get('/api/referrals/:userId', (req, res) => {
         },
         referralLink: `https://t.me/${botUsername}?start=${userId}`
     });
+});
+
+
+// =============================================
+// ITEM SELLING (USER SUBMISSIONS)
+// =============================================
+
+app.get('/api/user/item-sales/rewards', (req, res) => {
+    const rewards = db.data.sellingRewards || {
+        "Gmail": 50,
+        "TikTok": 100,
+        "Facebook": 80,
+        "Telegram": 120,
+        "Discord": 150,
+        "Other": 40,
+        "2faMultiplier": 1.5
+    };
+    res.json({ success: true, rewards });
+});
+
+// User: Submit item for sale
+app.post('/api/user/item-sales/submit', (req, res) => {
+    const { userId, itemType, details, email, password, note, is2fa } = req.body;
+    if (!userId || !itemType) return res.json({ success: false, message: 'Missing fields' });
+
+    if (!db.data.itemSales) db.data.itemSales = {};
+
+    const saleId = 'sale_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+    const saleData = {
+        id: saleId,
+        userId: userId.toString(),
+        itemType,
+        details: details || '',
+        email: email || '',
+        password: password || '',
+        note: note || '',
+        is2fa: !!is2fa,
+        status: 'pending',
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+    };
+
+    db.data.itemSales[saleId] = saleData;
+    db.save();
+
+    res.json({ success: true, message: 'Item submitted successfully! Waiting for admin approval.', sale: saleData });
+});
+
+// User: Get my sale submissions
+app.get('/api/user/item-sales/my', (req, res) => {
+    const { userId } = req.query;
+    if (!userId) return res.json({ success: false, items: [] });
+
+    const sales = Object.values(db.data.itemSales || {}).filter(s => s.userId === userId.toString());
+    // Sort by newest first
+    sales.sort((a, b) => b.createdAt - a.createdAt);
+
+    res.json({ success: true, items: sales });
+});
+
+// Admin: Get all sale submissions (pending/approved/rejected)
+app.get('/api/admin/item-sales/all', (req, res) => {
+    const sales = Object.values(db.data.itemSales || {});
+    // Filter/Sort
+    const pending = sales.filter(s => s.status === 'pending').sort((a, b) => b.createdAt - a.createdAt);
+    const history = sales.filter(s => s.status !== 'pending').sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 50);
+
+    res.json({ success: true, pending, history });
+});
+
+// Admin: Update sale status (Approve/Reject)
+app.post('/api/admin/item-sales/update', (req, res) => {
+    const { saleId, status, rewardAmount } = req.body;
+    if (!saleId || !status) return res.json({ success: false, message: 'Missing fields' });
+
+    if (!db.data.itemSales || !db.data.itemSales[saleId]) {
+        return res.json({ success: false, message: 'Submission not found' });
+    }
+
+    const sale = db.data.itemSales[saleId];
+    sale.status = status;
+    sale.updatedAt = Date.now();
+
+    // If approved and reward specified, credit the user
+    if (status === 'approved' && rewardAmount > 0) {
+        db.addCredit(sale.userId, parseInt(rewardAmount));
+        db.addTransaction(sale.userId, 'bonus', parseInt(rewardAmount), 'Tokens', `Reward for selling ${sale.itemType}`, 'gift');
+    }
+
+    db.save();
+    res.json({ success: true, message: `Submission ${status} successfully.` });
+});
+
+app.get('/api/admin/global-history', (req, res) => {
+    const users = db.data.users || {};
+    let allHistory = [];
+    
+    Object.keys(users).forEach(userId => {
+        const user = users[userId];
+        const userHistory = user.history || [];
+        userHistory.forEach(item => {
+            allHistory.push({
+                ...item,
+                userId: userId,
+                username: user.first_name || 'User'
+            });
+        });
+    });
+
+    // Sort by date descending
+    allHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    res.json({ success: true, history: allHistory.slice(0, 500) });
 });
 
 function startServer() {

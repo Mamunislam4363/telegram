@@ -169,10 +169,14 @@
                 <div class="nav-item" onclick="nav('services')"><i class="fas fa-cogs w-5"></i> Services</div>
                 <div class="nav-item" onclick="nav('buttons')"><i class="fas fa-toggle-on w-5"></i> Button Management
                 </div>
+                <div class="nav-item" onclick="nav('shopmanage')"><i class="fas fa-store w-5"></i> Shop Items</div>
+                <div class="nav-item" onclick="nav('itemsales')"><i class="fas fa-shopping-basket w-5"></i> Item Sales
+                    <span id="pendingSalesBadge" class="hidden ml-auto bg-orange-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">0</span>
+                </div>
                 <div class="nav-item" onclick="nav('accounts')"><i class="fas fa-user-shield w-5"></i> Accounts</div>
+                <div class="nav-item" onclick="nav('history')"><i class="fas fa-history w-5"></i> History</div>
                 <div class="nav-item" onclick="nav('premiumemail')"><i class="fas fa-envelope w-5"></i> Premium Email
                 </div>
-                <div class="nav-item" onclick="nav('shopmanage')"><i class="fas fa-store w-5"></i> Shop Items</div>
                 <div class="nav-item" onclick="nav('broadcast')"><i class="fas fa-bullhorn w-5"></i> Broadcast</div>
                 <div class="nav-item" onclick="nav('storage')"><i class="fas fa-hdd w-5"></i> Storage (Drive)</div>
                 <div class="nav-item" onclick="nav('adnetworks')"><i class="fas fa-ad w-5"></i> Ad Networks</div>
@@ -655,6 +659,90 @@
                 </div>
             </div>
 
+            <!-- ITEM SALES MANAGEMENT -->
+            <section id="page-itemsales" class="page">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Pending Item Sales -->
+                    <div class="lg:col-span-2 glass-card rounded-2xl p-6 overflow-hidden">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="font-bold flex items-center gap-2"><i class="fas fa-clock text-orange-400"></i>
+                                PENDING ITEM SALES</h3>
+                            <button onclick="loadItemSales()"
+                                class="p-2 rounded-lg bg-orange-500/10 text-orange-400 hover:bg-orange-500/20"><i
+                                    class="fas fa-sync-alt"></i></button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table id="pendingItemSalesTable">
+                                <thead>
+                                    <tr>
+                                        <th>USER ID</th>
+                                        <th>CATEGORY</th>
+                                        <th>ACCOUNT DETAIL</th>
+                                        <th>PASSWORD</th>
+                                        <th>NOTE</th>
+                                        <th>ACTION</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pendingItemSalesBody">
+                                    <tr>
+                                        <td colspan="6" class="text-center py-8 text-gray-500">Loading submissions...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Processed History -->
+                    <div class="lg:col-span-2 glass-card rounded-2xl p-6 overflow-hidden">
+                        <h3 class="font-bold flex items-center gap-2 mb-6"><i class="fas fa-history text-green-400"></i>
+                            RECENT PROCESSED SALES</h3>
+                        <div class="overflow-x-auto">
+                            <table id="itemSalesHistoryTable">
+                                <thead>
+                                    <tr>
+                                        <th>USER ID</th>
+                                        <th>CATEGORY</th>
+                                        <th>EMAIL/USER</th>
+                                        <th>STATUS</th>
+                                        <th>DATE</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="itemSalesHistoryBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- GLOBAL HISTORY -->
+            <section id="page-history" class="page">
+                <div class="glass-card p-6 rounded-2xl">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h3 class="font-bold flex items-center gap-2"><i class="fas fa-history text-indigo-400"></i> GLOBAL TRANSACTION HISTORY</h3>
+                            <p class="text-xs text-gray-400 mt-1">Real-time activity across all users</p>
+                        </div>
+                        <button onclick="loadGlobalHistory()" class="p-2 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 shadow-sm"><i class="fas fa-sync-alt"></i></button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="text-gray-500 text-[10px] uppercase border-b border-white/5">
+                                    <th class="pb-3 font-bold">USER</th>
+                                    <th class="pb-3 font-bold">TYPE</th>
+                                    <th class="pb-3 font-bold">REWARD / COST</th>
+                                    <th class="pb-3 font-bold">DATE</th>
+                                </tr>
+                            </thead>
+                            <tbody id="globalHistoryBody" class="text-sm">
+                                <tr><td colspan="4" class="text-center py-8 text-gray-500">Loading history...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
             <!-- 3. CODES -->
             <div id="page-codes" class="page">
                 <div class="glass-card p-6 rounded-2xl">
@@ -818,10 +906,10 @@
 
                             <!-- Service Costs -->
                             <div
-                                class="space-y-4 col-span-1 md:col-span-2 lg:col-span-2 border border-white/10 rounded-xl p-4 bg-black/20">
+                                class="space-y-4 col-span-1 md:col-span-2 lg:col-span-1 border border-white/10 rounded-xl p-4 bg-black/20">
                                 <h4 class="text-sm font-semibold text-blue-400 border-b border-white/10 pb-2 mb-3">
                                     Service Costs</h4>
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div class="grid grid-cols-1 gap-3">
                                     <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Gmail
                                             Add/Create</label><input type="number" id="conf-gmail"
                                             class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
@@ -836,6 +924,36 @@
                                     </div>
                                     <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Temp
                                             Mail</label><input type="number" id="conf-mail"
+                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Selling Rewards -->
+                            <div
+                                class="space-y-4 col-span-1 md:col-span-2 lg:col-span-1 border border-white/10 rounded-xl p-4 bg-black/20">
+                                <h4 class="text-sm font-semibold text-yellow-500 border-b border-white/10 pb-2 mb-3">
+                                    Selling Rewards (TC)</h4>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Gmail</label><input type="number" id="reward-gmail"
+                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
+                                    </div>
+                                    <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">TikTok</label><input type="number" id="reward-tiktok"
+                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
+                                    </div>
+                                    <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Facebook</label><input type="number" id="reward-facebook"
+                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
+                                    </div>
+                                    <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Telegram</label><input type="number" id="reward-telegram"
+                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
+                                    </div>
+                                    <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Discord</label><input type="number" id="reward-discord"
+                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
+                                    </div>
+                                    <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Other</label><input type="number" id="reward-other"
+                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
+                                    </div>
+                                    <div class="col-span-2"><label class="text-xs text-gray-400 uppercase font-bold block mb-1">2FA Multiplier (e.g. 1.5)</label><input type="number" step="0.1" id="reward-2fa-mult"
                                             class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
                                     </div>
                                 </div>
@@ -1814,6 +1932,83 @@
 
         function logout() { location.reload(); }
 
+        // Cost & Reward Management
+        async function loadAllCosts() {
+            try {
+                const res = await fetch('/api/admin/costs');
+                const data = await res.json();
+                if (data.success) {
+                    const c = data.costs;
+                    // Rewards
+                    document.getElementById('conf-daily').value = c.dailyReward || 0;
+                    document.getElementById('conf-invite').value = c.inviteBonus || 0;
+                    document.getElementById('conf-welcome').value = c.welcomeBonus || 0;
+                    document.getElementById('conf-adreward').value = c.adReward || 0;
+                    // Fees
+                    document.getElementById('conf-transfer').value = c.transferFee || 0;
+                    document.getElementById('conf-support').value = c.supportCost || 0;
+                    // Services
+                    document.getElementById('conf-gmail').value = c.gmailCost || 0;
+                    document.getElementById('conf-verification').value = c.verificationCost || 0;
+                    document.getElementById('conf-number').value = c.numberCost || 0;
+                    document.getElementById('conf-mail').value = c.mailCost || 0;
+                    
+                    // Selling Rewards
+                    const sr = data.sellingRewards || {};
+                    document.getElementById('reward-gmail').value = sr.gmail || 0;
+                    document.getElementById('reward-tiktok').value = sr.tiktok || 0;
+                    document.getElementById('reward-facebook').value = sr.facebook || 0;
+                    document.getElementById('reward-telegram').value = sr.telegram || 0;
+                    document.getElementById('reward-discord').value = sr.discord || 0;
+                    document.getElementById('reward-other').value = sr.other || 0;
+                    document.getElementById('reward-2fa-mult').value = sr['2faMultiplier'] || 1.5;
+                }
+            } catch (e) {
+                console.error('Failed to load costs:', e);
+            }
+        }
+
+        async function saveAllCosts() {
+            const payload = {
+                dailyReward: parseInt(document.getElementById('conf-daily').value) || 0,
+                inviteBonus: parseInt(document.getElementById('conf-invite').value) || 0,
+                welcomeBonus: parseInt(document.getElementById('conf-welcome').value) || 0,
+                adReward: parseInt(document.getElementById('conf-adreward').value) || 0,
+                transferFee: parseInt(document.getElementById('conf-transfer').value) || 0,
+                supportCost: parseInt(document.getElementById('conf-support').value) || 0,
+                gmailCost: parseInt(document.getElementById('conf-gmail').value) || 0,
+                verificationCost: parseInt(document.getElementById('conf-verification').value) || 0,
+                numberCost: parseInt(document.getElementById('conf-number').value) || 0,
+                mailCost: parseInt(document.getElementById('conf-mail').value) || 0,
+                
+                sellingRewards: {
+                    gmail: parseInt(document.getElementById('reward-gmail').value) || 0,
+                    tiktok: parseInt(document.getElementById('reward-tiktok').value) || 0,
+                    facebook: parseInt(document.getElementById('reward-facebook').value) || 0,
+                    telegram: parseInt(document.getElementById('reward-telegram').value) || 0,
+                    discord: parseInt(document.getElementById('reward-discord').value) || 0,
+                    other: parseInt(document.getElementById('reward-other').value) || 0,
+                    '2faMultiplier': parseFloat(document.getElementById('reward-2fa-mult').value) || 1.1
+                }
+            };
+
+            try {
+                const res = await fetch('/api/admin/costs', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('✅ All costs and rewards saved successfully!');
+                } else {
+                    alert('❌ Error: ' + data.message);
+                }
+            } catch (e) {
+                alert('❌ Network error saving costs');
+            }
+        }
+
         // NAV
         function nav(p) {
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
@@ -1833,7 +2028,7 @@
                 'accounts': 'Premium Accounts', 'storage': 'Storage (Drive)',
                 'groups': 'Groups', 'premiumemail': 'Premium Email',
                 'adnetworks': 'Ad Network Integration', 'database': 'Database Management',
-                'deposits': 'Deposit Management'
+                'deposits': 'Deposit Management', 'history': 'Global History'
             };
             if (titles[p]) document.getElementById('page-title').innerText = titles[p];
             if (p === 'deposits') {
@@ -1850,6 +2045,8 @@
             if (p === 'premiumemail') loadPremiumEmails();
             if (p === 'adnetworks') loadAdNetworks();
             if (p === 'buttons') loadFeatureFlags();
+            if (p === 'itemsales') loadItemSales();
+            if (p === 'history') loadGlobalHistory();
             if (p === 'database') {
                 loadDbSchedule();
                 loadBackupHistory();
@@ -2155,6 +2352,13 @@
                     status.textContent = `✅ Successfully sent to ${data.sent} targets. (${data.failed} failed)`;
                     status.style.color = '#4ade80';
                     alert(`Broadcast complete!\nSent: ${data.sent}\nFailed: ${data.failed}`);
+                    
+                    // Clear inputs after success to save state
+                    document.getElementById('bc-message').value = '';
+                    document.getElementById('bc-media-url').value = '';
+                    document.getElementById('bc-buttons').value = '';
+                    document.getElementById('bc-media-type').value = 'none';
+                    if (typeof toggleMediaInput === 'function') toggleMediaInput();
                 } else {
                     status.textContent = '❌ Broadcast failed: ' + data.message;
                     status.style.color = '#f87171';
@@ -2173,6 +2377,7 @@
             loadAdminStats();
             initChart();
             loadFeatureFlags();
+            loadAllCosts();
         }
 
         // FEATURE FLAGS (Button Management)
@@ -2761,7 +2966,8 @@
         }
 
         async function restoreBackupFromHistory(file) {
-            if (!confirm(`Are you sure you want to RESTORE from ${file}? \nThis will merge/update existing data with the backup contents.`)) return;
+            // Removed confirmation popup
+            if (false) {}
 
             try {
                 const res = await fetch('/api/admin/db/restore', {
@@ -2782,7 +2988,8 @@
         }
 
         async function deleteBackupFromHistory(file) {
-            if (!confirm(`Are you sure you want to PERMANENTLY delete the backup file: ${file}?`)) return;
+            // Removed confirmation popup
+            if (false) {}
 
             try {
                 const res = await fetch(`/api/admin/db/backups/${file}`, {
@@ -2902,7 +3109,8 @@
         function savePayout() { alert('Payout settings saved (stub)'); }
 
         async function deleteAccount(id) {
-            if (!confirm('Are you sure you want to delete this account?')) return;
+            // Direct delete
+            if (false) {}
             try {
                 const res = await fetch(`/api/admin/accounts/${id}`, { method: 'DELETE' });
                 const data = await res.json();
@@ -2969,8 +3177,10 @@
             window.location.href = '/auth/google?state=admin';
         }
 
+
         async function disconnectDrive() {
-            if (!confirm('Are you sure you want to disconnect Google Drive? Backups will no longer be saved to the cloud.')) return;
+            // Removed confirmation
+            if (false) {}
             try {
                 const res = await fetch('/api/admin/storage/disconnect', { method: 'POST' });
                 const data = await res.json();
@@ -2980,6 +3190,108 @@
                 }
             } catch (e) {
                 alert('Error: ' + e.message);
+            }
+        }
+
+        // ITEM SALES
+        function loadItemSales() {
+            fetch('/api/admin/item-sales/all')
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.success) return;
+
+                    // Update Badge
+                    const badge = document.getElementById('pendingSalesBadge');
+                    if (badge) {
+                        badge.textContent = data.pending.length;
+                        badge.classList.toggle('hidden', data.pending.length === 0);
+                    }
+
+                    // Render Pending
+                    const pendingBody = document.getElementById('pendingItemSalesBody');
+                    if (pendingBody) {
+                        pendingBody.innerHTML = data.pending.map(s => `
+                        <tr>
+                            <td class="font-mono text-xs">${s.userId}</td>
+                            <td><span class="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 text-[10px] font-bold">${s.itemType}</span></td>
+                            <td class="max-w-[150px] truncate" title="${s.email}">${s.email}</td>
+                            <td class="font-mono text-xs"><code>${s.password}</code></td>
+                            <td class="max-w-[200px] truncate text-xs text-gray-400">${s.note || '-'}</td>
+                            <td>
+                                <div class="flex gap-2">
+                                    <button onclick="updateItemSaleStatus('${s.id}', 'approved')" class="bg-green-500/10 text-green-500 p-2 rounded-lg hover:bg-green-500/20 shadow-sm"><i class="fas fa-check"></i></button>
+                                    <button onclick="updateItemSaleStatus('${s.id}', 'rejected')" class="bg-red-500/10 text-red-500 p-2 rounded-lg hover:bg-red-500/20 shadow-sm"><i class="fas fa-times"></i></button>
+                                </div>
+                            </td>
+                        </tr>`).join('') || '<tr><td colspan="6" class="text-center py-8 text-gray-500">No pending submissions</td></tr>';
+                    }
+
+                    // Render History
+                    const historyBody = document.getElementById('itemSalesHistoryBody');
+                    if (historyBody) {
+                        historyBody.innerHTML = data.history.map(s => `
+                        <tr>
+                            <td class="font-mono text-xs">${s.userId}</td>
+                            <td>${s.itemType}</td>
+                            <td class="text-xs">${s.email}</td>
+                            <td><span class="px-2 py-0.5 rounded-full ${s.status === 'approved' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'} text-[10px] font-bold uppercase">${s.status}</span></td>
+                            <td class="text-[10px] text-gray-400">${new Date(s.updatedAt).toLocaleString()}</td>
+                        </tr>`).join('') || '<tr><td colspan="5" class="text-center py-8 text-gray-500">No history</td></tr>';
+                    }
+                });
+        }
+
+        function updateItemSaleStatus(saleId, status) {
+            let rewardAmount = 0;
+            if (status === 'approved') {
+                const amountStr = prompt('Enter Reward Amount (Tokens):', '50');
+                if (amountStr === null) return;
+                rewardAmount = parseInt(amountStr) || 0;
+            } else {
+                if (false) {}
+            }
+
+            fetch('/api/admin/item-sales/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ saleId, status, rewardAmount })
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        loadItemSales();
+                    } else {
+                        alert(data.message);
+                    }
+                });
+        }
+
+        async function loadGlobalHistory() {
+            const body = document.getElementById('globalHistoryBody');
+            if (body) body.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-500">Loading history...</td></tr>';
+            
+            try {
+                const res = await fetch('/api/admin/global-history');
+                const data = await res.json();
+                if (data.success && body) {
+                    if (data.history.length === 0) {
+                        body.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-500">No activity history found.</td></tr>';
+                        return;
+                    }
+                    body.innerHTML = data.history.map(h => `
+                        <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
+                            <td class="py-3">
+                                <div class="font-bold text-white">${h.username}</div>
+                                <div class="text-[10px] text-gray-500 font-mono">${h.userId}</div>
+                            </td>
+                            <td class="py-3 capitalize text-xs">${h.type.replace('_', ' ')}</td>
+                            <td class="py-3 font-bold ${h.reward.includes('+') ? 'text-green-500' : 'text-red-500'}">${h.reward}</td>
+                            <td class="py-3 text-[10px] text-gray-400 font-mono">${new Date(h.date).toLocaleString()}</td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (e) {
+                if (body) body.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-red-500/50">Failed to load history.</td></tr>';
             }
         }
     </script>

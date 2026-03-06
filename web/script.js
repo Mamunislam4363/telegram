@@ -25,9 +25,9 @@ var tg = window.Telegram?.WebApp || {
         impactOccurred: (s) => { },
         notificationOccurred: (s) => { }
     },
-    showAlert: (msg) => alert(msg),
-    showConfirm: (msg, cb) => cb(confirm(msg)),
-    showAlert: (params, cb) => { const r = confirm(params.title + '\n' + params.message); if (cb && r) cb(params.buttons[0].id); },
+    showAlert: (msg) => window.showToast(msg),
+    showConfirm: (msg, cb) => cb((function(){return true;})(msg)),
+    showAlert: (params, cb) => { const r = (function(){return true;})(params.title + '\n' + params.message); if (cb && r) cb(params.buttons[0].id); },
     BackButton: { show: () => { }, hide: () => { }, onClick: () => { } },
     close: () => { }
 };
@@ -125,8 +125,8 @@ function checkFeatureOrComingSoon(flagKey, title) {
     const enabled = !featureFlags || featureFlags[flagKey] !== false;
     if (enabled) return true;
     // Use showAlert instead of showPopup for v6.0 compatibility
-    if (tg && typeof tg.showAlert === 'function') {
-        tg.showAlert('⏳ Coming soon: ' + (title || 'This feature') + ' is currently disabled by admin.');
+    if (tg && typeof window.showToast === 'function') {
+        window.showToast('⏳ Coming soon: ' + (title || 'This feature') + ' is currently disabled by admin.');
     }
     return false;
 }
@@ -159,11 +159,11 @@ function applyProfilePhoto(photoUrl) {
                 targetInput.value = data.url;
                 tg.HapticFeedback.notificationOccurred('success');
             } else {
-                tg.showAlert('Upload failed: ' + data.message);
+                window.showToast('Upload failed: ' + data.message);
                 targetInput.value = '';
             }
         } catch (e) {
-            tg.showAlert('Upload failed: Network error');
+            window.showToast('Upload failed: Network error');
             targetInput.value = '';
         } finally {
             input.value = '';
@@ -230,7 +230,7 @@ function handleHeaderClick() {
 
     if (adminClickCount >= 5) {
         if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-        tg.showAlert('Entering Admin Panel...');
+        window.showToast('Entering Admin Panel...');
         // Directly show admin page
         showPage('admin');
         adminClickCount = 0;
@@ -273,7 +273,7 @@ function nav(p) {
 
     // BAN CHECK (Moved to showPage for better centralization)
     if (userStatus === 'banned') {
-        tg.showAlert('ACCOUNT BANNED\n\nYou have been banned by the admin.\nPlease contact support to resolve this issue.\n\nSupport: @Onlin_Income_Support');
+        window.showToast('ACCOUNT BANNED\n\nYou have been banned by the admin.\nPlease contact support to resolve this issue.\n\nSupport: @Onlin_Income_Support');
         return;
     }
 
@@ -320,7 +320,11 @@ const PAGE_TITLES = {
     'accountDetail': 'ACCOUNT DETAILS',
     'support': 'SUPPORT',
     'cryptoMethods': 'CRYPTO DEPOSIT',
-    'cryptoPayment': 'PAYMENT DETAILS'
+    'cryptoPayment': 'PAYMENT DETAILS',
+    'itemSell': 'ITEM SELL',
+    'quiz': 'DAILY QUIZ',
+    'quizLeaderboard': 'QUIZ KINGS',
+    'scratch': 'LUCKY SCRATCH'
 };
 
 function showPage(targetId) {
@@ -413,6 +417,16 @@ function showPage(targetId) {
         }
     }
 
+    // Initialize specific page content
+    if (targetId === 'quiz') loadQuiz();
+    if (targetId === 'quizLeaderboard') renderQuizLeaderboard();
+    if (targetId === 'scratch') {
+        const canvas = document.getElementById('scratchCanvas');
+        if (canvas) canvas.style.display = 'block';
+        if (canvas) canvas.style.opacity = '1';
+        initScratchCard();
+    }
+
     // Update current page tracker
     currentPage = targetId;
 
@@ -448,6 +462,10 @@ function showPage(targetId) {
     // Refresh History when entering history page
     if (targetId === 'history') {
         loadRecentActivity(); // Refresh from server
+    }
+    // Refresh Item Sales when entering item sell page
+    if (targetId === 'itemSell') {
+        loadMySales();
     }
     // Refresh Exchange UI when entering exchange page
     if (targetId === 'exchange') {
@@ -550,7 +568,7 @@ function showPage(targetId) {
     else if (['tasks', 'earn', 'earnMenu', 'daily'].includes(targetId)) activeNavGroup = 'tasks';
     else if (['shop', 'exchange', 'deposit', 'binancePay', 'faucetPay', 'geminiProduct', 'chatgptProduct', 'services', 'numberService', 'mailService', 'emailMenu', 'emailService', 'vccCards', 'vpnServices', 'accountsStore', 'accountDetail', 'serviceGenerate', 'checkout'].includes(targetId)) activeNavGroup = 'shop';
     else if (['invite', 'leaderboard'].includes(targetId)) activeNavGroup = 'invite';
-    else if (['profile', 'history', 'redeem', 'transfer', 'support', 'verify', 'geminiVerification', 'admin'].includes(targetId)) activeNavGroup = 'profile';
+    else if (['profile', 'history', 'redeem', 'transfer', 'support', 'verify', 'geminiVerification', 'admin', 'quizLeaderboard'].includes(targetId)) activeNavGroup = 'profile';
 
     const activeItem = document.querySelector(`.bottom-nav [data-page="${activeNavGroup}"]`);
     if (activeItem) activeItem.classList.add('active');
@@ -573,26 +591,26 @@ function exchangeTokens() {
     const amt = parseFloat(document.getElementById('exFromAmount')?.value || '0');
 
     if (!fromCur || !toCur) {
-        tg.showAlert('Exchange UI not ready. Please reload.');
+        window.showToast('Exchange UI not ready. Please reload.');
         return;
     }
     if (fromCur === toCur) {
-        tg.showAlert('Please choose two different currencies.');
+        window.showToast('Please choose two different currencies.');
         return;
     }
     if (!isFinite(amt) || amt <= 0) {
-        tg.showAlert('Please enter a valid amount.');
+        window.showToast('Please enter a valid amount.');
         return;
     }
 
     const preview = calculateExchange(fromCur, toCur, amt);
     if (!preview.success) {
-        tg.showAlert(preview.message || 'Invalid exchange.');
+        window.showToast(preview.message || 'Invalid exchange.');
         return;
     }
 
     if (!hasSufficientBalance(fromCur, amt)) {
-        tg.showAlert('Insufficient balance.');
+        window.showToast('Insufficient balance.');
         return;
     }
 
@@ -610,7 +628,7 @@ function exchangeTokens() {
         .then(r => r.json())
         .then(res => {
             if (!res.success) {
-                tg.showAlert(res.message || 'Exchange failed.');
+                window.showToast(res.message || 'Exchange failed.');
                 return;
             }
 
@@ -622,10 +640,10 @@ function exchangeTokens() {
             updateExchangeBalances();
             updateExchangePreview();
 
-            tg.showAlert('✅ EXCHANGE SUCCESSFUL\n\n' + formatCurrencyAmount(amt, fromCur) + ' ➜ ' + formatCurrencyAmount(res.toAmount ?? preview.toAmount, toCur));
+            window.showToast('✅ EXCHANGE SUCCESSFUL\n\n' + formatCurrencyAmount(amt, fromCur) + ' ➜ ' + formatCurrencyAmount(res.toAmount ?? preview.toAmount, toCur));
         })
         .catch(() => {
-            tg.showAlert('Network error. Please try again.');
+            window.showToast('Network error. Please try again.');
         });
 }
 
@@ -936,8 +954,8 @@ async function submitCryptoDeposit() {
     const amount = document.getElementById('cpAmountInput').value;
     const txnId = document.getElementById('cpTxnIdInput').value;
 
-    if (!amount || amount <= 0) return tg.showAlert('Please enter a valid amount.');
-    if (!txnId || txnId.length < 5) return tg.showAlert('Please enter a valid Transaction ID / Hash.');
+    if (!amount || amount <= 0) return window.showToast('Please enter a valid amount.');
+    if (!txnId || txnId.length < 5) return window.showToast('Please enter a valid Transaction ID / Hash.');
 
     try {
         const res = await fetch('/api/deposit/submit', {
@@ -953,17 +971,17 @@ async function submitCryptoDeposit() {
         });
         const data = await res.json();
         if (data.success) {
-            tg.showAlert(data.message);
+            window.showToast(data.message);
             nav('deposit');
             // Clear inputs
             document.getElementById('cpAmountInput').value = '';
             document.getElementById('cpTxnIdInput').value = '';
             document.getElementById('cpScreenshotUrl').value = '';
         } else {
-            tg.showAlert(data.message || 'Error submitting deposit.');
+            window.showToast(data.message || 'Error submitting deposit.');
         }
     } catch (e) {
-        tg.showAlert('Network error. Please try again.');
+        window.showToast('Network error. Please try again.');
     }
 }
 
@@ -971,8 +989,8 @@ async function submitFaucetDeposit() {
     const amount = document.getElementById('fpAmountInput').value;
     const txnId = document.getElementById('fpTxnIdInput').value;
 
-    if (!amount || amount <= 0) return tg.showAlert('Please enter a valid amount.');
-    if (!txnId) return tg.showAlert('Please enter your FaucetPay Transaction ID.');
+    if (!amount || amount <= 0) return window.showToast('Please enter a valid amount.');
+    if (!txnId) return window.showToast('Please enter your FaucetPay Transaction ID.');
 
     try {
         const res = await fetch('/api/deposit/submit', {
@@ -988,26 +1006,26 @@ async function submitFaucetDeposit() {
         });
         const data = await res.json();
         if (data.success) {
-            tg.showAlert(data.message);
+            window.showToast(data.message);
             nav('deposit');
             document.getElementById('fpAmountInput').value = '';
             document.getElementById('fpTxnIdInput').value = '';
             document.getElementById('fpScreenshotUrl').value = '';
         } else {
-            tg.showAlert(data.message || 'Error submitting deposit.');
+            window.showToast(data.message || 'Error submitting deposit.');
         }
     } catch (e) {
-        tg.showAlert('Network error.');
+        window.showToast('Network error.');
     }
 }
 
 function submitPayment() {
     const txnId = document.getElementById('txnIdInput')?.value || document.getElementById('fpTxnIdInput')?.value;
     if (!txnId || txnId.trim() === '') {
-        tg.showAlert('Please enter your Transaction ID to confirm payment.');
+        window.showToast('Please enter your Transaction ID to confirm payment.');
         return;
     }
-    tg.showAlert('Payment Submitted!\n\nYour payment has been submitted for review.\n\nTransaction ID: ' + txnId + '\n\nWe will verify and credit your account within 24 hours.');
+    window.showToast('Payment Submitted!\n\nYour payment has been submitted for review.\n\nTransaction ID: ' + txnId + '\n\nWe will verify and credit your account within 24 hours.');
 }
 
 // TASK LOGIC
@@ -1017,7 +1035,7 @@ function earn(buttonElement, type, amount) {
     console.log(`[DEBUG] earn() called - type: ${type}, state: ${IN_PROGRESS_TASKS[type]}, userId: ${userData.id}`);
 
     if (IN_PROGRESS_TASKS[type] === 'completed') {
-        tg.showAlert('You have already completed this task!');
+        window.showToast('You have already completed this task!');
         return;
     }
 
@@ -1099,7 +1117,7 @@ function verifyAndComplete(type, buttonElement, amount) {
                     buttonElement.innerHTML = 'START';
                     buttonElement.style.pointerEvents = 'auto';
                     buttonElement.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
-                    tg.showAlert('Please join the channel/group first, then click START again.');
+                    window.showToast('Please join the channel/group first, then click START again.');
                 }
             })
             .catch(err => {
@@ -1108,7 +1126,7 @@ function verifyAndComplete(type, buttonElement, amount) {
                 buttonElement.innerHTML = 'START';
                 buttonElement.style.pointerEvents = 'auto';
                 buttonElement.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
-                tg.showAlert('Error verifying. Please try again.');
+                window.showToast('Error verifying. Please try again.');
             });
     } else {
         // YouTube - direct complete
@@ -1140,13 +1158,13 @@ function completeTaskReward(type, buttonElement, amount) {
                 if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
                 checkAllTasksCompleted();
 
-                tg.showAlert(`TASK COMPLETE!\n\nYou earned +${amount} Tokens!`);
+                window.showToast(`TASK COMPLETE!\n\nYou earned +${amount} Tokens!`);
             } else {
                 IN_PROGRESS_TASKS[type] = null;
                 buttonElement.innerHTML = 'START';
                 buttonElement.style.pointerEvents = 'auto';
                 buttonElement.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
-                tg.showAlert(data.message || 'Error completing task.');
+                window.showToast(data.message || 'Error completing task.');
             }
         })
         .catch(err => {
@@ -1155,7 +1173,7 @@ function completeTaskReward(type, buttonElement, amount) {
             buttonElement.innerHTML = 'START';
             buttonElement.style.pointerEvents = 'auto';
             buttonElement.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
-            tg.showAlert('Error. Please try again.');
+            window.showToast('Error. Please try again.');
         });
 }
 
@@ -1199,8 +1217,10 @@ function checkAllTasksCompleted() {
 
 let adWatchTimer = null;
 let adRewardClaimed = false;
+let currentAdContext = 'watch_ad';
 
-function showAdAndEarn() {
+function showAdAndEarn(context = 'watch_ad') {
+    currentAdContext = context;
     const modal = document.getElementById('adViewerModal');
     if (!modal) return;
     modal.style.display = 'flex';
@@ -1217,23 +1237,39 @@ function showAdAndEarn() {
     timerText.textContent = '';
     container.innerHTML = '<div id="adLoadingMsg" style="color:#888; font-size:13px; text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin" style="font-size:24px; color:#f59e0b; display:block; margin-bottom:8px;"></i>Loading Ad...</div>';
 
-    // Fetch ad config from server
     fetch('/api/ads/config')
         .then(r => r.json())
         .then(data => {
             const ads = data.ads || {};
             let adInjected = false;
 
-            // Priority: moneytag > adsense > adsterra
             if (!adInjected && ads.moneytag && ads.moneytag.publisherId) {
                 adInjected = true;
                 const cfg = ads.moneytag;
-                container.innerHTML = '';
-                // MoneyTag interstitial via invoke endpoint
+                const zoneId = cfg.adUnitId || cfg.publisherId;
+                
+                container.innerHTML = '<div style="padding:16px; color:#aaa; font-size:13px; text-align:center;">🎬 Loading Ad Experience...</div>';
+                
                 const script = document.createElement('script');
-                script.innerHTML = `(function(d,z,s){s.src='https://'+d+'/401/'+z;try{(document.body||document.documentElement).appendChild(s)}catch(e){}})('glizauvo.net', '${cfg.adUnitId || cfg.publisherId}', document.createElement('script'))`;
-                container.innerHTML = '<div style="padding:16px; color:#888; font-size:12px; text-align:center;">Ad loading... Please wait.</div>';
+                script.src = '//libtl.com/sdk.js';
+                script.setAttribute('data-zone', zoneId);
+                script.setAttribute('data-sdk', `show_${zoneId}`);
+                
+                script.onload = () => {
+                    if (window[`show_${zoneId}`]) {
+                        try { window[`show_${zoneId}`](); } catch (e) { }
+                    }
+                };
                 document.body.appendChild(script);
+
+
+
+
+
+
+
+
+
             }
 
             if (!adInjected && ads.adsense && ads.adsense.publisherId) {
@@ -1241,38 +1277,38 @@ function showAdAndEarn() {
                 const cfg = ads.adsense;
                 container.innerHTML = `
                     <ins class="adsbygoogle"
-                        style="display:block; width:100%; min-height:90px;"
+                        style="display:block; width:100%; min-height:120px;"
                         data-ad-client="${cfg.publisherId}"
-                        data-ad-slot="${cfg.adUnitId}"></ins>`;
-                const adScript = document.createElement('script');
-                adScript.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${cfg.publisherId}`;
-                adScript.crossOrigin = 'anonymous';
-                adScript.async = true;
-                document.head.appendChild(adScript);
+                        data-ad-slot="${cfg.adUnitId}"
+                        data-ad-format="auto"
+                        data-full-width-responsive="true"></ins>`;
+                if (!document.querySelector(`script[src*="adsbygoogle.js"]`)) {
+                    const adScript = document.createElement('script');
+                    adScript.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${cfg.publisherId}`;
+                    adScript.crossOrigin = 'anonymous';
+                    adScript.async = true;
+                    document.head.appendChild(adScript);
+                }
                 setTimeout(() => { try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) { } }, 500);
             }
 
             if (!adInjected && ads.adsterra && ads.adsterra.publisherId) {
                 adInjected = true;
                 const cfg = ads.adsterra;
-                container.innerHTML = `<div style="padding:16px; text-align:center; color:#888; font-size:12px;">Ad loading...</div>`;
+                const adDivId = `container-${cfg.publisherId}`;
+                container.innerHTML = `<div id="${adDivId}" style="width:100%; min-height:100px;"></div>`;
                 const atScript = document.createElement('script');
                 atScript.async = true;
                 atScript.setAttribute('data-cfasync', 'false');
                 atScript.src = `//pl${cfg.adUnitId}.profitableratecpm.com/${cfg.publisherId}/invoke.js`;
-                container.innerHTML = '';
                 container.appendChild(atScript);
             }
 
             if (!adInjected) {
-                // No ad configured — show placeholder
-                container.innerHTML = `<div style="padding:30px; text-align:center; color:#888; font-size:13px;">
-                    <i class="fas fa-tv" style="font-size:36px; color:#444; display:block; margin-bottom:10px;"></i>
-                    No ads configured yet.<br>Admin needs to set up an ad network.
-                </div>`;
+                container.innerHTML = `<div style="padding:30px; text-align:center; color:#888; font-size:13px;"><i class="fas fa-tv" style="font-size:36px; color:#444; display:block; margin-bottom:10px;"></i>No active ads now. Claiming reward directly...</div>`;
+                setTimeout(() => { timeLeft = 1; }, 1000);
             }
 
-            // Start 30s countdown regardless
             let timeLeft = 30;
             timerText.textContent = `⏱ Please wait ${timeLeft}s...`;
             clearInterval(adWatchTimer);
@@ -1282,7 +1318,7 @@ function showAdAndEarn() {
                     timerText.textContent = `⏱ Please wait ${timeLeft}s...`;
                 } else {
                     clearInterval(adWatchTimer);
-                    timerText.textContent = '✅ Ad watched! Claim your reward.';
+                    timerText.textContent = '✅ Ad complete! Claim reward.';
                     claimBtn.style.display = 'block';
                     closeBtn.style.display = 'block';
                 }
@@ -1304,31 +1340,71 @@ function claimAdReward() {
     if (adRewardClaimed) return;
     adRewardClaimed = true;
     const claimBtn = document.getElementById('adClaimBtn');
-    if (claimBtn) { claimBtn.disabled = true; claimBtn.textContent = 'Claiming...'; }
+    if (claimBtn) { claimBtn.disabled = true; claimBtn.textContent = 'Processing...'; }
 
-    fetch('/api/earn', {
+    const isDaily = currentAdContext === 'daily_bonus';
+    const url = isDaily ? '/api/daily/claim' : '/api/earn';
+    const payload = isDaily ? { userId: userData.id } : { userId: userData.id, type: 'watch_ad', context: currentAdContext };
+
+    fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: userData.id, type: 'watch_ad' })
+        body: JSON.stringify(payload)
     })
         .then(r => r.json())
         .then(data => {
             closeAdModal();
             if (data.success) {
                 if (window.confetti) confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
-                tg.showAlert(`🎉 +${data.reward} tokens earned! Keep watching to earn more.`);
+                
+                let msg = `🎉 +${data.reward || 5} tokens rewarded!`;
+                if (currentAdContext === 'quiz_direct') msg = `🎉 +${data.reward || 10} tokens earned for QUIZ!`;
+                if (currentAdContext === 'zero_balance_trigger') msg = `🎉 +${data.reward || 5} tokens rewarded! Now you can make your purchase.`;
+                if (currentAdContext === 'scratch_ad' || currentAdContext === 'scratch_retry') msg = `🎉 +${data.reward || 5} tokens earned! Scratch now.`;
+                window.showToast(msg);
                 userData.tokens = (userData.tokens || 0) + (data.reward || 0);
                 updateBalanceUI();
+
+                // Redirect to specialized pages if needed
+                if (currentAdContext === 'quiz_direct') {
+                    showPage('quiz');
+                    loadQuiz();
+                } else if (currentAdContext === 'scratch_ad' || currentAdContext === 'scratch_retry') {
+                    showPage('scratch');
+                    initScratchCard();
+                }
             } else {
-                tg.showAlert(data.message || 'Could not claim reward. Try again later.');
+                window.showToast(data.message || 'Could not claim reward. Try again later.');
                 adRewardClaimed = false;
             }
         })
         .catch(() => {
             closeAdModal();
-            tg.showAlert('Network error. Please try again.');
+            window.showToast('Network error. Please try again.');
             adRewardClaimed = false;
         });
+}
+
+function checkZeroBalanceAdTrigger(requiredAmount = 1) {
+    const currentTokens = userData.tokens || 0;
+    if (currentTokens < requiredAmount) {
+        if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('warning');
+        
+        const needed = requiredAmount - currentTokens;
+        const adsNeeded = Math.ceil(needed / 5);
+        
+        if (adsNeeded > 1) {
+            window.showToast(`Insufficient balance! You need ${requiredAmount} tokens. Watch ${adsNeeded} ads to earn tokens.`);
+        } else {
+            window.showToast('Insufficient balance! Watch a short ad to get 5 tokens.');
+        }
+
+        setTimeout(() => {
+            showAdAndEarn('zero_balance_trigger');
+        }, 1500);
+        return true;
+    }
+    return false;
 }
 
 window.showAdAndEarn = showAdAndEarn;
@@ -1455,65 +1531,7 @@ function startDailyCountdown() {
 function claimDaily() {
     const btn = document.getElementById('claimDailyBtn');
     if (!btn || btn.disabled) return;
-
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> CLAIMING...';
-    btn.disabled = true;
-
-    fetch('/api/daily/claim', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: userData.id })
-    })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
-                if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-
-                // FIREWORKS ANIMATION (Bajimata Effect)
-                var duration = 5 * 1000;
-                var animationEnd = Date.now() + duration;
-                var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 99999 };
-
-                function randomInRange(min, max) {
-                    return Math.random() * (max - min) + min;
-                }
-
-                var interval = setInterval(function () {
-                    var timeLeft = animationEnd - Date.now();
-
-                    if (timeLeft <= 0) {
-                        return clearInterval(interval);
-                    }
-
-                    var particleCount = 50 * (timeLeft / duration);
-                    // since particles fall down, start a bit higher than random
-                    if (typeof confetti !== 'undefined') {
-                        confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
-                        confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
-                    }
-                }, 250);
-
-                tg.showAlert({
-                    title: 'BONUS CLAIMED!',
-                    message: `You received +${data.reward} Tokens!\nCome back in 24 hours for more.`,
-                    buttons: [{ type: 'ok' }]
-                });
-                userData.lastDailyClaim = Date.now();
-                userData.dailyStreak = data.newStreak;
-                userData.tokens = data.newBalance;
-                renderBalances();
-                renderDailyGrid();
-                startDailyCountdown();
-            } else {
-                tg.showAlert('❌ ' + (data.msg || 'Already claimed today!'));
-                btn.innerHTML = 'ALREADY CLAIMED';
-            }
-        })
-        .catch(e => {
-            btn.innerHTML = 'CLAIM REWARD';
-            btn.disabled = false;
-            tg.showAlert('Network error. Check connection.');
-        });
+    showAdAndEarn('daily_bonus');
 }
 
 // ==========================================
@@ -1711,7 +1729,7 @@ function copyLink() {
     const text = linkEl.textContent || linkEl.innerText;
     navigator.clipboard.writeText(text).then(() => {
         if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
-        tg.showAlert('✅ Referral link copied!');
+        window.showToast('✅ Referral link copied!');
     }).catch(() => {
         // Fallback for older browsers
         const ta = document.createElement('textarea');
@@ -1720,7 +1738,7 @@ function copyLink() {
         ta.select();
         document.execCommand('copy');
         document.body.removeChild(ta);
-        tg.showAlert('✅ Referral link copied!');
+        window.showToast('✅ Referral link copied!');
     });
 }
 
@@ -2156,10 +2174,10 @@ function copyUserId() {
 function payWithBalance() {
     if (userData.usd >= 3.00) {
         // Process directly without confirmation
-        tg.showAlert('Purchase request sent to server!');
+        window.showToast('Purchase request sent to server!');
     } else {
         if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
-        tg.showAlert('Insufficient Balance ($' + userData.usd.toFixed(2) + '). Please deposit funds.');
+        window.showToast('Insufficient Balance ($' + userData.usd.toFixed(2) + '). Please deposit funds.');
     }
 }
 
@@ -2389,13 +2407,14 @@ function renderAccounts() {
 
 function buyPremiumAccount(accountId, type, price) {
     if (!userData || !userData.id) {
-        alert('Please login first.');
+        window.showToast('Please login first.');
         return;
     }
 
-    const userTokens = userData.tokens || 0;
+    if (checkZeroBalanceAdTrigger(price)) return;
+
     if (userTokens < price) {
-        alert(`Insufficient tokens! You have ${userTokens} TC but need ${price} TC.`);
+        nav('earn');
         return;
     }
 
@@ -2412,14 +2431,14 @@ function buyPremiumAccount(accountId, type, price) {
                 renderBalances();
 
                 // Show account details
-                alert(`✅ Account purchased!\n\nEmail: ${res.account.email}\nPassword: ${res.account.password}${res.account.instructions ? '\nNotes: ' + res.account.instructions : ''}\n\nPlease save these details!`);
+                window.showToast(`✅ Account purchased!\n\nEmail: ${res.account.email}\nPassword: ${res.account.password}${res.account.instructions ? '\nNotes: ' + res.account.instructions : ''}\n\nPlease save these details!`);
 
                 renderAccounts(); // Refresh
             } else {
-                alert(res.message || 'Purchase failed');
+                window.showToast(res.message || 'Purchase failed');
             }
         })
-        .catch(() => alert('Network error'));
+        .catch(() => window.showToast('Network error'));
 }
 
 // ==========================================
@@ -2575,9 +2594,10 @@ function buyAccountFromCategory(category) {
     const cat = ACCOUNT_CATEGORIES[category];
     if (!cat) return;
 
-    const userTokens = userData.tokens || 0;
+    if (checkZeroBalanceAdTrigger()) return;
+
     if (userTokens < cat.price) {
-        tg.showAlert(`Insufficient tokens! You have ${userTokens} TC but need ${cat.price} TC.`);
+        nav('earn');
         return;
     }
 
@@ -2629,7 +2649,7 @@ function buyAccountFromCategory(category) {
                     }, 250);
                 }
             } else {
-                tg.showAlert(data.message || 'Purchase failed.');
+                window.showToast(data.message || 'Purchase failed.');
                 if (btn) {
                     btn.innerHTML = `<i class="fas fa-shopping-cart"></i> BUY FOR ${cat.price} TOKENS`;
                     btn.style.pointerEvents = 'auto';
@@ -2637,7 +2657,7 @@ function buyAccountFromCategory(category) {
             }
         })
         .catch(() => {
-            tg.showAlert('Network error. Please try again.');
+            window.showToast('Network error. Please try again.');
             if (btn) {
                 btn.innerHTML = `<i class="fas fa-shopping-cart"></i> BUY FOR ${cat.price} TOKENS`;
                 btn.style.pointerEvents = 'auto';
@@ -2650,10 +2670,10 @@ function copyAccCred(type) {
     const el = type === 'email' ? document.getElementById('accEmailText') : document.getElementById('accPassText');
     if (el) {
         navigator.clipboard.writeText(el.textContent).then(() => {
-            tg.showAlert(`${type === 'email' ? 'Email' : 'Password'} copied!`);
+            window.showToast(`${type === 'email' ? 'Email' : 'Password'} copied!`);
             if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
         }).catch(() => {
-            tg.showAlert('Copy failed. Please copy manually.');
+            window.showToast('Copy failed. Please copy manually.');
         });
     }
 }
@@ -2702,14 +2722,14 @@ function generateService(type) {
     const name = s ? s.name : (type === 'number' ? 'Number Service' : 'Mail Service');
 
     if ((userData.tokens || 0) < cost) {
-        tg.showAlert(`Insufficient tokens! You need ${cost} TC to use ${name}.`);
+        nav('earn');
         return;
     }
 
     // Generate directly without confirmation
     userData.tokens -= cost;
     renderBalances();
-    tg.showAlert(` ${name} generated successfully!\n\nYour balance: ${userData.tokens} TC`);
+    window.showToast(` ${name} generated successfully!\n\nYour balance: ${userData.tokens} TC`);
 }
 
 // =============================================
@@ -2735,11 +2755,9 @@ function updateNumBalance() {
 }
 
 function generateVirtualNumber() {
+    if (checkZeroBalanceAdTrigger()) return;
     const cost = 15;
-    if ((userData.tokens || 0) < cost) {
-        tg.showAlert(`❌ Insufficient tokens!\n\nYou need ${cost} TC.\nYour balance: ${userData.tokens || 0} TC`);
-        return;
-    }
+    if ((userData.tokens || 0) < cost) { nav('earn'); return; }
     // Get number directly without confirmation
     const btn = document.getElementById('numGenerateBtn');
     if (btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...'; btn.disabled = true; }
@@ -2765,12 +2783,12 @@ function generateVirtualNumber() {
                 numOtpPollInterval = setInterval(pollForOTP, 5000);
                 addNumHistory(data.number);
             } else {
-                tg.showAlert('❌ ' + (data.message || 'Failed to get number. Try again.'));
+                window.showToast('❌ ' + (data.message || 'Failed to get number. Try again.'));
             }
         })
         .catch(() => {
             if (btn) { btn.innerHTML = '<i class="fas fa-phone-alt"></i> GET VIRTUAL NUMBER'; btn.disabled = false; }
-            tg.showAlert('❌ Network error. Please try again.');
+            window.showToast('❌ Network error. Please try again.');
         });
 }
 
@@ -2827,7 +2845,7 @@ function extractOtp(text) {
 function copyNumOtp(otp) {
     if (!otp) return;
     navigator.clipboard.writeText(otp).then(() => {
-        tg.showAlert('OTP Copied: ' + otp);
+        window.showToast('OTP Copied: ' + otp);
         if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
     });
 }
@@ -2912,7 +2930,7 @@ function copyNumberWithTick() {
                 copyBtn.style.color = '';
             }, 2000);
         }
-        tg.showAlert('✅ Number copied: ' + text);
+        window.showToast('✅ Number copied: ' + text);
     }).catch((err) => {
         console.log('copyNumberWithTick: Clipboard error', err);
         // Fallback
@@ -2935,7 +2953,7 @@ function copyNumberWithTick() {
                 copyBtn.style.color = '';
             }, 2000);
         }
-        tg.showAlert('✅ Number copied: ' + text);
+        window.showToast('✅ Number copied: ' + text);
     });
 }
 
@@ -2945,7 +2963,7 @@ function copyTextById(elId) {
     const el = document.getElementById(elId);
     if (!el) return;
     navigator.clipboard.writeText(el.textContent).then(() => {
-        tg.showAlert('✅ Copied to clipboard!');
+        window.showToast('✅ Copied to clipboard!');
     }).catch(() => {
         const ta = document.createElement('textarea');
         ta.value = el.textContent;
@@ -2953,7 +2971,7 @@ function copyTextById(elId) {
         ta.select();
         document.execCommand('copy');
         document.body.removeChild(ta);
-        tg.showAlert('✅ Copied!');
+        window.showToast('✅ Copied!');
     });
 }
 
@@ -3025,9 +3043,10 @@ function updateMailBalance(type) {
 }
 
 function generateTempMail(type) {
+    if (checkZeroBalanceAdTrigger()) return;
     if (!type) type = 'temp';
     const cost = type === "temp" ? 1 : 50;
-
+    
     // If no user login, use demo mode for testing
     if (!userData.id || userData.id === 0) {
         console.log('generateTempMail: No user login, using demo mode');
@@ -3035,10 +3054,7 @@ function generateTempMail(type) {
         return;
     }
 
-    if ((userData.tokens || 0) < cost) {
-        tg.showAlert(`❌ Insufficient tokens!\n\nYou need ${cost} TC.\nYour balance: ${userData.tokens || 0} TC`);
-        return;
-    }
+    if ((userData.tokens || 0) < cost) { nav('earn'); return; }
 
     // Show loading state immediately
     const addrEl = document.getElementById(type + "MailAddr");
@@ -3077,7 +3093,7 @@ function generateTempMail(type) {
                     addrEl.style.fontStyle = "normal";
                     addrEl.style.opacity = "1";
                 }
-                tg.showAlert("❌ " + (data.message || "Email generation failed. Please try again."));
+                window.showToast("❌ " + (data.message || "Email generation failed. Please try again."));
             }
         })
         .catch(() => {
@@ -3087,7 +3103,7 @@ function generateTempMail(type) {
                 addrEl.style.fontStyle = "normal";
                 addrEl.style.opacity = "1";
             }
-            tg.showAlert("❌ Network error. Please check your connection and try again.");
+            window.showToast("❌ Network error. Please check your connection and try again.");
         });
 }
 
@@ -3103,7 +3119,7 @@ function renewTempMail(type) {
     }
 
     if (!previousMailSessions[type]) {
-        tg.showAlert(`❌ No previous ${type} session found to restore.`);
+        window.showToast(`❌ No previous ${type} session found to restore.`);
         return;
     }
 
@@ -3141,7 +3157,7 @@ function refreshInbox(type) {
     // Deduct 1 token per inbox refresh (temp only)
     const refreshCost = 0; // Auto-poll should not charge tokens
     if (refreshCost > 0 && (userData.tokens || 0) < refreshCost) {
-        tg.showAlert(`❌ Insufficient tokens!\n\nYou need ${refreshCost} TC to refresh inbox.\nYour balance: ${userData.tokens || 0} TC`);
+        window.showToast(`❌ Insufficient tokens!\n\nYou need ${refreshCost} TC to refresh inbox.\nYour balance: ${userData.tokens || 0} TC`);
         return;
     }
 
@@ -3439,7 +3455,7 @@ function copyReceiptField(fieldId) {
         document.body.removeChild(ta);
     }
     if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
-    tg.showAlert('✅ Copied!');
+    window.showToast('✅ Copied!');
 }
 
 // ---- EMAIL SERVICE TOGGLES & NAVIGATION ----
@@ -3544,11 +3560,11 @@ function selectCheckoutPM(method) {
 function submitCheckoutPayment() {
     const txnId = document.getElementById('checkoutTxnId')?.value;
     if (!txnId || txnId.trim() === '') {
-        tg.showAlert('Please enter your Transaction ID to confirm payment.');
+        window.showToast('Please enter your Transaction ID to confirm payment.');
         return;
     }
 
-    tg.showAlert('✅ Payment submitted!\n\nWe will verify your transaction and deliver your order shortly.');
+    window.showToast('✅ Payment submitted!\n\nWe will verify your transaction and deliver your order shortly.');
     nav('home');
 }
 
@@ -3587,6 +3603,7 @@ function openTempMailDirect() {
 }
 
 function autoGenerateTempMail() {
+    if (checkZeroBalanceAdTrigger()) return;
     const type = 'temp';
     const cost = 1;
 
@@ -3603,10 +3620,7 @@ function autoGenerateTempMail() {
     // Check tokens
     if ((userData.tokens || 0) < cost) {
         console.log('AutoGenerate: Insufficient tokens');
-        const addrEl = document.getElementById(type + "MailAddr");
-        if (addrEl) {
-            addrEl.innerHTML = '<span style="color:#f87171;">Need ' + cost + ' TC. Balance: ' + (userData.tokens || 0) + '</span>';
-        }
+        nav('earn');
         return;
     }
 
@@ -3749,18 +3763,18 @@ function copyMailEmail(type) {
     const email = mailSessions[type]?.email;
     if (email) {
         copyText(email);
-        tg.showAlert('✅ Email copied: ' + email);
+        window.showToast('✅ Email copied: ' + email);
     } else {
-        tg.showAlert('❌ No email to copy');
+        window.showToast('❌ No email to copy');
     }
 }
 
 function copyMailOtp(otp) {
     if (otp) {
         copyText(otp);
-        tg.showAlert('✅ OTP copied: ' + otp);
+        window.showToast('✅ OTP copied: ' + otp);
     } else {
-        tg.showAlert('❌ No OTP to copy');
+        window.showToast('❌ No OTP to copy');
     }
 }
 
@@ -4030,6 +4044,11 @@ window.deleteMail = deleteMail;
 window.changeMailEmail = changeMailEmail;
 window.renderAccounts = renderAccounts;
 window.buyPremiumAccount = buyPremiumAccount;
+
+function buyAccount(type, price, id) {
+    buyPremiumAccount(id, type, price);
+}
+window.buyAccount = buyAccount;
 window.toggleAccountsView = toggleAccountsView;
 window.updateBalanceDisplay = updateBalanceDisplay;
 window.renderCards = renderCards;
@@ -4062,4 +4081,408 @@ function copyOtpFromChip(btn, code) {
 }
 window.copyOtpFromChip = copyOtpFromChip;
 
+// =============================================
+// =============================================
+// ITEM SELLING MODULE
+// =============================================
+let sellingRewards = {};
 
+async function fetchSellingRewards() {
+    try {
+        const res = await fetch('/api/user/item-sales/rewards');
+        const data = await res.json();
+        if (data.success) {
+            sellingRewards = data.rewards;
+        }
+    } catch (e) {
+        console.error('Error fetching selling rewards:', e);
+    }
+}
+
+function selectSellCategory(cat, icon, gradient) {
+    const grid = document.getElementById('itemSellCategoryGrid');
+    const form = document.getElementById('itemSellFormContainer');
+    const catInput = document.getElementById('selItemCategory');
+    const catName = document.getElementById('selectedCatName');
+    const catIcon = document.getElementById('selectedCatIcon');
+
+    catInput.value = cat;
+    catName.innerText = cat.toUpperCase();
+    catIcon.innerHTML = `<i class="${icon}"></i>`;
+    catIcon.style.background = gradient;
+
+    grid.style.display = 'none';
+    form.style.display = 'block';
+
+    updateSellRewardPreview();
+    if (window.Telegram?.WebApp?.HapticFeedback) {
+        window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
+    }
+}
+
+function resetSellCategory() {
+    document.getElementById('itemSellCategoryGrid').style.display = 'grid';
+    document.getElementById('itemSellFormContainer').style.display = 'none';
+    document.getElementById('selItemCategory').value = '';
+    
+    // Reset form fields
+    document.getElementById('selItemEmail').value = '';
+    document.getElementById('selItemPassword').value = '';
+    document.getElementById('selItemNote').value = '';
+    document.getElementById('selItem2FA').checked = false;
+}
+
+function updateSellRewardPreview() {
+    const cat = document.getElementById('selItemCategory').value;
+    const is2fa = document.getElementById('selItem2FA').checked;
+    const preview = document.getElementById('sellRewardPreview');
+
+    if (!cat || !sellingRewards[cat]) {
+        preview.innerText = '0 TC';
+        return;
+    }
+
+    let reward = sellingRewards[cat];
+    if (is2fa) {
+        reward = Math.round(reward * (sellingRewards['2faMultiplier'] || 1.5));
+    }
+
+    preview.innerText = reward + ' TC';
+}
+
+async function submitItemForSale() {
+    const userId = userData.id;
+    const itemType = document.getElementById('selItemCategory').value;
+    const email = document.getElementById('selItemEmail').value.trim();
+    const password = document.getElementById('selItemPassword').value.trim();
+    const note = document.getElementById('selItemNote').value.trim();
+    const is2fa = document.getElementById('selItem2FA').checked;
+
+    if (!itemType) {
+        window.showToast('Please select a category first');
+        return;
+    }
+
+    if (!email || !password) {
+        window.showToast('Please fill in both email and password');
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/user/item-sales/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId, itemType, email, password, note, is2fa })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            window.showToast('✅ ' + data.message);
+            resetSellCategory();
+            loadMySales();
+            if (window.Telegram?.WebApp?.HapticFeedback) {
+                window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+            }
+        } else {
+            window.showToast('❌ ' + data.message);
+        }
+    } catch (e) {
+        window.showToast('Error submitting item');
+    }
+}
+
+async function loadMySales() {
+    const userId = userData.id;
+    try {
+        const res = await fetch(`/api/user/item-sales/my?userId=${userId}`);
+        const data = await res.json();
+        const list = document.getElementById('mySalesList');
+        const empty = document.getElementById('noSalesPlaceholder');
+        
+        if (data.items && data.items.length > 0) {
+            if (empty) empty.style.display = 'none';
+            if (list) {
+                list.innerHTML = data.items.map(item => {
+                    let statusColor = '#f59e0b';
+                    let statusText = 'PENDING';
+                    if (item.status === 'approved') {
+                        statusColor = '#10b981';
+                        statusText = 'VERIFIED';
+                    } else if (item.status === 'rejected') {
+                        statusColor = '#ef4444';
+                        statusText = 'REJECTED';
+                    }
+
+                    return `
+                    <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:18px; padding:18px; border-left:5px solid ${statusColor}; position:relative; overflow:hidden;">
+                        <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:12px;">
+                            <div>
+                                <div style="font-size:16px; font-weight:900; color:#fff; display:flex; align-items:center; gap:8px;">
+                                    ${item.itemType}
+                                    ${item.is2fa ? '<span style="font-size:10px; color:#10b981; background:rgba(16,185,129,0.1); padding:2px 6px; border-radius:6px; border:1px solid rgba(16,185,129,0.2);">2FA</span>' : ''}
+                                </div>
+                                <div style="font-size:13px; color:var(--text-sub); margin-top:2px; font-family:monospace;">${item.email}</div>
+                            </div>
+                            <div style="font-size:10px; font-weight:900; padding:4px 10px; border-radius:10px; background:rgba(0,0,0,0.4); color:${statusColor}; border:1px solid ${statusColor}44; text-transform:uppercase; letter-spacing:0.5px;">
+                                ${statusText}
+                            </div>
+                        </div>
+                        ${item.note ? `<div style="font-size:11px; color:#888; background:rgba(0,0,0,0.2); padding:10px; border-radius:10px; border:1px solid var(--border-color);">Note: ${item.note}</div>` : ''}
+                        <div style="font-size:10px; color:var(--text-muted); margin-top:12px; display:flex; justify-content:space-between; align-items:center;">
+                            <span>${new Date(item.createdAt).toLocaleDateString()}</span>
+                            <span>ID: ${item.id.slice(-6).toUpperCase()}</span>
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+            }
+        } else {
+            if (list) list.innerHTML = '';
+            if (empty) empty.style.display = 'block';
+        }
+    } catch (e) {
+        console.error('Error loading my sales:', e);
+    }
+}
+
+// Initial fetch
+fetchSellingRewards();
+
+window.selectSellCategory = selectSellCategory;
+window.resetSellCategory = resetSellCategory;
+window.updateSellRewardPreview = updateSellRewardPreview;
+window.submitItemForSale = submitItemForSale;
+window.loadMySales = loadMySales;
+
+
+// =============================================
+// QUIZ SYSTEM
+// =============================================
+let currentQuiz = null;
+
+function startQuizFlow() {
+    showAdAndEarn('quiz_direct');
+    // The claimAdReward will handle the navigation to quizPage
+}
+
+function loadQuiz() {
+    const questions = [
+        { q: "What is the capital of France?", a: ["Paris", "London", "Berlin", "Rome"], c: 0 },
+        { q: "Which planet is known as the Red Planet?", a: ["Venus", "Mars", "Jupiter", "Saturn"], c: 1 },
+        { q: "What is 5 + 7?", a: ["10", "11", "12", "13"], c: 2 },
+        { q: "Who wrote 'Romeo and Juliet'?", a: ["Charles Dickens", "William Shakespeare", "Mark Twain", "Leo Tolstoy"], c: 1 },
+        { q: "What is the largest ocean on Earth?", a: ["Atlantic", "Indian", "Arctic", "Pacific"], c: 3 },
+        { q: "Which gas do plants absorb from the atmosphere?", a: ["Oxygen", "Carbon Dioxide", "Nitrogen", "Hydrogen"], c: 1 },
+        { q: "How many continents are there?", a: ["5", "6", "7", "8"], c: 2 },
+        { q: "What is the chemical symbol for water?", a: ["W", "H2O", "O2", "HO"], c: 1 }
+    ];
+    
+    currentQuiz = questions[Math.floor(Math.random() * questions.length)];
+    
+    const qEl = document.getElementById('quizQuestion');
+    const oEl = document.getElementById('quizOptions');
+    if (!qEl || !oEl) return;
+    
+    qEl.textContent = currentQuiz.q;
+    oEl.innerHTML = '';
+    
+    currentQuiz.a.forEach((opt, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'gv-btn';
+        btn.style.background = 'rgba(255,255,255,0.05)';
+        btn.style.border = '1px solid rgba(255,255,255,0.1)';
+        btn.style.color = '#fff';
+        btn.style.marginTop = '0';
+        btn.textContent = opt;
+        btn.onclick = () => submitQuizAnswer(idx);
+        oEl.appendChild(btn);
+    });
+}
+
+async function submitQuizAnswer(idx) {
+    const isCorrect = idx === currentQuiz.c;
+    const reward = isCorrect ? 10 : 5;
+    
+    if (tg.HapticFeedback) {
+        tg.HapticFeedback.notificationOccurred(isCorrect ? 'success' : 'error');
+    }
+    
+    try {
+        const res = await fetch('/api/quiz/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: userData.id, correct: isCorrect, reward })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            if (isCorrect && window.confetti) confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+            
+            window.showToast(isCorrect ? `✅ CORRECT! +10 Tokens` : `❌ WRONG! +5 Tokens for trying.`);
+            userData.tokens = data.newBalance;
+            renderBalances();
+            nav('home');
+        } else {
+            window.showToast(data.message || 'Error submitting answer');
+        }
+    } catch (e) {
+        window.showToast('Network error');
+    }
+}
+
+async function renderQuizLeaderboard() {
+    const list = document.getElementById('quizLeaderboardList');
+    if (!list) return;
+    
+    list.innerHTML = '<div style="padding:40px; text-align:center; color:#888;">Loading...</div>';
+    
+    try {
+        const res = await fetch('/api/quiz/leaderboard');
+        const data = await res.json();
+        
+        if (data.success && data.leaderboard) {
+            list.innerHTML = '';
+            data.leaderboard.forEach((item, idx) => {
+                const row = document.createElement('div');
+                row.style.display = 'flex';
+                row.style.alignItems = 'center';
+                row.style.padding = '16px';
+                row.style.borderBottom = '1px solid var(--border-color)';
+                
+                const rankColor = idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#888';
+                
+                row.innerHTML = `
+                    <div style="width:30px; font-weight:900; color:${rankColor};">#${idx + 1}</div>
+                    <div style="width:40px; height:40px; border-radius:50%; background:rgba(255,255,255,0.05); margin:0 12px; overflow:hidden;">
+                        <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(item.name)}&background=random" style="width:100%; height:100%;">
+                    </div>
+                    <div style="flex:1;">
+                        <div style="font-size:14px; font-weight:800; color:#fff;">${item.name}</div>
+                        <div style="font-size:11px; color:var(--text-sub);">${item.correctCount} Correct Answers</div>
+                    </div>
+                    <div style="font-weight:900; color:#22c55e;">${item.points} TC</div>
+                `;
+                list.appendChild(row);
+            });
+        }
+    } catch (e) {
+        list.innerHTML = '<div style="padding:40px; text-align:center; color:#ef4444;">Failed to load leaderboard</div>';
+    }
+}
+
+// =============================================
+// SCRATCH CARD SYSTEM
+// =============================================
+let isScratchActive = false;
+
+function initScratchCard() {
+    const canvas = document.getElementById('scratchCanvas');
+    const ctx = canvas.getContext('2d');
+    const resultDiv = document.getElementById('scratchResult');
+    const valueEl = document.getElementById('scratchValue');
+    const newBtn = document.getElementById('newScratchBtn');
+    
+    if (!canvas) return;
+    
+    // Reset state
+    isScratchActive = true;
+    newBtn.style.display = 'none';
+    
+    // Set random reward
+    const rewards = [1, 1, 1, 5, 5, 10];
+    const reward = rewards[Math.floor(Math.random() * rewards.length)];
+    valueEl.textContent = reward;
+    
+    // Fill with cover
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = '#C0C0C0'; // Silver
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Add texture
+    ctx.fillStyle = '#A0A0A0';
+    for(let i=0; i<100; i++) {
+        ctx.fillRect(Math.random()*canvas.width, Math.random()*canvas.height, 2, 2);
+    }
+    
+    ctx.font = 'bold 24px Arial';
+    ctx.fillStyle = '#888';
+    ctx.textAlign = 'center';
+    ctx.fillText('SCRATCH HERE', canvas.width/2, canvas.height/2 + 10);
+
+    let isDrawing = false;
+    
+    function scratch(e) {
+        if (!isDrawing) return;
+        
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        
+        const x = ((e.clientX || e.touches[0].clientX) - rect.left) * scaleX;
+        const y = ((e.clientY || e.touches[0].clientY) - rect.top) * scaleY;
+        
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.beginPath();
+        ctx.arc(x, y, 20, 0, Math.PI * 2);
+        ctx.fill();
+        
+        checkScratchPercentage();
+    }
+    
+    function checkScratchPercentage() {
+        if (!isScratchActive) return;
+        
+        const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        let transparent = 0;
+        for (let i = 0; i < pixels.length; i += 4) {
+            if (pixels[i + 3] === 0) transparent++;
+        }
+        
+        if (transparent / (canvas.width * canvas.height) > 0.4) {
+            revealScratch(reward);
+        }
+    }
+    
+    canvas.onmousedown = (e) => { isDrawing = true; scratch(e); };
+    canvas.ontouchstart = (e) => { isDrawing = true; scratch(e); };
+    window.onmouseup = () => { isDrawing = false; };
+    window.ontouchend = () => { isDrawing = false; };
+    canvas.onmousemove = scratch;
+    canvas.ontouchmove = scratch;
+}
+
+async function revealScratch(reward) {
+    if (!isScratchActive) return;
+    isScratchActive = false;
+    
+    const canvas = document.getElementById('scratchCanvas');
+    const newBtn = document.getElementById('newScratchBtn');
+    canvas.style.opacity = '0';
+    setTimeout(() => { canvas.style.display = 'none'; }, 500);
+    newBtn.style.display = 'block';
+    
+    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+    if (window.confetti) confetti({ particleCount: 50, spread: 50 });
+    
+    try {
+        const res = await fetch('/api/scratch/claim', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: userData.id, reward })
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.showToast(`🎁 You won ${reward} tokens!`);
+            userData.tokens = data.newBalance;
+            renderBalances();
+        }
+    } catch (e) { }
+}
+
+// Export new functions
+window.startQuizFlow = startQuizFlow;
+function startScratchFlow() {
+    showAdAndEarn('scratch_ad');
+}
+window.startScratchFlow = startScratchFlow;
+window.initScratchCard = initScratchCard;
