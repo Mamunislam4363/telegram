@@ -245,6 +245,17 @@ async function _runBackup(reason = 'auto') {
         }
     }
 
+    // NEW: Cloud Backup (Google Drive)
+    try {
+        const driveStorage = require('./google-drive-storage');
+        if (driveStorage.connected) {
+            await driveStorage.saveData(fileName, db.data);
+            console.log(`☁️ Backup ${fileName} uploaded to Google Drive`);
+        }
+    } catch (e) {
+        console.error('Drive Cloud backup error:', e.message);
+    }
+
     return { fileName, ts };
 }
 
@@ -261,7 +272,8 @@ app.get('/api/admin/db/schedule', (req, res) => {
             keep: schedule.keep || 30
         },
         lastBackupAt: schedule.lastBackupAt || 0,
-        nextBackupAt
+        nextBackupAt,
+        dbSize: fs.existsSync('./db.json') ? fs.statSync('./db.json').size : 0
     });
 });
 
@@ -299,6 +311,24 @@ app.get('/api/admin/db/backups', (req, res) => {
         });
     } catch (e) {
         res.json({ success: false, message: e.message });
+    }
+});
+
+// API: Download a selected backup file
+app.get('/api/admin/db/download/:file', (req, res) => {
+    try {
+        const path = require('path');
+        const file = req.params.file;
+        const dir = _getBackupsDir();
+        const full = path.join(dir, file);
+
+        // Security check
+        if (!full.startsWith(dir)) return res.status(403).send('Forbidden');
+        if (!fs.existsSync(full)) return res.status(404).send('Not Found');
+
+        res.download(full);
+    } catch (e) {
+        res.status(500).send(e.message);
     }
 });
 
@@ -1451,24 +1481,8 @@ app.post('/api/admin/db/reset', (req, res) => {
 // API: Database Export (Send to Admin)
 app.get('/api/admin/db/export', async (req, res) => {
     try {
-        const adminId = process.env.ADMIN_ID;
-        if (!adminId) return res.json({ success: false, message: 'ADMIN_ID not configured' });
-
-        const backupFile = './backups/manual_backup_' + Date.now() + '.json';
-        const fs = require('fs');
-        if (!fs.existsSync('./backups')) fs.mkdirSync('./backups');
-
-        fs.writeFileSync(backupFile, JSON.stringify(db.data, null, 2));
-
-        if (bot) {
-            await bot.sendDocument(adminId, backupFile, {
-                caption: '📥 Automated Database Backup\n\nGenerated from Web Admin panel.',
-                parse_mode: 'HTML'
-            });
-            res.json({ success: true, message: 'Backup sent to Telegram' });
-        } else {
-            res.json({ success: false, message: 'Bot Telegram instance not available' });
-        }
+        const result = await _runBackup('manual');
+        res.json({ success: true, message: 'Manual backup generated and sent to Telegram', file: result.fileName });
     } catch (e) {
         console.error('Export error:', e);
         res.json({ success: false, message: e.message });

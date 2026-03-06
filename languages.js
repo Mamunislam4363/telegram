@@ -76,15 +76,6 @@ const languages = {
 
         // Admin
         adminPanelTitle: '⚙️ **Admin Panel**\n\nManage your bot from here:',
-        managePayments: '💳 Manage Payments',
-        botSettings: '⚙️ Bot Settings',
-        backupRestore: '💾 Backup & Restore',
-        broadcast: '📣 Broadcast',
-        manageUsers: '👥 Manage Users',
-        manageTasks: '📋 Manage Tasks',
-        manageCards: '💳 Manage Cards',
-        statistics: '📊 Statistics',
-        uploadFile: '📂 Upload File', // Kept from original, not in provided edit, but makes sense to keep.
 
         // File Upload
         uploadFileMenu: '📂 **Bulk Upload**\n\nUpload a text file to add multiple cards or codes.\n\nFormat: One item per line', // Kept from original
@@ -168,15 +159,6 @@ const languages = {
 
         // Admin
         adminPanelTitle: '⚙️ **এডমিন প্যানেল**\n\nএখান থেকে বট পরিচালনা করুন:',
-        managePayments: '💳 পেমেন্ট ম্যানেজ',
-        botSettings: '⚙️ বট সেটিংস',
-        backupRestore: '💾 ব্যাকআপ ও রিস্টোর',
-        broadcast: '📣 ব্রডকাস্ট',
-        manageUsers: '👥 ইউজার ম্যানেজ',
-        manageTasks: '📋 টাস্ক ম্যানেজ',
-        manageCards: '💳 কার্ড ম্যানেজ',
-        statistics: '📊 পরিসংখ্যান',
-        uploadFile: '📂 ফাইল আপলোড', // Kept from original
 
         // File Upload
         uploadFileMenu: '📂 **বাল্ক আপলোড**\n\nঅনেক কার্ড বা কোড যোগ করতে একটি টেক্সট ফাইল আপলোড করুন।\n\nফরম্যাট: প্রতি লাইনে একটি আইটেম', // Kept from original

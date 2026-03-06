@@ -1615,7 +1615,160 @@
                 </div>
             </div>
 
-        </main>
+            <!-- DATABASE MANAGEMENT PAGE -->
+            <div id="page-database" class="page">
+                <div class="glass-card p-6 rounded-2xl mb-8">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div
+                            class="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center text-orange-400">
+                            <i class="fas fa-database text-2xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-bold">Database Management</h2>
+                            <p class="text-gray-400 text-sm">Export/Import backups and control database operations.</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <!-- Export -->
+                        <div
+                            class="p-6 rounded-xl bg-white/5 border border-white/10 flex flex-col items-center text-center">
+                            <i class="fas fa-file-export text-3xl text-blue-400 mb-4"></i>
+                            <h3 class="font-bold mb-2">Generate Data</h3>
+                            <p class="text-xs text-gray-400 mb-6">Generate a full backup of the current database and
+                                send it to your Telegram.</p>
+                            <button onclick="exportDatabase()"
+                                class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-xl transition-all">
+                                <i class="fas fa-download mr-2"></i> EXPORT TO TG
+                            </button>
+                        </div>
+
+                        <!-- Import -->
+                        <div
+                            class="p-6 rounded-xl bg-white/5 border border-white/10 flex flex-col items-center text-center">
+                            <i class="fas fa-file-import text-3xl text-green-400 mb-4"></i>
+                            <h3 class="font-bold mb-2">Upload Data</h3>
+                            <p class="text-xs text-gray-400 mb-6">Upload a local JSON backup file to merge with the
+                                existing database.</p>
+                            <button onclick="document.getElementById('db-import-file').click()"
+                                class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl transition-all">
+                                <i class="fas fa-upload mr-2"></i> UPLOAD JSON
+                            </button>
+                            <input type="file" id="db-import-file" class="hidden" accept=".json"
+                                onchange="importDatabase(this)">
+                        </div>
+
+                        <!-- Wipe -->
+                        <div
+                            class="p-6 rounded-xl bg-white/5 border border-white/10 flex flex-col items-center text-center">
+                            <i class="fas fa-trash-alt text-3xl text-red-500 mb-4"></i>
+                            <h3 class="font-bold mb-2">Restore / Wipe</h3>
+                            <p class="text-xs text-gray-400 mb-6">Permenently delete all user and transaction data. Use
+                                with extreme caution!</p>
+                            <button onclick="wipeDatabase()"
+                                class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl transition-all">
+                                <i class="fas fa-skull mr-2"></i> WIPE DATABASE
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Backup History List -->
+                    <div class="mt-8 glass-card p-8 rounded-2xl">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-xl font-bold flex items-center gap-2">
+                                <i class="fas fa-history text-blue-400"></i> Backup History
+                            </h3>
+                            <button onclick="loadBackupHistory()"
+                                class="text-xs bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg transition-all">
+                                <i class="fas fa-sync-alt mr-1"></i> REFRESH
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead>
+                                    <tr class="text-gray-500 text-xs uppercase border-b border-white/5">
+                                        <th class="pb-4 font-bold">File Name</th>
+                                        <th class="pb-4 font-bold">Size</th>
+                                        <th class="pb-4 font-bold">Date</th>
+                                        <th class="pb-4 font-bold text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="backupHistoryTable" class="text-sm">
+                                    <tr>
+                                        <td colspan="4" class="text-center text-gray-500 py-8">Loading history...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AUTO BACKUP CONTROLS -->
+                <div class="glass-card p-8 rounded-2xl">
+                    <div class="flex items-center justify-between mb-8">
+                        <div>
+                            <h3 class="text-xl font-bold flex items-center gap-2">
+                                <i class="fas fa-clock text-yellow-400"></i> Auto Backup Schedule
+                            </h3>
+                            <p class="text-gray-400 text-sm">Configure automated telegram backups.</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-sm font-bold text-gray-400">Enabled</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="db-auto-enabled" class="sr-only peer">
+                                <div
+                                    class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500">
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+                        <div>
+                            <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Interval (Hours)</label>
+                            <input type="number" id="db-auto-interval" value="6" min="1"
+                                class="w-full bg-black/30 border border-white/10 rounded-xl p-4 text-white focus:border-yellow-500 outline-none">
+                            <p class="text-[10px] text-gray-500 mt-1">E.g. 6 = Backup every 6 hours</p>
+                        </div>
+                        <div>
+                            <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Specific Daily
+                                Time</label>
+                            <input type="text" id="db-auto-time" placeholder="HH:MM (e.g. 00:00)"
+                                class="w-full bg-black/30 border border-white/10 rounded-xl p-4 text-white focus:border-yellow-500 outline-none">
+                            <p class="text-[10px] text-gray-500 mt-1">Leave blank to use interval</p>
+                        </div>
+                        <div>
+                            <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Retention
+                                (Files)</label>
+                            <input type="number" id="db-auto-keep" value="30" min="1"
+                                class="w-full bg-black/30 border border-white/10 rounded-xl p-4 text-white focus:border-yellow-500 outline-none">
+                            <p class="text-[10px] text-gray-500 mt-1">Number of local backups to keep</p>
+                        </div>
+                        <div class="flex flex-col justify-end">
+                            <button onclick="saveDbSchedule()"
+                                class="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-4 rounded-xl transition-all">
+                                <i class="fas fa-save mr-2"></i> SAVE SCHEDULE
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="pt-8 border-t border-white/5 grid grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div class="bg-black/20 p-4 rounded-xl">
+                            <div class="text-[10px] text-gray-500 font-bold uppercase mb-1">Current DB Size</div>
+                            <div id="db-current-size" class="text-sm font-mono text-green-400">0 KB</div>
+                        </div>
+                        <div class="bg-black/20 p-4 rounded-xl">
+                            <div class="text-[10px] text-gray-500 font-bold uppercase mb-1">Last Backup</div>
+                            <div id="db-last-backup" class="text-sm font-mono text-gray-300">Loading...</div>
+                        </div>
+                        <div class="bg-black/20 p-4 rounded-xl">
+                            <div class="text-[10px] text-gray-500 font-bold uppercase mb-1">Next Backup</div>
+                            <div id="db-next-backup" class="text-sm font-mono text-yellow-400">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
     </div>
 
     <script>
@@ -1669,7 +1822,10 @@
             if (p === 'premiumemail') loadPremiumEmails();
             if (p === 'adnetworks') loadAdNetworks();
             if (p === 'buttons') loadFeatureFlags();
-            if (p === 'database') loadDbSchedule();
+            if (p === 'database') {
+                loadDbSchedule();
+                loadBackupHistory();
+            }
         }
 
         // AD NETWORKS
@@ -2138,6 +2294,8 @@
                 const data = await res.json();
                 if (data.success) {
                     alert('Data generated and sent to your Telegram account successfully!');
+                    loadBackupHistory();
+                    loadDbSchedule(); // to update last backup time
                 } else {
                     alert('Export failed: ' + (data.message || 'Unknown error'));
                 }
@@ -2231,8 +2389,10 @@
 
                 const lastEl = document.getElementById('db-last-backup');
                 const nextEl = document.getElementById('db-next-backup');
+                const sizeEl = document.getElementById('db-current-size');
                 if (lastEl) lastEl.textContent = _fmtDateTime(data.lastBackupAt);
                 if (nextEl) nextEl.textContent = _fmtDateTime(data.nextBackupAt);
+                if (sizeEl) sizeEl.textContent = (data.dbSize / 1024).toFixed(1) + ' KB';
             } catch (e) {
                 alert('Error loading schedule: ' + e.message);
             }
@@ -2260,6 +2420,126 @@
                 await loadDbSchedule();
             } catch (e) {
                 alert('Error saving schedule: ' + e.message);
+            }
+        }
+        async function loadBackupHistory() {
+            const tbody = document.getElementById('backupHistoryTable');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-gray-500 py-8">Loading history...</td></tr>';
+
+            try {
+                const res = await fetch('/api/admin/db/backups');
+                const data = await res.json();
+                if (!data.success) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-red-400 py-8">Failed to load backups</td></tr>';
+                    return;
+                }
+
+                if (!data.files || data.files.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-gray-500 py-8">No backup files found</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.files.slice(0, 50).map(f => `
+                    <tr class="border-b border-white/5 hover:bg-white/5 transition-all">
+                        <td class="py-4 font-mono text-xs text-gray-300">${f.file}</td>
+                        <td class="py-4 text-gray-400">${(f.size / 1024).toFixed(1)} KB</td>
+                        <td class="py-4 text-gray-400">${_fmtDateTime(f.mtime)}</td>
+                        <td class="py-4 text-right">
+                            <div class="flex gap-2 justify-end">
+                                <a href="/api/admin/db/download/${f.file}" download 
+                                    class="bg-green-500/20 text-green-400 hover:bg-green-500/30 px-3 py-1 rounded text-xs font-bold transition-all">
+                                    <i class="fas fa-download mr-1"></i>
+                                </a>
+                                <button onclick="restoreBackupFromHistory('${f.file}')" 
+                                    class="bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 px-3 py-1 rounded text-xs font-bold transition-all">
+                                    <i class="fas fa-undo mr-1"></i> RESTORE
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-red-400 py-8">Network error</td></tr>';
+            }
+        }
+
+        async function restoreBackupFromHistory(file) {
+            if (!confirm(`Are you sure you want to RESTORE from ${file}? \nThis will merge/update existing data with the backup contents.`)) return;
+
+            try {
+                const res = await fetch('/api/admin/db/restore', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('Database restored successfully! The page will now reload.');
+                    window.location.reload();
+                } else {
+                    alert('Restore failed: ' + data.message);
+                }
+            } catch (e) {
+                alert('Error restoring backup: ' + e.message);
+            }
+        }
+        async function loadStorageStatus() {
+            const badge = document.getElementById('drive-badge');
+            const email = document.getElementById('drive-email');
+            const usageText = document.getElementById('drive-usage-text');
+            const progress = document.getElementById('drive-progress');
+            const btnConnect = document.getElementById('btn-drive-connect');
+            const btnDisconnect = document.getElementById('btn-drive-disconnect');
+
+            try {
+                const res = await fetch('/api/admin/storage/status');
+                const data = await res.json();
+
+                if (data.connected) {
+                    badge.textContent = 'CONNECTED';
+                    badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-green-500/10 text-green-400';
+                    email.textContent = data.info.user || 'Connected';
+
+                    const used = (data.info.used / (1024 * 1024)).toFixed(1);
+                    const total = (data.info.total / (1024 * 1024 * 1024)).toFixed(1); // GB
+                    usageText.textContent = `${used} MB / ${total} GB`;
+
+                    const percent = Math.min(100, Math.round((data.info.used / data.info.total) * 100)) || 0;
+                    progress.style.width = percent + '%';
+
+                    btnConnect.style.display = 'none';
+                    btnDisconnect.style.display = 'block';
+                } else {
+                    badge.textContent = 'DISCONNECTED';
+                    badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-red-500/10 text-red-500';
+                    email.textContent = 'None';
+                    usageText.textContent = '0 MB / 0 MB';
+                    progress.style.width = '0%';
+                    btnConnect.style.display = 'block';
+                    btnDisconnect.style.display = 'none';
+                }
+            } catch (e) {
+                console.error('Storage status error:', e);
+            }
+        }
+
+        function connectDrive() {
+            // Redirect to Google OAuth start
+            window.location.href = '/auth/google?state=admin';
+        }
+
+        async function disconnectDrive() {
+            if (!confirm('Are you sure you want to disconnect Google Drive? Backups will no longer be saved to the cloud.')) return;
+            try {
+                const res = await fetch('/api/admin/storage/disconnect', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    alert('Disconnected successfully');
+                    loadStorageStatus();
+                }
+            } catch (e) {
+                alert('Error: ' + e.message);
             }
         }
     </script>
