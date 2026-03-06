@@ -1243,12 +1243,19 @@
             font-size: 14px;
             font-weight: 700;
             color: var(--text-main);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex: 1;
+            margin-right: 8px;
         }
 
         .ii-time {
             font-size: 11px;
             color: var(--text-sub);
             font-weight: 600;
+            flex-shrink: 0;
+            white-space: nowrap;
         }
 
         .ii-subject {
@@ -1676,7 +1683,8 @@
                                 <div style="flex:1; overflow:hidden;">
                                     <div id="tempMailAddr"
                                         style="font-size:15px; font-weight:700; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                                        <i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>loading...</div>
+                                        <i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>loading...
+                                    </div>
                                 </div>
                                 <div style="display:flex; gap:8px;">
                                     <button
@@ -1752,7 +1760,8 @@
                                 <div style="flex:1; overflow:hidden;">
                                     <div id="premiumMailAddr"
                                         style="font-size:15px; font-weight:700; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                                        <i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>loading...</div>
+                                        <i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>loading...
+                                    </div>
                                 </div>
                                 <div style="display:flex; gap:8px;">
                                     <button
@@ -1832,7 +1841,7 @@
                             <div class="otp-chip" style="width:fit-content;">
                                 <span class="oc-code" id="mdOtpCode">------</span>
                                 <button class="oc-copy" onclick="copySimpleText('mdOtpCode')"
-                                    style="width:36px; height:36px; border-radius:50%; background:#f59e0b; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; margin-left:8px;">
+                                    style="width:36px; height:36px; border-radius:50%; background:#10b981; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; margin-left:8px; transition: all 0.2s;">
                                     <i class="fas fa-copy" style="color:#fff; font-size:14px;"></i>
                                 </button>
                             </div>
@@ -1844,7 +1853,7 @@
                                 <a id="mdLinkUrl" href="#" target="_blank"
                                     style="color:#3b82f6; text-decoration:none; font-weight:700; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:inline-block; vertical-align:middle;">Link</a>
                                 <button class="oc-copy" onclick="copySimpleText('mdLinkUrl')"
-                                    style="width:36px; height:36px; border-radius:50%; background:#3b82f6; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; margin-left:8px;">
+                                    style="width:36px; height:36px; border-radius:50%; background:#3b82f6; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; margin-left:8px; transition: all 0.2s;">
                                     <i class="fas fa-copy" style="color:#fff; font-size:14px;"></i>
                                 </button>
                             </div>
@@ -1915,7 +1924,11 @@
                             style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 2px;">
                             <div class="pui-id"
                                 style="background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.8); font-size: 11px; padding: 3px 10px; border-radius: 8px; font-family: 'Share Tech Mono', monospace; font-weight:600">
-                                ID: <span id="prof-id">00000000</span><button id="copy-id-btn" onclick="copyUserId()" title="Copy ID" style="background:rgba(255,255,255,0.12);border:none;border-radius:6px;padding:3px 7px;cursor:pointer;margin-left:4px;display:inline-flex;align-items:center;transition:background 0.2s;"><i id="copy-id-icon" class="fas fa-copy" style="color:#f59e0b;font-size:12px;"></i></button></div>
+                                ID: <span id="prof-id">00000000</span><button id="copy-id-btn" onclick="copyUserId()"
+                                    title="Copy ID"
+                                    style="background:rgba(255,255,255,0.12);border:none;border-radius:6px;padding:3px 7px;cursor:pointer;margin-left:4px;display:inline-flex;align-items:center;transition:background 0.2s;"><i
+                                        id="copy-id-icon" class="fas fa-copy"
+                                        style="color:#f59e0b;font-size:12px;"></i></button></div>
                         </div>
                     </div>
 
@@ -2621,13 +2634,13 @@
                 </div>
 
                 <!-- Payment Method Cards -->
-                <div class="pm-card" onclick="selectPayMethod('binance')">
+                <div class="pm-card" onclick="nav('cryptoMethods')">
                     <div class="pm-icon" style="background:linear-gradient(135deg, #FCD535, #d4a017);">
-                        <span style="font-size:24px; font-weight:900; color:#000;">B</span>
+                        <i class="fas fa-coins" style="font-size:20px; color:#000;"></i>
                     </div>
                     <div class="pm-info">
-                        <div class="pm-title">Binance Pay</div>
-                        <div class="pm-desc">Fast & secure crypto payments</div>
+                        <div class="pm-title">Crypto Payments</div>
+                        <div class="pm-desc">Binance, Bitget, Gate.io, Web3</div>
                     </div>
                     <div class="pm-arrow"><i class="fas fa-chevron-right"></i></div>
                 </div>
@@ -2674,45 +2687,7 @@
                     </div>
                 </div>
 
-                <!-- Pay Via Binance Section (Hidden by default) -->
-                <div id="payViaBinanceSection" style="margin-top:24px; display:none;">
-                    <div
-                        style="text-align:center; font-size:16px; font-weight:800; color:#FCD535; margin-bottom:6px; text-transform:uppercase;">
-                        PAY VIA BINANCE</div>
-                    <div
-                        style="text-align:center; font-size:10px; color:var(--text-sub); font-weight:600; text-transform:uppercase; margin-bottom:20px;">
-                        FOLLOW THE DETAILS BELOW TO COMPLETE ORDER</div>
-
-                    <div
-                        style="background:#fff; padding:16px; border-radius:16px; text-align:center; margin-bottom:16px;">
-                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=39996280"
-                            style="width:160px; height:160px; border-radius:8px;">
-                    </div>
-
-                    <div class="bp-details-box" style="margin-bottom:10px;">
-                        <div>
-                            <div
-                                style="font-size:10px; color:var(--text-sub); font-weight:700; text-transform:uppercase; margin-bottom:4px;">
-                                BINANCE PAY ID</div>
-                            <div style="font-size:16px; font-weight:700; color:var(--text-main);">39996280</div>
-                        </div>
-                        <div onclick="navigator.clipboard.writeText('39996280')"
-                            style="width:36px; height:36px; background:#f59e0b; border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#000;">
-                            <i class="far fa-copy"></i>
-                        </div>
-                    </div>
-
-                    <div class="gv-input-box" style="margin-top:20px; margin-bottom:8px;">
-                        <i class="fas fa-hashtag" style="color:var(--text-sub)"></i>
-                        <input type="text" class="gv-input" id="txnIdInput"
-                            placeholder="Enter Transaction ID after payment">
-                    </div>
-                    <button class="gv-btn" onclick="submitPayment()" style="margin-top:12px;">
-                        <i class="far fa-check-circle"></i> I've Completed the Payment
-                    </button>
-                </div>
-
-                <!-- Pay Via FaucetPay Section (hidden by default) -->
+                <!-- FaucetPay Section (hidden by default) -->
                 <div id="payViaFaucetSection" style="margin-top:24px; display:none;">
                     <div
                         style="text-align:center; font-size:16px; font-weight:800; color:#3b82f6; margin-bottom:6px; text-transform:uppercase;">
@@ -2729,130 +2704,141 @@
                             <div style="font-size:13px; font-weight:700; color:var(--text-main);">boyearn705@gmail.com
                             </div>
                         </div>
-                        <div onclick="navigator.clipboard.writeText('boyearn705@gmail.com')"
+                        <div onclick="copyText('boyearn705@gmail.com', this)"
                             style="width:36px; height:36px; background:#3b82f6; border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#fff;">
                             <i class="far fa-copy"></i>
                         </div>
                     </div>
 
                     <div class="gv-input-box" style="margin-top:20px; margin-bottom:8px;">
+                        <i class="fas fa-dollar-sign" style="color:var(--text-sub)"></i>
+                        <input type="number" class="gv-input" id="fpAmountInput" placeholder="Enter Amount (USD)">
+                    </div>
+
+                    <div class="gv-input-box" style="margin-bottom:8px;">
                         <i class="fas fa-hashtag" style="color:var(--text-sub)"></i>
                         <input type="text" class="gv-input" id="fpTxnIdInput"
                             placeholder="Enter Transaction ID after payment">
                     </div>
-                    <button class="gv-btn" onclick="submitPayment()"
+
+                    <!-- NEW: FaucetPay Screenshot Proof -->
+                    <div style="margin-bottom:12px;">
+                        <div
+                            style="font-size:11px; color:var(--text-sub); font-weight:700; margin-bottom:6px; text-transform:uppercase;">
+                            Payment Proof (Screenshot)</div>
+                        <div style="display:flex; gap:8px;">
+                            <input type="text" id="fpScreenshotUrl" readonly placeholder="No screenshot uploaded"
+                                style="flex:1; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:10px; font-size:12px; color:#fff; outline:none;">
+                            <label
+                                style="background:var(--tg-theme-button-color, #2481cc); color:#fff; padding:10px 15px; border-radius:10px; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+                                <i class="fas fa-camera"></i>
+                                <input type="file" accept="image/*" style="display:none;"
+                                    onchange="uploadDepositScreenshot(this, 'fpScreenshotUrl')">
+                            </label>
+                        </div>
+                    </div>
+                    <button class="gv-btn" onclick="submitFaucetDeposit()"
                         style="margin-top:12px; background:linear-gradient(135deg,#3b82f6,#8b5cf6);">
                         <i class="far fa-check-circle"></i> I've Completed the Payment
                     </button>
                 </div>
+            </div>
+
+            <!-- CRYPTO METHODS SELECTION PAGE -->
+            <div id="cryptoMethodsPage" class="page">
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px; padding:0 4px;">
+                    <div
+                        style="width:44px; height:44px; background:linear-gradient(135deg, #FCD535, #d4a017); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; color:#000;">
+                        <i class="fas fa-coins"></i>
+                    </div>
+                    <div style="font-size:18px; font-weight:800; color:#fff;">Select Exchange/Wallet</div>
+                </div>
+
+                <div id="cryptoMethodsList">
+                    <!-- Methods will be populated dynamically -->
+                </div>
+
 
             </div>
 
-            <!-- BINANCE PAY PAGE -->
-            <div id="binancePayPage" class="page">
-                <div class="qr-box"
-                    style="background:#fff; padding:20px; border-radius:20px; text-align:center; margin-bottom:20px">
-                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=39996280"
-                        style="width:150px; height:150px">
+            <!-- CRYPTO PAYMENT DETAILS PAGE -->
+            <div id="cryptoPaymentPage" class="page">
+                <div id="cryptoPayHeader" style="text-align:center; margin-bottom:20px;">
+                    <h2 id="cpMethodName" style="color:#fff; margin-bottom:5px;">Payment</h2>
+                    <p id="cpMethodDesc" style="color:#888; font-size:10px; text-transform:uppercase;">FOLLOW THE
+                        DETAILS BELOW TO COMPLETE ORDER</p>
                 </div>
 
-                <button class="tcn-btn"
-                    style="width:100%; display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:20px; background:#333; border:1px solid #444">
-                    <i class="fas fa-download"></i> Download QR Code
+                <div id="cpQrBox"
+                    style="background:#fff; padding:16px; border-radius:16px; text-align:center; margin-bottom:16px; display:none;">
+                    <img id="cpQrImg" src="" style="width:160px; height:160px; border-radius:8px;">
+                </div>
+
+                <div class="bp-details-box" id="cpIdBox" style="margin-bottom:10px; display:none;">
+                    <div>
+                        <div id="cpIdLabel"
+                            style="font-size:10px; color:var(--text-sub); font-weight:700; text-transform:uppercase; margin-bottom:4px;">
+                            ID</div>
+                        <div id="cpIdVal" style="font-size:16px; font-weight:700; color:var(--text-main);">00000000
+                        </div>
+                    </div>
+                    <div id="cpIdCopy"
+                        style="width:36px; height:36px; background:#f59e0b; border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#000;">
+                        <i class="far fa-copy"></i>
+                    </div>
+                </div>
+
+                <div class="bp-details-box" id="cpEmailBox" style="margin-bottom:10px; display:none;">
+                    <div>
+                        <div id="cpEmailLabel"
+                            style="font-size:10px; color:var(--text-sub); font-weight:700; text-transform:uppercase; margin-bottom:4px;">
+                            EMAIL / ADDRESS</div>
+                        <div id="cpEmailVal"
+                            style="font-size:13px; font-weight:700; color:var(--text-main); word-break:break-all;">
+                            example@mail.com</div>
+                    </div>
+                    <div id="cpEmailCopy"
+                        style="width:36px; height:36px; background:#f59e0b; border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#000;">
+                        <i class="far fa-copy"></i>
+                    </div>
+                </div>
+
+                <div class="gv-input-box" style="margin-top:20px; margin-bottom:8px;">
+                    <i class="fas fa-dollar-sign" style="color:var(--text-sub)"></i>
+                    <input type="number" class="gv-input" id="cpAmountInput" placeholder="Enter Amount (USD)">
+                </div>
+
+                <div class="gv-input-box" style="margin-bottom:8px;">
+                    <i class="fas fa-hashtag" style="color:var(--text-sub)"></i>
+                    <input type="text" class="gv-input" id="cpTxnIdInput" placeholder="Enter Transaction ID / Hash">
+                </div>
+
+                <!-- NEW: Screenshot Upload Proof -->
+                <div style="margin-bottom:12px;">
+                    <div
+                        style="font-size:11px; color:var(--text-sub); font-weight:700; margin-bottom:6px; text-transform:uppercase;">
+                        Payment Proof (Screenshot)</div>
+                    <div style="display:flex; gap:8px;">
+                        <input type="text" id="cpScreenshotUrl" readonly placeholder="No screenshot uploaded"
+                            style="flex:1; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:10px; font-size:12px; color:#fff; outline:none;">
+                        <label
+                            style="background:var(--tg-theme-button-color, #2481cc); color:#fff; padding:10px 15px; border-radius:10px; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+                            <i class="fas fa-camera"></i>
+                            <input type="file" accept="image/*" style="display:none;"
+                                onchange="uploadDepositScreenshot(this, 'cpScreenshotUrl')">
+                        </label>
+                    </div>
+                </div>
+
+                <button class="gv-btn" onclick="submitCryptoDeposit()"
+                    style="margin-top:12px; background:linear-gradient(135deg, #10b981, #059669);">
+                    <i class="far fa-check-circle"></i> I've Completed the Payment
                 </button>
 
-                <div
-                    style="display:flex; justify-content:space-between; margin-bottom:12px; font-weight:700; color:#fff">
-                    <span style="color:#888; font-size:11px; text-transform:uppercase">Amount</span>
-                    <span>$28.00</span>
-                </div>
-                <div
-                    style="display:flex; justify-content:space-between; margin-bottom:24px; font-weight:700; color:#fff">
-                    <span style="color:#888; font-size:11px; text-transform:uppercase">Method</span>
-                    <span style="color:#fbbf24">Binance Pay</span>
-                </div>
-
-                <div class="bp-details-box">
-                    <div>
-                        <div class="bp-label">BINANCE PAY ID</div>
-                        <div class="bp-val">39996280</div>
-                    </div>
-                    <div class="bp-copy"><i class="far fa-copy"></i></div>
-                </div>
-
-                <div class="bp-details-box">
-                    <div>
-                        <div class="bp-label">EMAIL ADDRESS</div>
-                        <div class="bp-val" style="font-size:11px">boyearn705@gmail...</div>
-                    </div>
-                    <div class="bp-copy"><i class="far fa-copy"></i></div>
-                </div>
-
-                <div
-                    style="margin-top:20px; margin-bottom:10px; font-size:11px; font-weight:700; color:#888; text-transform:uppercase">
-                    Transaction ID</div>
-                <div class="gv-input-box" style="margin-bottom:8px">
-                    <input type="text" class="gv-input" placeholder="Enter your transaction ID">
-                </div>
-                <div style="font-size:10px; color:#666; margin-bottom:20px; font-style:italic">Paste the transaction ID
-                    from your Binance payment history</div>
-
-                <button class="gv-btn" onclick="alert('Payment Submitted!')"><i class="far fa-check-circle"></i> I've
-                    Completed the Payment</button>
-                <div
-                    style="text-align:center; margin-top:16px; font-size:11px; color:#666; font-weight:700; text-transform:uppercase">
-                    Edit Amount</div>
-            </div>
-
-            <!-- FAUCETPAY PAGE -->
-            <div id="faucetPayPage" class="page">
-                <div class="ex-top-grid">
-                    <div class="ex-bal-card">
-                        <div class="ex-bal-title" style="color:#f59e0b"><i class="fas fa-dollar-sign"></i> Tokens (TC)
-                        </div>
-                        <div class="ex-bal-val" style="color:#f59e0b">250 / $1</div>
-                    </div>
-                    <div class="ex-bal-card">
-                        <div class="ex-bal-title" style="color:#38bdf8"><i class="fas fa-gem"></i> Gems (JS)</div>
-                        <div class="ex-bal-val" style="color:#38bdf8">7 / $1</div>
-                    </div>
-                </div>
-
-                <div class="section-title" style="margin-bottom:16px; display:flex; align-items:center; gap:8px">
-                    <i class="fas fa-wallet" style="color:#f59e0b"></i> FaucetPay Deposit
-                </div>
-
-                <div class="step-row">
-                    <div class="step-item active">1</div>
-                    <div class="step-line"></div>
-                    <div class="step-item">2</div>
-                </div>
-
-                <div class="fp-input-label">Pay With Cryptocurrency</div>
-                <select class="fp-select">
-                    <option>USDT (TRC20)</option>
-                    <option>Bitcoin (BTC)</option>
-                    <option>Ethereum (ETH)</option>
-                </select>
-
-                <div class="fp-input-label">Amount (USD)</div>
-                <div class="gv-input-box">
-                    <span style="color:#888; font-weight:600">$</span>
-                    <input type="number" class="gv-input" value="0.00" style="margin-left:8px">
-                </div>
-                <div style="font-size:11px; color:#666; margin-top:-10px; margin-bottom:20px">Minimum: $1.00</div>
-
-                <div class="fp-calc-box">
-                    <div style="font-size:12px; color:#888; margin-bottom:12px">You will receive:</div>
-                    <div style="display:flex; justify-content:space-between; align-items:center">
-                        <div style="font-size:16px; font-weight:800; color:#fff"><span style="color:#f59e0b">$</span> 0
-                            TC</div>
-                        <div style="font-size:16px; font-weight:800; color:#fff"><span style="color:#38bdf8">??</span>
-                            0
-                            JS</div>
-                    </div>
-                </div>
-                <div style="height:80px"></div>
+                <button class="gv-btn" onclick="nav('cryptoMethods')"
+                    style="margin-top:10px; background:rgba(255,255,255,0.05); color:#fff; border:1px solid rgba(255,255,255,0.1);">
+                    Cancel
+                </button>
             </div>
 
 
@@ -2914,10 +2900,135 @@
                 </div>
             </div>
 
+            <!-- Exchange Page -->
+            <div id="exchangePage" class="page">
+                <div class="content-body" style="padding:0;">
+                    <!-- Section Title with Icon -->
+                    <div style="display:flex; align-items:center; gap:12px; margin-bottom:24px; padding:0 4px;">
+                        <div
+                            style="width:44px; height:44px; background:linear-gradient(135deg, #10b981, #059669); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; color:#fff;">
+                            <i class="fas fa-exchange-alt"></i>
+                        </div>
+                        <div style="font-size:18px; font-weight:800; color:#fff;">Exchange Assets</div>
+                    </div>
+
+                    <!-- Balance Row -->
+                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; margin-bottom:24px;">
+                        <div
+                            style="background:rgba(255,255,255,0.03); padding:12px; border-radius:16px; border:1px solid rgba(255,255,255,0.05); text-align:center;">
+                            <div style="font-size:10px; color:var(--text-sub); margin-bottom:4px; font-weight:700;">
+                                TOKENS</div>
+                            <div id="exBalTokens" style="font-size:15px; font-weight:900; color:#f59e0b;">0</div>
+                        </div>
+                        <div
+                            style="background:rgba(255,255,255,0.03); padding:12px; border-radius:16px; border:1px solid rgba(255,255,255,0.05); text-align:center;">
+                            <div style="font-size:10px; color:var(--text-sub); margin-bottom:4px; font-weight:700;">GEMS
+                            </div>
+                            <div id="exBalGems" style="font-size:15px; font-weight:900; color:#38bdf8;">0</div>
+                        </div>
+                        <div
+                            style="background:rgba(255,255,255,0.03); padding:12px; border-radius:16px; border:1px solid rgba(255,255,255,0.05); text-align:center;">
+                            <div style="font-size:10px; color:var(--text-sub); margin-bottom:4px; font-weight:700;">USD
+                            </div>
+                            <div id="exBalUsd" style="font-size:15px; font-weight:900; color:#22c55e;">0.00</div>
+                        </div>
+                    </div>
+
+                    <!-- Exchange Form Container -->
+                    <div
+                        style="background:rgba(255,255,255,0.02); border-radius:24px; padding:20px; border:1px solid rgba(255,255,255,0.05);">
+                        <!-- From Currency -->
+                        <div style="margin-bottom:20px;">
+                            <label
+                                style="font-size:12px; color:var(--text-sub); display:block; margin-bottom:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Convert
+                                From</label>
+                            <div
+                                style="background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:4px;">
+                                <select id="exFromCurrency" onchange="updateExchangePreview()"
+                                    style="background:transparent; color:#fff; border:none; padding:12px; width:100%; outline:none; font-weight:700;">
+                                    <option value="tokens">TOKENS (TC)</option>
+                                    <option value="Gems">GEMS (JS)</option>
+                                    <option value="usd">USD BALANCE</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Swap Button -->
+                        <div style="display:flex; justify-content:center; margin:-10px 0;">
+                            <button onclick="swapExchangeCurrencies()"
+                                style="background:#10b981; border:none; width:40px; height:40px; border-radius:50%; color:#fff; cursor:pointer; z-index:2; box-shadow:0 4px 12px rgba(16,185,129,0.3); transition:all 0.2s;">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+
+                        <!-- To Currency -->
+                        <div style="margin-bottom:24px; margin-top:10px;">
+                            <label
+                                style="font-size:12px; color:var(--text-sub); display:block; margin-bottom:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Convert
+                                To</label>
+                            <div
+                                style="background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:4px;">
+                                <select id="exToCurrency" onchange="updateExchangePreview()"
+                                    style="background:transparent; color:#fff; border:none; padding:12px; width:100%; outline:none; font-weight:700;">
+                                    <option value="usd">USD BALANCE</option>
+                                    <option value="tokens">TOKENS (TC)</option>
+                                    <option value="Gems">GEMS (JS)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Input Amount -->
+                        <div style="margin-bottom:24px;">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                                <label
+                                    style="font-size:12px; color:var(--text-sub); font-weight:700; text-transform:uppercase;">Amount
+                                    to exchange</label>
+                                <span id="exFromHint" onclick="setMaxExchangeAmount()"
+                                    style="font-size:11px; color:#10b981; cursor:pointer; font-weight:800;">MAX:
+                                    0</span>
+                            </div>
+                            <div
+                                style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:16px;">
+                                <input type="number" id="exFromAmount" oninput="updateExchangePreview()"
+                                    placeholder="0.00"
+                                    style="background:transparent; border:none; color:#fff; width:100%; font-size:24px; font-weight:900; outline:none; text-align:center;">
+                            </div>
+                        </div>
+
+                        <!-- Preview Box -->
+                        <div
+                            style="background:linear-gradient(135deg, rgba(16,185,129,0.1), rgba(16,185,129,0.05)); padding:20px; border-radius:20px; border:1px solid rgba(16,185,129,0.2); margin-bottom:24px; text-align:center;">
+                            <div
+                                style="display:flex; justify-content:space-between; margin-bottom:12px; border-bottom:1px solid rgba(16,185,129,0.1); padding-bottom:12px;">
+                                <span style="font-size:12px; color:var(--text-sub); font-weight:700;">YOU WILL
+                                    RECEIVE</span>
+                                <span id="exRateHint" style="font-size:11px; color:#10b981; font-weight:700;">RATE:
+                                    -</span>
+                            </div>
+                            <input type="text" id="exToAmount" readonly value="0.00"
+                                style="background:transparent; border:none; color:#fff; font-size:32px; font-weight:900; width:100%; text-align:center; outline:none;">
+                            <div id="exFeeHint" style="font-size:11px; color:#ef4444; margin-top:8px; font-weight:600;">
+                            </div>
+                        </div>
+
+                        <button class="gv-btn" onclick="exchangeTokens()"
+                            style="width:100%; height:56px; background:linear-gradient(135deg, #10b981, #059669); color:#fff; font-size:16px; font-weight:900; border-radius:18px; box-shadow:0 8px 20px rgba(16,185,129,0.3);">
+                            <i class="fas fa-check-circle"></i> CONFIRM EXCHANGE
+                        </button>
+                    </div>
+
+                    <div
+                        style="margin-top:20px; text-align:center; font-size:11px; color:var(--text-sub); font-weight:600;">
+                        <i class="fas fa-shield-alt" style="margin-right:4px;"></i> Secure Instant Exchange
+                    </div>
+                </div>
+            </div>
+
             <!-- OTHER PAGES -->
             <div id="historyPage" class="page">
                 <div class="section-title">RECENT TRANSACTIONS</div>
-                <div class="empty-state">
+                <div id="fullHistoryList"></div>
+                <div class="empty-state" id="historyEmptyState">
                     <div class="empty-icon"><i class="fas fa-clock"></i></div>
                     <p>No transactions yet</p>
                 </div>
@@ -2932,24 +3043,13 @@
 
                 <!-- Grid View (Hidden by default) - Service Cards in Square Format -->
                 <div id="servicesGridView" class="services-grid" style="display:none;">
-                    <div class="sg-card" onclick="nav('chatgptProduct')">
-                        <div class="sg-card-icon" style="background:linear-gradient(135deg,#10b981,#059669)">
-                            <i class="fas fa-robot"></i>
-                        </div>
-                        <span>ChatGPT</span>
-                    </div>
-                    <div class="sg-card" onclick="nav('geminiProduct')">
-                        <div class="sg-card-icon" style="background:linear-gradient(135deg,#38bdf8,#0284c7)">
-                            <i class="fas fa-gem"></i>
-                        </div>
-                        <span>Gemini</span>
-                    </div>
                     <div class="sg-card" onclick="nav('vccCards')">
-                        <div class="sg-card-icon" style="background:linear-gradient(135deg,#fbbf24,#d97706)">
+                        <div class="sg-card-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)">
                             <i class="fas fa-credit-card"></i>
                         </div>
-                        <span>VCC Cards</span>
+                        <span>Virtual Card</span>
                     </div>
+
                     <div class="sg-card" onclick="nav('vpnServices')">
                         <div class="sg-card-icon" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8)">
                             <i class="fas fa-shield-alt"></i>
@@ -2960,41 +3060,18 @@
 
                 <!-- List View (Default) -->
                 <div class="service-cards-container">
-                    <!-- ChatGPT Card -->
-                    <div class="service-card" onclick="nav('chatgptProduct')">
-                        <div class="sc-icon">
-                            <i class="fas fa-robot"></i>
-                        </div>
-                        <div class="sc-info">
-                            <h3>ChatGPT</h3>
-                            <p>NEW CHATGPT DETAILS</p>
-                        </div>
-                        <div class="sc-arrow"><i class="fas fa-chevron-right"></i></div>
-                    </div>
-
-                    <!-- Gemini Card -->
-                    <div class="service-card" onclick="nav('geminiProduct')">
-                        <div class="sc-icon gemini">
-                            <i class="fas fa-gem"></i>
-                        </div>
-                        <div class="sc-info">
-                            <h3>Gemini</h3>
-                            <p>NEW GEMINI CARD DETAILS</p>
-                        </div>
-                        <div class="sc-arrow"><i class="fas fa-chevron-right"></i></div>
-                    </div>
-
-                    <!-- VCC Card -->
+                    <!-- Virtual Card Card -->
                     <div class="service-card" onclick="nav('vccCards')">
-                        <div class="sc-icon vcc">
+                        <div class="sc-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)">
                             <i class="fas fa-credit-card"></i>
                         </div>
                         <div class="sc-info">
-                            <h3>VCC Cards</h3>
-                            <p>PREMIUM VIRTUAL CARDS</p>
+                            <h3>Virtual Card</h3>
+                            <p>MANAGE VIRTUAL CARDS</p>
                         </div>
                         <div class="sc-arrow"><i class="fas fa-chevron-right"></i></div>
                     </div>
+
 
                     <!-- VPN Card -->
                     <div class="service-card" onclick="nav('vpnServices')">
@@ -3880,13 +3957,13 @@
                 { code: 'bn', flag: '????', name: 'Bengali', native: '?????', dir: 'ltr' },
                 { code: 'ar', flag: '????', name: 'Arabic', native: '???????', dir: 'rtl' },
                 { code: 'hi', flag: '????', name: 'Hindi', native: '??????', dir: 'ltr' },
-                { code: 'fr', flag: '????', name: 'French', native: 'Français', dir: 'ltr' },
-                { code: 'es', flag: '????', name: 'Spanish', native: 'Español', dir: 'ltr' },
+                { code: 'fr', flag: '????', name: 'French', native: 'Franais', dir: 'ltr' },
+                { code: 'es', flag: '????', name: 'Spanish', native: 'Espaol', dir: 'ltr' },
                 { code: 'de', flag: '????', name: 'German', native: 'Deutsch', dir: 'ltr' },
                 { code: 'ru', flag: '????', name: 'Russian', native: '???????', dir: 'ltr' },
                 { code: 'zh', flag: '????', name: 'Chinese', native: '??', dir: 'ltr' },
-                { code: 'tr', flag: '????', name: 'Turkish', native: 'Türkçe', dir: 'ltr' },
-                { code: 'pt', flag: '????', name: 'Portuguese', native: 'Português', dir: 'ltr' },
+                { code: 'tr', flag: '????', name: 'Turkish', native: 'Trke', dir: 'ltr' },
+                { code: 'pt', flag: '????', name: 'Portuguese', native: 'Portugus', dir: 'ltr' },
                 { code: 'id', flag: '????', name: 'Indonesian', native: 'Bahasa Indonesia', dir: 'ltr' },
             ];
 
@@ -3981,67 +4058,67 @@
                     close: '??? ????', copyAll: '?? ???? ????',
                 },
                 fr: {
-                    appName: 'Vérification Auto', welcomeBack: 'BON RETOUR,', tokensLabel: 'Jetons', gemsLabel: 'Gemmes',
-                    daily: 'Quotidien', verify: 'Vérifier', service: 'Service', tasks: 'Tâches', invite: 'Inviter',
-                    history: 'Historique', deposit: 'Dépôt', earn: 'Gagner', accounts: 'Comptes',
-                    number: 'Numéro', email: 'E-mail', redeemTokens: 'Obtenir des jetons',
-                    redeemSub: 'Entrez votre code pour obtenir des jetons', recentActivity: 'Activité récente', seeAll: 'VOIR TOUT',
-                    language: 'Langue', selectLang: 'Sélectionner la langue', chooseLang: 'Choisissez votre langue préférée',
-                    home: 'Accueil', shop: 'Boutique', profile: 'Profil', verification: 'Vérification', services: 'Services',
-                    leaderboard: 'Classement', exchange: 'Échange', redeemCode: 'Code cadeau',
-                    virtualNumber: 'Numéro virtuel', inviteEarn: 'Inviter & Gagner', supportTeam: 'Équipe support',
-                    support: 'Équipe support', appearance: 'Apparence', themeDark: 'THÈME: MODE SOMBRE',
-                    accountStatus: 'Statut du compte', displaySecurity: 'AFFICHAGE & SÉCURITÉ',
-                    totalAssets: 'Total des actifs', estimatedValue: 'VALEUR ESTIMÉE',
-                    applyVerify: 'DEMANDER LA VÉRIFICATION', earnFreeTokens: 'Gagnez des jetons gratuits',
-                    yourReferral: 'Votre lien de parrainage', invited: 'INVITÉ', earned: 'GAGNÉ',
+                    appName: 'Vrification Auto', welcomeBack: 'BON RETOUR,', tokensLabel: 'Jetons', gemsLabel: 'Gemmes',
+                    daily: 'Quotidien', verify: 'Vrifier', service: 'Service', tasks: 'Tches', invite: 'Inviter',
+                    history: 'Historique', deposit: 'Dpt', earn: 'Gagner', accounts: 'Comptes',
+                    number: 'Numro', email: 'E-mail', redeemTokens: 'Obtenir des jetons',
+                    redeemSub: 'Entrez votre code pour obtenir des jetons', recentActivity: 'Activit rcente', seeAll: 'VOIR TOUT',
+                    language: 'Langue', selectLang: 'Slectionner la langue', chooseLang: 'Choisissez votre langue prfre',
+                    home: 'Accueil', shop: 'Boutique', profile: 'Profil', verification: 'Vrification', services: 'Services',
+                    leaderboard: 'Classement', exchange: 'change', redeemCode: 'Code cadeau',
+                    virtualNumber: 'Numro virtuel', inviteEarn: 'Inviter & Gagner', supportTeam: 'quipe support',
+                    support: 'quipe support', appearance: 'Apparence', themeDark: 'THME: MODE SOMBRE',
+                    accountStatus: 'Statut du compte', displaySecurity: 'AFFICHAGE & SCURIT',
+                    totalAssets: 'Total des actifs', estimatedValue: 'VALEUR ESTIME',
+                    applyVerify: 'DEMANDER LA VRIFICATION', earnFreeTokens: 'Gagnez des jetons gratuits',
+                    yourReferral: 'Votre lien de parrainage', invited: 'INVIT', earned: 'GAGN',
                     topRefs: 'TOP 10 PARRAINS', globalRanking: 'Classement mondial', needHelp: "Besoin d'aide?",
                     msgSupport: 'CONTACTER LE SUPPORT', availableItems: 'ARTICLES DISPONIBLES',
-                    claimReward: 'RÉCLAMER', dailyBonus: 'Bonus quotidien', nextClaim: 'PROCHAIN CLAIM:',
+                    claimReward: 'RCLAMER', dailyBonus: 'Bonus quotidien', nextClaim: 'PROCHAIN CLAIM:',
                     missionCenter: 'CENTRE DE MISSION', howToEarn: 'COMMENT GAGNER',
-                    yourInboxEmpty: "Votre boîte est vide", waitingEmails: "En attente d'emails",
+                    yourInboxEmpty: "Votre bote est vide", waitingEmails: "En attente d'emails",
                     close: 'FERMER', copyAll: 'TOUT COPIER',
                 },
                 es: {
-                    appName: 'Verificación Auto', welcomeBack: 'BIENVENIDO DE VUELTA,', tokensLabel: 'Fichas', gemsLabel: 'Gemas',
+                    appName: 'Verificacin Auto', welcomeBack: 'BIENVENIDO DE VUELTA,', tokensLabel: 'Fichas', gemsLabel: 'Gemas',
                     daily: 'Diario', verify: 'Verificar', service: 'Servicio', tasks: 'Tareas', invite: 'Invitar',
-                    history: 'Historial', deposit: 'Depósito', earn: 'Ganar', accounts: 'Cuentas',
-                    number: 'Número', email: 'Correo', redeemTokens: 'Canjear Tokens',
-                    redeemSub: 'Ingresa tu código para obtener tokens', recentActivity: 'Actividad reciente', seeAll: 'VER TODO',
+                    history: 'Historial', deposit: 'Depsito', earn: 'Ganar', accounts: 'Cuentas',
+                    number: 'Nmero', email: 'Correo', redeemTokens: 'Canjear Tokens',
+                    redeemSub: 'Ingresa tu cdigo para obtener tokens', recentActivity: 'Actividad reciente', seeAll: 'VER TODO',
                     language: 'Idioma', selectLang: 'Seleccionar idioma', chooseLang: 'Elige tu idioma preferido',
-                    home: 'Inicio', shop: 'Tienda', profile: 'Perfil', verification: 'Verificación', services: 'Servicios',
-                    leaderboard: 'Clasificación', exchange: 'Intercambio', redeemCode: 'Canjear código',
-                    virtualNumber: 'Número virtual', inviteEarn: 'Invitar & Ganar', supportTeam: 'Soporte',
+                    home: 'Inicio', shop: 'Tienda', profile: 'Perfil', verification: 'Verificacin', services: 'Servicios',
+                    leaderboard: 'Clasificacin', exchange: 'Intercambio', redeemCode: 'Canjear cdigo',
+                    virtualNumber: 'Nmero virtual', inviteEarn: 'Invitar & Ganar', supportTeam: 'Soporte',
                     support: 'Soporte', appearance: 'Apariencia', themeDark: 'TEMA: MODO OSCURO',
                     accountStatus: 'Estado de cuenta', displaySecurity: 'PANTALLA & SEGURIDAD',
                     totalAssets: 'Activos totales', estimatedValue: 'VALOR ESTIMADO',
-                    applyVerify: 'SOLICITAR VERIFICACIÓN', earnFreeTokens: 'Gana tokens gratis',
+                    applyVerify: 'SOLICITAR VERIFICACIN', earnFreeTokens: 'Gana tokens gratis',
                     yourReferral: 'Tu enlace de referido', invited: 'INVITADO', earned: 'GANADO',
-                    topRefs: 'TOP 10 REFERIDORES', globalRanking: 'Clasificación global', needHelp: '¿Necesitas ayuda?',
-                    msgSupport: 'CONTACTAR SOPORTE', availableItems: 'ARTÍCULOS DISPONIBLES',
-                    claimReward: 'RECLAMAR', dailyBonus: 'Bono diario', nextClaim: 'PRÓXIMA:',
-                    missionCenter: 'CENTRO DE MISIONES', howToEarn: 'CÓMO GANAR',
-                    yourInboxEmpty: 'Tu bandeja está vacía', waitingEmails: 'Esperando correos',
+                    topRefs: 'TOP 10 REFERIDORES', globalRanking: 'Clasificacin global', needHelp: 'Necesitas ayuda?',
+                    msgSupport: 'CONTACTAR SOPORTE', availableItems: 'ARTCULOS DISPONIBLES',
+                    claimReward: 'RECLAMAR', dailyBonus: 'Bono diario', nextClaim: 'PRXIMA:',
+                    missionCenter: 'CENTRO DE MISIONES', howToEarn: 'CMO GANAR',
+                    yourInboxEmpty: 'Tu bandeja est vaca', waitingEmails: 'Esperando correos',
                     close: 'CERRAR', copyAll: 'COPIAR TODO',
                 },
                 de: {
-                    appName: 'Auto Verifizierung', welcomeBack: 'WILLKOMMEN ZURÜCK,', tokensLabel: 'Token', gemsLabel: 'Edelsteine',
-                    daily: 'Täglich', verify: 'Verifizieren', service: 'Service', tasks: 'Aufgaben', invite: 'Einladen',
+                    appName: 'Auto Verifizierung', welcomeBack: 'WILLKOMMEN ZURCK,', tokensLabel: 'Token', gemsLabel: 'Edelsteine',
+                    daily: 'Tglich', verify: 'Verifizieren', service: 'Service', tasks: 'Aufgaben', invite: 'Einladen',
                     history: 'Verlauf', deposit: 'Einzahlung', earn: 'Verdienen', accounts: 'Konten',
-                    number: 'Nummer', email: 'E-Mail', redeemTokens: 'Token Einlösen',
-                    redeemSub: 'Code eingeben für Token', recentActivity: 'Letzte Aktivität', seeAll: 'ALLE SEHEN',
-                    language: 'Sprache', selectLang: 'Sprache auswählen', chooseLang: 'Wählen Sie Ihre bevorzugte Sprache',
+                    number: 'Nummer', email: 'E-Mail', redeemTokens: 'Token Einlsen',
+                    redeemSub: 'Code eingeben fr Token', recentActivity: 'Letzte Aktivitt', seeAll: 'ALLE SEHEN',
+                    language: 'Sprache', selectLang: 'Sprache auswhlen', chooseLang: 'Whlen Sie Ihre bevorzugte Sprache',
                     home: 'Start', shop: 'Shop', profile: 'Profil', verification: 'Verifizierung', services: 'Dienste',
-                    leaderboard: 'Rangliste', exchange: 'Tausch', redeemCode: 'Code einlösen',
+                    leaderboard: 'Rangliste', exchange: 'Tausch', redeemCode: 'Code einlsen',
                     virtualNumber: 'Virtuelle Nummer', inviteEarn: 'Einladen & Verdienen', supportTeam: 'Support-Team',
                     support: 'Support-Team', appearance: 'Erscheinungsbild', themeDark: 'DESIGN: DUNKELMODUS',
                     accountStatus: 'Kontostatus', displaySecurity: 'ANZEIGE & SICHERHEIT',
-                    totalAssets: 'Gesamtvermögen', estimatedValue: 'GESCHÄTZTER WERT',
-                    applyVerify: 'FÜR VERIFIZIERUNG BEWERBEN', earnFreeTokens: 'Kostenlose Token verdienen',
+                    totalAssets: 'Gesamtvermgen', estimatedValue: 'GESCHTZTER WERT',
+                    applyVerify: 'FR VERIFIZIERUNG BEWERBEN', earnFreeTokens: 'Kostenlose Token verdienen',
                     yourReferral: 'Ihr Empfehlungslink', invited: 'EINGELADEN', earned: 'VERDIENT',
                     topRefs: 'TOP 10 WERBER', globalRanking: 'Globales Ranking', needHelp: 'Brauchen Sie Hilfe?',
-                    msgSupport: 'SUPPORT KONTAKTIEREN', availableItems: 'VERFÜGBARE ARTIKEL',
-                    claimReward: 'BELOHNUNG BEANSPRUCHEN', dailyBonus: 'Täglicher Bonus', nextClaim: 'NÄCHSTE:',
+                    msgSupport: 'SUPPORT KONTAKTIEREN', availableItems: 'VERFGBARE ARTIKEL',
+                    claimReward: 'BELOHNUNG BEANSPRUCHEN', dailyBonus: 'Tglicher Bonus', nextClaim: 'NCHSTE:',
                     missionCenter: 'MISSIONSZENTRUM', howToEarn: 'WIE MAN VERDIENT',
                     yourInboxEmpty: 'Ihr Posteingang ist leer', waitingEmails: 'Warte auf E-Mails',
                     close: 'SCHLIESSEN', copyAll: 'ALLES KOPIEREN',
@@ -4091,47 +4168,47 @@
                     close: '??', copyAll: '????',
                 },
                 tr: {
-                    appName: 'Otomatik Dogrulama', welcomeBack: 'HOS GELDINIZ,', tokensLabel: 'Token', gemsLabel: 'Mücevher',
-                    daily: 'Günlük', verify: 'Dogrula', service: 'Servis', tasks: 'Görevler', invite: 'Davet',
-                    history: 'Geçmis', deposit: 'Yatirim', earn: 'Kazan', accounts: 'Hesaplar',
+                    appName: 'Otomatik Dogrulama', welcomeBack: 'HOS GELDINIZ,', tokensLabel: 'Token', gemsLabel: 'Mcevher',
+                    daily: 'Gnlk', verify: 'Dogrula', service: 'Servis', tasks: 'Grevler', invite: 'Davet',
+                    history: 'Gemis', deposit: 'Yatirim', earn: 'Kazan', accounts: 'Hesaplar',
                     number: 'Numara', email: 'E-posta', redeemTokens: 'Token Al',
-                    redeemSub: 'Token almak için kodu girin', recentActivity: 'Son Aktiviteler', seeAll: 'HEPSI',
-                    language: 'Dil', selectLang: 'Dil Seç', chooseLang: 'Tercih ettiginiz dili seçin',
+                    redeemSub: 'Token almak iin kodu girin', recentActivity: 'Son Aktiviteler', seeAll: 'HEPSI',
+                    language: 'Dil', selectLang: 'Dil Se', chooseLang: 'Tercih ettiginiz dili sein',
                     home: 'Ana Sayfa', shop: 'Magaza', profile: 'Profil', verification: 'Dogrulama', services: 'Servisler',
                     leaderboard: 'Siralama', exchange: 'Takas', redeemCode: 'Kodu Kullan',
                     virtualNumber: 'Sanal Numara', inviteEarn: 'Davet Et & Kazan', supportTeam: 'Destek Ekibi',
-                    support: 'Destek Ekibi', appearance: 'Görünüm', themeDark: 'TEMA: KARANLIK MOD',
-                    accountStatus: 'Hesap Durumu', displaySecurity: 'EKRAN VE GÜVENLIK',
+                    support: 'Destek Ekibi', appearance: 'Grnm', themeDark: 'TEMA: KARANLIK MOD',
+                    accountStatus: 'Hesap Durumu', displaySecurity: 'EKRAN VE GVENLIK',
                     totalAssets: 'Toplam Varlik', estimatedValue: 'TAHMINI DEGER',
-                    applyVerify: 'DOGRULAMA IÇIN BASVUR', earnFreeTokens: 'Ücretsiz Token Kazan',
+                    applyVerify: 'DOGRULAMA IIN BASVUR', earnFreeTokens: 'cretsiz Token Kazan',
                     yourReferral: 'Referans Baglantiniz', invited: 'DAVET EDILEN', earned: 'KAZANILAN',
-                    topRefs: 'EN IYI 10 REFERANS', globalRanking: 'Küresel Siralama', needHelp: 'Yardim lazim mi?',
-                    msgSupport: 'DOGRUDAN DESTEGE YAZ', availableItems: 'MEVCUT ÜRÜNLER',
-                    claimReward: 'ÖDÜL AL', dailyBonus: 'Günlük Bonus', nextClaim: 'SONRAKI:',
-                    missionCenter: 'GÖREV MERKEZI', howToEarn: 'NASIL KAZANILIR',
+                    topRefs: 'EN IYI 10 REFERANS', globalRanking: 'Kresel Siralama', needHelp: 'Yardim lazim mi?',
+                    msgSupport: 'DOGRUDAN DESTEGE YAZ', availableItems: 'MEVCUT RNLER',
+                    claimReward: 'DL AL', dailyBonus: 'Gnlk Bonus', nextClaim: 'SONRAKI:',
+                    missionCenter: 'GREV MERKEZI', howToEarn: 'NASIL KAZANILIR',
                     yourInboxEmpty: 'Gelen kutunuz bos', waitingEmails: 'E-posta bekleniyor',
                     close: 'KAPAT', copyAll: 'HEPSINI KOPYALA',
                 },
                 pt: {
-                    appName: 'Verificação Auto', welcomeBack: 'BEM-VINDO DE VOLTA,', tokensLabel: 'Fichas', gemsLabel: 'Gemas',
-                    daily: 'Diário', verify: 'Verificar', service: 'Serviço', tasks: 'Tarefas', invite: 'Convidar',
-                    history: 'Histórico', deposit: 'Depósito', earn: 'Ganhar', accounts: 'Contas',
-                    number: 'Número', email: 'E-mail', redeemTokens: 'Resgatar Tokens',
-                    redeemSub: 'Digite seu código para obter tokens', recentActivity: 'Atividade recente', seeAll: 'VER TUDO',
+                    appName: 'Verificao Auto', welcomeBack: 'BEM-VINDO DE VOLTA,', tokensLabel: 'Fichas', gemsLabel: 'Gemas',
+                    daily: 'Dirio', verify: 'Verificar', service: 'Servio', tasks: 'Tarefas', invite: 'Convidar',
+                    history: 'Histrico', deposit: 'Depsito', earn: 'Ganhar', accounts: 'Contas',
+                    number: 'Nmero', email: 'E-mail', redeemTokens: 'Resgatar Tokens',
+                    redeemSub: 'Digite seu cdigo para obter tokens', recentActivity: 'Atividade recente', seeAll: 'VER TUDO',
                     language: 'Idioma', selectLang: 'Selecionar idioma', chooseLang: 'Escolha seu idioma preferido',
-                    home: 'Início', shop: 'Loja', profile: 'Perfil', verification: 'Verificação', services: 'Serviços',
-                    leaderboard: 'Classificação', exchange: 'Troca', redeemCode: 'Resgatar código',
-                    virtualNumber: 'Número virtual', inviteEarn: 'Convidar & Ganhar', supportTeam: 'Suporte',
-                    support: 'Suporte', appearance: 'Aparência', themeDark: 'TEMA: MODO ESCURO',
-                    accountStatus: 'Status da conta', displaySecurity: 'EXIBIÇÃO & SEGURANÇA',
+                    home: 'Incio', shop: 'Loja', profile: 'Perfil', verification: 'Verificao', services: 'Servios',
+                    leaderboard: 'Classificao', exchange: 'Troca', redeemCode: 'Resgatar cdigo',
+                    virtualNumber: 'Nmero virtual', inviteEarn: 'Convidar & Ganhar', supportTeam: 'Suporte',
+                    support: 'Suporte', appearance: 'Aparncia', themeDark: 'TEMA: MODO ESCURO',
+                    accountStatus: 'Status da conta', displaySecurity: 'EXIBIO & SEGURANA',
                     totalAssets: 'Total de ativos', estimatedValue: 'VALOR ESTIMADO',
-                    applyVerify: 'SOLICITAR VERIFICAÇÃO', earnFreeTokens: 'Ganhe tokens grátis',
-                    yourReferral: 'Seu link de indicação', invited: 'CONVIDADO', earned: 'GANHO',
+                    applyVerify: 'SOLICITAR VERIFICAO', earnFreeTokens: 'Ganhe tokens grtis',
+                    yourReferral: 'Seu link de indicao', invited: 'CONVIDADO', earned: 'GANHO',
                     topRefs: 'TOP 10 INDICADORES', globalRanking: 'Ranking global', needHelp: 'Precisa de ajuda?',
-                    msgSupport: 'CONTATAR SUPORTE', availableItems: 'ITENS DISPONÍVEIS',
-                    claimReward: 'RESGATAR', dailyBonus: 'Bônus diário', nextClaim: 'PRÓXIMO:',
-                    missionCenter: 'CENTRO DE MISSÕES', howToEarn: 'COMO GANHAR',
-                    yourInboxEmpty: 'Sua caixa está vazia', waitingEmails: 'Aguardando e-mails',
+                    msgSupport: 'CONTATAR SUPORTE', availableItems: 'ITENS DISPONVEIS',
+                    claimReward: 'RESGATAR', dailyBonus: 'Bnus dirio', nextClaim: 'PRXIMO:',
+                    missionCenter: 'CENTRO DE MISSES', howToEarn: 'COMO GANHAR',
+                    yourInboxEmpty: 'Sua caixa est vazia', waitingEmails: 'Aguardando e-mails',
                     close: 'FECHAR', copyAll: 'COPIAR TUDO',
                 },
                 id: {
@@ -4316,9 +4393,3 @@
 
 
 </html>
-
-
-
-
-
-

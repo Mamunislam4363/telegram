@@ -367,6 +367,51 @@ app.post('/api/admin/db/restore', (req, res) => {
     }
 });
 
+// API: Delete a selected backup file
+app.delete('/api/admin/db/backups/:file', (req, res) => {
+    try {
+        const file = req.params.file;
+        const dir = _getBackupsDir();
+        const full = path.join(dir, file);
+
+        // Security check
+        if (!full.startsWith(dir)) return res.json({ success: false, message: 'Forbidden' });
+        if (!fs.existsSync(full)) return res.json({ success: false, message: 'Backup file not found' });
+
+        fs.unlinkSync(full);
+        res.json({ success: true, message: 'Backup deleted successfully' });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// Helper: Clean up user history older than 30 days
+function _cleanupUserHistory() {
+    const now = Date.now();
+    const thirtyDaysAgo = now - (30 * 24 * 60 * 60 * 1000);
+    let totalRemoved = 0;
+    let usersUpdated = 0;
+
+    Object.values(db.data.users || {}).forEach(user => {
+        if (user.history && Array.isArray(user.history)) {
+            const initialLength = user.history.length;
+            user.history = user.history.filter(h => {
+                const hDate = h.date ? new Date(h.date).getTime() : 0;
+                return hDate > thirtyDaysAgo;
+            });
+            if (initialLength !== user.history.length) {
+                totalRemoved += (initialLength - user.history.length);
+                usersUpdated++;
+            }
+        }
+    });
+
+    if (totalRemoved > 0) {
+        db.save();
+        console.log(`[DB] Cleaned up ${totalRemoved} expired user history items from ${usersUpdated} users.`);
+    }
+}
+
 // Timer: check every minute
 setInterval(async () => {
     try {
@@ -375,6 +420,15 @@ setInterval(async () => {
         const nextAt = _computeNextBackupAt(schedule);
         if (Date.now() >= nextAt) {
             await _runBackup('auto');
+        }
+
+        // Also run user history cleanup once a day (at midnight-ish or just random check)
+        // For simplicity, we run it every backup cycle or every few hours.
+        // Let's check every hour.
+        const h = new Date().getHours();
+        if (!global._lastHistoryCleanupHour || global._lastHistoryCleanupHour !== h) {
+            _cleanupUserHistory();
+            global._lastHistoryCleanupHour = h;
         }
     } catch (e) {
         console.error('Auto backup scheduler error:', e.message);
@@ -448,6 +502,7 @@ app.post('/api/admin/users/:userId', (req, res) => {
     }
     if (referralCount !== undefined) user.referralCount = parseInt(referralCount);
     if (verified !== undefined) user.verified = (verified === true || verified === 'true');
+    if (req.body.adminVerified !== undefined) user.adminVerified = (req.body.adminVerified === true || req.body.adminVerified === 'true');
 
     db.updateUser(user);
     res.json({ success: true });
@@ -1042,7 +1097,7 @@ app.get('/api/mail/inbox', async (req, res) => {
             subject: m.subject || '(No Subject)',
             preview: m.text ? m.text.substring(0, 100) : '',
             body: m.text || '',
-            time: m.date ? new Date(m.date).toLocaleTimeString() : '',
+            time: m.date ? new Date(m.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
             otp: m.text ? (m.text.match(/\b\d{4,8}\b/) || [])[0] : null
         }));
         let newBalance;
@@ -1069,7 +1124,9 @@ app.get('/api/admin/users', (req, res) => {
         id, username: u.username || 'Unknown', firstName: u.firstName || u.first_name || '',
         tokens: u.tokens || u.balance_tokens || 0,
         invites: u.invites || u.referralCount || 0,
-        verified: u.verified || false, banned: u.banned || u.blocked || false,
+        verified: u.verified || false,
+        adminVerified: u.adminVerified || false,
+        banned: u.banned || u.blocked || false,
         joinDate: u.joinDate || u.joinedAt || null, lastActive: u.lastActive || null
     }));
     res.json({ success: true, users: list, total: list.length });
@@ -1142,8 +1199,228 @@ app.get('/api/admin/user-detail/:userId', (req, res) => {
     };
 
     const history = Array.isArray(u.history) ? u.history : [];
-
     res.json({ success: true, user: userProfile, history });
+});
+
+// API: Exchange - Convert Assets (One-way USD restriction)
+app.post('/api/exchange/convert', (req, res) => {
+    const { userId, from, to, amount } = req.body;
+    const users = getUsersObj();
+    const user = users[userId];
+    if (!user) return res.json({ success: false, message: 'User not found' });
+
+    const amt = parseFloat(amount) || 0;
+    if (amt <= 0) return res.json({ success: false, message: 'Please enter a valid amount' });
+
+    // Restriction: Tokens and Gems cannot be converted back to USD
+    if (to === 'usd' && from !== 'usd') {
+        return res.json({ success: false, message: 'Convert to USD is not allowed. USD can only be converted to Tokens or Gems.' });
+    }
+
+    if (from === to) {
+        return res.json({ success: false, message: 'Please select different currencies' });
+    }
+
+    // Currency field names
+    const getField = (tokenType) => {
+        if (tokenType === 'tokens') return user.tokens !== undefined ? 'tokens' : 'balance_tokens';
+        return tokenType; // usd, Gems
+    };
+
+    const fromField = getField(from);
+    const toField = getField(to);
+
+    const balance = user[fromField] || 0;
+    if (balance < amt) return res.json({ success: false, message: 'Insufficient balance' });
+
+    // Rates (Sync with frontend)
+    const rates = {
+        usd_to_tokens: 100,
+        Gems_to_tokens: 100
+    };
+
+    // 1. Convert source to a common base (Tokens)
+    let tokensBase = 0;
+    if (from === 'tokens') tokensBase = amt;
+    else if (from === 'usd') tokensBase = amt * rates.usd_to_tokens;
+    else if (from === 'Gems') tokensBase = amt * rates.Gems_to_tokens;
+
+    // 2. Convert base to target
+    let targetAmount = 0;
+    if (to === 'tokens') targetAmount = tokensBase;
+    else if (to === 'Gems') targetAmount = tokensBase / rates.Gems_to_tokens;
+    else if (to === 'usd') targetAmount = tokensBase / rates.usd_to_tokens;
+
+    // Apply rounding
+    if (to === 'usd') targetAmount = Math.round(targetAmount * 100) / 100;
+    else if (to === 'Gems') targetAmount = Math.floor(targetAmount * 10000) / 10000;
+    else targetAmount = Math.floor(targetAmount);
+
+    // Update balances
+    user[fromField] = balance - amt;
+    user[toField] = (user[toField] || 0) + targetAmount;
+
+    // History record
+    if (!user.history) user.history = [];
+    user.history.unshift({
+        type: 'exchange',
+        from, to,
+        fromAmount: amt,
+        toAmount: targetAmount,
+        date: Date.now()
+    });
+
+    saveUsersObj(users);
+    res.json({
+        success: true,
+        tokens: user.tokens ?? user.balance_tokens,
+        Gems: user.Gems || 0,
+        usd: user.usd || 0,
+        toAmount: targetAmount
+    });
+});
+
+// API: Deposit - Submit Request
+app.post('/api/deposit/submit', (req, res) => {
+    const { userId, method, amount, txnId } = req.body;
+    if (!userId || !method || !amount || !txnId) {
+        return res.json({ success: false, message: 'Missing required fields' });
+    }
+
+    db.data.pendingDeposits = db.data.pendingDeposits || [];
+
+    // Check if txnId already exists (prevent duplicate submissions)
+    const exists = db.data.pendingDeposits.find(d => d.txnId === txnId);
+    if (exists) {
+        return res.json({ success: false, message: 'Transaction ID already submitted for review.' });
+    }
+
+    const deposit = {
+        id: 'dep_' + Date.now() + Math.random().toString(36).substr(2, 5),
+        userId: userId.toString(),
+        method,
+        amount: parseFloat(amount),
+        txnId,
+        screenshot: req.body.screenshot || null,
+        date: Date.now(),
+        status: 'pending'
+    };
+
+    db.data.pendingDeposits.unshift(deposit);
+    db.save();
+
+    res.json({ success: true, message: 'Deposit submitted successfully! Admin will review it.' });
+});
+
+// API: Deposit - Get Config (QR/Addresses)
+app.get('/api/deposit/config', (req, res) => {
+    res.json({ success: true, cryptoMethods: db.data.cryptoMethods || {} });
+});
+
+// API: Admin - Get All Deposits (Pending & History)
+app.get('/api/admin/deposits', (req, res) => {
+    const pending = (db.data.pendingDeposits || []).filter(d => d.status === 'pending');
+    const history = (db.data.pendingDeposits || []).filter(d => d.status !== 'pending').slice(0, 50);
+    res.json({ success: true, pending, history });
+});
+
+// API: Admin - Deposit Action (Approve/Reject)
+app.post('/api/admin/deposits/action', (req, res) => {
+    const { depositId, action, note } = req.body;
+    const deposits = db.data.pendingDeposits || [];
+    const depositIndex = deposits.findIndex(d => d.id === depositId);
+
+    if (depositIndex === -1) return res.json({ success: false, message: 'Deposit not found' });
+
+    const deposit = deposits[depositIndex];
+    if (deposit.status !== 'pending') return res.json({ success: false, message: 'Deposit already processed' });
+
+    if (action === 'approve') {
+        const users = getUsersObj();
+        const user = users[deposit.userId];
+        if (user) {
+            // Credit user with USD balance (since deposits are in USD usually)
+            user.usd = (user.usd || 0) + deposit.amount;
+
+            // Add to history
+            if (!user.history) user.history = [];
+            user.history.unshift({
+                type: 'deposit',
+                amount: deposit.amount,
+                currency: 'usd',
+                method: deposit.method,
+                txnId: deposit.txnId,
+                date: Date.now(),
+                status: 'completed'
+            });
+
+            saveUsersObj(users);
+            deposit.status = 'approved';
+        } else {
+            return res.json({ success: false, message: 'User not found' });
+        }
+    } else {
+        deposit.status = 'rejected';
+        deposit.adminNote = note;
+    }
+
+    db.save();
+    res.json({ success: true });
+});
+
+// API: Admin - Auto Approve by Transaction IDs
+app.post('/api/admin/deposits/auto-approve', (req, res) => {
+    const { txnIds } = req.body; // Array of strings or newline separated string
+    if (!txnIds) return res.json({ success: false, message: 'No IDs provided' });
+
+    let idsArray = Array.isArray(txnIds) ? txnIds : txnIds.split('\n').map(s => s.trim()).filter(s => s);
+
+    const deposits = db.data.pendingDeposits || [];
+    const users = getUsersObj();
+    let approvedCount = 0;
+
+    idsArray.forEach(tid => {
+        const deposit = deposits.find(d => d.txnId === tid && d.status === 'pending');
+        if (deposit) {
+            const user = users[deposit.userId];
+            if (user) {
+                user.usd = (user.usd || 0) + deposit.amount;
+                if (!user.history) user.history = [];
+                user.history.unshift({
+                    type: 'deposit',
+                    amount: deposit.amount,
+                    currency: 'usd',
+                    method: deposit.method,
+                    txnId: deposit.txnId,
+                    date: Date.now(),
+                    status: 'completed',
+                    autoApproved: true
+                });
+                deposit.status = 'approved';
+                deposit.autoApproved = true;
+                approvedCount++;
+            }
+        }
+    });
+
+    if (approvedCount > 0) {
+        saveUsersObj(users);
+        db.save();
+    }
+
+    res.json({ success: true, approvedCount, totalChecked: idsArray.length });
+});
+
+// API: Admin - Update Deposit Config
+app.post('/api/admin/deposits/config', (req, res) => {
+    const { cryptoMethods } = req.body;
+    if (cryptoMethods) {
+        db.data.cryptoMethods = cryptoMethods;
+        db.save();
+        res.json({ success: true });
+    } else {
+        res.json({ success: false });
+    }
 });
 
 // API: Admin - Dashboard Stats
@@ -1647,19 +1924,34 @@ app.post('/api/admin/broadcast', async (req, res) => {
     // Prepare Keyboard
     let reply_markup = undefined;
     if (buttons && Array.isArray(buttons) && buttons.length > 0) {
-        // Format: [[{text, url}], [{text, url}]] (rows)
-        // Client sends simple array? Let's assume client sends array of objects {text, url}
-        // We can stack them 1 per row or 2. Let's do 1 per row for simplicity or 2.
         const rows = [];
         let currentRow = [];
         buttons.forEach((btn, i) => {
-            currentRow.push({ text: btn.text, url: btn.url });
+            let bUrl = btn.url || '';
+            // Auto-fix @usernames to t.me links
+            if (bUrl.startsWith('@')) {
+                bUrl = 'https://t.me/' + bUrl.slice(1);
+            } else if (bUrl && !bUrl.includes('://')) {
+                bUrl = 'https://' + bUrl;
+            }
+
+            currentRow.push({ text: btn.text, url: bUrl });
             if (currentRow.length === 2 || i === buttons.length - 1) {
                 rows.push(currentRow);
                 currentRow = [];
             }
         });
         reply_markup = { inline_keyboard: rows };
+    }
+
+    // Resolve Local Paths for Media
+    let actualMedia = mediaUrl;
+    if (mediaUrl && mediaUrl.startsWith('/uploads/')) {
+        actualMedia = path.join(__dirname, '..', 'web', mediaUrl);
+        if (!fs.existsSync(actualMedia)) {
+            console.error(`[BROADCAST] Media file not found locally: ${actualMedia}`);
+            // Fallback to URL if file missing? (unlikely)
+        }
     }
 
     // Send
@@ -1669,24 +1961,25 @@ app.post('/api/admin/broadcast', async (req, res) => {
     try {
         const TelegramBot = require('node-telegram-bot-api');
         const config = require('../config');
-        const bot = new TelegramBot(config.TELEGRAM_BOT_TOKEN); // Stateless sender
 
-        // Batch processing to avoid rate limits? 
-        // For now simple loop with slight delay
+        // Use Global Bot if available (set via setBot), otherwise create stateless instance
+        const activeBot = bot || new TelegramBot(config.TELEGRAM_BOT_TOKEN);
 
         for (const chatId of targetIds) {
             try {
-                if (mediaType === 'photo' && mediaUrl) {
-                    await bot.sendPhoto(chatId, mediaUrl, { caption: message, reply_markup });
-                } else if (mediaType === 'video' && mediaUrl) {
-                    await bot.sendVideo(chatId, mediaUrl, { caption: message, reply_markup });
+                if (mediaType === 'photo' && actualMedia) {
+                    await activeBot.sendPhoto(chatId, actualMedia, { caption: message, reply_markup });
+                } else if (mediaType === 'video' && actualMedia) {
+                    await activeBot.sendVideo(chatId, actualMedia, { caption: message, reply_markup });
                 } else {
-                    await bot.sendMessage(chatId, message || 'Broadcast', { reply_markup });
+                    await activeBot.sendMessage(chatId, message || 'Broadcast', { reply_markup });
                 }
                 successCount++;
             } catch (e) {
                 failCount++;
-                // console.error(`Failed to send to ${chatId}: ${e.message}`);
+                console.error(`[BROADCAST] Failed to send to ${chatId}: ${e.message}`);
+                // Optional: Log more details for first few failures
+                if (failCount < 5) console.error(e);
             }
             // Tiny delay to be polite to API
             await new Promise(r => setTimeout(r, 50));
@@ -1701,19 +1994,46 @@ app.post('/api/admin/broadcast', async (req, res) => {
 });
 
 
-// API: Admin - Upload Image (Base64)
+// Multer setup for large files
+const multer = require('multer');
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadDir = path.join(__dirname, '..', 'web', 'uploads');
+        if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname);
+        cb(null, 'media_' + Date.now() + '_' + Math.floor(Math.random() * 1000) + ext);
+    }
+});
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: Infinity } // Set to Infinity as requested
+});
+
+app.post('/api/admin/upload-media', upload.single('file'), (req, res) => {
+    if (req.file) console.log(`[UPLOAD] Admin Media: ${req.file.filename} (${req.file.size} bytes)`);
+    if (!req.file) return res.json({ success: false, message: 'No file uploaded' });
+    res.json({ success: true, url: '/uploads/' + req.file.filename });
+});
+
+// Public API: Upload Screenshot (for deposits)
+app.post('/api/upload/screenshot', upload.single('file'), (req, res) => {
+    if (!req.file) return res.json({ success: false, message: 'No file uploaded' });
+    res.json({ success: true, url: '/uploads/' + req.file.filename });
+});
+
+// API: Admin - Upload Image (Base64) - Legacy/Small images
 app.post('/api/admin/upload', (req, res) => {
-    const { image } = req.body; // Expects base64 string
+    const { image } = req.body;
     if (!image) return res.json({ success: false, message: 'No image data' });
 
     try {
-        // Strip header if present (e.g., "data:image/png;base64,...")
         const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
         const buffer = Buffer.from(base64Data, 'base64');
-
-        // Fixed: upload to project /web/uploads, not /database/web/uploads
         const uploadDir = path.join(__dirname, '..', 'web', 'uploads');
-        if (!fs.existsSync(uploadDir)) { fs.mkdirSync(uploadDir, { recursive: true }); }
+        if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
         const filename = 'img_' + Date.now() + '_' + Math.floor(Math.random() * 1000) + '.png';
         const filepath = path.join(uploadDir, filename);
@@ -2193,8 +2513,17 @@ app.get('/auth/google/callback', async (req, res) => {
 app.post('/api/check-required-joins', async (req, res) => {
     const { userId } = req.body;
 
-    if (!userId) {
-        return res.json({ success: false, message: 'User ID required' });
+    // 1. Check if user is Admin Verified (Highest Tier - bypasses all join checks)
+    const user = db.getUser(userId);
+    if (user && user.adminVerified) {
+        return res.json({
+            success: true,
+            allJoined: true,
+            canProceed: true,
+            channelJoined: true,
+            groupJoined: true,
+            message: 'Admin Verified - Join Check Bypassed'
+        });
     }
 
     // Channel and Group IDs
@@ -2228,6 +2557,7 @@ app.post('/api/check-required-joins', async (req, res) => {
             return res.json({
                 success: true,
                 allJoined: true,
+                canProceed: true,
                 channelJoined: true,
                 groupJoined: true,
                 message: 'Bot not available - allowing access'
@@ -2237,6 +2567,7 @@ app.post('/api/check-required-joins', async (req, res) => {
         res.json({
             success: true,
             allJoined: channelJoined && groupJoined,
+            canProceed: channelJoined && groupJoined,
             channelJoined: channelJoined,
             groupJoined: groupJoined,
             channelLink: 'https://t.me/AutosVerifych',
@@ -2248,6 +2579,7 @@ app.post('/api/check-required-joins', async (req, res) => {
         res.json({
             success: true,
             allJoined: true,
+            canProceed: true,
             channelJoined: true,
             groupJoined: true,
             message: 'Error occurred - allowing access'

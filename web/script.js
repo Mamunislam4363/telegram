@@ -80,7 +80,8 @@ var userData = {
     verified: true,
     dailyStreak: 0,
     lastDailyClaim: 0,
-    completedTasks: []
+    completedTasks: [],
+    history: []
 };
 
 // FEATURE FLAGS (Button Management)
@@ -136,7 +137,53 @@ function applyProfilePhoto(photoUrl) {
     const fallback = `https://ui-avatars.com/api/?name=${name}&background=fbbf24&color=000&size=80&bold=true&rounded=true`;
     const src = (photoUrl && photoUrl.trim()) ? photoUrl : fallback;
 
-    // Target all possible avatar img elements
+    // Utility: Upload Deposit Screenshot
+    async function uploadDepositScreenshot(input, targetId) {
+        const file = input.files[0];
+        if (!file) return;
+
+        const targetInput = document.getElementById(targetId);
+        const originalPlaceholder = targetInput.placeholder;
+        targetInput.value = 'Uploading...';
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const res = await fetch('/api/upload/screenshot', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+            if (data.success) {
+                targetInput.value = data.url;
+                tg.HapticFeedback.notificationOccurred('success');
+            } else {
+                tg.showAlert('Upload failed: ' + data.message);
+                targetInput.value = '';
+            }
+        } catch (e) {
+            tg.showAlert('Upload failed: Network error');
+            targetInput.value = '';
+        } finally {
+            input.value = '';
+        }
+    }
+    function copyText(text, btnElement) {
+        if (!btnElement) return;
+        navigator.clipboard.writeText(text);
+        if (window.Telegram && Telegram.WebApp && Telegram.WebApp.HapticFeedback) {
+            Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+        }
+
+        const icon = btnElement.querySelector('i');
+        if (icon) {
+            const originalClass = icon.className;
+            icon.className = 'fas fa-check';
+            setTimeout(() => { icon.className = originalClass; }, 2000);
+        }
+    }
+
     const selectors = ['#home-avatar', '#profile-avatar-img', '.wc-avatar', '.prof-avatar', '.pui-avatar'];
     selectors.forEach(sel => {
         document.querySelectorAll(sel).forEach(el => {
@@ -272,6 +319,8 @@ const PAGE_TITLES = {
     'accountsStore': 'PREMIUM ACCOUNTS',
     'accountDetail': 'ACCOUNT DETAILS',
     'support': 'SUPPORT',
+    'cryptoMethods': 'CRYPTO DEPOSIT',
+    'cryptoPayment': 'PAYMENT DETAILS'
 };
 
 function showPage(targetId) {
@@ -396,6 +445,18 @@ function showPage(targetId) {
     if (targetId === 'numberService') {
         updateNumBalance();
     }
+    // Refresh History when entering history page
+    if (targetId === 'history') {
+        loadRecentActivity(); // Refresh from server
+    }
+    // Refresh Exchange UI when entering exchange page
+    if (targetId === 'exchange') {
+        initExchangeUI();
+    }
+    // Load Deposit Config when entering deposit pages
+    if (targetId === 'deposit' || targetId === 'cryptoMethods') {
+        fetchCryptoConfig();
+    }
     // Update Header Style based on page type
     const headerContainer = document.querySelector('.sticky-header-container');
     const mainHeader = document.getElementById('mainHeader');
@@ -411,7 +472,8 @@ function showPage(targetId) {
         'geminiProduct', 'chatgptProduct', 'checkout', 'deposit',
         'exchange', 'binancePay', 'faucetPay', 'history', 'redeem',
         'invite', 'tasks', 'earn', 'daily', 'verify', 'admin',
-        'geminiVerification', 'leaderboard', 'support', 'emailMessage'];
+        'geminiVerification', 'leaderboard', 'support', 'emailMessage',
+        'cryptoMethods', 'cryptoPayment'];
 
     if (targetId === 'home') {
         // Home style: Avatar + Auto Verify + bolt + settings
@@ -599,6 +661,11 @@ function calculateExchange(from, to, amount) {
     else if (from === 'Gems') tokensBase = GemsToTokens(amount);
     else return { success: false, message: 'Invalid source currency' };
 
+    // Restriction: Cannot convert Tokens/Gems back to USD
+    if (to === 'usd' && from !== 'usd') {
+        return { success: false, message: 'Convert back to USD is not allowed.' };
+    }
+
     // Convert tokens base -> to
     if (to === 'tokens') {
         toAmount = tokensBase;
@@ -669,7 +736,10 @@ function updateExchangePreview() {
     if (!preview.success) {
         toEl.value = '0';
         rateEl.textContent = 'RATE: -';
-        if (feeEl) feeEl.textContent = preview.message || '';
+        if (feeEl) {
+            feeEl.textContent = preview.message || '';
+            feeEl.style.color = '#ef4444';
+        }
         return;
     }
 
@@ -751,27 +821,183 @@ function changeQty(delta) {
 }
 
 function selectPayMethod(method) {
-    const binanceCard = document.getElementById('pm-binance');
-    const faucetCard = document.getElementById('pm-faucet');
-    const checkBinance = document.getElementById('check-binance');
-    const checkFaucet = document.getElementById('check-faucet');
-    const binanceSection = document.getElementById('payViaBinanceSection');
     const faucetSection = document.getElementById('payViaFaucetSection');
+    if (method === 'faucet') {
+        if (faucetSection) faucetSection.style.display = faucetSection.style.display === 'block' ? 'none' : 'block';
+    }
+}
 
-    if (method === 'binance') {
-        binanceCard?.classList.add('selected');
-        faucetCard?.classList.remove('selected');
-        if (checkBinance) checkBinance.innerHTML = '<i class="fas fa-check" style="font-size:10px;"></i>';
-        if (checkFaucet) checkFaucet.innerHTML = '';
-        if (binanceSection) binanceSection.style.display = 'block';
-        if (faucetSection) faucetSection.style.display = 'none';
+let cryptoConfig = null;
+let currentCryptoMethod = null;
+
+async function fetchCryptoConfig() {
+    try {
+        const res = await fetch('/api/deposit/config');
+        const data = await res.json();
+        if (data.success) {
+            cryptoConfig = data.cryptoMethods;
+            renderCryptoMethods();
+        }
+    } catch (e) { console.error('Error fetching crypto config:', e); }
+}
+
+function renderCryptoMethods() {
+    const container = document.getElementById('cryptoMethodsList');
+    if (!container || !cryptoConfig) return;
+
+    container.innerHTML = '';
+    const icons = {
+        binance: { bg: '#FCD535', icon: '<span style="font-size:20px; font-weight:900; color:#000;">B</span>' },
+        bitget: { bg: '#00f0ff', icon: '<i class="fas fa-bolt" style="color:#000;"></i>' },
+        gateio: { bg: '#f23e5c', icon: '<i class="fas fa-g" style="color:#fff; font-weight:900;"></i>' },
+        usdt: { bg: '#26A17B', icon: '<i class="fas fa-t" style="color:#fff; font-weight:900;"></i>' },
+        bitcoin: { bg: '#f7931a', icon: '<i class="fab fa-bitcoin" style="color:#fff;"></i>' },
+        web3: { bg: 'linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045)', icon: '<i class="fas fa-link" style="color:#fff;"></i>' }
+    };
+
+    Object.entries(cryptoConfig).forEach(([id, meta]) => {
+        if (meta.status !== 'active') return;
+        const style = icons[id] || { bg: '#444', icon: '<i class="fas fa-wallet"></i>' };
+
+        const card = document.createElement('div');
+        card.className = 'pm-card';
+        card.onclick = () => openCryptoPayment(id);
+        card.innerHTML = `
+            <div class="pm-icon" style="background:${style.bg};">${style.icon}</div>
+            <div class="pm-info">
+                <div class="pm-title">${meta.name}</div>
+                <div class="pm-desc">${id === 'web3' ? 'USDT TRC20/ERC20' : 'Exchange Deposit'}</div>
+            </div>
+            <div class="pm-arrow"><i class="fas fa-chevron-right"></i></div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+function openCryptoPayment(methodId) {
+    currentCryptoMethod = methodId;
+    const meta = cryptoConfig[methodId];
+    if (!meta) return;
+
+    document.getElementById('cpMethodName').textContent = meta.name;
+
+    // QR
+    const qrBox = document.getElementById('cpQrBox');
+    const qrImg = document.getElementById('cpQrImg');
+    if (meta.qr) {
+        qrImg.src = meta.qr;
+        qrBox.style.display = 'block';
     } else {
-        faucetCard?.classList.add('selected');
-        binanceCard?.classList.remove('selected');
-        if (checkFaucet) checkFaucet.innerHTML = '<i class="fas fa-check" style="font-size:10px;"></i>';
-        if (checkBinance) checkBinance.innerHTML = '';
-        if (faucetSection) faucetSection.style.display = 'block';
-        if (binanceSection) binanceSection.style.display = 'none';
+        qrBox.style.display = 'none';
+    }
+
+    // Reset screenshot
+    document.getElementById('cpScreenshotUrl').value = '';
+
+    // ID
+    const idBox = document.getElementById('cpIdBox');
+    const idVal = document.getElementById('cpIdVal');
+    const idLabel = document.getElementById('cpIdLabel');
+    if (meta.details) {
+        idVal.textContent = meta.details;
+        const lowerName = meta.name.toLowerCase();
+        let label = 'UID / ID';
+        if (lowerName.includes('binance')) label = 'BINANCE PAY ID';
+        else if (lowerName.includes('bitget')) label = 'BITGET UID';
+        else if (lowerName.includes('gate')) label = 'GATE.IO UID';
+        else if (lowerName.includes('web3') || lowerName.includes('usdt') || lowerName.includes('address') || lowerName.includes('wallet')) label = 'WALLET ADDRESS';
+
+        idLabel.textContent = label;
+        idBox.style.display = 'flex';
+        document.getElementById('cpIdCopy').onclick = (e) => {
+            copyText(meta.details, e.currentTarget);
+        };
+    } else {
+        idBox.style.display = 'none';
+    }
+
+    // Email
+    const emailBox = document.getElementById('cpEmailBox');
+    const emailVal = document.getElementById('cpEmailVal');
+    if (meta.email) {
+        emailVal.textContent = meta.email;
+        emailBox.style.display = 'flex';
+        document.getElementById('cpEmailCopy').onclick = (e) => {
+            copyText(meta.email, e.currentTarget);
+        };
+    } else {
+        emailBox.style.display = 'none';
+    }
+
+    nav('cryptoPayment');
+}
+
+async function submitCryptoDeposit() {
+    const amount = document.getElementById('cpAmountInput').value;
+    const txnId = document.getElementById('cpTxnIdInput').value;
+
+    if (!amount || amount <= 0) return tg.showAlert('Please enter a valid amount.');
+    if (!txnId || txnId.length < 5) return tg.showAlert('Please enter a valid Transaction ID / Hash.');
+
+    try {
+        const res = await fetch('/api/deposit/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: userData.id,
+                method: currentCryptoMethod,
+                amount: amount,
+                txnId: txnId,
+                screenshot: document.getElementById('cpScreenshotUrl').value
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            tg.showAlert(data.message);
+            nav('deposit');
+            // Clear inputs
+            document.getElementById('cpAmountInput').value = '';
+            document.getElementById('cpTxnIdInput').value = '';
+            document.getElementById('cpScreenshotUrl').value = '';
+        } else {
+            tg.showAlert(data.message || 'Error submitting deposit.');
+        }
+    } catch (e) {
+        tg.showAlert('Network error. Please try again.');
+    }
+}
+
+async function submitFaucetDeposit() {
+    const amount = document.getElementById('fpAmountInput').value;
+    const txnId = document.getElementById('fpTxnIdInput').value;
+
+    if (!amount || amount <= 0) return tg.showAlert('Please enter a valid amount.');
+    if (!txnId) return tg.showAlert('Please enter your FaucetPay Transaction ID.');
+
+    try {
+        const res = await fetch('/api/deposit/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: userData.id,
+                method: 'faucetpay',
+                amount: amount,
+                txnId: txnId,
+                screenshot: document.getElementById('fpScreenshotUrl').value
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            tg.showAlert(data.message);
+            nav('deposit');
+            document.getElementById('fpAmountInput').value = '';
+            document.getElementById('fpTxnIdInput').value = '';
+            document.getElementById('fpScreenshotUrl').value = '';
+        } else {
+            tg.showAlert(data.message || 'Error submitting deposit.');
+        }
+    } catch (e) {
+        tg.showAlert('Network error.');
     }
 }
 
@@ -1672,13 +1898,83 @@ function loadRecentActivity() {
     fetch(`/api/history/${userData.id}`)
         .then(r => r.json())
         .then(data => {
-            if (data.success && data.history && data.history.length > 0) {
-                renderRecentActivity(data.history.slice(0, 3)); // Show last 3 activities
+            if (data.success && data.history) {
+                userData.history = data.history; // Store globally
+                if (data.history.length > 0) {
+                    renderRecentActivity(data.history.slice(0, 3)); // Show last 3 activities on home
+
+                    // If we currently are on history page, render full list too
+                    if (currentPage === 'history') {
+                        renderFullHistory();
+                    }
+                }
             }
         })
         .catch(() => {
             // Silently fail - show empty state
         });
+}
+
+function renderFullHistory() {
+    const list = document.getElementById('fullHistoryList');
+    const empty = document.getElementById('historyEmptyState');
+    if (!list || !empty) return;
+
+    if (!userData.history || userData.history.length === 0) {
+        list.style.display = 'none';
+        empty.style.display = 'flex';
+        return;
+    }
+
+    list.style.display = 'block';
+    empty.style.display = 'none';
+
+    const typeConfig = {
+        'ad_reward': { icon: 'fas fa-play', color: '#f59e0b', name: 'Watch and Earn' },
+        'mission_reward': { icon: 'fas fa-check-circle', color: '#22c55e', name: 'Task Completed' },
+        'account_purchase': { icon: 'fas fa-shopping-cart', color: '#3b82f6', name: 'Account Purchase' },
+        'mail': { icon: 'fas fa-envelope', color: '#ef4444', name: 'Email Generated' },
+        'number': { icon: 'fas fa-phone', color: '#9333ea', name: 'Virtual Number' },
+        'redeem': { icon: 'fas fa-ticket-alt', color: '#22c55e', name: 'Code Redeemed' },
+        'daily_bonus': { icon: 'fas fa-gift', color: '#fbbf24', name: 'Daily Bonus' },
+        'verification': { icon: 'fas fa-shield-alt', color: '#10b981', name: 'Verification' }
+    };
+
+    list.innerHTML = userData.history.map(item => {
+        const config = typeConfig[item.type] || { icon: 'fas fa-check', color: '#9ca3af', name: item.type || 'Activity' };
+
+        let dateObj;
+        try {
+            dateObj = item.date ? new Date(item.date) : new Date();
+        } catch (e) {
+            dateObj = new Date();
+        }
+
+        const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const timeStr = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+        const reward = item.reward || '';
+        const detail = item.detail || '';
+
+        return `
+        <div class="activity-card" style="margin-bottom:12px;">
+            <div class="activity-left">
+                <div class="activity-icon" style="background:rgba(255,255,255,0.05); color:${config.color}">
+                    <i class="${config.icon}"></i>
+                </div>
+                <div class="activity-info">
+                    <div class="activity-name">${config.name}</div>
+                    <div class="activity-meta">${dateStr} • ${timeStr}</div>
+                    ${detail ? `<div style="font-size:10px; color:rgba(255,255,255,0.5); margin-top:2px;">${detail}</div>` : ''}
+                </div>
+            </div>
+            <div class="activity-reward">
+                <div style="font-size:13px; font-weight:700; color:${reward.includes('+') ? '#22c55e' : '#ef4444'}">
+                    ${reward}
+                </div>
+            </div>
+        </div>`;
+    }).join('');
 }
 
 // Load broadcast messages with real live user activity data
@@ -1988,18 +2284,25 @@ function renderCards() {
     const container = document.getElementById('cardsList');
     if (!container) return;
     const cards = JSON.parse(localStorage.getItem('adminCards') || '[]');
+    if (cards.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding:40px 0; color:var(--text-sub); opacity:0.5;">No cards available</div>';
+        return;
+    }
     container.innerHTML = cards.map(c => `
-        <div class="glass-card p-4 rounded-xl flex items-center gap-4" style="background:var(--bg-card); border:1px solid var(--border-color);">
-            <div style="width:48px; height:48px; border-radius:12px; background:rgba(251,191,36,0.1); display:flex; align-items:center; justify-content:center; color:#fbbf24; font-size:24px;">
+        <div class="service-card" style="margin-bottom:12px; cursor:default; padding:16px;">
+            <div class="sc-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706); width:50px; height:50px; border-radius:16px; flex-shrink:0;">
                 <i class="fas fa-credit-card"></i>
             </div>
-            <div style="flex:1;">
-                <div style="font-weight:700; color:var(--text-main);">${c.name}</div>
-                <div style="font-size:11px; color:var(--text-sub);">Stock: ${c.count}</div>
+            <div class="sc-info" style="flex:1; margin-left:14px;">
+                <h3 style="font-size:15px; font-weight:700; color:var(--text-main); margin:0;">${c.name}</h3>
+                <p style="font-size:11px; color:var(--text-sub); margin:4px 0 0 0; font-weight:600;">Stock: ${c.count}</p>
             </div>
-            <div style="text-align:right;">
-                <div style="font-weight:800; color:#22c55e;">${c.price} TC</div>
-                <button onclick="buyAccount('card', ${c.price}, '${c.id}')" style="margin-top:4px; padding:4px 12px; border-radius:8px; background:#fbbf24; color:#000; font-weight:700; font-size:10px; border:none;">BUY</button>
+            <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+                <div style="font-weight:900; color:#22c55e; font-size:15px; letter-spacing:0.5px;">${c.price} TC</div>
+                <button onclick="buyAccount('card', ${c.price}, '${c.id}')" 
+                    style="padding:6px 16px; border-radius:12px; background:#fbbf24; color:#000; font-weight:800; font-size:11px; border:none; cursor:pointer; box-shadow:0 4px 10px rgba(251,191,36,0.2);">
+                    BUY
+                </button>
             </div>
         </div>`).join('');
 }
@@ -2008,18 +2311,25 @@ function renderVPN() {
     const container = document.getElementById('vpnList');
     if (!container) return;
     const vpns = JSON.parse(localStorage.getItem('adminVPNs') || '[]');
+    if (vpns.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding:40px 0; color:var(--text-sub); opacity:0.5;">No VPN accounts available</div>';
+        return;
+    }
     container.innerHTML = vpns.map(v => `
-        <div class="glass-card p-4 rounded-xl flex items-center gap-4" style="background:var(--bg-card); border:1px solid var(--border-color);">
-            <div style="width:48px; height:48px; border-radius:12px; background:rgba(59,130,246,0.1); display:flex; align-items:center; justify-content:center; color:#3b82f6; font-size:24px;">
+        <div class="service-card" style="margin-bottom:12px; cursor:default; padding:16px;">
+            <div class="sc-icon" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8); width:50px; height:50px; border-radius:16px; flex-shrink:0;">
                 <i class="fas fa-shield-alt"></i>
             </div>
-            <div style="flex:1;">
-                <div style="font-weight:700; color:var(--text-main);">${v.name}</div>
-                <div style="font-size:11px; color:var(--text-sub);">Locations: Premium</div>
+            <div class="sc-info" style="flex:1; margin-left:14px;">
+                <h3 style="font-size:15px; font-weight:700; color:var(--text-main); margin:0;">${v.name}</h3>
+                <p style="font-size:11px; color:var(--text-sub); margin:4px 0 0 0; font-weight:600;">Location: Premium</p>
             </div>
-            <div style="text-align:right;">
-                <div style="font-weight:800; color:#22c55e;">${v.price} TC</div>
-                <button onclick="buyAccount('vpn', ${v.price}, '${v.id}')" style="margin-top:4px; padding:4px 12px; border-radius:8px; background:#3b82f6; color:#fff; font-weight:700; font-size:10px; border:none;">BUY</button>
+            <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+                <div style="font-weight:900; color:#22c55e; font-size:15px; letter-spacing:0.5px;">${v.price} TC</div>
+                <button onclick="buyAccount('vpn', ${v.price}, '${v.id}')" 
+                    style="padding:6px 16px; border-radius:12px; background:#3b82f6; color:#fff; font-weight:800; font-size:11px; border:none; cursor:pointer; box-shadow:0 4px 10px rgba(59,130,246,0.2);">
+                    BUY
+                </button>
             </div>
         </div>`).join('');
 }
@@ -2901,9 +3211,14 @@ function renderInbox(emails, type) {
     if (otpListEl) {
         if (otps.length > 0) {
             otpListEl.innerHTML = otps.map(o => `
-                <div class="otp-chip">
-                    <span class="oc-code">${o.code}</span>
-                    <button class="oc-copy" onclick="copyText('${o.code}')">COPY</button>
+                <div class="otp-chip" style="padding: 6px 12px; height: auto; min-height: 44px; display: flex; align-items: center; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 12px; margin-right: 8px; margin-bottom: 8px;">
+                    <div style="flex:1;">
+                        <div class="oc-code" style="font-size: 16px; font-weight: 800; color: var(--text-main); letter-spacing: 1px;">${o.code}</div>
+                    </div>
+                    <button class="oc-copy" onclick="copyOtpFromChip(this, '${o.code}')" 
+                        style="width:32px; height:32px; border-radius:50%; background:#10b981; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; margin-left:10px; transition: all 0.2s; box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);">
+                        <i class="fas fa-copy" style="color:#fff; font-size:12px;"></i>
+                    </button>
                 </div>
             `).join("");
         } else {
@@ -3724,5 +4039,27 @@ window.renderShopItems = renderShopItems;
 window.copyUserId = copyUserId;
 window.copyNumOtp = copyNumOtp;
 window.extractOtp = extractOtp;
+
+function copyOtpFromChip(btn, code) {
+    if (!code) return;
+
+    copyText(code);
+    if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+
+    const icon = btn.querySelector('i');
+    if (icon) {
+        const originalClass = icon.className;
+        icon.className = 'fas fa-check';
+        btn.style.background = '#22c55e';
+        btn.style.transform = 'scale(1.1)';
+
+        setTimeout(() => {
+            icon.className = originalClass;
+            btn.style.background = '#10b981';
+            btn.style.transform = '';
+        }, 1000);
+    }
+}
+window.copyOtpFromChip = copyOtpFromChip;
 
 

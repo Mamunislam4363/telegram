@@ -70,7 +70,7 @@ const defaultData = {
             nagad: 1
         },
         // Welcome credits for new users
-        welcomeCredits: 100
+        welcomeCredits: 50
     },
     featureFlags: {
         // Admin Panel Buttons
@@ -108,7 +108,15 @@ const defaultData = {
     shopItems: {},
     // Generic API Providers (New System)
     providers: {}, // { id: { title, type, apiUrl, apiKey (enc), priority, status, healthStats... } }
-    broadcasts: [] // Ensure broadcast storage structure
+    broadcasts: [], // Ensure broadcast storage structure
+    pendingDeposits: [], // { id, userId, method, amount, txnId, screenshot, date, status: 'pending'|'approved'|'rejected', autoApproved: true|false }
+    cryptoMethods: {
+        binance: { name: "Binance Pay", details: "39996280", email: "boyearn705@gmail.com", qr: "https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=39996280", status: "active" },
+        bitget: { name: "Bitget", details: "748839201", email: "", qr: "", status: "active" },
+        gateio: { name: "Gate.io", details: "12345678", email: "", qr: "", status: "active" },
+        usdt: { name: "Web3 (USDT TRC20)", details: "TR7NHqkeu71v7otNDV352u653nqYBg7KkZ", email: "", qr: "", status: "active" },
+        bitcoin: { name: "Web3 (Bitcoin)", details: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa", email: "", qr: "", status: "active" }
+    }
 };
 
 /* Encryption Helper */
@@ -190,9 +198,24 @@ class Database {
 
         this.ready = true;
 
-        // 4. Cleanup Local Files (Strict Policy)
+        // 4. Safety Cleanup: Move Local File to Backups instead of deleting
         if (fs.existsSync(DB_FILE)) {
-            this.deleteLocalBackup();
+            try {
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                const backupName = `migrated_backup_${timestamp}.json`;
+                const backupPath = path.join(BACKUP_DIR, backupName);
+
+                if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
+
+                // Copy to backup first
+                fs.copyFileSync(DB_FILE, backupPath);
+                // Then remove original (only after successful copy)
+                fs.unlinkSync(DB_FILE);
+
+                console.log(`📦 Local database migrated and moved to: ${backupPath}`);
+            } catch (err) {
+                console.error("❌ Failed to move local database to backups:", err.message);
+            }
         }
     }
 
@@ -214,33 +237,45 @@ class Database {
         if (firebaseManager.connected) {
             try {
                 await firebaseManager.setData(this.data);
+
+                // If we successfully saved to Firebase, we can clear the local "offline backup"
+                // This keeps the local storage clean and light as requested by the user.
+                if (fs.existsSync(DB_FILE)) {
+                    try {
+                        fs.unlinkSync(DB_FILE);
+                        console.log("🧹 Firebase Synced: Local cache cleared to save storage.");
+                    } catch (err) {
+                        // Silent fail for unlink
+                    }
+                }
             } catch (e) {
                 console.error("Firebase Sync Error:", e.message);
+                this.saveLocalBackup();
             }
         } else {
             // Fallback: Save to local disk if Firebase is not connected
-            try {
-                fs.writeFileSync(DB_FILE, JSON.stringify(this.data, null, 2));
-            } catch (e) {
-                // Ignore write errors if disk is read-only (common in some containers)
-            }
+            this.saveLocalBackup();
         }
 
         // 2. Sync to Google Drive (Secondary & Background)
-        // If connected, update specific files so user can see them live.
         if (googleDriveStorage && googleDriveStorage.connected) {
-            // Run in background to avoid blocking bot response
             (async () => {
                 try {
-                    // Split data into readable JSON files on Drive
                     await googleDriveStorage.saveData('users.json', this.data.users);
                     await googleDriveStorage.saveData('gmails.json', this.data.gmails);
                     await googleDriveStorage.saveData('services.json', this.data.emailServices);
-                    // console.log("☁️ Synced to Google Drive");
                 } catch (e) {
                     console.error("Drive Sync Error:", e.message);
                 }
             })();
+        }
+    }
+
+    saveLocalBackup() {
+        try {
+            fs.writeFileSync(DB_FILE, JSON.stringify(this.data, null, 2));
+        } catch (e) {
+            console.error("❌ Failed to save local backup:", e.message);
         }
     }
 
@@ -272,6 +307,7 @@ class Database {
                 failedVerifications: 0,
                 cardsPurchased: 0,
                 blocked: false,
+                adminVerified: false,
                 language: 'en',  // Default language
                 lastActive: Date.now(), // New: Activity tracking
                 dailyStreak: 0,
@@ -1426,6 +1462,16 @@ class Database {
         this.save();
     }
 
+    deleteCode(code) {
+        this.getSettings();
+        if (this.data.settings.codes && this.data.settings.codes[code]) {
+            delete this.data.settings.codes[code];
+            this.save();
+            return true;
+        }
+        return false;
+    }
+
     redeemCode(userId, code) {
         this.getSettings();
         if (!this.data.settings.codes) return { success: false, msg: 'Invalid Code' };
@@ -1847,9 +1893,9 @@ class Database {
 
     getWelcomeCredits() {
         if (!this.data.adminSettings) {
-            this.data.adminSettings = { welcomeCredits: 100 };
+            this.data.adminSettings = { welcomeCredits: 50 };
         }
-        return this.data.adminSettings.welcomeCredits || 100;
+        return this.data.adminSettings.welcomeCredits || 50;
     }
 
     setWelcomeCredits(amount) {
