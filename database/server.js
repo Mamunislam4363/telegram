@@ -2367,6 +2367,9 @@ app.post('/api/admin/db/wipe', async (req, res) => {
         db.data.numberSessions = {};
         db.data.gmails = [];
 
+        // Also clear marketplace/user-generated content
+        db.data.itemSales = {};
+
         db.save();
 
         const adminId = process.env.ADMIN_ID;
@@ -2378,6 +2381,25 @@ app.post('/api/admin/db/wipe', async (req, res) => {
     } catch (e) {
         console.error('Wipe error:', e);
         res.json({ success: false, message: e.message });
+    }
+});
+
+// Admin: Delete any item sale (approved/pending/etc.)
+app.delete('/api/admin/item-sales/:id', (req, res) => {
+    try {
+        const id = (req.params.id || '').trim();
+        if (!id) return res.json({ success: false, message: 'Missing id' });
+
+        if (!db.data.itemSales || !db.data.itemSales[id]) {
+            return res.json({ success: false, message: 'Item not found' });
+        }
+
+        delete db.data.itemSales[id];
+        db.save();
+
+        return res.json({ success: true, message: 'Item deleted' });
+    } catch (e) {
+        return res.json({ success: false, message: e.message });
     }
 });
 

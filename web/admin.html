@@ -4170,6 +4170,7 @@ Admins can use /settings command in the group to manage settings.`);
                                     <button onclick="updateItemSaleStatus('${s.id}', 'approved')" title="Directly Approve" class="bg-green-500/10 text-green-500 p-2 rounded-lg hover:bg-green-500/20 shadow-sm"><i class="fas fa-check"></i></button>
                                     <button onclick="updateItemSaleStatus('${s.id}', 'offer_sent')" title="Send Offer" class="bg-purple-500/10 text-purple-500 p-2 rounded-lg hover:bg-purple-500/20 shadow-sm"><i class="fas fa-handshake"></i></button>
                                     <button onclick="updateItemSaleStatus('${s.id}', 'rejected')" title="Reject" class="bg-red-500/10 text-red-500 p-2 rounded-lg hover:bg-red-500/20 shadow-sm"><i class="fas fa-times"></i></button>
+                                    <button onclick="deleteItemSale('${s.id}')" title="Delete" class="bg-red-500/10 text-red-500 p-2 rounded-lg hover:bg-red-500/20 shadow-sm"><i class="fas fa-trash"></i></button>
                                 </div>
                             </td>
                         </tr>`).join('') || '<tr><td colspan="6" class="text-center text-gray-500 py-8">No pending submissions</td></tr>';
@@ -4185,9 +4186,25 @@ Admins can use /settings command in the group to manage settings.`);
                             <td class="text-xs">${s.email}</td>
                             <td><span class="px-2 py-0.5 rounded-full ${s.status === 'approved' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'} text-[10px] font-bold uppercase">${s.status}</span></td>
                             <td class="text-[10px] text-gray-400">${new Date(s.updatedAt).toLocaleString()}</td>
+                            <td class="text-right"><button onclick="deleteItemSale('${s.id}')" class="text-red-400 hover:text-red-300" title="Delete"><i class="fas fa-trash"></i></button></td>
                         </tr>`).join('') || '<tr><td colspan="5" class="text-center text-gray-500 py-8">No history</td></tr>';
                     }
                 });
+        }
+
+        async function deleteItemSale(id) {
+            if (!confirm('Delete this item listing permanently?')) return;
+            try {
+                const res = await fetch(API_BASE + '/api/admin/item-sales/' + encodeURIComponent(id), { method: 'DELETE' });
+                const data = await res.json();
+                if (!data.success) {
+                    alert(data.message || 'Delete failed');
+                    return;
+                }
+                loadItemSales();
+            } catch (e) {
+                alert('Delete error: ' + e.message);
+            }
         }
 
         async function updateItemSaleStatus(saleId, status) {
