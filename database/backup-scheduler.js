@@ -76,16 +76,22 @@ class BackupScheduler {
             if (uploadResult.success) {
                 console.log(`✅ Backup Uploaded Successfully: ${fileName}`);
 
-                // 3. Retention Policy: Keep ONLY ONE (Delete ALL older backups)
+                // 3. Retention Policy: Keep ONLY 2 MOST RECENT (Delete older backups)
                 const files = await driveStorage.listFiles();
                 if (files && files.length > 0) {
                     // Filter for backup files (our naming convention)
                     // We look for files starting with 'bot_backup_'
-                    const backups = files.filter(f => f.name.startsWith('bot_backup_') && f.name !== fileName);
+                    const backups = files.filter(f => f.name.startsWith('bot_backup_'));
 
-                    if (backups.length > 0) {
-                        console.log(`🧹 Cleaning up ${backups.length} old backups...`);
-                        for (const oldFile of backups) {
+                    if (backups.length > 2) {
+                        // Sort by name (which includes timestamp) - oldest first
+                        backups.sort((a, b) => a.name.localeCompare(b.name));
+
+                        // Delete all except the 2 most recent
+                        const filesToDelete = backups.slice(0, backups.length - 2);
+                        console.log(`🧹 Cleaning up ${filesToDelete.length} old backups (keeping 2 most recent)...`);
+
+                        for (const oldFile of filesToDelete) {
                             await driveStorage.deleteFile(oldFile.name);
                             console.log(`   🗑️ Deleted Old Backup: ${oldFile.name}`);
                         }

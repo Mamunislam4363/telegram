@@ -26,8 +26,8 @@ var tg = window.Telegram?.WebApp || {
         notificationOccurred: (s) => { }
     },
     showAlert: (msg) => window.showToast(msg),
-    showConfirm: (msg, cb) => cb((function(){return true;})(msg)),
-    showAlert: (params, cb) => { const r = (function(){return true;})(params.title + '\n' + params.message); if (cb && r) cb(params.buttons[0].id); },
+    showConfirm: (msg, cb) => cb((function () { return true; })(msg)),
+    showAlert: (params, cb) => { const r = (function () { return true; })(params.title + '\n' + params.message); if (cb && r) cb(params.buttons[0].id); },
     BackButton: { show: () => { }, hide: () => { }, onClick: () => { } },
     close: () => { }
 };
@@ -137,53 +137,6 @@ function applyProfilePhoto(photoUrl) {
     const fallback = `https://ui-avatars.com/api/?name=${name}&background=fbbf24&color=000&size=80&bold=true&rounded=true`;
     const src = (photoUrl && photoUrl.trim()) ? photoUrl : fallback;
 
-    // Utility: Upload Deposit Screenshot
-    async function uploadDepositScreenshot(input, targetId) {
-        const file = input.files[0];
-        if (!file) return;
-
-        const targetInput = document.getElementById(targetId);
-        const originalPlaceholder = targetInput.placeholder;
-        targetInput.value = 'Uploading...';
-
-        const formData = new FormData();
-        formData.append('file', file);
-
-        try {
-            const res = await fetch('/api/upload/screenshot', {
-                method: 'POST',
-                body: formData
-            });
-            const data = await res.json();
-            if (data.success) {
-                targetInput.value = data.url;
-                tg.HapticFeedback.notificationOccurred('success');
-            } else {
-                window.showToast('Upload failed: ' + data.message);
-                targetInput.value = '';
-            }
-        } catch (e) {
-            window.showToast('Upload failed: Network error');
-            targetInput.value = '';
-        } finally {
-            input.value = '';
-        }
-    }
-    function copyText(text, btnElement) {
-        if (!btnElement) return;
-        navigator.clipboard.writeText(text);
-        if (window.Telegram && Telegram.WebApp && Telegram.WebApp.HapticFeedback) {
-            Telegram.WebApp.HapticFeedback.notificationOccurred('success');
-        }
-
-        const icon = btnElement.querySelector('i');
-        if (icon) {
-            const originalClass = icon.className;
-            icon.className = 'fas fa-check';
-            setTimeout(() => { icon.className = originalClass; }, 2000);
-        }
-    }
-
     const selectors = ['#home-avatar', '#profile-avatar-img', '.wc-avatar', '.prof-avatar', '.pui-avatar'];
     selectors.forEach(sel => {
         document.querySelectorAll(sel).forEach(el => {
@@ -196,6 +149,56 @@ function applyProfilePhoto(photoUrl) {
         });
     });
 }
+
+// Utility: Upload Deposit Screenshot
+async function uploadDepositScreenshot(input, targetId) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const targetInput = document.getElementById(targetId);
+    if (!targetInput) return;
+    const originalPlaceholder = targetInput.placeholder;
+    targetInput.value = 'Uploading...';
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        const res = await fetch('/api/upload/screenshot', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        if (data.success) {
+            targetInput.value = data.url;
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+        } else {
+            if (typeof window.showToast === 'function') window.showToast('Upload failed: ' + data.message);
+            targetInput.value = '';
+        }
+    } catch (e) {
+        if (typeof window.showToast === 'function') window.showToast('Upload failed: Network error');
+        targetInput.value = '';
+    } finally {
+        input.value = '';
+    }
+}
+
+function copyText(text, btnElement) {
+    if (!btnElement) return;
+    navigator.clipboard.writeText(text);
+    if (window.Telegram && Telegram.WebApp && Telegram.WebApp.HapticFeedback) {
+        Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+    }
+
+    const icon = btnElement.querySelector('i');
+    if (icon) {
+        const originalClass = icon.className;
+        icon.className = 'fas fa-check';
+        setTimeout(() => { icon.className = originalClass; }, 2000);
+    }
+}
+
 
 
 // THEME MANAGEMENT
@@ -321,7 +324,7 @@ const PAGE_TITLES = {
     'support': 'SUPPORT',
     'cryptoMethods': 'CRYPTO DEPOSIT',
     'cryptoPayment': 'PAYMENT DETAILS',
-    'itemSell': 'ITEM SELL',
+    'itemSell': 'SELL ITEMS',
     'quiz': 'DAILY QUIZ',
     'quizLeaderboard': 'QUIZ KINGS',
     'scratch': 'LUCKY SCRATCH'
@@ -429,6 +432,7 @@ function showPage(targetId) {
 
     // Update current page tracker
     currentPage = targetId;
+    if (targetId === 'home') loadRecentActivity();
 
     // Auto-update mail balances and start/stop polling
     stopInboxPolling();
@@ -459,6 +463,11 @@ function showPage(targetId) {
     if (targetId === 'numberService') {
         updateNumBalance();
     }
+    // Update balances when entering service pages with balance displays
+    if (targetId === 'mailService' || targetId === 'premiumMail' || targetId === 'accountsStore' ||
+        targetId === 'vpnServices' || targetId === 'vccCards') {
+        renderBalances();
+    }
     // Refresh History when entering history page
     if (targetId === 'history') {
         loadRecentActivity(); // Refresh from server
@@ -466,6 +475,7 @@ function showPage(targetId) {
     // Refresh Item Sales when entering item sell page
     if (targetId === 'itemSell') {
         loadMySales();
+        resetSellCategory();
     }
     // Refresh Exchange UI when entering exchange page
     if (targetId === 'exchange') {
@@ -487,7 +497,7 @@ function showPage(targetId) {
     // Define service pages that need simple header
     const servicePages = ['profile', 'services', 'numberService', 'mailService', 'premiumMail', 'emailMenu',
         'emailService', 'vccCards', 'vpnServices', 'accountsStore', 'serviceGenerate',
-        'geminiProduct', 'chatgptProduct', 'checkout', 'deposit',
+        'geminiProduct', 'chatgptProduct', 'checkout', 'deposit', 'shop', 'itemSell',
         'exchange', 'binancePay', 'faucetPay', 'history', 'redeem',
         'invite', 'tasks', 'earn', 'daily', 'verify', 'admin',
         'geminiVerification', 'leaderboard', 'support', 'emailMessage',
@@ -583,47 +593,39 @@ function goBack() {
         nav('home');
     }
 }
-
-// EXCHANGE LOGIC
+// EXCHANGE SYSTEM
 function exchangeTokens() {
-    const fromCur = document.getElementById('exFromCurrency')?.value;
-    const toCur = document.getElementById('exToCurrency')?.value;
-    const amt = parseFloat(document.getElementById('exFromAmount')?.value || '0');
+    const fromSel = document.getElementById('exFromCurrency');
+    const toSel = document.getElementById('exToCurrency');
+    const fromAmtEl = document.getElementById('exFromAmount');
+    if (!fromSel || !toSel || !fromAmtEl) return;
 
-    if (!fromCur || !toCur) {
-        window.showToast('Exchange UI not ready. Please reload.');
-        return;
-    }
-    if (fromCur === toCur) {
-        window.showToast('Please choose two different currencies.');
-        return;
-    }
+    const fromCur = fromSel.value;
+    const toCur = toSel.value;
+    const amt = parseFloat(fromAmtEl.value);
+
     if (!isFinite(amt) || amt <= 0) {
         window.showToast('Please enter a valid amount.');
         return;
     }
 
+    if (!hasSufficientBalance(fromCur, amt)) {
+        window.showToast('Insufficient balance for exchange.');
+        return;
+    }
+
     const preview = calculateExchange(fromCur, toCur, amt);
     if (!preview.success) {
-        window.showToast(preview.message || 'Invalid exchange.');
+        window.showToast(preview.message);
         return;
     }
 
-    if (!hasSufficientBalance(fromCur, amt)) {
-        window.showToast('Insufficient balance.');
-        return;
-    }
+    if (!confirm('Confirm exchange of ' + formatCurrencyAmount(amt, fromCur) + ' to ' + formatCurrencyAmount(preview.toAmount, toCur) + '?')) return;
 
-    // Execute exchange directly without confirmation
     fetch('/api/exchange/convert', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            userId: userData.id,
-            from: fromCur,
-            to: toCur,
-            amount: amt
-        })
+        body: JSON.stringify({ userId: userData.id, from: fromCur, to: toCur, amount: amt })
     })
         .then(r => r.json())
         .then(res => {
@@ -633,18 +635,62 @@ function exchangeTokens() {
             }
 
             // Sync balances from response
-            if (typeof res.tokens === 'number') userData.tokens = res.tokens;
-            if (typeof res.Gems === 'number') userData.Gems = res.Gems;
-            if (typeof res.usd === 'number') userData.usd = res.usd;
+            if (typeof res.tokens === 'number') userData.tokens = Math.max(0, res.tokens);
+            if (typeof res.Gems === 'number') userData.Gems = Math.max(0, res.Gems);
+            userData.usd = (res.usd !== undefined && res.usd !== null) ? res.usd : 0;
             renderBalances();
+            loadRecentActivity(); // Refresh history after exchange
             updateExchangeBalances();
             updateExchangePreview();
 
-            window.showToast('✅ EXCHANGE SUCCESSFUL\n\n' + formatCurrencyAmount(amt, fromCur) + ' ➜ ' + formatCurrencyAmount(res.toAmount ?? preview.toAmount, toCur));
+            // Save to history locally
+            saveExchangeHistory(fromCur, toCur, amt, res.toAmount ?? preview.toAmount);
+
+            window.showToast('✅ EXCHANGE SUCCESSFUL\n\n' + formatCurrencyAmount(amt, fromCur) + ' ➔ ' + formatCurrencyAmount(res.toAmount ?? preview.toAmount, toCur));
         })
         .catch(() => {
             window.showToast('Network error. Please try again.');
         });
+}
+
+function saveExchangeHistory(from, to, fAmt, tAmt) {
+    let history = JSON.parse(localStorage.getItem('exHistory') || '[]');
+    history.unshift({
+        from, to, fAmt, tAmt, date: new Date().toISOString()
+    });
+    // Keep last 10
+    if (history.length > 10) history = history.slice(0, 10);
+    localStorage.setItem('exHistory', JSON.stringify(history));
+    renderExchangeHistory();
+}
+
+function renderExchangeHistory() {
+    const container = document.getElementById('exchangeHistoryList');
+    if (!container) return;
+    const history = JSON.parse(localStorage.getItem('exHistory') || '[]');
+    if (history.length === 0) {
+        container.innerHTML = '<div style="text-align:center; color:var(--text-sub); font-size:12px; padding:20px;">No recent exchanges.</div>';
+        return;
+    }
+
+    container.innerHTML = history.map(h => {
+        const dateStr = new Date(h.date).toLocaleString([], { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' });
+        return `
+        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); padding:14px; border-radius:16px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <div style="font-size:12px; font-weight:900; color:#fff; display:flex; align-items:center; gap:6px;">
+                    ${formatCurrencyAmount(h.fAmt, h.from)} 
+                    <i class="fas fa-arrow-right" style="font-size:10px; color:#10b981;"></i> 
+                    ${formatCurrencyAmount(h.tAmt, h.to)}
+                </div>
+                <div style="font-size:9px; color:var(--text-sub); margin-top:4px; font-weight:700; text-transform:uppercase;">${dateStr}</div>
+            </div>
+            <div style="width:32px; height:32px; background:rgba(16,185,129,0.1); border-radius:50%; display:flex; align-items:center; justify-content:center;">
+                <i class="fas fa-check" style="color:#10b981; font-size:12px;"></i>
+            </div>
+        </div>
+        `;
+    }).join('');
 }
 
 const exchangeRates = {
@@ -741,11 +787,19 @@ function updateExchangePreview() {
     if (!fromCur || !toCur || !toEl || !rateEl) return;
 
     if (fromCur === toCur) {
-        toEl.value = '0';
-        rateEl.textContent = 'RATE: -';
-        if (feeEl) feeEl.textContent = 'Choose different currencies.';
-        return;
+        // Since To only has Tokens and Gems now, if From is one of them, switch To to the other.
+        if (fromCur === 'tokens') document.getElementById('exToCurrency').value = 'Gems';
+        else if (fromCur === 'Gems') document.getElementById('exToCurrency').value = 'tokens';
+
+        // Refresh toCur after potential change
+        toCur = document.getElementById('exToCurrency').value;
     }
+
+    // Disable the same currency in To dropdown
+    const toOptions = document.getElementById('exToCurrency').querySelectorAll('option');
+    toOptions.forEach(opt => {
+        opt.disabled = (opt.value === fromCur);
+    });
 
     const maxVal = fromCur === 'tokens' ? (userData.tokens || 0) : fromCur === 'Gems' ? (userData.Gems || 0) : (userData.usd || 0);
     if (fromHint) fromHint.textContent = `MAX: ${fromCur === 'usd' ? '$' + (Math.round(maxVal * 100) / 100).toFixed(2) : maxVal}`;
@@ -778,6 +832,8 @@ function initExchangeUI() {
     fromSel.addEventListener('change', () => updateExchangePreview());
     toSel.addEventListener('change', () => updateExchangePreview());
     fromAmt.addEventListener('input', () => updateExchangePreview());
+
+    renderExchangeHistory();
 }
 
 // Swap FROM and TO currencies
@@ -788,13 +844,21 @@ function swapExchangeCurrencies() {
 
     if (!fromSel || !toSel) return;
 
-    // Swap values
-    const temp = fromSel.value;
-    fromSel.value = toSel.value;
-    toSel.value = temp;
+    // Special logic for USD as requested: 
+    // USD always stays at top. If USD is selected, clicking swap toggles the target.
+    if (fromSel.value === 'usd') {
+        toSel.value = (toSel.value === 'Gems') ? 'tokens' : 'Gems';
+    } else {
+        // Normal swap for Tokens/Gems
+        const temp = fromSel.value;
+        const currentTo = toSel.value;
+
+        fromSel.value = currentTo;
+        toSel.value = temp;
+    }
 
     // Clear amount
-    if (fromAmt) fromAmt.value = '0';
+    if (fromAmt) fromAmt.value = '';
 
     // Update preview
     updateExchangePreview();
@@ -1159,6 +1223,7 @@ function completeTaskReward(type, buttonElement, amount) {
                 checkAllTasksCompleted();
 
                 window.showToast(`TASK COMPLETE!\n\nYou earned +${amount} Tokens!`);
+                loadRecentActivity(); // Refresh history immediately
             } else {
                 IN_PROGRESS_TASKS[type] = null;
                 buttonElement.innerHTML = 'START';
@@ -1211,31 +1276,23 @@ function checkAllTasksCompleted() {
 }
 
 // ==========================================
-// ==========================================
-// AD VIEWER (Watch & Earn)
+// AD VIEWER (Watch & Earn) - STRICT VERSION
 // ==========================================
 
 let adWatchTimer = null;
 let adRewardClaimed = false;
 let currentAdContext = 'watch_ad';
+let adWatchStartTime = null;
+let adMinWatchDuration = 5000; // 5 seconds minimum watch time
+let adCompleted = false;
 
 function showAdAndEarn(context = 'watch_ad') {
     currentAdContext = context;
-    const modal = document.getElementById('adViewerModal');
-    if (!modal) return;
-    modal.style.display = 'flex';
     adRewardClaimed = false;
+    adCompleted = false;
+    adWatchStartTime = Date.now();
 
-    const container = document.getElementById('adContainer');
-    const loadingMsg = document.getElementById('adLoadingMsg');
-    const timerText = document.getElementById('adTimerText');
-    const claimBtn = document.getElementById('adClaimBtn');
-    const closeBtn = document.getElementById('adCloseBtn');
-
-    claimBtn.style.display = 'none';
-    closeBtn.style.display = 'none';
-    timerText.textContent = '';
-    container.innerHTML = '<div id="adLoadingMsg" style="color:#888; font-size:13px; text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin" style="font-size:24px; color:#f59e0b; display:block; margin-bottom:8px;"></i>Loading Ad...</div>';
+    window.showToast("🎬 Loading Ad... Watch full ad to earn!");
 
     fetch('/api/ads/config')
         .then(r => r.json())
@@ -1247,156 +1304,211 @@ function showAdAndEarn(context = 'watch_ad') {
                 adInjected = true;
                 const cfg = ads.moneytag;
                 const zoneId = cfg.adUnitId || cfg.publisherId;
-                
-                container.innerHTML = '<div style="padding:16px; color:#aaa; font-size:13px; text-align:center;">🎬 Loading Ad Experience...</div>';
-                
-                const script = document.createElement('script');
-                script.src = '//libtl.com/sdk.js';
-                script.setAttribute('data-zone', zoneId);
-                script.setAttribute('data-sdk', `show_${zoneId}`);
-                
-                script.onload = () => {
-                    if (window[`show_${zoneId}`]) {
-                        try { window[`show_${zoneId}`](); } catch (e) { }
-                    }
-                };
-                document.body.appendChild(script);
 
+                if (window[`show_${zoneId}`]) {
+                    try { window[`show_${zoneId}`](); } catch (e) { }
+                    // STRICT: Don't auto-claim, wait for actual completion
+                    startAdWatchVerification();
+                } else {
+                    const script = document.createElement('script');
+                    script.src = '//libtl.com/sdk.js';
+                    script.setAttribute('data-zone', zoneId);
+                    script.setAttribute('data-sdk', `show_${zoneId}`);
 
-
-
-
-
-
-
-
+                    script.onload = () => {
+                        if (window[`show_${zoneId}`]) {
+                            try { window[`show_${zoneId}`](); } catch (e) { }
+                        }
+                        // STRICT: Don't auto-claim, wait for actual completion
+                        startAdWatchVerification();
+                    };
+                    document.body.appendChild(script);
+                }
             }
 
             if (!adInjected && ads.adsense && ads.adsense.publisherId) {
                 adInjected = true;
-                const cfg = ads.adsense;
-                container.innerHTML = `
-                    <ins class="adsbygoogle"
-                        style="display:block; width:100%; min-height:120px;"
-                        data-ad-client="${cfg.publisherId}"
-                        data-ad-slot="${cfg.adUnitId}"
-                        data-ad-format="auto"
-                        data-full-width-responsive="true"></ins>`;
-                if (!document.querySelector(`script[src*="adsbygoogle.js"]`)) {
-                    const adScript = document.createElement('script');
-                    adScript.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${cfg.publisherId}`;
-                    adScript.crossOrigin = 'anonymous';
-                    adScript.async = true;
-                    document.head.appendChild(adScript);
-                }
-                setTimeout(() => { try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) { } }, 500);
+                // STRICT: User must watch, no auto reward
+                startAdWatchVerification();
             }
 
             if (!adInjected && ads.adsterra && ads.adsterra.publisherId) {
                 adInjected = true;
                 const cfg = ads.adsterra;
-                const adDivId = `container-${cfg.publisherId}`;
-                container.innerHTML = `<div id="${adDivId}" style="width:100%; min-height:100px;"></div>`;
                 const atScript = document.createElement('script');
                 atScript.async = true;
                 atScript.setAttribute('data-cfasync', 'false');
                 atScript.src = `//pl${cfg.adUnitId}.profitableratecpm.com/${cfg.publisherId}/invoke.js`;
-                container.appendChild(atScript);
+                document.body.appendChild(atScript);
+                // STRICT: Wait for actual watch completion
+                startAdWatchVerification();
             }
 
             if (!adInjected) {
-                container.innerHTML = `<div style="padding:30px; text-align:center; color:#888; font-size:13px;"><i class="fas fa-tv" style="font-size:36px; color:#444; display:block; margin-bottom:10px;"></i>No active ads now. Claiming reward directly...</div>`;
-                setTimeout(() => { timeLeft = 1; }, 1000);
+                window.showToast('❌ No ads available. Try again later.');
             }
-
-            let timeLeft = 30;
-            timerText.textContent = `⏱ Please wait ${timeLeft}s...`;
-            clearInterval(adWatchTimer);
-            adWatchTimer = setInterval(() => {
-                timeLeft--;
-                if (timeLeft > 0) {
-                    timerText.textContent = `⏱ Please wait ${timeLeft}s...`;
-                } else {
-                    clearInterval(adWatchTimer);
-                    timerText.textContent = '✅ Ad complete! Claim reward.';
-                    claimBtn.style.display = 'block';
-                    closeBtn.style.display = 'block';
-                }
-            }, 1000);
         })
-        .catch(() => {
-            container.innerHTML = '<div style="color:#f87171; text-align:center; padding:20px;">Failed to load ad. Please try again.</div>';
-            closeBtn.style.display = 'block';
+        .catch((err) => {
+            console.error('Ad Config Fetch Error:', err);
+            window.showToast("❌ Failed to load ad. Please try again.");
         });
 }
 
-function closeAdModal() {
-    const modal = document.getElementById('adViewerModal');
-    if (modal) modal.style.display = 'none';
-    clearInterval(adWatchTimer);
+// STRICT: Verify ad is actually being watched
+function startAdWatchVerification() {
+    adWatchStartTime = Date.now();
+
+    // Show waiting message
+    window.showToast("⏳ Watch the full ad to earn tokens!");
+
+    // STRICT: Check if user actually watched the ad
+    adWatchTimer = setInterval(() => {
+        const elapsed = Date.now() - adWatchStartTime;
+        const remaining = Math.max(0, Math.ceil((adMinWatchDuration - elapsed) / 1000));
+
+        // Only show countdown for first few seconds
+        if (remaining > 0 && remaining <= 5) {
+            window.showToast(`⏳ ${remaining}s remaining...`);
+        }
+
+        // Check if minimum watch time reached
+        if (elapsed >= adMinWatchDuration && !adCompleted) {
+            adCompleted = true;
+            clearInterval(adWatchTimer);
+
+            // Now show claim button instead of auto-claiming
+            showAdClaimButton();
+        }
+    }, 1000);
 }
 
-function claimAdReward() {
+// STRICT: Show manual claim button - user must interact to prove they watched
+function showAdClaimButton() {
+    // Create a modal or button for user to claim
+    const claimDiv = document.createElement('div');
+    claimDiv.id = 'adClaimButton';
+    claimDiv.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        color: #000;
+        padding: 16px 32px;
+        border-radius: 12px;
+        font-weight: 800;
+        font-size: 16px;
+        z-index: 9999;
+        cursor: pointer;
+        box-shadow: 0 4px 20px rgba(245, 158, 11, 0.4);
+        animation: pulse 1.5s infinite;
+    `;
+    claimDiv.innerHTML = '👆 CLICK TO CLAIM REWARD';
+    claimDiv.onclick = () => {
+        claimDiv.remove();
+        verifyAndClaimAdReward();
+    };
+    document.body.appendChild(claimDiv);
+
+    window.showToast("🎉 Ad completed! Click the button to claim your reward!");
+
+    // Auto-remove after 10 seconds if not clicked
+    setTimeout(() => {
+        if (document.getElementById('adClaimButton')) {
+            claimDiv.remove();
+            window.showToast("❌ Reward expired. Watch another ad to earn!");
+            adRewardClaimed = false;
+            adCompleted = false;
+        }
+    }, 10000);
+}
+
+// STRICT: Verify before claiming
+async function verifyAndClaimAdReward() {
+    if (adRewardClaimed) {
+        window.showToast("❌ Reward already claimed!");
+        return;
+    }
+
+    if (!adCompleted) {
+        window.showToast("❌ You must watch the full ad to earn!");
+        return;
+    }
+
+    // STRICT: Server-side verification
+    await claimAdReward();
+}
+
+function closeAdModal() { }
+
+async function claimAdReward() {
     if (adRewardClaimed) return;
     adRewardClaimed = true;
-    const claimBtn = document.getElementById('adClaimBtn');
-    if (claimBtn) { claimBtn.disabled = true; claimBtn.textContent = 'Processing...'; }
 
-    const isDaily = currentAdContext === 'daily_bonus';
-    const url = isDaily ? '/api/daily/claim' : '/api/earn';
-    const payload = isDaily ? { userId: userData.id } : { userId: userData.id, type: 'watch_ad', context: currentAdContext };
-
-    fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    })
-        .then(r => r.json())
-        .then(data => {
-            closeAdModal();
-            if (data.success) {
-                if (window.confetti) confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
-                
-                let msg = `🎉 +${data.reward || 5} tokens rewarded!`;
-                if (currentAdContext === 'quiz_direct') msg = `🎉 +${data.reward || 10} tokens earned for QUIZ!`;
-                if (currentAdContext === 'zero_balance_trigger') msg = `🎉 +${data.reward || 5} tokens rewarded! Now you can make your purchase.`;
-                if (currentAdContext === 'scratch_ad' || currentAdContext === 'scratch_retry') msg = `🎉 +${data.reward || 5} tokens earned! Scratch now.`;
-                window.showToast(msg);
-                userData.tokens = (userData.tokens || 0) + (data.reward || 0);
-                updateBalanceUI();
-
-                // Redirect to specialized pages if needed
-                if (currentAdContext === 'quiz_direct') {
-                    showPage('quiz');
-                    loadQuiz();
-                } else if (currentAdContext === 'scratch_ad' || currentAdContext === 'scratch_retry') {
-                    showPage('scratch');
-                    initScratchCard();
-                }
-            } else {
-                window.showToast(data.message || 'Could not claim reward. Try again later.');
-                adRewardClaimed = false;
-            }
-        })
-        .catch(() => {
-            closeAdModal();
-            window.showToast('Network error. Please try again.');
-            adRewardClaimed = false;
+    try {
+        const res = await fetch('/api/ad/claim', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: userData.id,
+                context: currentAdContext,
+                adCompleted: true, // Send completion status
+                watchDuration: Date.now() - adWatchStartTime
+            })
         });
+        const data = await res.json();
+
+        if (data.success) {
+            if (window.confetti && currentAdContext === 'watch_ad') {
+                confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+            }
+
+            let msg = `🎉 Reward claimed!`;
+            if (currentAdContext === 'watch_ad') msg = `📺 +${data.reward || 5} Tokens rewarded!`;
+            else if (currentAdContext === 'quiz_direct') msg = `🧠 Quiz unlocked! Good luck.`;
+            else if (currentAdContext === 'scratch_ad' || currentAdContext === 'scratch_retry') msg = `✨ Scratch card unlocked!`;
+
+            window.showToast(msg);
+
+            if (data.newBalance !== undefined) {
+                userData.tokens = data.newBalance;
+                updateBalanceUI();
+                loadRecentActivity();
+            }
+
+            if (currentAdContext === 'quiz_direct') {
+                showPage('quiz');
+                loadQuiz();
+            } else if (currentAdContext === 'scratch_ad' || currentAdContext === 'scratch_retry') {
+                showPage('scratch');
+                initScratchCard();
+            }
+        } else {
+            window.showToast(data.message || '❌ Failed to claim reward');
+            adRewardClaimed = false;
+        }
+    } catch (e) {
+        console.error('Ad Claim Error:', e);
+        window.showToast('❌ Network error. Try again!');
+        adRewardClaimed = false;
+    }
 }
 
 function checkZeroBalanceAdTrigger(requiredAmount = 1) {
     const currentTokens = userData.tokens || 0;
     if (currentTokens < requiredAmount) {
         if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('warning');
-        
+
         const needed = requiredAmount - currentTokens;
-        const adsNeeded = Math.ceil(needed / 5);
-        
+        const perAd = (window.appCostConfig && Number.isFinite(parseInt(window.appCostConfig.zeroBalanceAdReward)))
+            ? parseInt(window.appCostConfig.zeroBalanceAdReward)
+            : 5;
+        const adsNeeded = Math.ceil(needed / perAd);
+
         if (adsNeeded > 1) {
             window.showToast(`Insufficient balance! You need ${requiredAmount} tokens. Watch ${adsNeeded} ads to earn tokens.`);
         } else {
-            window.showToast('Insufficient balance! Watch a short ad to get 5 tokens.');
+            window.showToast(`Insufficient balance! Watch a short ad to get ${perAd} tokens.`);
         }
 
         setTimeout(() => {
@@ -1532,6 +1644,47 @@ function claimDaily() {
     const btn = document.getElementById('claimDailyBtn');
     if (!btn || btn.disabled) return;
     showAdAndEarn('daily_bonus');
+}
+
+async function redeemCode() {
+    const input = document.getElementById('redeemCodeInput');
+    if (!input) return;
+    const code = input.value.trim();
+    if (!code) {
+        window.showToast('Please enter a code');
+        return;
+    }
+
+    const btn = document.querySelector('#redeemPage .gv-btn');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> REDEEMING...';
+    }
+
+    try {
+        const res = await fetch('/api/redeem', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: userData.id, code: code })
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.showToast(`✅ ${data.message}! +${data.reward} Tokens.`);
+            userData.tokens = data.newTokens;
+            renderBalances();
+            loadRecentActivity(); // Refresh history
+            input.value = '';
+        } else {
+            window.showToast(`❌ ${data.message || 'Invalid code'}`);
+        }
+    } catch (e) {
+        window.showToast('Network error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = 'REDEEM NOW';
+        }
+    }
 }
 
 // ==========================================
@@ -1856,7 +2009,7 @@ function registerAndFetchUser() {
                 // Sync from server - check both tokens and balance_tokens fields
                 userData.tokens = data.tokens || data.balance_tokens || 0;
                 userData.Gems = data.Gems || data.gems || 0;
-                userData.usd = data.usd || (userData.tokens / 100);
+                userData.usd = (data.usd !== undefined && data.usd !== null) ? data.usd : 0;
                 userData.verified = data.verified || false;
                 userData.dailyStreak = data.dailyStreak || 0;
                 userData.lastDailyClaim = data.lastClaim || 0;
@@ -1918,13 +2071,11 @@ function loadRecentActivity() {
         .then(data => {
             if (data.success && data.history) {
                 userData.history = data.history; // Store globally
-                if (data.history.length > 0) {
-                    renderRecentActivity(data.history.slice(0, 3)); // Show last 3 activities on home
+                renderRecentActivity(data.history.slice(0, 3)); // Show last 3 activities on home
 
-                    // If we currently are on history page, render full list too
-                    if (currentPage === 'history') {
-                        renderFullHistory();
-                    }
+                // If we currently are on history page, render full list too
+                if (currentPage === 'history') {
+                    renderFullHistory();
                 }
             }
         })
@@ -1947,32 +2098,36 @@ function renderFullHistory() {
     list.style.display = 'block';
     empty.style.display = 'none';
 
+    const POS_TYPES = new Set(['transfer_in', 'redeem', 'daily_bonus', 'ad_reward', 'mission_reward', 'quiz_reward', 'bonus', 'deposit']);
+    const NEG_TYPES = new Set(['transfer_out', 'account_purchase', 'mail', 'number', 'exchange_out']);
+
     const typeConfig = {
         'ad_reward': { icon: 'fas fa-play', color: '#f59e0b', name: 'Watch and Earn' },
         'mission_reward': { icon: 'fas fa-check-circle', color: '#22c55e', name: 'Task Completed' },
         'account_purchase': { icon: 'fas fa-shopping-cart', color: '#3b82f6', name: 'Account Purchase' },
         'mail': { icon: 'fas fa-envelope', color: '#ef4444', name: 'Email Generated' },
         'number': { icon: 'fas fa-phone', color: '#9333ea', name: 'Virtual Number' },
-        'redeem': { icon: 'fas fa-ticket-alt', color: '#22c55e', name: 'Code Redeemed' },
-        'daily_bonus': { icon: 'fas fa-gift', color: '#fbbf24', name: 'Daily Bonus' },
-        'verification': { icon: 'fas fa-shield-alt', color: '#10b981', name: 'Verification' }
+        'quiz_reward': { icon: 'fas fa-question-circle', color: '#f59e0b', name: 'Quiz Reward' },
+        'deposit': { icon: 'fas fa-wallet', color: '#22c55e', name: 'Deposit' },
+        'redeem': { icon: 'fas fa-ticket-alt', color: '#22c55e', name: 'Redeem Code' },
+        'transfer_in': { icon: 'fas fa-arrow-down', color: '#22c55e', name: 'Transfer In' },
+        'transfer_out': { icon: 'fas fa-arrow-up', color: '#ef4444', name: 'Transfer Out' },
+        'daily_bonus': { icon: 'fas fa-gift', color: '#22c55e', name: 'Daily Bonus' },
+        'bonus': { icon: 'fas fa-gift', color: '#22c55e', name: 'Bonus' },
+        'exchange': { icon: 'fas fa-exchange-alt', color: '#06b6d4', name: 'Currency Exchange' },
     };
 
     list.innerHTML = userData.history.map(item => {
         const config = typeConfig[item.type] || { icon: 'fas fa-check', color: '#9ca3af', name: item.type || 'Activity' };
-
-        let dateObj;
-        try {
-            dateObj = item.date ? new Date(item.date) : new Date();
-        } catch (e) {
-            dateObj = new Date();
-        }
-
+        const dateObj = item.date ? new Date(item.date) : new Date();
         const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         const timeStr = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-
         const reward = item.reward || '';
         const detail = item.detail || '';
+        const amt = Number(item.amount || 0);
+        const isNeg = NEG_TYPES.has(item.type) || (!POS_TYPES.has(item.type) && amt < 0);
+        const isPos = POS_TYPES.has(item.type) || (!NEG_TYPES.has(item.type) && amt > 0);
+        const asset = item.asset || item.currency || 'TC';
 
         return `
         <div class="activity-card" style="margin-bottom:12px;">
@@ -1982,13 +2137,14 @@ function renderFullHistory() {
                 </div>
                 <div class="activity-info">
                     <div class="activity-name">${config.name}</div>
-                    <div class="activity-meta">${dateStr} • ${timeStr}</div>
+                    <div class="activity-meta">${dateStr} • ${timeStr} ${item.to ? `to User #${item.to}` : (item.from ? `from User #${item.from}` : '')}</div>
                     ${detail ? `<div style="font-size:10px; color:rgba(255,255,255,0.5); margin-top:2px;">${detail}</div>` : ''}
+                    ${item.type === 'exchange' ? `<div style="font-size:10px; color:rgba(255,255,255,0.5); margin-top:2px;">${item.fromAmount} ${item.from.toUpperCase()} → ${item.toAmount} ${item.to.toUpperCase()}</div>` : ''}
                 </div>
             </div>
             <div class="activity-reward">
-                <div style="font-size:13px; font-weight:700; color:${reward.includes('+') ? '#22c55e' : '#ef4444'}">
-                    ${reward}
+                <div style="font-size:13px; font-weight:700; color:${isPos ? '#22c55e' : (isNeg ? '#ef4444' : '#fff')}">
+                    ${reward || ((item.amount !== undefined && item.amount !== null) ? ((isNeg ? '-' : (isPos ? '+' : '')) + Math.abs(amt) + ' ' + (item.asset || item.currency || 'TC').toUpperCase()) : '')}
                 </div>
             </div>
         </div>`;
@@ -2020,31 +2176,27 @@ function loadBroadcast() {
             if (data.success && data.activities && data.activities.length > 0) {
                 // Convert activities to SHORT format messages
                 const activityMessages = data.activities.slice(0, 8).map(activity => {
-                    // Get username with @ symbol
                     let user = activity.username || activity.user || 'User';
-                    user = user.replace(/^@/, ''); // Remove @ if exists
+                    user = user.replace(/^@/, '');
 
                     const action = activity.action;
                     const item = activity.item || '';
                     const amount = activity.amount || 0;
                     const currency = activity.currency || 'TC';
 
-                    // Format with @ symbol and yellow username
                     const userSpan = `<span class="bcp-user">@${user}</span>`;
 
-                    // ULTRA SHORT format - icon + @username + item + sign + amount
-                    if (action === 'purchase' || action === 'spend') {
-                        // Short item names
+                    if (action === 'purchase' || action === 'spend' || action === 'transfer_out') {
                         const shortItem = item.replace('purchased ', '').replace('bought ', '').replace('generated ', '');
-                        return `💰 ${userSpan} ${shortItem} -${amount} ${currency}`;
-                    } else if (action === 'earn' || action === 'reward') {
-                        return `⭐ ${userSpan} +${amount} ${currency}`;
+                        return `💰 ${userSpan} ${shortItem} <span style="color:#ef4444; font-weight:700;">-${amount} ${currency}</span>`;
+                    } else if (action === 'earn' || action === 'reward' || action === 'transfer_in') {
+                        return `⭐ ${userSpan} ${item || 'Earned'} <span style="color:#22c55e; font-weight:700;">+${amount} ${currency}</span>`;
                     } else if (action === 'mail' || item.includes('mail')) {
-                        return `📧 ${userSpan} Temp Mail -${amount} ${currency}`;
+                        return `📧 ${userSpan} Temp Mail <span style="color:#ef4444; font-weight:700;">-${amount} ${currency}</span>`;
                     } else if (action === 'verify') {
-                        return `🎯 ${userSpan} Verify -${amount} ${currency}`;
+                        return `🎯 ${userSpan} Verify <span style="color:#ef4444; font-weight:700;">-${amount} ${currency}</span>`;
                     } else {
-                        return `🔥 ${userSpan} ${item} -${amount} ${currency}`;
+                        return `🔥 ${userSpan} ${item} <span style="color:#ef4444; font-weight:700;">-${amount} ${currency}</span>`;
                     }
                 });
 
@@ -2074,21 +2226,38 @@ function renderRecentActivity(history) {
         'number': { icon: 'fas fa-phone', color: '#9333ea', name: 'Virtual Number' },
         'redeem': { icon: 'fas fa-ticket-alt', color: '#22c55e', name: 'Code Redeemed' },
         'daily_bonus': { icon: 'fas fa-gift', color: '#fbbf24', name: 'Daily Bonus' },
-        'verification': { icon: 'fas fa-shield-alt', color: '#10b981', name: 'Verification' }
+        'verification': { icon: 'fas fa-shield-alt', color: '#10b981', name: 'Verification' },
+        'transfer_in': { icon: 'fas fa-arrow-down', color: '#22c55e', name: 'Received' },
+        'transfer_out': { icon: 'fas fa-arrow-up', color: '#ec4899', name: 'Sent' },
+        'exchange': { icon: 'fas fa-exchange-alt', color: '#06b6d4', name: 'Exchanged' },
+        'bonus': { icon: 'fas fa-gift', color: '#fbbf24', name: 'Welcomes' }
     };
+
+    if (!history || history.length === 0) {
+        container.innerHTML = `
+            <div style="text-align:center; padding:40px 20px; color:var(--text-sub);">
+                <i class="fas fa-history" style="font-size:24px; opacity:0.3; display:block; margin-bottom:10px;"></i>
+                <div style="font-size:13px;">No recent activity</div>
+            </div>
+        `;
+        return;
+    }
 
     container.innerHTML = history.map(item => {
         const config = typeConfig[item.type] || { icon: 'fas fa-check', color: '#9ca3af', name: item.type || 'Activity' };
         const date = item.date ? new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
         const time = item.date ? new Date(item.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '';
-        const amount = item.amount || 0;
-        const isPositive = item.type === 'ad_reward' || item.type === 'mission_reward' || item.type === 'redeem' || item.type === 'daily_bonus';
-        const gems = item.currency === 'gems' || item.Gems ? (item.Gems || item.gems || 0) : 0;
+        const POS_TYPES = new Set(['transfer_in', 'redeem', 'daily_bonus', 'ad_reward', 'mission_reward', 'quiz_reward', 'bonus', 'deposit']);
+        const NEG_TYPES = new Set(['transfer_out', 'account_purchase', 'mail', 'number']);
+        const amt = Number(item.amount || 0);
+        const isNeg = NEG_TYPES.has(item.type) || (!POS_TYPES.has(item.type) && amt < 0);
+        const isPos = POS_TYPES.has(item.type) || (!NEG_TYPES.has(item.type) && amt > 0);
+        const asset = item.asset || item.currency || 'TC';
 
         return `
         <div class="activity-card">
             <div class="activity-left">
-                <div class="activity-icon" style="background:rgba(${config.color.replace('#', '')}, 0.1); color:${config.color}">
+                <div class="activity-icon" style="background:rgba(255,255,255,0.05); color:${config.color}">
                     <i class="${config.icon}"></i>
                 </div>
                 <div class="activity-info">
@@ -2097,8 +2266,9 @@ function renderRecentActivity(history) {
                 </div>
             </div>
             <div class="activity-reward">
-                ${amount > 0 ? `<div class="activity-reward-${isPositive ? 'tokens' : 'Gems'}">${isPositive ? '+' : '-'}${amount} ${item.currency === 'tokens' || !item.currency ? 'Tokens' : item.currency.toUpperCase()}</div>` : ''}
-                ${gems > 0 ? `<div class="activity-reward-Gems">+${gems} Gems</div>` : ''}
+                <div style="font-size:13px; font-weight:700; color:${isPos ? '#22c55e' : (isNeg ? '#ef4444' : '#fff')}">
+                    ${(isPos ? '+' : (isNeg ? '-' : ''))}${Math.abs(amt)} ${String(asset).toUpperCase()}
+                </div>
             </div>
         </div>`;
     }).join('');
@@ -2128,20 +2298,47 @@ function renderBalances() {
     const elProfName = document.getElementById('prof-name');
     const elProfId = document.getElementById('prof-id');
 
-    if (elTc) elTc.innerText = (userData.tokens || 0).toLocaleString();
-    if (elJs) elJs.innerText = (userData.Gems || 0).toLocaleString();
-    if (elUsd) elUsd.innerText = '$' + ((userData.tokens || 0) / 100).toFixed(2);
+    if (elTc) elTc.innerText = Math.max(0, userData.tokens || 0).toLocaleString();
+    if (elJs) elJs.innerText = Math.max(0, userData.Gems || 0).toLocaleString();
+    if (elUsd) elUsd.innerText = '$' + Math.max(0, userData.usd || 0.00).toFixed(2);
     if (elProfName) elProfName.innerText = displayName;
     if (elProfId) elProfId.innerText = '#' + userData.id;
 
     // 2. Update Home Page Stats
     const hTc = document.getElementById('home-tc');
     const hJs = document.getElementById('home-js');
+    const hUsd = document.getElementById('home-usd');
     const hName = document.getElementById('home-name');
 
-    if (hTc) hTc.innerText = (userData.tokens || 0).toLocaleString();
-    if (hJs) hJs.innerText = (userData.Gems || 0).toLocaleString();
+    if (hTc) hTc.innerText = Math.max(0, userData.tokens || 0).toLocaleString();
+    if (hJs) hJs.innerText = Math.max(0, userData.Gems || 0).toLocaleString();
+    if (hUsd) hUsd.innerText = '$' + Math.max(0, userData.usd || 0.00).toFixed(2);
     if (hName) hName.innerText = displayName;
+
+    // 3. Update Service Page Balance Displays
+    // Temp Mail (TC)
+    const tempMailBal = document.getElementById('tempMailBalanceDisplay');
+    if (tempMailBal) tempMailBal.innerText = Math.max(0, userData.tokens || 0).toLocaleString() + ' TC';
+
+    // Premium Mail (TC)
+    const premiumMailBal = document.getElementById('premiumMailBalanceDisplay');
+    if (premiumMailBal) premiumMailBal.innerText = Math.max(0, userData.tokens || 0).toLocaleString() + ' TC';
+
+    // Virtual Number (TC) - already exists as numBalanceDisplay
+    const numBal = document.getElementById('numBalanceDisplay');
+    if (numBal) numBal.innerText = Math.max(0, userData.tokens || 0).toLocaleString() + ' TC';
+
+    // Accounts Store (USD)
+    const accStoreBal = document.getElementById('accountsStoreBalanceDisplay');
+    if (accStoreBal) accStoreBal.innerText = '$' + Math.max(0, userData.usd || 0.00).toFixed(2);
+
+    // VPN Services (USD)
+    const vpnBal = document.getElementById('vpnServicesBalanceDisplay');
+    if (vpnBal) vpnBal.innerText = '$' + Math.max(0, userData.usd || 0.00).toFixed(2);
+
+    // VCC Cards (USD)
+    const vccBal = document.getElementById('vccCardsBalanceDisplay');
+    if (vccBal) vccBal.innerText = '$' + Math.max(0, userData.usd || 0.00).toFixed(2);
 }
 
 
@@ -2168,6 +2365,64 @@ function copyUserId() {
         ta.select();
         document.execCommand('copy');
         document.body.removeChild(ta);
+    }
+}
+
+// Transfer System logic
+async function transferTokens() {
+    const targetUserId = document.getElementById('transferToUser').value.trim();
+    const amountOrig = document.getElementById('transferAmount').value;
+    const amount = parseFloat(amountOrig);
+    const assetType = document.getElementById('transferAssetType').value; // 'tokens', 'usd', 'Gems'
+
+    if (!targetUserId || isNaN(amount) || amount <= 0) {
+        window.showToast("Please enter a valid User ID and amount.");
+        return;
+    }
+
+    if (String(targetUserId) === String(userData.id)) {
+        window.showToast("You cannot transfer to yourself.");
+        return;
+    }
+
+    // Confirmation
+    const assetNames = { tokens: 'Tokens', usd: 'USD', Gems: 'Gems' };
+    if (!confirm(`Are you sure you want to transfer ${amount} ${assetNames[assetType]} to User #${targetUserId}?`)) return;
+
+    try {
+        const response = await fetch('/api/user/transfer', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                fromUserId: userData.id,
+                toUserId: targetUserId,
+                amount: amount,
+                asset: assetType
+            })
+        });
+
+        const res = await response.json();
+        if (res.success) {
+            window.showToast(res.message || "Transfer successful!", "success");
+            // Update local user data
+            if (res.newBalances) {
+                userData.tokens = res.newBalances.tokens;
+                userData.Gems = res.newBalances.Gems;
+                userData.usd = res.newBalances.usd;
+                renderBalances();
+                loadRecentActivity(); // Refresh history after transfer
+            }
+            // Clear inputs
+            document.getElementById('transferToUser').value = '';
+            document.getElementById('transferAmount').value = '';
+            // Nav back to profile
+            setTimeout(() => nav('profile'), 2000);
+        } else {
+            window.showToast(res.message || "Transfer failed.");
+        }
+    } catch (e) {
+        console.error("Transfer error:", e);
+        window.showToast("Server error during transfer.");
     }
 }
 
@@ -2198,6 +2453,44 @@ const defaultServices = [
     { id: 'number', name: 'Number Service', desc: 'Virtual phone numbers', icon: 'fas fa-phone', color: '#4a044e,#9333ea', cost: 15, page: 'numberService' },
     { id: 'mail', name: 'Mail Service', desc: 'Temporary email inbox', icon: 'fas fa-envelope', color: '#7f1d1d,#dc2626', cost: 10, page: 'mailService' },
 ];
+
+// Admin-configurable runtime config (filled from /api/admin/costs when possible)
+window.appCostConfig = window.appCostConfig || {
+    adReward: 5,
+    zeroBalanceAdReward: 5,
+    mailCost: 10,
+    premiumMailCost: 50
+};
+
+async function loadAppCostConfig() {
+    try {
+        const res = await fetch('/api/admin/costs');
+        const data = await res.json();
+        if (!data?.success || !data.costs) return;
+        const c = data.costs;
+        window.appCostConfig.adReward = parseInt(c.adReward) || 5;
+        window.appCostConfig.zeroBalanceAdReward = parseInt(c.zeroBalanceAdReward) || 5;
+        window.appCostConfig.mailCost = parseInt(c.mailCost) || 10;
+        // Premium mail cost uses token-based cost if present; otherwise fallback to 50
+        window.appCostConfig.premiumMailCost = parseInt(c.premiumMailCost || c.gmailCost || 0) || 50;
+
+        const tempBadge = document.getElementById('tempMailCostBadge');
+        if (tempBadge) tempBadge.textContent = `${window.appCostConfig.mailCost} TC / Email`;
+        const premBadge = document.getElementById('premiumMailCostBadge');
+        if (premBadge) premBadge.textContent = `${window.appCostConfig.premiumMailCost} TC / Email`;
+    } catch (e) {
+        // silent
+    }
+}
+
+// Load cost config early so UI shows correct costs (email/ad reward, etc.)
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        loadAppCostConfig();
+    });
+} else {
+    loadAppCostConfig();
+}
 
 const defaultShopItems = [
     { id: 'gemini1y', name: 'GEMINI 1 YEAR', price: '$3.00', imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Google_Gemini_logo.svg/200px-Google_Gemini_logo.svg.png', bgColor: '#0d0d0d', btnColor: '#f59e0b', page: 'deposit' },
@@ -2230,9 +2523,18 @@ function syncAdminData() {
         .then(data => {
             if (data.success && data.shopItems) {
                 localStorage.setItem('adminShopItems', JSON.stringify(data.shopItems));
-                renderShopItems();
             }
         });
+    // Also fetch approved user-submitted items
+    fetch('/api/user/item-sales/approved')
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                localStorage.setItem('approvedUserItems', JSON.stringify(data.items || []));
+            }
+        })
+        .catch(() => { })
+        .finally(() => renderShopItems());
     fetch('/api/admin/cards').then(r => r.json()).then(data => {
         if (data.success) {
             localStorage.setItem('adminCards', JSON.stringify(data.cards));
@@ -2274,66 +2576,440 @@ function renderServicesList() {
 
 function renderShopItems() {
     const grid = document.getElementById('shopGrid');
-    if (!grid) return;
-    const items = getShopItems();
-    grid.innerHTML = items.map(item => {
-        const imgHtml = item.imageUrl
-            ? `<img src="${item.imageUrl}" style="width:70px; height:auto; object-fit:contain;" onerror="this.style.display='none'">`
-            : `<i class="fas fa-box" style="font-size:36px; color:#f59e0b;"></i>`;
-        return `
-        <div onclick="nav('${item.page || 'deposit'}')"
-            style="background:var(--bg-card); border-radius:20px; overflow:hidden; border:1px solid var(--border-color); cursor:pointer; transition:0.2s;"
+
+    // User-submitted approved items (with stock > 0)
+    const userItems = JSON.parse(localStorage.getItem('approvedUserItems') || '[]')
+        .filter(item => (item.stock || 0) > 0);
+
+    let shopCardsHtml = '';
+    let appCardsHtml = '';
+    let vpnCardsHtml = '';
+    let accountCardsHtml = '';
+    let cardCardsHtml = '';
+
+    const adminItems = getShopItems();
+
+    // 1. Process Admin Items (Always in main shop)
+    if (grid) {
+        shopCardsHtml += adminItems.map(item => {
+            const imgHtml = item.imageUrl
+                ? `<img src="${item.imageUrl}" style="width:70px; height:auto; object-fit:contain;" onerror="this.style.display='none'">`
+                : `<i class="fas fa-box" style="font-size:36px; color:#f59e0b;"></i>`;
+
+            // Fix price display to ensure $ if not present
+            let priceDisp = item.price || '$0.00';
+            if (typeof priceDisp === 'number') priceDisp = '$' + priceDisp.toFixed(2);
+            else if (!priceDisp.includes('$') && !priceDisp.toLowerCase().includes('tc')) priceDisp = '$' + priceDisp;
+
+            return `
+            <div onclick="nav('${item.page || 'deposit'}')"
+                style="background:var(--bg-card); border-radius:20px; overflow:hidden; border:1px solid var(--border-color); cursor:pointer; transition:0.2s;"
+                onmousedown="this.style.transform='scale(0.97)'" onmouseup="this.style.transform='scale(1)'">
+                <div style="background:${item.bgColor || '#0d0d0d'}; padding:20px; display:flex; align-items:center; justify-content:center; min-height:110px;">
+                    ${imgHtml}
+                </div>
+                <div style="padding:12px;">
+                    <div style="font-size:11px; font-weight:700; color:var(--text-main); margin-bottom:4px;">${item.name}</div>
+                    <div style="font-size:16px; font-weight:800; color:#22c55e; margin-bottom:10px;">${priceDisp}</div>
+                    <div style="background:rgba(245,158,11,0.1); border:1px solid ${item.btnColor || '#f59e0b'}; border-radius:10px; padding:8px; text-align:center; font-size:11px; font-weight:700; color:${item.btnColor || '#f59e0b'}; display:flex; align-items:center; justify-content:center; gap:6px;">
+                        <i class="fas fa-shopping-cart"></i> BUY
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    // 2. Process User Items
+    userItems.forEach(item => {
+        const displayName = item.accountName || item.customName || item.vpnName || item.serviceName || item.itemType;
+        const iconHtml = item.accountLogo
+            ? `<img src="${item.accountLogo}" style="width:60px; height:60px; object-fit:cover; border-radius:12px;" onerror="this.src='https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=${displayName}'">`
+            : (item.iconBase64
+                ? `<img src="${item.iconBase64}" style="width:60px; height:60px; object-fit:cover; border-radius:12px;">`
+                : (item.itemType === 'VPN' ? `<i class="fas fa-shield-alt" style="font-size:36px; color:#0ea5e9;"></i>`
+                    : (item.itemType === 'Card' ? `<i class="fas fa-credit-card" style="font-size:36px; color:#8b5cf6;"></i>`
+                        : (item.itemType === 'Account' ? `<i class="fas fa-user-circle" style="font-size:36px; color:#6366f1;"></i>`
+                            : `<i class="fas fa-box" style="font-size:36px; color:#f59e0b;"></i>`))));
+
+        const has2fa = item.is2fa;
+
+        // Use $ for everything as requested
+        let price = item.price || item.sellingPrice || 0;
+        let priceDisp = '$' + parseFloat(price).toFixed(2);
+        // if (item.itemType === 'Card') priceDisp = price + ' TC'; // User wants dollars now
+
+        const cardHtml = `
+        <div onclick="viewUserItem('${item.id}')"
+            style="background:var(--bg-card); border-radius:20px; overflow:hidden; border:1px solid var(--border-color); cursor:pointer; transition:0.2s; position:relative;"
             onmousedown="this.style.transform='scale(0.97)'" onmouseup="this.style.transform='scale(1)'">
-            <div style="background:${item.bgColor || '#0d0d0d'}; padding:20px; display:flex; align-items:center; justify-content:center; min-height:110px;">
-                ${imgHtml}
+            ${has2fa ? `<div style="position:absolute; top:8px; right:8px; background:rgba(16,185,129,0.9); color:#fff; font-size:9px; font-weight:800; padding:2px 6px; border-radius:6px; z-index:2;">2FA</div>` : ''}
+            <div style="background:#111; padding:20px; display:flex; align-items:center; justify-content:center; min-height:110px; position:relative;">
+                ${iconHtml}
             </div>
             <div style="padding:12px;">
-                <div style="font-size:11px; font-weight:700; color:var(--text-main); margin-bottom:4px;">${item.name}</div>
-                <div style="font-size:16px; font-weight:800; color:#22c55e; margin-bottom:10px;">${item.price}</div>
-                <div style="background:rgba(245,158,11,0.1); border:1px solid ${item.btnColor || '#f59e0b'}; border-radius:10px; padding:8px; text-align:center; font-size:11px; font-weight:700; color:${item.btnColor || '#f59e0b'}; display:flex; align-items:center; justify-content:center; gap:6px;">
+                <div style="font-size:11px; font-weight:800; color:var(--text-main); margin-bottom:2px; text-transform:uppercase;">${displayName}</div>
+                <div style="font-size:10px; color:#888; font-weight:700; margin-bottom:6px;">Stock: ${item.stock}</div>
+                <div style="font-size:16px; font-weight:800; color:#22c55e; margin-bottom:10px;">${priceDisp}</div>
+                <div style="background:rgba(245,158,11,0.1); border:1px solid #f59e0b; border-radius:10px; padding:8px; text-align:center; font-size:11px; font-weight:700; color:#f59e0b; display:flex; align-items:center; justify-content:center; gap:6px;">
                     <i class="fas fa-shopping-cart"></i> BUY
                 </div>
             </div>
         </div>`;
-    }).join('');
+
+        const listStyleCardHtml = `
+        <div class="service-card" onclick="viewUserItem('${item.id}')" style="margin-bottom:12px; cursor:pointer;">
+            <div class="sc-icon" style="background:#111;">${iconHtml.replace('60px', '40px')}</div>
+            <div class="sc-info" style="flex:1;">
+                <h3 style="font-size:14px;">${displayName}</h3>
+                <p style="font-size:11px;">STOCK: ${item.stock} | PRICE: ${priceDisp}</p>
+            </div>
+            <div class="sc-arrow"><i class="fas fa-chevron-right"></i></div>
+        </div>`;
+
+        // Logic: if users select subscription then it will list in all section shop (main grid)
+        // if user select not subscription (Premium Account) then it will list in premium account section
+        if (item.isSubscription) {
+            shopCardsHtml += cardHtml;
+        } else {
+            // Non-subscription items go to their respective tabs in Accounts Store
+            if (item.itemType === 'Other' || item.itemType === 'Card') {
+                // Both 'Other' and 'Card' now go to SHOP tab
+                appCardsHtml += (item.itemType === 'Other' ? cardHtml : listStyleCardHtml);
+            } else if (item.itemType === 'VPN') {
+                vpnCardsHtml += listStyleCardHtml;
+            } else if (item.itemType === 'Account') {
+                accountCardsHtml += listStyleCardHtml;
+            } else {
+                // Fallback to Account tab if unclear
+                accountCardsHtml += listStyleCardHtml;
+            }
+        }
+    });
+
+    if (grid) {
+        grid.innerHTML = shopCardsHtml || '<div style="grid-column:1/-1; text-align:center; padding:40px; color:var(--text-sub);">No items available</div>';
+    }
+
+    // Inject to premium tabs if elements exist
+    const pAppGrid = document.getElementById('premiumAppsGrid');
+    if (pAppGrid) pAppGrid.innerHTML = appCardsHtml || '<div style="grid-column:1/-1; text-align:center; padding:40px; color:var(--text-sub);">No apps available</div>';
+
+    const pVpnList = document.getElementById('premiumVPNList');
+    if (pVpnList) pVpnList.innerHTML = vpnCardsHtml || '<div style="text-align:center; padding:40px; color:var(--text-sub);">No VPNs available</div>';
+
+    const pAccList = document.getElementById('userApprovedAccounts');
+    if (pAccList) pAccList.innerHTML = accountCardsHtml || '';
+
+    // For Cards, since renderCards is called separately, we might just append or handle it within renderCards.
+    // However, if we do it here it's cleaner to append. Let's let renderCards handle its own logic, or append.
+    // For now, let's store user cards in global var or just let renderCards run and append.
+    window._userCardHtml = cardCardsHtml;
 }
+
+window.renderShopItems = renderShopItems;
+
+
+
+
+// ========================
+// VCC CARDS - Organized by Provider/Type with Generation Flow
+// ========================
+let selectedCardType = null;
+let currentCardData = null;
 
 function renderCards() {
     const container = document.getElementById('cardsList');
     if (!container) return;
-    const cards = JSON.parse(localStorage.getItem('adminCards') || '[]');
-    if (cards.length === 0) {
-        container.innerHTML = '<div style="text-align:center; padding:40px 0; color:var(--text-sub); opacity:0.5;">No cards available</div>';
+
+    // Fetch cards from API organized by provider/type
+    fetch('/api/cards/types')
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success || !data.cardTypes || data.cardTypes.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:40px 0; color:var(--text-sub); opacity:0.5;">No cards available</div>';
+                return;
+            }
+
+            // Group cards by provider/type
+            const cardTypes = data.cardTypes;
+
+            container.innerHTML = cardTypes.map(type => `
+                <div class="service-card" onclick="showCardTypeDetail('${type.id}')" 
+                    style="margin-bottom:12px; cursor:pointer; padding:16px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; display:flex; align-items:center; gap:14px; transition:all 0.2s;"
+                    onmouseover="this.style.borderColor='${type.color}'; this.style.background='rgba(255,255,255,0.03)';"
+                    onmouseout="this.style.borderColor='var(--border-color)'; this.style.background='var(--bg-card)';">
+                    <div class="sc-icon" style="background:${type.gradient}; width:50px; height:50px; border-radius:16px; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
+                        <i class="${type.icon}" style="color:#fff; font-size:22px;"></i>
+                    </div>
+                    <div class="sc-info" style="flex:1;">
+                        <h3 style="font-size:15px; font-weight:700; color:var(--text-main); margin:0;">${type.name}</h3>
+                        <p style="font-size:11px; color:var(--text-sub); margin:4px 0 0 0; font-weight:600;">
+                            <i class="fas fa-layer-group" style="margin-right:4px;"></i>${type.availableCount} cards available
+                        </p>
+                    </div>
+                    <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+                        <div style="font-weight:900; color:#22c55e; font-size:15px; letter-spacing:0.5px;">${type.price} TC</div>
+                        <div style="font-size:10px; color:var(--text-sub); font-weight:600;">
+                            <i class="fas fa-chevron-right" style="color:${type.color};"></i>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        })
+        .catch(() => {
+            container.innerHTML = '<div style="text-align:center; padding:40px 0; color:var(--text-sub);">Failed to load cards</div>';
+        });
+}
+
+// Show card type detail page with Generate button
+function showCardTypeDetail(cardTypeId) {
+    selectedCardType = cardTypeId;
+
+    // Fetch card type details
+    fetch(`/api/cards/type/${cardTypeId}`)
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success || !data.cardType) {
+                window.showToast('Card type not found');
+                return;
+            }
+
+            const type = data.cardType;
+            currentCardData = type;
+
+            // Create or update the card detail view
+            let detailContainer = document.getElementById('cardTypeDetail');
+            if (!detailContainer) {
+                // Create new page for card detail
+                const vccPage = document.getElementById('vccCardsPage');
+                detailContainer = document.createElement('div');
+                detailContainer.id = 'cardTypeDetail';
+                detailContainer.className = 'page';
+                detailContainer.style.cssText = 'display:none; padding:20px;';
+                vccPage.parentNode.insertBefore(detailContainer, vccPage.nextSibling);
+            }
+
+            detailContainer.innerHTML = `
+                <!-- Header -->
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px; padding-top:20px;">
+                    <button onclick="hideCardTypeDetail()" 
+                        style="background:rgba(255,255,255,0.05); border:1px solid var(--border-color); border-radius:12px; width:40px; height:40px; display:flex; align-items:center; justify-content:center; color:var(--text-main); cursor:pointer;">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <div style="font-size:18px; font-weight:800; color:var(--text-main);">${type.name}</div>
+                </div>
+
+                <!-- Card Preview -->
+                <div style="background:${type.gradient}; border-radius:24px; padding:28px 20px; margin-bottom:20px; text-align:center; position:relative; overflow:hidden; box-shadow:0 8px 32px ${type.color}44;">
+                    <div style="position:absolute; top:0; left:0; right:0; bottom:0; background:radial-gradient(circle at 30% 50%, rgba(255,255,255,0.1), transparent 70%);"></div>
+                    <div style="position:relative; z-index:1;">
+                        <div style="width:70px; height:70px; background:rgba(255,255,255,0.2); border-radius:20px; display:flex; align-items:center; justify-content:center; margin:0 auto 14px; backdrop-filter:blur(10px);">
+                            <i class="${type.icon}" style="font-size:32px; color:#fff;"></i>
+                        </div>
+                        <div style="font-size:20px; font-weight:900; color:#fff; margin-bottom:6px;">${type.name}</div>
+                        <div style="font-size:12px; color:rgba(255,255,255,0.8); max-width:260px; margin:0 auto; line-height:1.5;">${type.description || 'Premium virtual card for online purchases'}</div>
+                    </div>
+                </div>
+
+                <!-- Price Card -->
+                <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:20px; padding:20px; margin-bottom:16px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                        <div style="font-size:12px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:1px;">Price</div>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <i class="fas fa-coins" style="color:#fbbf24; font-size:14px;"></i>
+                            <span style="font-size:22px; font-weight:900; color:#fbbf24;">${type.price}</span>
+                            <span style="font-size:12px; color:var(--text-sub); font-weight:600;">TOKENS</span>
+                        </div>
+                    </div>
+                    <div style="height:1px; background:var(--border-color); margin-bottom:16px;"></div>
+                    <div style="font-size:11px; font-weight:700; color:var(--text-sub); margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">Features</div>
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                        <i class="fas fa-check-circle" style="color:${type.color}; font-size:14px;"></i>
+                        <span style="font-size:13px; color:var(--text-main); font-weight:600;">Instant Delivery</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                        <i class="fas fa-check-circle" style="color:${type.color}; font-size:14px;"></i>
+                        <span style="font-size:13px; color:var(--text-main); font-weight:600;">Valid Card Details</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                        <i class="fas fa-check-circle" style="color:${type.color}; font-size:14px;"></i>
+                        <span style="font-size:13px; color:var(--text-main); font-weight:600;">Ready to Use</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <i class="fas fa-check-circle" style="color:${type.color}; font-size:14px;"></i>
+                        <span style="font-size:13px; color:var(--text-main); font-weight:600;">${type.availableCount} Cards in Stock</span>
+                    </div>
+                </div>
+
+                <!-- Card Details Box (Hidden by default, shown after generation) -->
+                <div id="cardDetailsBox" style="display:none; margin-bottom:16px;">
+                    <div style="background:rgba(34,197,94,0.08); border:1px solid rgba(34,197,94,0.3); border-radius:20px; padding:20px;">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px;">
+                            <i class="fas fa-check-circle" style="color:#22c55e; font-size:16px;"></i>
+                            <span style="font-size:14px; font-weight:800; color:#22c55e;">CARD GENERATED SUCCESSFULLY</span>
+                        </div>
+                        <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:16px; font-family:monospace;">
+                            <div style="margin-bottom:12px;">
+                                <div style="font-size:10px; font-weight:700; color:var(--text-sub); margin-bottom:4px; text-transform:uppercase;">Card Number</div>
+                                <div id="generatedCardNumber" style="font-size:16px; font-weight:700; color:var(--text-main); background:rgba(255,255,255,0.05); padding:10px 12px; border-radius:10px; border:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+                                    <span>-</span>
+                                    <i class="fas fa-copy" style="color:${type.color}; cursor:pointer;" onclick="copyCardDetail('number')"></i>
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:12px; margin-bottom:12px;">
+                                <div style="flex:1;">
+                                    <div style="font-size:10px; font-weight:700; color:var(--text-sub); margin-bottom:4px; text-transform:uppercase;">Expiry</div>
+                                    <div id="generatedCardExpiry" style="font-size:14px; font-weight:700; color:var(--text-main); background:rgba(255,255,255,0.05); padding:10px 12px; border-radius:10px; border:1px solid var(--border-color);">-</div>
+                                </div>
+                                <div style="flex:1;">
+                                    <div style="font-size:10px; font-weight:700; color:var(--text-sub); margin-bottom:4px; text-transform:uppercase;">CVV</div>
+                                    <div id="generatedCardCvv" style="font-size:14px; font-weight:700; color:var(--text-main); background:rgba(255,255,255,0.05); padding:10px 12px; border-radius:10px; border:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+                                        <span>-</span>
+                                        <i class="fas fa-copy" style="color:${type.color}; cursor:pointer;" onclick="copyCardDetail('cvv')"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="font-size:10px; font-weight:700; color:var(--text-sub); margin-bottom:4px; text-transform:uppercase;">Card Holder</div>
+                                <div id="generatedCardHolder" style="font-size:14px; font-weight:700; color:var(--text-main); background:rgba(255,255,255,0.05); padding:10px 12px; border-radius:10px; border:1px solid var(--border-color);">-</div>
+                            </div>
+                        </div>
+                        <div style="margin-top:12px; font-size:11px; color:#888; text-align:center; font-weight:600;">
+                            <i class="fas fa-exclamation-triangle" style="color:#f59e0b;"></i> Save these details! They won't be shown again.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Generate Button -->
+                <button id="generateCardBtn" onclick="generateCard('${cardTypeId}')"
+                    style="width:100%; padding:16px; border:none; border-radius:16px; font-weight:900; font-size:15px; color:#fff; background:${type.gradient}; cursor:pointer; text-transform:uppercase; letter-spacing:1px; box-shadow:0 8px 24px ${type.color}44; transition:all 0.3s ease;">
+                    <i class="fas fa-magic"></i> GENERATE CARD
+                </button>
+
+                <!-- Availability Note -->
+                <div style="margin-top:16px; text-align:center;">
+                    <div style="font-size:11px; color:var(--text-sub); font-weight:600;">
+                        <i class="fas fa-circle" style="color:#22c55e; font-size:8px;"></i> Available &bull; Instant Delivery &bull; 24/7 Support
+                    </div>
+                </div>
+            `;
+
+            // Hide vccCardsPage and show cardTypeDetail
+            document.getElementById('vccCardsPage').style.display = 'none';
+            detailContainer.style.display = 'block';
+            historyStack.push('cardTypeDetail');
+        })
+        .catch(() => {
+            window.showToast('Failed to load card details');
+        });
+}
+window.showCardTypeDetail = showCardTypeDetail;
+
+function hideCardTypeDetail() {
+    const detailContainer = document.getElementById('cardTypeDetail');
+    if (detailContainer) {
+        detailContainer.style.display = 'none';
+    }
+    document.getElementById('vccCardsPage').style.display = 'block';
+    // Remove from history stack
+    const idx = historyStack.indexOf('cardTypeDetail');
+    if (idx > -1) historyStack.splice(idx, 1);
+}
+window.hideCardTypeDetail = hideCardTypeDetail;
+
+function generateCard(cardTypeId) {
+    if (!userData || !userData.id) {
+        window.showToast('Please login first.');
         return;
     }
-    container.innerHTML = cards.map(c => `
-        <div class="service-card" style="margin-bottom:12px; cursor:default; padding:16px;">
-            <div class="sc-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706); width:50px; height:50px; border-radius:16px; flex-shrink:0;">
-                <i class="fas fa-credit-card"></i>
-            </div>
-            <div class="sc-info" style="flex:1; margin-left:14px;">
-                <h3 style="font-size:15px; font-weight:700; color:var(--text-main); margin:0;">${c.name}</h3>
-                <p style="font-size:11px; color:var(--text-sub); margin:4px 0 0 0; font-weight:600;">Stock: ${c.count}</p>
-            </div>
-            <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
-                <div style="font-weight:900; color:#22c55e; font-size:15px; letter-spacing:0.5px;">${c.price} TC</div>
-                <button onclick="buyAccount('card', ${c.price}, '${c.id}')" 
-                    style="padding:6px 16px; border-radius:12px; background:#fbbf24; color:#000; font-weight:800; font-size:11px; border:none; cursor:pointer; box-shadow:0 4px 10px rgba(251,191,36,0.2);">
-                    BUY
-                </button>
-            </div>
-        </div>`).join('');
+
+    const btn = document.getElementById('generateCardBtn');
+    if (btn) {
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> GENERATING...';
+        btn.style.pointerEvents = 'none';
+    }
+
+    fetch('/api/cards/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: userData.id, cardTypeId })
+    })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                // Update balance
+                userData.tokens = data.newBalance;
+                renderBalances();
+
+                // Show card details
+                const detailsBox = document.getElementById('cardDetailsBox');
+                const numberEl = document.getElementById('generatedCardNumber');
+                const expiryEl = document.getElementById('generatedCardExpiry');
+                const cvvEl = document.getElementById('generatedCardCvv');
+                const holderEl = document.getElementById('generatedCardHolder');
+
+                if (detailsBox) detailsBox.style.display = 'block';
+                if (numberEl) numberEl.innerHTML = `<span>${data.card.number}</span><i class="fas fa-copy" style="color:${currentCardData.color}; cursor:pointer;" onclick="copyCardDetail('number')"></i>`;
+                if (expiryEl) expiryEl.textContent = data.card.expiry;
+                if (cvvEl) cvvEl.innerHTML = `<span>${data.card.cvv}</span><i class="fas fa-copy" style="color:${currentCardData.color}; cursor:pointer;" onclick="copyCardDetail('cvv')"></i>`;
+                if (holderEl) holderEl.textContent = data.card.holder;
+
+                if (btn) {
+                    btn.innerHTML = '<i class="fas fa-check"></i> GENERATED';
+                    btn.style.background = '#22c55e';
+                    btn.style.boxShadow = '0 8px 24px rgba(34,197,94,0.3)';
+                }
+
+                // Haptic feedback
+                if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+
+                // Refresh cards list to update stock count
+                renderCards();
+            } else {
+                window.showToast(data.message || 'Card generation failed');
+                if (btn) {
+                    btn.innerHTML = '<i class="fas fa-magic"></i> GENERATE CARD';
+                    btn.style.pointerEvents = 'auto';
+                }
+            }
+        })
+        .catch(() => {
+            window.showToast('Network error. Please try again.');
+            if (btn) {
+                btn.innerHTML = '<i class="fas fa-magic"></i> GENERATE CARD';
+                btn.style.pointerEvents = 'auto';
+            }
+        });
 }
+window.generateCard = generateCard;
+
+function copyCardDetail(type) {
+    let text = '';
+    if (type === 'number') {
+        const el = document.getElementById('generatedCardNumber');
+        if (el) text = el.querySelector('span')?.textContent || '';
+    } else if (type === 'cvv') {
+        const el = document.getElementById('generatedCardCvv');
+        if (el) text = el.querySelector('span')?.textContent || '';
+    }
+
+    if (text) {
+        navigator.clipboard.writeText(text).then(() => {
+            window.showToast(`${type.toUpperCase()} copied!`);
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+        });
+    }
+}
+window.copyCardDetail = copyCardDetail;
 
 function renderVPN() {
     const container = document.getElementById('vpnList');
     if (!container) return;
     const vpns = JSON.parse(localStorage.getItem('adminVPNs') || '[]');
-    if (vpns.length === 0) {
-        container.innerHTML = '<div style="text-align:center; padding:40px 0; color:var(--text-sub); opacity:0.5;">No VPN accounts available</div>';
-        return;
-    }
-    container.innerHTML = vpns.map(v => `
+    let html = '';
+
+    if (vpns.length > 0) {
+        html += vpns.map(v => `
         <div class="service-card" style="margin-bottom:12px; cursor:default; padding:16px;">
             <div class="sc-icon" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8); width:50px; height:50px; border-radius:16px; flex-shrink:0;">
                 <i class="fas fa-shield-alt"></i>
@@ -2350,6 +3026,11 @@ function renderVPN() {
                 </button>
             </div>
         </div>`).join('');
+    }
+
+    if (window._userVpnHtml) html += window._userVpnHtml; // In case we export it differently
+
+    container.innerHTML = html || '<div style="text-align:center; padding:40px 0; color:var(--text-sub); opacity:0.5;">No VPN accounts available</div>';
 }
 
 // ========================
@@ -2721,7 +3402,7 @@ function generateService(type) {
     const cost = s ? (s.cost || 10) : (type === 'number' ? 15 : 10);
     const name = s ? s.name : (type === 'number' ? 'Number Service' : 'Mail Service');
 
-    if ((userData.tokens || 0) < cost) {
+    if (Math.max(0, userData.tokens || 0) < cost) {
         nav('earn');
         return;
     }
@@ -2729,7 +3410,7 @@ function generateService(type) {
     // Generate directly without confirmation
     userData.tokens -= cost;
     renderBalances();
-    window.showToast(` ${name} generated successfully!\n\nYour balance: ${userData.tokens} TC`);
+    window.showToast(` ${name} generated successfully!\n\nYour balance: ${Math.max(0, userData.tokens || 0)} TC`);
 }
 
 // =============================================
@@ -2738,6 +3419,45 @@ function generateService(type) {
 let currentNumSession = null;
 let numOtpPollInterval = null;
 let selectedNumPlatform = 'telegram';
+
+// Load platforms from API (sorted by popularity)
+function loadNumPlatforms() {
+    const list = document.getElementById('numPlatformList');
+    if (!list) return;
+
+    fetch('/api/number/platforms')
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.platforms) {
+                list.innerHTML = '';
+                data.platforms.forEach((p, idx) => {
+                    // Most popular (first item) gets selected by default if nothing selected
+                    const isActive = idx === 0;
+                    if (isActive && !selectedNumPlatform) selectedNumPlatform = p.id;
+
+                    const btn = document.createElement('button');
+                    btn.className = 'num-platform-btn';
+                    btn.onclick = (e) => selectNumPlatform(btn, p.id);
+                    btn.style.cssText = `background:${isActive ? 'rgba(147,51,234,0.15)' : 'var(--accent-bg)'}; border:2px solid ${isActive ? '#9333ea' : 'var(--border-color)'}; border-radius:14px; padding:14px 8px; display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; position:relative;`;
+
+                    // Add "POPULAR" badge for first platform (most popular)
+                    let badge = '';
+                    if (idx === 0) {
+                        badge = `<div style="position:absolute; top:-6px; right:-6px; background:#9333ea; color:#fff; font-size:8px; padding:2px 6px; border-radius:10px; font-weight:900;">🔥 POPULAR</div>`;
+                    }
+
+                    btn.innerHTML = `
+                        ${badge}
+                        <i class="${p.icon}" style="font-size:22px; color:${p.color};"></i>
+                        <span style="font-size:10px; font-weight:700; color:var(--text-main);">${p.name}</span>
+                    `;
+                    list.appendChild(btn);
+
+                    if (isActive) selectedNumPlatform = p.id;
+                });
+            }
+        }).catch(err => console.error('Error loading platforms:', err));
+}
 
 function selectNumPlatform(el, platform) {
     selectedNumPlatform = platform;
@@ -2751,13 +3471,13 @@ function selectNumPlatform(el, platform) {
 
 function updateNumBalance() {
     const el = document.getElementById('numBalanceDisplay');
-    if (el) el.textContent = (userData.tokens || 0) + ' TC';
+    if (el) el.textContent = Math.max(0, userData.tokens || 0) + ' TC';
 }
 
 function generateVirtualNumber() {
     if (checkZeroBalanceAdTrigger()) return;
     const cost = 15;
-    if ((userData.tokens || 0) < cost) { nav('earn'); return; }
+    if (Math.max(0, userData.tokens || 0) < cost) { nav('earn'); return; }
     // Get number directly without confirmation
     const btn = document.getElementById('numGenerateBtn');
     if (btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...'; btn.disabled = true; }
@@ -3016,7 +3736,7 @@ function updateMailBalance(type) {
     if (typeof mailSessions === 'undefined' || !mailSessions) {
         mailSessions = { temp: null, premium: null };
     }
-    const tokens = (typeof userData !== "undefined" && userData.tokens) ? userData.tokens : 0;
+    const tokens = Math.max(0, (typeof userData !== "undefined" && userData.tokens) ? userData.tokens : 0);
     const balEl = document.getElementById(type + "MailBalance");
     if (balEl) balEl.textContent = tokens + " TC";
 
@@ -3045,16 +3765,18 @@ function updateMailBalance(type) {
 function generateTempMail(type) {
     if (checkZeroBalanceAdTrigger()) return;
     if (!type) type = 'temp';
-    const cost = type === "temp" ? 1 : 50;
-    
-    // If no user login, use demo mode for testing
+    const cost = type === "temp"
+        ? (parseInt(window.appCostConfig?.mailCost) || 10)
+        : (parseInt(window.appCostConfig?.premiumMailCost) || 50);
+
+    // If no user login, cannot generate
     if (!userData.id || userData.id === 0) {
-        console.log('generateTempMail: No user login, using demo mode');
-        generateDemoTempMail(type, 0);
+        window.showToast("Please login via Telegram to use this service");
+        nav('home');
         return;
     }
 
-    if ((userData.tokens || 0) < cost) { nav('earn'); return; }
+    if (Math.max(0, userData.tokens || 0) < cost) { nav('earn'); return; }
 
     // Show loading state immediately
     const addrEl = document.getElementById(type + "MailAddr");
@@ -3072,7 +3794,7 @@ function generateTempMail(type) {
         .then(r => r.json())
         .then(data => {
             if (data.success) {
-                userData.tokens = (typeof data.newBalance === 'number') ? data.newBalance : ((userData.tokens || 0) - cost);
+                userData.tokens = (typeof data.newBalance === 'number') ? data.newBalance : (Math.max(0, userData.tokens || 0) - cost);
                 renderBalances();
                 if (mailSessions[type]) {
                     previousMailSessions[type] = mailSessions[type];
@@ -3112,9 +3834,8 @@ function renewTempMail(type) {
 
     // If no user login, use demo mode
     if (!userData.id || userData.id === 0) {
-        console.log('renewTempMail: No user login, using demo mode');
-        // For demo, just generate a new email
-        generateDemoTempMail(type, 0);
+        window.showToast("Please login via Telegram to use this service");
+        nav('home');
         return;
     }
 
@@ -3156,8 +3877,8 @@ function refreshInbox(type) {
 
     // Deduct 1 token per inbox refresh (temp only)
     const refreshCost = 0; // Auto-poll should not charge tokens
-    if (refreshCost > 0 && (userData.tokens || 0) < refreshCost) {
-        window.showToast(`❌ Insufficient tokens!\n\nYou need ${refreshCost} TC to refresh inbox.\nYour balance: ${userData.tokens || 0} TC`);
+    if (refreshCost > 0 && Math.max(0, userData.tokens || 0) < refreshCost) {
+        window.showToast(`❌ Insufficient tokens!\n\nYou need ${refreshCost} TC to refresh inbox.\nYour balance: ${Math.max(0, userData.tokens || 0)} TC`);
         return;
     }
 
@@ -3605,7 +4326,7 @@ function openTempMailDirect() {
 function autoGenerateTempMail() {
     if (checkZeroBalanceAdTrigger()) return;
     const type = 'temp';
-    const cost = 1;
+    const cost = (parseInt(window.appCostConfig?.mailCost) || 10);
 
     // Check user login
     if (!userData.id || userData.id === 0) {
@@ -3618,7 +4339,7 @@ function autoGenerateTempMail() {
     }
 
     // Check tokens
-    if ((userData.tokens || 0) < cost) {
+    if (Math.max(0, userData.tokens || 0) < cost) {
         console.log('AutoGenerate: Insufficient tokens');
         nav('earn');
         return;
@@ -3698,49 +4419,299 @@ function generateDemoTempMail(type, cost) {
 function openPremiumMailDirect() {
     if (!checkFeatureOrComingSoon('premiumMail', 'Premium Mail')) return;
     nav('premiumMail');
-    if (!mailSessions.premium) {
-        setTimeout(() => {
-            autoGeneratePremiumMail();
-        }, 300);
+    // Load premium emails from admin panel
+    loadPremiumEmailsFromAdmin();
+}
+
+// Store assigned premium email
+let assignedPremiumEmail = null;
+
+// Load premium emails from admin panel
+async function loadPremiumEmailsFromAdmin() {
+    const addrEl = document.getElementById('premiumMailAddr');
+    const inboxList = document.getElementById('premiumInboxList');
+    const otpList = document.getElementById('premiumOtpList');
+
+    if (addrEl) {
+        addrEl.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>loading...';
+    }
+
+    try {
+        // Check if user already has an assigned premium email
+        const userRes = await fetch(`/api/user/${userData.id}`);
+        const userData2 = await userRes.json();
+
+        if (userData2.success && userData2.user?.premiumEmailId) {
+            // User has an assigned email, fetch its details
+            const emailRes = await fetch(`/api/premium-emails/${userData2.user.premiumEmailId}`);
+            const emailData = await emailRes.json();
+
+            if (emailData.success) {
+                assignedPremiumEmail = emailData.email;
+                displayPremiumEmail(emailData.email);
+                loadPremiumEmailMessages(userData2.user.premiumEmailId);
+                return;
+            }
+        }
+
+        // No assigned email, fetch available emails
+        const res = await fetch('/api/premium-emails');
+        const data = await res.json();
+
+        if (!data.success || !data.emails || data.emails.length === 0) {
+            if (addrEl) {
+                addrEl.innerHTML = '<span style="color:#f87171;">No premium emails available</span>';
+            }
+            if (inboxList) {
+                inboxList.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-sub);"><i class="fas fa-envelope" style="font-size:32px; margin-bottom:10px; opacity:0.3;"></i><div style="font-size:12px;">No premium emails available. Please check back later.</div></div>`;
+            }
+            return;
+        }
+
+        // Show email selection or auto-assign first available
+        const availableEmail = data.emails[0];
+
+        // Try to assign this email to user
+        const assignRes = await fetch('/api/premium-emails/assign', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: userData.id, emailId: availableEmail.id })
+        });
+
+        const assignData = await assignRes.json();
+
+        if (assignData.success) {
+            assignedPremiumEmail = assignData.email;
+            displayPremiumEmail(assignData.email);
+            loadPremiumEmailMessages(availableEmail.id);
+            window.showToast('✅ Premium email assigned successfully!');
+        } else {
+            // Show available emails for selection
+            displayPremiumEmailList(data.emails);
+        }
+
+    } catch (e) {
+        console.error('Error loading premium emails:', e);
+        if (addrEl) {
+            addrEl.innerHTML = '<span style="color:#f87171;">Error loading emails</span>';
+        }
     }
 }
 
-function autoGeneratePremiumMail() {
-    const type = 'premium';
-    const cost = 50;
-    // If user has enough tokens, try real API first
-    if ((userData.tokens || 0) >= cost) {
-        fetch("/api/mail/generate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userId: userData.id, cost, type })
-        })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    userData.tokens -= cost;
-                    renderBalances();
-                    mailSessions[type] = data;
-                    updateMailBalance(type);
-                    refreshInbox(type);
-                } else {
-                    generateDemoPremiumMail(type, 0);
-                }
-            })
-            .catch(() => {
-                generateDemoPremiumMail(type, 0);
-            });
-    } else {
-        // Not enough tokens - generate demo email (free preview)
-        generateDemoPremiumMail(type, 0);
+// Display assigned premium email
+function displayPremiumEmail(email) {
+    const addrEl = document.getElementById('premiumMailAddr');
+    if (addrEl && email) {
+        addrEl.textContent = email.email || email;
+        addrEl.style.fontStyle = 'normal';
+        addrEl.style.opacity = '1';
     }
+}
+
+// Display list of available premium emails for selection
+function displayPremiumEmailList(emails) {
+    const addrEl = document.getElementById('premiumMailAddr');
+    const inboxList = document.getElementById('premiumInboxList');
+
+    if (addrEl) {
+        addrEl.innerHTML = '<span style="color:var(--text-sub);">Select an email</span>';
+    }
+
+    if (inboxList) {
+        inboxList.innerHTML = emails.map(e => `
+            <div style="padding:16px; border-bottom:1px solid var(--border-color); cursor:pointer;" onclick="selectPremiumEmail('${e.id}', '${e.email}')">
+                <div style="font-size:14px; font-weight:600; color:var(--text-main); margin-bottom:4px;">${e.email}</div>
+                <div style="font-size:11px; color:var(--text-sub);">${e.messageCount} messages</div>
+            </div>
+        `).join('');
+    }
+}
+
+// Select and assign a premium email
+async function selectPremiumEmail(emailId, emailAddress) {
+    try {
+        const res = await fetch('/api/premium-emails/assign', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: userData.id, emailId: emailId })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            assignedPremiumEmail = data.email;
+            displayPremiumEmail(data.email);
+            loadPremiumEmailMessages(emailId);
+            window.showToast('✅ Premium email assigned!');
+        } else {
+            window.showToast('❌ ' + (data.message || 'Failed to assign email'));
+        }
+    } catch (e) {
+        window.showToast('❌ Error assigning email');
+    }
+}
+
+// Load messages for assigned premium email
+async function loadPremiumEmailMessages(emailId) {
+    const inboxList = document.getElementById('premiumInboxList');
+    const otpList = document.getElementById('premiumOtpList');
+
+    if (!emailId) return;
+
+    try {
+        const res = await fetch(`/api/premium-emails/${emailId}/messages`);
+        const data = await res.json();
+
+        if (data.success && data.messages) {
+            renderPremiumInbox(data.messages);
+        } else {
+            if (inboxList) {
+                inboxList.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-sub);"><i class="fas fa-inbox" style="font-size:32px; margin-bottom:10px; opacity:0.3;"></i><div style="font-size:12px;">No messages yet</div></div>`;
+            }
+            if (otpList) {
+                otpList.innerHTML = `<div style="font-size:11px; color:var(--text-sub); padding:10px;">No OTP yet</div>`;
+            }
+        }
+    } catch (e) {
+        console.error('Error loading messages:', e);
+    }
+}
+
+// Render premium inbox messages
+function renderPremiumInbox(messages) {
+    const listEl = document.getElementById('premiumInboxList');
+    const otpListEl = document.getElementById('premiumOtpList');
+
+    if (!listEl) return;
+
+    if (!messages || messages.length === 0) {
+        listEl.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-sub);"><i class="fas fa-inbox" style="font-size:32px; margin-bottom:10px; opacity:0.3;"></i><div style="font-size:12px;">No messages yet</div></div>`;
+        if (otpListEl) {
+            otpListEl.innerHTML = `<div style="font-size:11px; color:var(--text-sub); padding:10px;">No OTP yet</div>`;
+        }
+        return;
+    }
+
+    // Extract OTPs
+    let otps = [];
+    const otpRegex = /\b\d{4,8}\b/g;
+    const keywords = ["otp", "code", "verification", "verify", "login", "security"];
+
+    messages.forEach(msg => {
+        const combined = ((msg.subject || '') + " " + (msg.body || msg.preview || '')).toLowerCase();
+        const hasKeyword = keywords.some(k => combined.includes(k));
+        if (hasKeyword) {
+            const matches = combined.match(otpRegex);
+            if (matches) {
+                matches.forEach(code => {
+                    if (!otps.some(o => o.code === code)) {
+                        otps.push({ code, from: msg.from || msg.sender || 'Unknown' });
+                    }
+                });
+            }
+        }
+    });
+
+    // Render OTP chips
+    if (otpListEl) {
+        if (otps.length > 0) {
+            otpListEl.innerHTML = otps.map(o => `
+                <div class="otp-chip" style="padding: 6px 12px; height: auto; min-height: 44px; display: flex; align-items: center; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 12px; margin-right: 8px; margin-bottom: 8px;">
+                    <div style="flex:1;">
+                        <div class="oc-code" style="font-size: 16px; font-weight: 800; color: var(--text-main); letter-spacing: 1px;">${o.code}</div>
+                    </div>
+                    <button class="oc-copy" onclick="copyOtpFromChip(this, '${o.code}')" 
+                        style="width:32px; height:32px; border-radius:50%; background:#10b981; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; margin-left:10px; transition: all 0.2s; box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);">
+                        <i class="fas fa-copy" style="color:#fff; font-size:12px;"></i>
+                    </button>
+                </div>
+            `).join("");
+        } else {
+            otpListEl.innerHTML = `<div style="font-size:11px; color:var(--text-sub); padding:10px;">No OTP yet</div>`;
+        }
+    }
+
+    // Render message list
+    listEl.innerHTML = messages.map(msg => `
+        <div class="inbox-item" onclick="openPremiumEmailMessage('${msg.id}')" style="display:grid; grid-template-columns:1fr 1fr 60px; padding:12px 16px; border-bottom:1px solid var(--border-color); cursor:pointer; align-items:center;">
+            <div style="font-size:12px; color:var(--text-main); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${msg.from || msg.sender || 'Unknown'}</div>
+            <div style="font-size:12px; color:var(--text-sub); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${msg.subject || 'No Subject'}</div>
+            <div style="text-align:center;">
+                <i class="fas fa-eye" style="color:#f59e0b; font-size:14px;"></i>
+            </div>
+        </div>
+    `).join('');
+
+    window._premiumEmailMessages = messages;
+}
+
+// Open a premium email message
+function openPremiumEmailMessage(msgId) {
+    const messages = window._premiumEmailMessages || [];
+    const msg = messages.find(m => m.id === msgId);
+    if (!msg) return;
+
+    document.getElementById("mdSubject").textContent = msg.subject || 'No Subject';
+    document.getElementById("mdFrom").textContent = msg.from || msg.sender || "Unknown";
+    document.getElementById("mdTo").textContent = assignedPremiumEmail?.email || "...";
+    document.getElementById("mdDate").textContent = msg.time || msg.date || "Recent";
+    document.getElementById("mdBody").innerHTML = msg.body || msg.preview || '';
+
+    const content = (msg.subject || '') + " " + (msg.body || msg.preview || '');
+
+    // Extract OTP
+    const otpMatch = content.match(/\b\d{4,8}\b/);
+    const urlRegex = /(https?:\/\/[^\s<>'"{}|\^`\[\]]+)/i;
+    const urlMatch = content.match(urlRegex);
+
+    const otpContainer = document.getElementById("mdOtpContainer");
+    const linkContainer = document.getElementById("mdLinkContainer");
+
+    if (otpMatch) {
+        otpContainer.style.display = "block";
+        document.getElementById("mdOtpCode").textContent = otpMatch[0];
+    } else {
+        otpContainer.style.display = "none";
+    }
+
+    if (urlMatch) {
+        linkContainer.style.display = "block";
+        document.getElementById("mdLinkUrl").textContent = urlMatch[0];
+        document.getElementById("mdLinkUrl").href = urlMatch[0];
+    } else {
+        linkContainer.style.display = "none";
+    }
+
+    nav("emailMessage");
+}
+
+// Refresh premium email inbox
+function refreshPremiumInbox() {
+    if (assignedPremiumEmail && assignedPremiumEmail.id) {
+        loadPremiumEmailMessages(assignedPremiumEmail.id);
+        window.showToast('✅ Inbox refreshed');
+    } else {
+        loadPremiumEmailsFromAdmin();
+    }
+}
+
+// Export new functions
+window.loadPremiumEmailsFromAdmin = loadPremiumEmailsFromAdmin;
+window.selectPremiumEmail = selectPremiumEmail;
+window.loadPremiumEmailMessages = loadPremiumEmailMessages;
+window.refreshPremiumInbox = refreshPremiumInbox;
+window.openPremiumEmailMessage = openPremiumEmailMessage;
+
+function autoGeneratePremiumMail() {
+    // Replaced by loadPremiumEmailsFromAdmin
+    loadPremiumEmailsFromAdmin();
 }
 
 function generateDemoPremiumMail(type, cost) {
     const domains = ["premium-inbox.com", "private-mail.net"];
     const email = "user" + Math.floor(Math.random() * 99999) + "@" + domains[Math.floor(Math.random() * domains.length)];
     mailSessions[type] = { email, id: "demo_" + Date.now(), type, sessionId: "demo_" + Date.now() };
-    userData.tokens -= cost;
+    userData.tokens = Math.max(0, (userData.tokens || 0) - cost);
     renderBalances();
     updateMailBalance(type);
     refreshInbox(type);
@@ -4027,6 +4998,7 @@ function updateBalanceDisplay() { renderBalances(); }
 window.generateService = generateService;
 window.generateVirtualNumber = generateVirtualNumber;
 window.selectNumPlatform = selectNumPlatform;
+window.loadNumPlatforms = loadNumPlatforms;
 window.refreshOTP = refreshOTP;
 window.cancelNumber = cancelNumber;
 window.openService = openService;
@@ -4099,42 +5071,213 @@ async function fetchSellingRewards() {
     }
 }
 
-function selectSellCategory(cat, icon, gradient) {
+// Item Selling Helper: Set Selection Type
+function setSellItemType(type) {
+    const isSub = (type === 'subscription');
+    document.getElementById('selIsSubscription').value = isSub;
+
+    const btnSub = document.getElementById('btnSellTypeSub');
+    const btnAcc = document.getElementById('btnSellTypeAcc');
+
+    if (isSub) {
+        btnSub.style.background = 'var(--accent-color)';
+        btnSub.style.color = '#000';
+        btnSub.innerText = 'SHOP'; // Changed from SUBSCRIPTIONS
+        btnAcc.style.background = 'rgba(255,255,255,0.05)';
+        btnAcc.style.color = 'var(--text-sub)';
+        btnAcc.innerText = 'ACCOUNTS';
+    } else {
+        btnAcc.style.background = 'var(--accent-color)';
+        btnAcc.style.color = '#000';
+        btnAcc.innerText = 'ACCOUNTS';
+        btnSub.style.background = 'rgba(255,255,255,0.05)';
+        btnSub.style.color = 'var(--text-sub)';
+        btnSub.innerText = 'SHOP'; // Changed from SUBSCRIPTIONS
+    }
+
+    // Filter Category Grid based on type
     const grid = document.getElementById('itemSellCategoryGrid');
-    const form = document.getElementById('itemSellFormContainer');
-    const catInput = document.getElementById('selItemCategory');
-    const catName = document.getElementById('selectedCatName');
-    const catIcon = document.getElementById('selectedCatIcon');
+    if (grid) {
+        const cards = grid.getElementsByClassName('sell-cat-card');
+        for (let card of cards) {
+            const cardType = card.getAttribute('data-sell-type');
+            if (isSub) {
+                card.style.display = (cardType === 'subscription' || cardType === 'both') ? 'flex' : 'none';
+            } else {
+                card.style.display = (cardType === 'account' || cardType === 'both') ? 'flex' : 'none';
+            }
+        }
 
-    catInput.value = cat;
-    catName.innerText = cat.toUpperCase();
-    catIcon.innerHTML = `<i class="${icon}"></i>`;
-    catIcon.style.background = gradient;
-
-    grid.style.display = 'none';
-    form.style.display = 'block';
+        // AUTO-RESET IF FORM IS OPEN:
+        // If they click the toggle while the form is open, take them back to the grid
+        const form = document.getElementById('itemSellFormContainer');
+        const selCat = document.getElementById('selItemCategory').value;
+        if (form && form.style.display === 'block' && selCat) {
+            // Only reset if they click the opposite of what they selected
+            // But for simplicity, reset always so they see the fresh list
+            document.getElementById('itemSellFormContainer').style.display = 'none';
+            document.getElementById('itemSellCategoryGrid').style.display = 'grid';
+            document.getElementById('selItemCategory').value = '';
+        }
+    }
 
     updateSellRewardPreview();
-    if (window.Telegram?.WebApp?.HapticFeedback) {
-        window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
+}
+window.setSellItemType = setSellItemType;
+
+
+
+function selectSellCategory(cat, icon, gradient) {
+    if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+
+    document.getElementById('selItemCategory').value = cat;
+    document.getElementById('itemSellCategoryGrid').style.display = 'none';
+    document.getElementById('itemSellFormContainer').style.display = 'block';
+
+    // Header for form
+    const catName = document.getElementById('selectedCatName');
+    const catIcon = document.getElementById('selectedCatIcon');
+    if (catName) catName.innerText = cat.toUpperCase();
+    if (catIcon) {
+        catIcon.innerHTML = `<i class="${icon}"></i>`;
+        catIcon.style.background = gradient;
     }
+
+    // Toggle logic for fields
+    const apiFields = document.getElementById('apiKeyFields');
+    const vpnFields = document.getElementById('vpnFields');
+    const cardFields = document.getElementById('cardFields');
+    const accountFields = document.getElementById('accountFields');
+    const accountExtraFields = document.getElementById('accountExtraFields');
+    const otherFields = document.getElementById('otherItemFields');
+
+    if (apiFields) apiFields.style.display = (cat === 'API Key') ? 'block' : 'none';
+    if (vpnFields) vpnFields.style.display = (cat === 'VPN') ? 'block' : 'none';
+    if (cardFields) cardFields.style.display = (cat === 'Card') ? 'block' : 'none';
+    if (otherFields) otherFields.style.display = (cat === 'Other' || cat === 'App') ? 'block' : 'none';
+
+    // Show account generic fields for most categories except Card and API Key
+    if (accountFields) accountFields.style.display = (cat !== 'Card' && cat !== 'API Key') ? 'block' : 'none';
+
+    // Account Name/Logo for 'Account' category
+    if (accountExtraFields) accountExtraFields.style.display = (cat === 'Account') ? 'block' : 'none';
+
+    // Update Email/Password labels based on category
+    const lblEmail = document.getElementById('lblSelItemEmail');
+    if (lblEmail) {
+        if (cat === 'Telegram') lblEmail.textContent = 'PHONE NUMBER *';
+        else if (cat === 'Discord') lblEmail.textContent = 'DISCORD TOKEN *';
+        else lblEmail.textContent = 'LOGIN EMAIL / USERNAME *';
+    }
+
+    // Show duration only for relevant items
+    const subscriptionFields = document.getElementById('subscriptionFields');
+    const hideDurationFor = ['Gmail', 'TikTok', 'Facebook', 'Telegram', 'Discord', 'Card'];
+    if (subscriptionFields) subscriptionFields.style.display = hideDurationFor.includes(cat) ? 'none' : 'block';
+
+    // Custom price field for 'Other' or 'App' (if added)
+    const requestedPriceField = document.getElementById('requestedPriceField');
+    if (requestedPriceField) requestedPriceField.style.display = (cat === 'Other' || cat === 'App') ? 'block' : 'none';
+
+    updateSellRewardPreview();
+}
+
+function toggle2FAFields() {
+    const is2fa = document.getElementById('selItem2FA').checked;
+    const fields = document.getElementById('twoFAFields');
+    if (fields) {
+        fields.style.display = is2fa ? 'block' : 'none';
+        if (!is2fa) {
+            const authCode = document.getElementById('sel2FAAuthCode');
+            const backupCode = document.getElementById('sel2FABackupCode');
+            const appCode = document.getElementById('sel2FAAppCode');
+            if (authCode) authCode.value = '';
+            if (backupCode) backupCode.value = '';
+            if (appCode) appCode.value = '';
+        }
+    }
+}
+
+function previewCustomIcon(input) {
+    const preview = document.getElementById('customIconPreview');
+    if (!preview || !input.files || !input.files[0]) return;
+    const file = input.files[0];
+    const url = URL.createObjectURL(file);
+    preview.innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;">`;
 }
 
 function resetSellCategory() {
     document.getElementById('itemSellCategoryGrid').style.display = 'grid';
     document.getElementById('itemSellFormContainer').style.display = 'none';
     document.getElementById('selItemCategory').value = '';
-    
-    // Reset form fields
-    document.getElementById('selItemEmail').value = '';
-    document.getElementById('selItemPassword').value = '';
-    document.getElementById('selItemNote').value = '';
-    document.getElementById('selItem2FA').checked = false;
+
+    // Reset all form fields
+    const fields = ['selItemEmail', 'selItemPassword', 'selItemCustomName', 'apiServiceName', 'apiKeyValue', 'apiQuota', 'apiExtraInfo', 'sel2FAAuthCode', 'sel2FABackupCode', 'sel2FAAppCode', 'vpnName', 'vpnEmail', 'vpnPassword', 'vpnPlan', 'cardNumber', 'cardExpiry', 'cardCVV', 'cardHolder', 'cardCountry', 'cardBillingAddress', 'selItemCustomDuration', 'selItemRequestedPrice'];
+    fields.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+
+    // Reset Card Types
+    const cardTypeRadios = document.getElementsByName('cardType');
+    if (cardTypeRadios) cardTypeRadios.forEach(r => r.checked = false);
+    selectCardType(''); // Reset visual selection
+
+    const twofa = document.getElementById('selItem2FA');
+    if (twofa) twofa.checked = false;
+
+    const twoFAFields = document.getElementById('twoFAFields');
+    if (twoFAFields) {
+        twoFAFields.style.opacity = '0';
+        twoFAFields.style.display = 'none';
+    }
+
+    // Reset icon preview
+    const iconPreview = document.getElementById('customIconPreview');
+    if (iconPreview) iconPreview.innerHTML = '<i class="fas fa-image"></i>';
+
+    const iconFile = document.getElementById('selItemIconFile');
+    if (iconFile) iconFile.value = '';
+
+    setSellDuration(30); // Reset to 30 days default
+
+    // Refresh filter based on current type
+    const isSub = (document.getElementById('selIsSubscription').value === 'true');
+    setSellItemType(isSub ? 'subscription' : 'account');
+}
+
+function setSellDuration(days) {
+    const hidden = document.getElementById('selItemDurationDays');
+    const custom = document.getElementById('selItemCustomDuration');
+    const btns = [7, 30, 90, 365];
+
+    if (days === 'custom') {
+        hidden.value = custom.value || 30;
+        days = null; // deselect buttons
+    } else {
+        hidden.value = days;
+        if (custom) custom.value = '';
+    }
+
+    btns.forEach(b => {
+        const btn = document.getElementById('btnDur' + b);
+        if (btn) {
+            if (b === days) {
+                btn.style.borderColor = 'var(--accent-color)';
+                btn.style.background = 'rgba(234,179,8,0.15)';
+                btn.style.color = 'var(--accent-color)';
+            } else {
+                btn.style.borderColor = 'var(--border-color)';
+                btn.style.background = 'rgba(0,0,0,0.2)';
+                btn.style.color = 'var(--text-sub)';
+            }
+        }
+    });
+
+    updateSellRewardPreview();
 }
 
 function updateSellRewardPreview() {
     const cat = document.getElementById('selItemCategory').value;
-    const is2fa = document.getElementById('selItem2FA').checked;
+    const is2fa = document.getElementById('selItem2FA')?.checked;
+    const appCode = document.getElementById('sel2FAAppCode')?.value?.trim();
     const preview = document.getElementById('sellRewardPreview');
 
     if (!cat || !sellingRewards[cat]) {
@@ -4142,40 +5285,167 @@ function updateSellRewardPreview() {
         return;
     }
 
+    if (cat === 'Other') {
+        preview.innerText = 'Admin Review';
+        return;
+    }
+
     let reward = sellingRewards[cat];
     if (is2fa) {
         reward = Math.round(reward * (sellingRewards['2faMultiplier'] || 1.5));
     }
+    // App code gives +25% on top
+    if (is2fa && appCode) {
+        reward = Math.round(reward * 1.25);
+    }
+    // Pro-rate by duration if it's a duration-based item
+    const hideDurationFor = ['Gmail', 'TikTok', 'Facebook', 'Telegram', 'Discord', 'Card'];
+    if (!hideDurationFor.includes(cat)) {
+        let dur = parseInt(document.getElementById('selItemDurationDays')?.value || '30', 10);
+        if (isNaN(dur) || dur < 1) dur = 30; // default 30 days for calculations if invalid
+        reward = Math.round((reward / 30) * dur);
+    }
 
-    preview.innerText = reward + ' TC';
+    // Currency display: Card -> TC, Others -> USD
+    if (cat === 'Card') {
+        preview.innerText = reward + ' TC';
+    } else {
+        // Assume 100 TC = $1.00 for calculation if needed, or if rewards are already in currency
+        // User stated: "Profile's dollar system fix... Cards processed as tokens... Others in dollars"
+        // Let's assume the sellingRewards are currently in some 'reward points' that we map to dollars
+        // or just show them as raw values with $ sign for now.
+        preview.innerText = '$' + (reward / 10).toFixed(2); // Example mapping: 10 units = $1
+    }
 }
 
 async function submitItemForSale() {
     const userId = userData.id;
     const itemType = document.getElementById('selItemCategory').value;
-    const email = document.getElementById('selItemEmail').value.trim();
-    const password = document.getElementById('selItemPassword').value.trim();
-    const note = document.getElementById('selItemNote').value.trim();
-    const is2fa = document.getElementById('selItem2FA').checked;
 
     if (!itemType) {
         window.showToast('Please select a category first');
         return;
     }
 
-    if (!email || !password) {
-        window.showToast('Please fill in both email and password');
-        return;
+    const isApiKey = itemType === 'API Key';
+    const isOther = itemType === 'Other' || itemType === 'App';
+    const isVpn = itemType === 'VPN';
+    const isCard = itemType === 'Card';
+    const isSubscription = document.getElementById('selIsSubscription').value === 'true';
+    let payload = { userId, itemType, isSubscription };
+
+    // Process Duration
+    const hideDurationFor = ['Gmail', 'TikTok', 'Facebook', 'Telegram', 'Discord', 'Card'];
+    if (!hideDurationFor.includes(itemType)) {
+        let dur = parseInt(document.getElementById('selItemDurationDays')?.value || '0', 10);
+        if (dur > 0) payload.durationDays = dur;
+    }
+
+    if (isApiKey) {
+        const serviceName = document.getElementById('apiServiceName')?.value.trim();
+        const apiKey = document.getElementById('apiKeyValue')?.value.trim();
+        if (!serviceName || !apiKey) {
+            window.showToast('Please enter service name and API key');
+            return;
+        }
+        payload.serviceName = serviceName;
+        payload.apiKey = apiKey;
+        payload.apiQuota = document.getElementById('apiQuota')?.value.trim() || '';
+        payload.extraInfo = document.getElementById('apiExtraInfo')?.value.trim() || '';
+    } else if (isVpn) {
+        const vpnName = document.getElementById('vpnName')?.value.trim();
+        const vpnEmail = document.getElementById('vpnEmail')?.value.trim();
+        const vpnPassword = document.getElementById('vpnPassword')?.value.trim();
+        if (!vpnName || !vpnEmail || !vpnPassword) {
+            window.showToast('Please fill all required VPN fields');
+            return;
+        }
+        payload.vpnName = vpnName;
+        // Map VPN email/pass to standard email/pass for consistency or keep separate
+        payload.email = vpnEmail;
+        payload.password = vpnPassword;
+        payload.vpnPlan = document.getElementById('vpnPlan')?.value.trim() || '';
+    } else if (isCard) {
+        const cardTypeInput = document.querySelector('input[name="cardType"]:checked');
+        if (!cardTypeInput) {
+            window.showToast('Please select a Card Type');
+            return;
+        }
+        const cardNumber = document.getElementById('cardNumber')?.value.trim();
+        const cardExpiry = document.getElementById('cardExpiry')?.value.trim();
+        const cardCVV = document.getElementById('cardCVV')?.value.trim();
+        const cardHolder = document.getElementById('cardHolder')?.value.trim();
+        const cardCountry = document.getElementById('cardCountry')?.value.trim();
+        if (!cardNumber || !cardExpiry || !cardCVV || !cardHolder || !cardCountry) {
+            window.showToast('Please fill all required card fields');
+            return;
+        }
+        payload.cardType = cardTypeInput.value;
+        payload.cardNumber = cardNumber;
+        payload.cardExpiry = cardExpiry;
+        payload.cardCVV = cardCVV;
+        payload.cardHolder = cardHolder;
+        payload.cardCountry = cardCountry;
+        payload.cardBillingAddress = document.getElementById('cardBillingAddress')?.value.trim() || '';
+    } else {
+        const email = document.getElementById('selItemEmail')?.value.trim();
+        const password = document.getElementById('selItemPassword')?.value.trim();
+        if (!email || !password) {
+            window.showToast('Please fill in both email and password');
+            return;
+        }
+        payload.email = email;
+        payload.password = password;
+
+        if (isOther) {
+            const customName = document.getElementById('selItemCustomName')?.value.trim();
+            if (!customName) {
+                window.showToast('Please enter an item name');
+                return;
+            }
+            const requestedPrice = document.getElementById('selItemRequestedPrice')?.value.trim();
+            if (!requestedPrice) {
+                window.showToast('Please enter your requested price');
+                return;
+            }
+            payload.customName = customName;
+            payload.requestedPrice = parseFloat(requestedPrice);
+            // Reward currency for Other: TC if it's card-like, USD otherwise
+            payload.rewardCurrency = (itemType === 'Card') ? 'TC' : 'USD';
+        }
+
+        // Account Name/Logo for category 'Account'
+        if (itemType === 'Account') {
+            payload.accountName = document.getElementById('selAccountName')?.value.trim();
+            payload.accountLogo = document.getElementById('selAccountLogo')?.value.trim();
+            if (!payload.accountName) {
+                window.showToast('Please enter account name');
+                return;
+            }
+        }
+
+        const is2fa = document.getElementById('selItem2FA')?.checked;
+        payload.is2fa = is2fa;
+        if (is2fa) {
+            const authCode = document.getElementById('sel2FAAuthCode')?.value.trim();
+            const backupCode = document.getElementById('sel2FABackupCode')?.value.trim();
+            const appCode = document.getElementById('sel2FAAppCode')?.value.trim();
+            if (!authCode || !backupCode) {
+                window.showToast('Please fill in Authenticator Code and Backup Code');
+                return;
+            }
+            payload.twoFA = { authCode, backupCode, appCode };
+        }
     }
 
     try {
         const res = await fetch('/api/user/item-sales/submit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId, itemType, email, password, note, is2fa })
+            body: JSON.stringify(payload)
         });
         const data = await res.json();
-        
+
         if (data.success) {
             window.showToast('✅ ' + data.message);
             resetSellCategory();
@@ -4198,36 +5468,83 @@ async function loadMySales() {
         const data = await res.json();
         const list = document.getElementById('mySalesList');
         const empty = document.getElementById('noSalesPlaceholder');
-        
+
         if (data.items && data.items.length > 0) {
             if (empty) empty.style.display = 'none';
             if (list) {
                 list.innerHTML = data.items.map(item => {
                     let statusColor = '#f59e0b';
                     let statusText = 'PENDING';
-                    if (item.status === 'approved') {
+                    let statusMessage = '⏳ Waiting for a buyer...';
+
+                    if (item.status === 'pending') {
+                        statusColor = '#f59e0b';
+                        statusText = 'UNDER REVIEW';
+                        statusMessage = '⏳ Admin is reviewing your item...';
+                    }
+                    else if (item.status === 'approved') {
                         statusColor = '#10b981';
-                        statusText = 'VERIFIED';
-                    } else if (item.status === 'rejected') {
+                        statusText = 'LISTED';
+                        statusMessage = `💰 You will receive ${item.rewardOffer || 0} ${item.rewardCurrency || 'Tokens'} after sale`;
+                    }
+                    else if (item.status === 'sold') {
+                        statusColor = '#3b82f6';
+                        statusText = 'SOLD ✓';
+                        statusMessage = `✅ Payment of ${item.rewardOffer || 0} ${item.rewardCurrency || 'Tokens'} received!`;
+                    }
+                    else if (item.status === 'rejected') {
                         statusColor = '#ef4444';
                         statusText = 'REJECTED';
+                        statusMessage = '❌ Item was not approved';
+                    }
+                    else if (item.status === 'offer_sent') {
+                        statusColor = '#8b5cf6';
+                        statusText = 'COUNTER OFFER';
+                        statusMessage = '💬 Admin sent a price offer';
+                    }
+
+                    const displayName = item.customName || item.serviceName || item.itemType;
+
+                    let offerBlock = '';
+                    if (item.status === 'offer_sent') {
+                        offerBlock = `
+                            <div style="background:rgba(139,92,246,0.1); border:1px solid rgba(139,92,246,0.2); border-radius:12px; padding:12px; margin-top:12px;">
+                                <div style="font-size:12px; color:#c4b5fd; font-weight:700; margin-bottom:8px;">
+                                    Admin offered: <span style="font-size:16px; color:#8b5cf6; font-weight:900;">${item.rewardOffer || 0} ${item.rewardCurrency || 'Tokens'}</span>
+                                </div>
+                                <div style="font-size:11px; color:#a78bfa; margin-bottom:12px;">
+                                    💡 Tip: You will only get paid AFTER your item sells to a buyer
+                                </div>
+                                <div style="display:flex; gap:8px;">
+                                    <button onclick="respondToOffer('${item.id}', 'accept')" style="flex:1; padding:8px; border-radius:10px; border:none; background:#10b981; color:#fff; font-weight:800; cursor:pointer; font-size:12px;">ACCEPT</button>
+                                    <button onclick="respondToOffer('${item.id}', 'reject')" style="flex:1; padding:8px; border-radius:10px; border:none; background:rgba(239,68,68,0.2); color:#ef4444; border:1px solid rgba(239,68,68,0.5); font-weight:800; cursor:pointer; font-size:12px;">REJECT</button>
+                                </div>
+                            </div>
+                        `;
                     }
 
                     return `
-                    <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:18px; padding:18px; border-left:5px solid ${statusColor}; position:relative; overflow:hidden;">
-                        <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:12px;">
+                    <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:18px; padding:18px; border-left:5px solid ${statusColor}; position:relative; overflow:hidden; margin-bottom:12px;">
+                        <div style="display:flex; justify-content:space-between; align-items:start;">
                             <div>
                                 <div style="font-size:16px; font-weight:900; color:#fff; display:flex; align-items:center; gap:8px;">
-                                    ${item.itemType}
+                                    ${displayName}
                                     ${item.is2fa ? '<span style="font-size:10px; color:#10b981; background:rgba(16,185,129,0.1); padding:2px 6px; border-radius:6px; border:1px solid rgba(16,185,129,0.2);">2FA</span>' : ''}
+                                    ${item.twoFA?.appCode ? '<span style="font-size:10px; color:#eab308; background:rgba(234,179,8,0.1); padding:2px 6px; border-radius:6px; border:1px solid rgba(234,179,8,0.2);">APP</span>' : ''}
                                 </div>
-                                <div style="font-size:13px; color:var(--text-sub); margin-top:2px; font-family:monospace;">${item.email}</div>
+                                <div style="font-size:13px; color:var(--text-sub); margin-top:2px; font-family:monospace;">${item.email || item.apiKey?.slice(0, 12) + '...' || ''}</div>
                             </div>
-                            <div style="font-size:10px; font-weight:900; padding:4px 10px; border-radius:10px; background:rgba(0,0,0,0.4); color:${statusColor}; border:1px solid ${statusColor}44; text-transform:uppercase; letter-spacing:0.5px;">
+                            <div style="font-size:10px; font-weight:900; padding:4px 10px; border-radius:10px; background:rgba(0,0,0,0.4); color:${statusColor}; border:1px solid ${statusColor}44; text-transform:uppercase;">
                                 ${statusText}
                             </div>
                         </div>
-                        ${item.note ? `<div style="font-size:11px; color:#888; background:rgba(0,0,0,0.2); padding:10px; border-radius:10px; border:1px solid var(--border-color);">Note: ${item.note}</div>` : ''}
+                        
+                        <div style="font-size:12px; color:var(--text-sub); margin-top:12px; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px;">
+                            ${statusMessage}
+                        </div>
+                        
+                        ${offerBlock}
+                        
                         <div style="font-size:10px; color:var(--text-muted); margin-top:12px; display:flex; justify-content:space-between; align-items:center;">
                             <span>${new Date(item.createdAt).toLocaleDateString()}</span>
                             <span>ID: ${item.id.slice(-6).toUpperCase()}</span>
@@ -4245,6 +5562,22 @@ async function loadMySales() {
     }
 }
 
+async function respondToOffer(saleId, action) {
+    try {
+        const res = await fetch('/api/user/item-sales/offer-action', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ saleId, action, userId: userData.id })
+        });
+        const data = await res.json();
+        window.showToast(data.success ? '✅ ' + data.message : '❌ ' + data.message);
+        loadMySales();
+    } catch (e) {
+        console.error(e);
+        window.showToast('❌ Error responding to offer');
+    }
+}
+
 // Initial fetch
 fetchSellingRewards();
 
@@ -4253,60 +5586,144 @@ window.resetSellCategory = resetSellCategory;
 window.updateSellRewardPreview = updateSellRewardPreview;
 window.submitItemForSale = submitItemForSale;
 window.loadMySales = loadMySales;
+window.toggle2FAFields = toggle2FAFields;
+window.previewCustomIcon = previewCustomIcon;
+window.respondToOffer = respondToOffer;
+
+function selectCardType(type) {
+    const types = ['visa', 'mastercard', 'amex'];
+    types.forEach(t => {
+        const idMap = { 'visa': 'Visa', 'mastercard': 'MC', 'amex': 'Amex' };
+        const el = document.getElementById('cardType' + idMap[t]);
+        if (el) {
+            if (t === type) {
+                el.style.borderColor = '#8b5cf6';
+                el.style.background = 'rgba(139,92,246,0.2)';
+                el.style.color = '#fff';
+            } else {
+                el.style.borderColor = 'var(--border-color)';
+                el.style.background = 'rgba(0,0,0,0.2)';
+                el.style.color = 'var(--text-sub)';
+            }
+        }
+    });
+}
+window.selectCardType = selectCardType;
+
+function switchPremiumTab(tabStr) {
+    const tabs = ['vpn', 'account'];
+    tabs.forEach(t => {
+        const btn = document.getElementById('ptab-' + t);
+        const content = document.getElementById('premiumTab-' + t);
+        if (btn && content) {
+            if (t === tabStr) {
+                btn.style.background = 'var(--accent-color)';
+                btn.style.color = '#000';
+                content.style.display = 'block';
+            } else {
+                btn.style.background = 'transparent';
+                btn.style.color = 'var(--text-sub)';
+                content.style.display = 'none';
+            }
+        }
+    });
+}
+window.switchPremiumTab = switchPremiumTab;
 
 
 // =============================================
 // QUIZ SYSTEM
 // =============================================
+// Utility for cooldowns
+function isActionOnCooldown(key, seconds) {
+    const last = localStorage.getItem('cooldown_' + key);
+    if (!last) return false;
+    const now = Date.now();
+    const diff = (now - parseInt(last, 10)) / 1000;
+    if (diff < seconds) {
+        const remaining = Math.ceil(seconds - diff);
+        window.showToast(`⏱️ Please wait ${remaining}s...`);
+        return true;
+    }
+    return false;
+}
+
+function setActionCooldown(key) {
+    localStorage.setItem('cooldown_' + key, Date.now().toString());
+}
+
 let currentQuiz = null;
 
 function startQuizFlow() {
+    // ALLOW DEMO USER (999999) for testing as requested
+    if (!userData || !userData.id) {
+        window.showToast('User not initialized');
+        return;
+    }
+    if (isActionOnCooldown('quiz', 5)) return;
+
+    // Set immediate cooldown to prevent double clicks
+    localStorage.setItem('cooldown_quiz', Date.now());
+
+    window.showToast("🎬 Preparing Quiz...");
     showAdAndEarn('quiz_direct');
-    // The claimAdReward will handle the navigation to quizPage
 }
 
-function loadQuiz() {
-    const questions = [
-        { q: "What is the capital of France?", a: ["Paris", "London", "Berlin", "Rome"], c: 0 },
-        { q: "Which planet is known as the Red Planet?", a: ["Venus", "Mars", "Jupiter", "Saturn"], c: 1 },
-        { q: "What is 5 + 7?", a: ["10", "11", "12", "13"], c: 2 },
-        { q: "Who wrote 'Romeo and Juliet'?", a: ["Charles Dickens", "William Shakespeare", "Mark Twain", "Leo Tolstoy"], c: 1 },
-        { q: "What is the largest ocean on Earth?", a: ["Atlantic", "Indian", "Arctic", "Pacific"], c: 3 },
-        { q: "Which gas do plants absorb from the atmosphere?", a: ["Oxygen", "Carbon Dioxide", "Nitrogen", "Hydrogen"], c: 1 },
-        { q: "How many continents are there?", a: ["5", "6", "7", "8"], c: 2 },
-        { q: "What is the chemical symbol for water?", a: ["W", "H2O", "O2", "HO"], c: 1 }
-    ];
-    
-    currentQuiz = questions[Math.floor(Math.random() * questions.length)];
-    
+async function loadQuiz() {
     const qEl = document.getElementById('quizQuestion');
     const oEl = document.getElementById('quizOptions');
     if (!qEl || !oEl) return;
-    
-    qEl.textContent = currentQuiz.q;
+
+    qEl.textContent = '🧠 Generating dynamic question...';
     oEl.innerHTML = '';
-    
-    currentQuiz.a.forEach((opt, idx) => {
-        const btn = document.createElement('button');
-        btn.className = 'gv-btn';
-        btn.style.background = 'rgba(255,255,255,0.05)';
-        btn.style.border = '1px solid rgba(255,255,255,0.1)';
-        btn.style.color = '#fff';
-        btn.style.marginTop = '0';
-        btn.textContent = opt;
-        btn.onclick = () => submitQuizAnswer(idx);
-        oEl.appendChild(btn);
-    });
+
+    try {
+        const res = await fetch('/api/quiz/generate');
+        const data = await res.json();
+
+        if (data.success) {
+            currentQuiz = {
+                q: data.question,
+                a: data.options,
+                c: data.correctIndex
+            };
+
+            qEl.textContent = currentQuiz.q;
+            oEl.innerHTML = '';
+
+            currentQuiz.a.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'gv-btn';
+                btn.style.background = 'rgba(255,255,255,0.05)';
+                btn.style.border = '1px solid rgba(255,255,255,0.1)';
+                btn.style.color = '#fff';
+                btn.style.marginTop = '0';
+                btn.textContent = opt;
+                btn.onclick = () => submitQuizAnswer(idx);
+                oEl.appendChild(btn);
+            });
+        } else {
+            window.showToast('Failed to load quiz');
+        }
+    } catch (e) {
+        window.showToast('Network error loading quiz');
+    }
 }
 
 async function submitQuizAnswer(idx) {
     const isCorrect = idx === currentQuiz.c;
     const reward = isCorrect ? 10 : 5;
-    
+
     if (tg.HapticFeedback) {
         tg.HapticFeedback.notificationOccurred(isCorrect ? 'success' : 'error');
     }
-    
+
+    // ADD DELAY AS REQUESTED (2 SECONDS WAIT)
+    window.showToast(isCorrect ? 'Checking answer...' : 'Processing reward...');
+    await new Promise(r => setTimeout(r, 2000));
+
+    setActionCooldown('quiz');
+
     try {
         const res = await fetch('/api/quiz/submit', {
             method: 'POST',
@@ -4314,13 +5731,14 @@ async function submitQuizAnswer(idx) {
             body: JSON.stringify({ userId: userData.id, correct: isCorrect, reward })
         });
         const data = await res.json();
-        
+
         if (data.success) {
             if (isCorrect && window.confetti) confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-            
+
             window.showToast(isCorrect ? `✅ CORRECT! +10 Tokens` : `❌ WRONG! +5 Tokens for trying.`);
             userData.tokens = data.newBalance;
             renderBalances();
+            loadRecentActivity(); // Refresh history after quiz
             nav('home');
         } else {
             window.showToast(data.message || 'Error submitting answer');
@@ -4333,13 +5751,13 @@ async function submitQuizAnswer(idx) {
 async function renderQuizLeaderboard() {
     const list = document.getElementById('quizLeaderboardList');
     if (!list) return;
-    
+
     list.innerHTML = '<div style="padding:40px; text-align:center; color:#888;">Loading...</div>';
-    
+
     try {
         const res = await fetch('/api/quiz/leaderboard');
         const data = await res.json();
-        
+
         if (data.success && data.leaderboard) {
             list.innerHTML = '';
             data.leaderboard.forEach((item, idx) => {
@@ -4348,9 +5766,9 @@ async function renderQuizLeaderboard() {
                 row.style.alignItems = 'center';
                 row.style.padding = '16px';
                 row.style.borderBottom = '1px solid var(--border-color)';
-                
+
                 const rankColor = idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#888';
-                
+
                 row.innerHTML = `
                     <div style="width:30px; font-weight:900; color:${rankColor};">#${idx + 1}</div>
                     <div style="width:40px; height:40px; border-radius:50%; background:rgba(255,255,255,0.05); margin:0 12px; overflow:hidden;">
@@ -4381,68 +5799,73 @@ function initScratchCard() {
     const resultDiv = document.getElementById('scratchResult');
     const valueEl = document.getElementById('scratchValue');
     const newBtn = document.getElementById('newScratchBtn');
-    
+
     if (!canvas) return;
-    
+
     // Reset state
     isScratchActive = true;
     newBtn.style.display = 'none';
-    
+    canvas.style.display = 'block'; // Ensure canvas is visible
+    canvas.style.opacity = '1'; // Ensure canvas is opaque
+
     // Set random reward
     const rewards = [1, 1, 1, 5, 5, 10];
     const reward = rewards[Math.floor(Math.random() * rewards.length)];
     valueEl.textContent = reward;
-    
+
     // Fill with cover
     ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = '#C0C0C0'; // Silver
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
+
     // Add texture
     ctx.fillStyle = '#A0A0A0';
-    for(let i=0; i<100; i++) {
-        ctx.fillRect(Math.random()*canvas.width, Math.random()*canvas.height, 2, 2);
+    for (let i = 0; i < 100; i++) {
+        ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 2, 2);
     }
-    
+
     ctx.font = 'bold 24px Arial';
     ctx.fillStyle = '#888';
     ctx.textAlign = 'center';
-    ctx.fillText('SCRATCH HERE', canvas.width/2, canvas.height/2 + 10);
+    ctx.fillText('SCRATCH HERE', canvas.width / 2, canvas.height / 2 + 10);
 
     let isDrawing = false;
-    
+
     function scratch(e) {
-        if (!isDrawing) return;
-        
+        if (!isDrawing || !isScratchActive) return; // Only scratch if active
+
         const rect = canvas.getBoundingClientRect();
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
-        
+
         const x = ((e.clientX || e.touches[0].clientX) - rect.left) * scaleX;
         const y = ((e.clientY || e.touches[0].clientY) - rect.top) * scaleY;
-        
+
         ctx.globalCompositeOperation = 'destination-out';
         ctx.beginPath();
         ctx.arc(x, y, 20, 0, Math.PI * 2);
         ctx.fill();
-        
+
         checkScratchPercentage();
     }
-    
+
     function checkScratchPercentage() {
         if (!isScratchActive) return;
-        
+
         const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
         let transparent = 0;
         for (let i = 0; i < pixels.length; i += 4) {
             if (pixels[i + 3] === 0) transparent++;
         }
-        
-        if (transparent / (canvas.width * canvas.height) > 0.4) {
-            revealScratch(reward);
+
+        const percent = (transparent / (canvas.width * canvas.height)) * 100;
+
+        if (percent > 65) { // If more than 65% scratched
+            isScratchActive = false; // Deactivate scratching
+            claimScratchReward(reward); // Call the new claim function
         }
     }
-    
+
     canvas.onmousedown = (e) => { isDrawing = true; scratch(e); };
     canvas.ontouchstart = (e) => { isDrawing = true; scratch(e); };
     window.onmouseup = () => { isDrawing = false; };
@@ -4451,19 +5874,22 @@ function initScratchCard() {
     canvas.ontouchmove = scratch;
 }
 
-async function revealScratch(reward) {
-    if (!isScratchActive) return;
-    isScratchActive = false;
-    
+async function claimScratchReward(reward) {
+    // 2s delay
+    window.showToast('Claiming scratch reward...');
+    await new Promise(r => setTimeout(r, 2000));
+
+    setActionCooldown('scratch'); // Apply cooldown after delay
+
     const canvas = document.getElementById('scratchCanvas');
     const newBtn = document.getElementById('newScratchBtn');
     canvas.style.opacity = '0';
     setTimeout(() => { canvas.style.display = 'none'; }, 500);
     newBtn.style.display = 'block';
-    
+
     if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
     if (window.confetti) confetti({ particleCount: 50, spread: 50 });
-    
+
     try {
         const res = await fetch('/api/scratch/claim', {
             method: 'POST',
@@ -4475,13 +5901,18 @@ async function revealScratch(reward) {
             window.showToast(`🎁 You won ${reward} tokens!`);
             userData.tokens = data.newBalance;
             renderBalances();
+        } else {
+            window.showToast(data.message || 'Error claiming scratch reward.');
         }
-    } catch (e) { }
+    } catch (e) {
+        window.showToast('Network error claiming scratch reward.');
+    }
 }
 
 // Export new functions
 window.startQuizFlow = startQuizFlow;
 function startScratchFlow() {
+    if (isActionOnCooldown('scratch', 5)) return; // Check cooldown before showing ad
     showAdAndEarn('scratch_ad');
 }
 window.startScratchFlow = startScratchFlow;

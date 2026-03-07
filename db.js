@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const DB_FILE = path.join(__dirname, 'database.json');
+const BACKUP_DIR = path.join(__dirname, 'backups');
 
 // Default initial data
 const defaultData = {
@@ -208,7 +209,7 @@ class Database {
 
         this.ready = true;
 
-        // 4. Safety Cleanup: Move Local File to Backups instead of deleting
+        // 4. Safety Cleanup: Move Local File to Backups (NOT deleting, keeping as cache)
         if (fs.existsSync(DB_FILE)) {
             try {
                 const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -217,27 +218,19 @@ class Database {
 
                 if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
 
-                // Copy to backup first
+                // Copy to backup for extra safety
                 fs.copyFileSync(DB_FILE, backupPath);
-                // Then remove original (only after successful copy)
-                fs.unlinkSync(DB_FILE);
 
-                console.log(`📦 Local database migrated and moved to: ${backupPath}`);
+                console.log(`📦 Local database backup created at: ${backupPath}`);
             } catch (err) {
-                console.error("❌ Failed to move local database to backups:", err.message);
+                console.error("❌ Failed to create local backup:", err.message);
             }
         }
     }
 
     deleteLocalBackup() {
-        if (fs.existsSync(DB_FILE)) {
-            try {
-                fs.unlinkSync(DB_FILE);
-                console.log("🗑️ Legacy Local Backup DELETED (Migrated to Firebase).");
-            } catch (e) {
-                console.error("❌ Failed to delete legacy backup:", e.message);
-            }
-        }
+        // Disabling local data deletion for safety.
+        console.log("ℹ️ Local backup deletion skipped (kept for persistence safety).");
     }
 
     async save() {
@@ -248,16 +241,8 @@ class Database {
             try {
                 await firebaseManager.setData(this.data);
 
-                // If we successfully saved to Firebase, we can clear the local "offline backup"
-                // This keeps the local storage clean and light as requested by the user.
-                if (fs.existsSync(DB_FILE)) {
-                    try {
-                        fs.unlinkSync(DB_FILE);
-                        console.log("🧹 Firebase Synced: Local cache cleared to save storage.");
-                    } catch (err) {
-                        // Silent fail for unlink
-                    }
-                }
+                // Keep the local cache for reliability, don't unlink it.
+                this.saveLocalBackup();
             } catch (e) {
                 console.error("Firebase Sync Error:", e.message);
                 this.saveLocalBackup();
@@ -321,9 +306,34 @@ class Database {
                 language: 'en',  // Default language
                 lastActive: Date.now(), // New: Activity tracking
                 dailyStreak: 0,
-                lastDaily: 0
+                lastDaily: 0,
+                usd: 0.00, // New: Dollar balance
+                history: [
+                    {
+                        type: 'bonus',
+                        amount: welcomeCredits,
+                        reward: `+${welcomeCredits} Tokens`,
+                        date: Date.now(),
+                        detail: 'Welcome Bonus'
+                    }
+                ]
             };
             this.save();
+        } else {
+            // Migration for existing users without history
+            if (!this.data.users[id].history || this.data.users[id].history.length === 0) {
+                const welcome = this.getWelcomeCredits() || 100;
+                this.data.users[id].history = [
+                    {
+                        type: 'bonus',
+                        amount: welcome,
+                        reward: `+${welcome} Tokens`,
+                        date: Date.now(),
+                        detail: 'Welcome Bonus'
+                    }
+                ];
+                this.save();
+            }
         }
         return this.data.users[id];
     }
@@ -353,6 +363,39 @@ class Database {
 
     getGroups() {
         return Object.values(this.data.groups || {});
+    }
+
+    // Group Settings Management
+    getGroupSettings(chatId) {
+        if (!this.data.groupSettings) this.data.groupSettings = {};
+        const id = chatId.toString();
+
+        // Return default settings if not exists
+        if (!this.data.groupSettings[id]) {
+            return {
+                autoDeleteServiceMessages: false,
+                deleteDelay: 3, // seconds
+                deleteJoinMessages: true,
+                deleteLeaveMessages: true,
+                deletePinMessages: false
+            };
+        }
+
+        return this.data.groupSettings[id];
+    }
+
+    updateGroupSettings(chatId, settings) {
+        if (!this.data.groupSettings) this.data.groupSettings = {};
+        const id = chatId.toString();
+
+        this.data.groupSettings[id] = {
+            ...this.getGroupSettings(chatId),
+            ...settings,
+            updatedAt: Date.now()
+        };
+
+        this.save();
+        return true;
     }
 
     updateUser(userOrId, updates = null) {
@@ -395,7 +438,8 @@ class Database {
                 failedVerifications: 0,
                 cardsPurchased: 0,
                 blocked: false,
-                language: 'en'
+                language: 'en',
+                usd: 0.00
             };
         }
 
@@ -431,15 +475,19 @@ class Database {
         user.balance = val;
     }
 
-    addCredit(userId, amount) {
+    addCredit(userId, amount, currency = 'Tokens') {
         const user = this.getUser(userId);
         if (!user) return 0;
 
-        const current = this.getTokenBalance(user);
-        this.setTokenBalance(user, current + amount);
+        if (currency === 'USD' || currency === 'Dollars' || currency === 'usd') {
+            user.usd = parseFloat(((user.usd || 0) + parseFloat(amount)).toFixed(2));
+        } else {
+            const current = this.getTokenBalance(user);
+            this.setTokenBalance(user, current + parseInt(amount));
+        }
 
         this.save();
-        return user.tokens;
+        return (currency === 'USD' || currency === 'usd') ? user.usd : user.tokens;
     }
 
     setLanguage(userId, lang) {
@@ -814,6 +862,23 @@ class Database {
         };
 
         this.data.transactions.unshift(transaction); // Add to beginning
+
+        // ALSO add to user's specific history for the web panel
+        const user = this.getUser(userId);
+        if (user) {
+            if (!user.history) user.history = [];
+            user.history.unshift({
+                type: type === 'bonus' ? 'ad_reward' : (type === 'service' ? 'account_purchase' : type),
+                amount: amount,
+                reward: (amount > 0 ? '+' : '') + amount + ' ' + (currency || 'Tokens'),
+                date: Date.now(),
+                detail: title
+            });
+            // Keep user history from growing too large
+            if (user.history.length > 100) {
+                user.history = user.history.slice(0, 100);
+            }
+        }
 
         // Limit history size per user or globally to prevent bloat (keep last 1000 globally)
         if (this.data.transactions.length > 1000) {
@@ -1795,6 +1860,16 @@ class Database {
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         const prefix = auto ? 'auto_backup_' : 'backup_';
         const backupFile = path.join(backupDir, `${prefix}${timestamp}.json`);
+
+        // Retention: Delete all existing .json files in backup folder before creating new one
+        try {
+            const files = fs.readdirSync(backupDir).filter(f => f.endsWith('.json'));
+            for (const file of files) {
+                fs.unlinkSync(path.join(backupDir, file));
+            }
+        } catch (e) {
+            console.error('Backup cleanup error:', e.message);
+        }
 
         fs.writeFileSync(backupFile, JSON.stringify(this.data, null, 2));
         return backupFile;

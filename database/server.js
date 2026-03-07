@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
 const oauth = require('../oauth');
+const { OpenAI } = require('openai');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -12,32 +13,46 @@ app.use(bodyParser.json({ limit: '10mb' }));
 const db = require('../db');
 const config = require('../config');
 const os = require('os');
+const openai = new OpenAI({ apiKey: config.OPENAI_API_KEY });
 
 let bot = null;
+let backupBot = null;
 let totalCallbacks = 0;
+
+function getBackupBot() {
+    if (!backupBot && config.BACKUP_BOT_TOKEN) {
+        try {
+            const TelegramBot = require('node-telegram-bot-api');
+            backupBot = new TelegramBot(config.BACKUP_BOT_TOKEN, { polling: false });
+        } catch (e) {
+            console.error('❌ Failed to initialize Backup Bot:', e.message);
+        }
+    }
+    return backupBot;
+}
 
 function setBot(instance) {
     bot = instance;
 
-    // The Netlify URL is the public-facing Mini App URL
-    const NETLIFY_URL = 'https://mamunislam.netlify.app';
+    // The Public URL is the public-facing Mini App URL
+    const publicUrl = config.PUBLIC_URL || 'https://mamunislam.netlify.app';
 
     setTimeout(async () => {
         try {
-            // Keep PUBLIC_URL and MINI_APP_URL as the Netlify URL
-            config.PUBLIC_URL = NETLIFY_URL;
-            config.MINI_APP_URL = NETLIFY_URL;
-            process.env.PUBLIC_URL = NETLIFY_URL;
+            // Sync environment variables and config
+            config.PUBLIC_URL = publicUrl;
+            config.MINI_APP_URL = publicUrl;
+            process.env.PUBLIC_URL = publicUrl;
 
-            // Set the Web App Menu Button to the NETLIFY URL
+            // Set the Web App Menu Button to the Public URL
             await bot.setChatMenuButton({
                 menu_button: {
                     type: 'web_app',
                     text: 'Launch Bot',
-                    web_app: { url: NETLIFY_URL }
+                    web_app: { url: publicUrl }
                 }
             });
-            console.log(`✅ [MINI APP] Telegram Menu Button set to: ${NETLIFY_URL}`);
+            console.log(`✅ [MINI APP] Telegram Menu Button set to: ${publicUrl}`);
         } catch (e) {
             console.error('❌ Failed to set Telegram Menu Button:', e.message);
         }
@@ -143,11 +158,12 @@ function _ensureAdminSettings() {
     if (!db.data.adminSettings.dbAutoBackup) {
         db.data.adminSettings.dbAutoBackup = {
             enabled: false,
-            intervalHours: 6,
-            dailyTime: '',
-            keep: 30,
+            backupDays: 1,
+            backupTime: '06:00',
+            keep: 1, // New: Always keep only the latest backup
             lastBackupAt: 0,
-            lastBackupFile: ''
+            lastBackupFile: '',
+            nextBackupAt: 0
         };
         db.save();
     }
@@ -167,20 +183,32 @@ function _parseDailyTimeToMs(dailyTime) {
 function _computeNextBackupAt(schedule) {
     const now = Date.now();
     const last = schedule.lastBackupAt || 0;
-    const intervalHours = Math.max(1, parseInt(schedule.intervalHours || 6));
+    const backupDays = Math.max(1, parseInt(schedule.backupDays || 1));
+    const backupTime = schedule.backupTime || '06:00';
 
-    const daily = _parseDailyTimeToMs(schedule.dailyTime);
-    if (daily) {
-        const d = new Date();
-        d.setSeconds(0, 0);
-        d.setHours(daily.hh, daily.mm, 0, 0);
-        let t = d.getTime();
-        if (t <= now) t += 24 * 60 * 60 * 1000;
-        return t;
+    // Parse time (HH:MM format)
+    const timeMatch = backupTime.match(/^(\d{1,2}):(\d{2})$/);
+    if (!timeMatch) {
+        // Invalid time format, default to 06:00
+        return now + backupDays * 24 * 60 * 60 * 1000;
     }
 
-    if (!last) return now + intervalHours * 60 * 60 * 1000;
-    return last + intervalHours * 60 * 60 * 1000;
+    const hh = parseInt(timeMatch[1], 10);
+    const mm = parseInt(timeMatch[2], 10);
+    if (isNaN(hh) || isNaN(mm) || hh < 0 || hh > 23 || mm < 0 || mm > 59) {
+        return now + backupDays * 24 * 60 * 60 * 1000;
+    }
+
+    // Calculate next backup time
+    const nextBackup = new Date();
+    nextBackup.setHours(hh, mm, 0, 0);
+
+    // If the time has already passed today, move to the next occurrence
+    if (nextBackup.getTime() <= now) {
+        nextBackup.setDate(nextBackup.getDate() + backupDays);
+    }
+
+    return nextBackup.getTime();
 }
 
 function _getBackupsDir() {
@@ -224,7 +252,7 @@ async function _runBackup(reason = 'auto') {
     db.save();
 
     // Trim old backups
-    const keep = Math.max(1, parseInt(schedule.keep || 30));
+    const keep = Math.max(1, parseInt(schedule.keep || 1));
     const files = _listBackupFiles();
     if (files.length > keep) {
         files.slice(keep).forEach(f => {
@@ -232,17 +260,26 @@ async function _runBackup(reason = 'auto') {
         });
     }
 
-    // Optional: send to Telegram admin
-    const adminId = process.env.ADMIN_ID;
-    if (bot && adminId) {
+    // Unified Telegram Backup via Backup Bot
+    const bBot = getBackupBot();
+    const backupTarget = config.BACKUP_CHAT_ID || config.ADMIN_ID;
+    if (bBot && backupTarget) {
         try {
-            await bot.sendDocument(adminId, fullPath, {
-                caption: `📦 <b>Database Backup</b> (${reason})\n\nFile: <code>${fileName}</code>`,
+            const fileStream = fs.createReadStream(fullPath);
+            await bBot.sendDocument(backupTarget, fileStream, {
+                caption: `📦 <b>Database Backup</b> (${reason.toUpperCase()})\n\n` +
+                    `📅 <b>Date:</b> ${new Date().toLocaleDateString()}\n` +
+                    `⏰ <b>Time:</b> ${new Date().toLocaleTimeString()}\n` +
+                    `📄 <b>File:</b> <code>${fileName}</code>\n\n` +
+                    `_Sent via Backup Service_`,
                 parse_mode: 'HTML'
             });
+            console.log(`✅ Backup sent to Telegram via Backup Bot: ${fileName}`);
         } catch (e) {
-            console.error('Auto backup sendDocument error:', e.message);
+            console.error('❌ Backup Bot sendDocument error:', e.message);
         }
+    } else {
+        console.warn('⚠️ Backup Telegram send skipped: Backup Bot or Target ID missing.');
     }
 
     // NEW: Cloud Backup (Google Drive)
@@ -262,13 +299,13 @@ async function _runBackup(reason = 'auto') {
 // API: Get DB Auto Backup Schedule
 app.get('/api/admin/db/schedule', (req, res) => {
     const schedule = _ensureAdminSettings();
-    const nextBackupAt = _computeNextBackupAt(schedule);
+    const nextBackupAt = schedule.nextBackupAt || _computeNextBackupAt(schedule);
     res.json({
         success: true,
         schedule: {
             enabled: schedule.enabled === true,
-            intervalHours: schedule.intervalHours || 6,
-            dailyTime: schedule.dailyTime || '',
+            backupDays: schedule.backupDays || 1,
+            backupTime: schedule.backupTime || '06:00',
             keep: schedule.keep || 30
         },
         lastBackupAt: schedule.lastBackupAt || 0,
@@ -282,14 +319,15 @@ app.post('/api/admin/db/schedule', (req, res) => {
     try {
         const schedule = _ensureAdminSettings();
         const enabled = req.body.enabled === true;
-        const intervalHours = Math.max(1, parseInt(req.body.intervalHours || schedule.intervalHours || 6));
-        const dailyTime = (req.body.dailyTime || '').trim();
+        const backupDays = Math.max(1, parseInt(req.body.backupDays || schedule.backupDays || 1));
+        const backupTime = (req.body.backupTime || '06:00').trim();
         const keep = Math.max(1, parseInt(req.body.keep || schedule.keep || 30));
 
         schedule.enabled = enabled;
-        schedule.intervalHours = intervalHours;
-        schedule.dailyTime = dailyTime;
+        schedule.backupDays = backupDays;
+        schedule.backupTime = backupTime;
         schedule.keep = keep;
+        schedule.nextBackupAt = _computeNextBackupAt(schedule);
         db.data.adminSettings.dbAutoBackup = schedule;
         db.save();
 
@@ -456,14 +494,43 @@ function _cleanupUploads() {
     }
 }
 
+function _cleanupItemSales() {
+    if (!db.data.itemSales) return;
+    const now = Date.now();
+    const twentyFourHoursAgo = now - (24 * 60 * 60 * 1000);
+    let removed = 0;
+    const keys = Object.keys(db.data.itemSales);
+    keys.forEach(id => {
+        const sale = db.data.itemSales[id];
+        if ((sale.status === 'sold' || sale.status === 'rejected') && sale.updatedAt < twentyFourHoursAgo) {
+            delete db.data.itemSales[id];
+            removed++;
+        }
+    });
+    if (removed > 0) {
+        console.log(`[CLEANUP] Deleted ${removed} sold/rejected item sales (older than 24h)`);
+        db.save();
+    }
+}
+
 // Timer: check every minute
 setInterval(async () => {
     try {
         const schedule = _ensureAdminSettings();
         if (!schedule.enabled) return;
-        const nextAt = _computeNextBackupAt(schedule);
-        if (Date.now() >= nextAt) {
+        // Persist nextBackupAt to avoid multiple triggers when server is busy
+        if (!schedule.nextBackupAt || schedule.nextBackupAt < Date.now() - (60 * 60 * 1000)) {
+            schedule.nextBackupAt = _computeNextBackupAt(schedule);
+            db.data.adminSettings.dbAutoBackup = schedule;
+            db.save();
+        }
+
+        if (Date.now() >= schedule.nextBackupAt) {
             await _runBackup('auto');
+            // Recompute after backup
+            schedule.nextBackupAt = _computeNextBackupAt(schedule);
+            db.data.adminSettings.dbAutoBackup = schedule;
+            db.save();
         }
 
         // Also run user history cleanup once a day (at midnight-ish or just random check)
@@ -473,6 +540,7 @@ setInterval(async () => {
         if (!global._lastHistoryCleanupHour || global._lastHistoryCleanupHour !== h) {
             _cleanupUserHistory();
             _cleanupUploads(); // NEW: Periodic uploads cleanup
+            _cleanupItemSales(); // NEW: Daily item sales cleanup
             global._lastHistoryCleanupHour = h;
         }
     } catch (e) {
@@ -569,7 +637,8 @@ app.get('/api/user/:userId', (req, res) => {
         firstName: user.firstName || '',
         lastName: user.lastName || '',
         photo_url: user.photo_url || '',
-        tokens: user.balance_tokens !== undefined ? user.balance_tokens : (user.tokens || 0),
+        tokens: db.getTokenBalance(user),
+        balance_tokens: db.getTokenBalance(user),
         Gems: user.balance_Gems !== undefined ? user.balance_Gems : (user.Gems || 0),
         invites: user.referralCount || user.invites || 0,
         lastClaim: user.lastDaily || 0,
@@ -607,6 +676,18 @@ app.post('/api/register', (req, res) => {
         }
     }
 
+    // Migration/Fix: Ensure history exists and has welcome bonus if empty
+    if (!user.history || user.history.length === 0) {
+        const welcome = (typeof db.getWelcomeCredits === 'function') ? db.getWelcomeCredits() : 100;
+        user.history = [{
+            type: 'bonus',
+            amount: welcome,
+            reward: `+${welcome} Tokens`,
+            date: Date.now(),
+            detail: 'Welcome Bonus'
+        }];
+    }
+
     db.updateUser(user);
 
     // Always return the synced balance
@@ -634,25 +715,73 @@ app.post('/api/register', (req, res) => {
 // API: Get User History
 app.get('/api/history/:userId', (req, res) => {
     const userId = req.params.userId;
-    const user = db.getUser(userId);
+    let user = db.getUser(userId);
 
+    // If user missing from memory (unlikely if they just registered), return fixed default
     if (!user) {
-        return res.json({ success: false, history: [] });
+        const welcome = (typeof db.getWelcomeCredits === 'function') ? db.getWelcomeCredits() : 100;
+        return res.json({
+            success: true,
+            history: [{
+                type: 'bonus',
+                amount: welcome,
+                reward: `+${welcome} Tokens`,
+                date: Date.now(),
+                detail: 'Welcome Bonus'
+            }]
+        });
     }
 
     const history = user.history || [];
     res.json({ success: true, history: history });
 });
 
-// API: Quiz Submit
+// API: Generate Quiz with AI
+app.get('/api/quiz/generate', async (req, res) => {
+    try {
+        if (!config.OPENAI_API_KEY) {
+            // No key configured; use fallback question
+            return res.json({
+                success: true,
+                question: 'What is the capital of France?',
+                options: ['Berlin', 'Madrid', 'Paris', 'Rome'],
+                correctIndex: 2
+            });
+        }
+        const completion = await openai.chat.completions.create({
+            model: config.OPENAI_MODEL || "gpt-3.5-turbo",
+            messages: [
+                { role: "system", content: "You are a dynamic and engaging quiz master. Generate a fresh, unique, and medium-difficulty multiple choice question. It can be about science, history, movies, gaming, geography, or current technology. Ensure the question is interesting and not repetitive. Return ONLY a JSON object: { \"question\": \"text\", \"options\": [\"opt1\", \"opt2\", \"opt3\", \"opt4\"], \"correctIndex\": 0 }" }
+            ],
+            response_format: { type: "json_object" }
+        });
+
+        const data = JSON.parse(completion.choices[0].message.content);
+        res.json({ success: true, ...data });
+    } catch (e) {
+        console.error('AI Quiz Error:', e.message);
+        // Fallback question
+        res.json({
+            success: true,
+            question: "What is the capital of Japan?",
+            options: ["Tokyo", "Seoul", "Beijing", "Bangkok"],
+            correctIndex: 0
+        });
+    }
+});
+
+// API: Submit Quiz Answer
 app.post('/api/quiz/submit', (req, res) => {
-    const { userId, correct, reward } = req.body;
+    const { userId, correct } = req.body;
     const user = db.getUser(userId);
     if (!user) return res.json({ success: false, message: 'User not found' });
 
-    user.tokens = (user.tokens || user.balance_tokens || 0) + parseInt(reward);
-    if (user.balance_tokens !== undefined) user.balance_tokens = user.tokens;
-    
+    // 10 for correct, 5 for wrong as per user request
+    const amount = correct ? 10 : 5;
+    const isCorrect = correct; // Store this for history detail
+
+    db.setTokenBalance(user, db.getTokenBalance(user) + amount);
+
     if (correct) {
         user.quizCorrectCount = (user.quizCorrectCount || 0) + 1;
         user.quizPoints = (user.quizPoints || 0) + 10;
@@ -663,14 +792,75 @@ app.post('/api/quiz/submit', (req, res) => {
     if (!user.history) user.history = [];
     user.history.unshift({
         type: 'quiz_reward',
-        amount: parseInt(reward),
+        amount: amount,
         currency: 'tokens',
         date: Date.now(),
         detail: correct ? 'Quiz Correct' : 'Quiz Wrong'
     });
 
     db.updateUser(user);
-    res.json({ success: true, newBalance: user.tokens });
+    res.json({ success: true, newBalance: db.getTokenBalance(user) });
+});
+
+// API: Claim Ad Reward - STRICT VERSION
+app.post('/api/ad/claim', (req, res) => {
+    const { userId, context, adCompleted, watchDuration } = req.body;
+    const user = db.getUser(userId);
+    if (!user) return res.json({ success: false, message: 'User not found' });
+
+    // STRICT: Verify ad was actually completed
+    if (!adCompleted || !watchDuration) {
+        return res.json({ success: false, message: 'Ad not completed. Watch full ad to earn!' });
+    }
+
+    // STRICT: Minimum watch time verification (5 seconds = 5000ms)
+    const MIN_WATCH_TIME = 5000;
+    if (watchDuration < MIN_WATCH_TIME) {
+        return res.json({ success: false, message: `Watch time too short. Must watch at least ${MIN_WATCH_TIME / 1000} seconds!` });
+    }
+
+    let amount = 0;
+    let detail = 'Ad Reward';
+
+    if (context === 'watch_ad') {
+        amount = 5;
+        detail = 'Watched Ad';
+    } else if (context === 'quiz_direct' || context === 'scratch_ad' || context === 'scratch_retry') {
+        // Just unlocking, no tokens yet
+        return res.json({ success: true });
+    } else {
+        amount = 2; // Default
+    }
+
+    // STRICT: Check if user is trying to claim too frequently (anti-cheat)
+    const now = Date.now();
+    const lastClaim = user.lastAdClaim || 0;
+    const minClaimInterval = 25000; // 25 seconds minimum between claims
+
+    if (now - lastClaim < minClaimInterval) {
+        return res.json({ success: false, message: 'Claiming too fast. Please wait!' });
+    }
+
+    if (amount > 0) {
+        db.setTokenBalance(user, db.getTokenBalance(user) + amount);
+        if (!user.history) user.history = [];
+        user.history.unshift({
+            type: 'ad_reward',
+            amount: amount,
+            currency: 'tokens',
+            date: Date.now(),
+            detail: detail,
+            watchDuration: watchDuration // Store for verification
+        });
+
+        // Update last claim time (STRICT tracking)
+        user.lastAdClaim = now;
+        user.lastAdWatch = now;
+
+        db.updateUser(user);
+    }
+
+    res.json({ success: true, newBalance: db.getTokenBalance(user), reward: amount });
 });
 
 // API: Quiz Leaderboard
@@ -695,8 +885,7 @@ app.post('/api/scratch/claim', (req, res) => {
     const user = db.getUser(userId);
     if (!user) return res.json({ success: false, message: 'User not found' });
 
-    user.tokens = (user.tokens || user.balance_tokens || 0) + parseInt(reward);
-    if (user.balance_tokens !== undefined) user.balance_tokens = user.tokens;
+    db.setTokenBalance(user, db.getTokenBalance(user) + parseInt(reward));
 
     if (!user.history) user.history = [];
     user.history.unshift({
@@ -707,7 +896,7 @@ app.post('/api/scratch/claim', (req, res) => {
     });
 
     db.updateUser(user);
-    res.json({ success: true, newBalance: user.tokens });
+    res.json({ success: true, newBalance: db.getTokenBalance(user) });
 });
 
 // API: Earn Task Completion
@@ -735,9 +924,33 @@ app.post('/api/earn', async (req, res) => {
     // --- Special: watch_ad (repeatable daily) ---
     if (taskType === 'watch_ad') {
         const settings = db.data.settings || {};
-        const adReward = (req.body.context === 'zero_balance_trigger') ? 5 : (parseInt(settings.adReward) || 5);
+        const zeroBalanceReward = parseInt(settings.zeroBalanceAdReward);
+        const adReward = (req.body.context === 'zero_balance_trigger')
+            ? (Number.isFinite(zeroBalanceReward) ? zeroBalanceReward : 5)
+            : (parseInt(settings.adReward) || 5);
         const now = Date.now();
         const lastWatched = user.lastAdWatch || 0;
+
+        // STRICT: Verify ad completion data from frontend
+        const { adCompleted, watchDuration } = req.body;
+
+        if (!adCompleted || !watchDuration) {
+            return res.json({ success: false, message: 'Ad not completed! Watch full ad to earn tokens.' });
+        }
+
+        // STRICT: Minimum watch time check (5 seconds)
+        const MIN_WATCH_TIME = 5000;
+        if (watchDuration < MIN_WATCH_TIME) {
+            return res.json({ success: false, message: `Watch time too short! Watch at least ${MIN_WATCH_TIME / 1000} seconds.` });
+        }
+
+        // STRICT: Anti-cheat - check if claiming too fast
+        const lastClaim = user.lastAdClaim || 0;
+        const minClaimInterval = 25000; // 25 seconds
+        if (now - lastClaim < minClaimInterval) {
+            return res.json({ success: false, message: 'Claiming too fast! Please wait.' });
+        }
+
         const cooldownMs = 5 * 60 * 1000; // 5 minutes cooldown per ad
 
         // Bypass cooldown for zero balance trigger
@@ -747,18 +960,20 @@ app.post('/api/earn', async (req, res) => {
         }
 
         user.lastAdWatch = now;
-        user.tokens = (user.tokens || user.balance_tokens || 0) + adReward;
-        if (user.balance_tokens !== undefined) user.balance_tokens = user.tokens;
+        user.lastAdClaim = now; // STRICT tracking
+
+        db.setTokenBalance(user, db.getTokenBalance(user) + adReward);
         if (!user.history) user.history = [];
-        user.history.unshift({ 
-            type: 'ad_reward', 
-            amount: adReward, 
-            currency: 'tokens', 
+        user.history.unshift({
+            type: 'ad_reward',
+            amount: adReward,
+            currency: 'tokens',
             date: now,
-            detail: req.body.context === 'quiz_direct' ? 'Quiz Ad' : (req.body.context === 'zero_balance_trigger' ? 'Zero Balance Ad' : (req.body.context === 'scratch_ad' ? 'Scratch Ad' : 'Watch Ad'))
+            detail: req.body.context === 'quiz_direct' ? 'Quiz Ad' : (req.body.context === 'zero_balance_trigger' ? 'Zero Balance Ad' : (req.body.context === 'scratch_ad' ? 'Scratch Ad' : 'Watch Ad')),
+            watchDuration: watchDuration // Store for verification
         });
         db.updateUser(user);
-        return res.json({ success: true, reward: adReward, newBalance: user.tokens });
+        return res.json({ success: true, reward: adReward, newBalance: db.getTokenBalance(user) });
     }
 
     // Verify Telegram Tasks (non-blocking - just log, don't prevent reward)
@@ -788,8 +1003,7 @@ app.post('/api/earn', async (req, res) => {
 
     // Mark task complete and give tokens
     user.completedTasks.push(taskType);
-    user.tokens = (user.tokens || user.balance_tokens || 0) + rewardAmount;
-    if (user.balance_tokens !== undefined) user.balance_tokens = user.tokens;
+    db.setTokenBalance(user, db.getTokenBalance(user) + rewardAmount);
 
     // Add to history
     if (!user.history) user.history = [];
@@ -803,8 +1017,8 @@ app.post('/api/earn', async (req, res) => {
 
     db.updateUser(user);
 
-    console.log(`[DEBUG] Task completed successfully: ${taskType}, newBalance: ${user.tokens}`);
-    return res.json({ success: true, reward: rewardAmount, newBalance: user.tokens });
+    console.log(`[DEBUG] Task completed successfully: ${taskType}, newBalance: ${db.getTokenBalance(user)}`);
+    return res.json({ success: true, reward: rewardAmount, newBalance: db.getTokenBalance(user) });
 
 });
 
@@ -821,15 +1035,14 @@ app.post('/api/accounts/buy-category', (req, res) => {
         return res.json({ success: false, message: 'User not found' });
     }
 
-    const userTokens = user.tokens !== undefined ? user.tokens : (user.balance_tokens || 0);
+    const userTokens = db.getTokenBalance(user);
     if (userTokens < parseInt(price)) {
         return res.json({ success: false, message: 'Insufficient tokens' });
     }
 
     // Deduct tokens safely
     const priceInt = parseInt(price);
-    if (user.tokens !== undefined) user.tokens = Math.max(0, user.tokens - priceInt);
-    if (user.balance_tokens !== undefined) user.balance_tokens = Math.max(0, user.balance_tokens - priceInt);
+    db.setTokenBalance(user, userTokens - priceInt);
 
     // Generate account credentials (admin can add real ones later)
     const accountData = {
@@ -857,7 +1070,7 @@ app.post('/api/accounts/buy-category', (req, res) => {
 
     return res.json({
         success: true,
-        newBalance: user.tokens !== undefined ? user.tokens : user.balance_tokens,
+        newBalance: db.getTokenBalance(user),
         account: {
             email: accountData.email,
             password: accountData.password
@@ -905,14 +1118,13 @@ app.post('/api/generate/:service', (req, res) => {
     const settings = db.getSettings();
     const cost = (settings.costs && settings.costs[service]) || 10;
 
-    const userTokens = user.tokens !== undefined ? user.tokens : (user.balance_tokens || 0);
+    const userTokens = db.getTokenBalance(user);
     if (userTokens < cost) {
         return res.json({ success: false, message: `Insufficient tokens. Need ${cost} TC.` });
     }
 
     // Deduct tokens
-    if (user.tokens !== undefined) user.tokens = Math.max(0, user.tokens - cost);
-    else user.balance_tokens = (user.balance_tokens || 0) - cost;
+    db.setTokenBalance(user, db.getTokenBalance(user) - cost);
 
     // Add to history
     if (!user.history) user.history = [];
@@ -927,7 +1139,7 @@ app.post('/api/generate/:service', (req, res) => {
     res.json({
         success: true,
         message: `${service} generated successfully`,
-        newBalance: user.tokens !== undefined ? user.tokens : user.balance_tokens
+        newBalance: db.getTokenBalance(user)
     });
 });
 
@@ -983,8 +1195,7 @@ app.post('/api/verify', (req, res) => {
 
     // Add tokens reward
     const reward = 20;
-    user.tokens = (user.tokens || 0) + reward;
-    if (user.balance_tokens !== undefined) user.balance_tokens = user.tokens;
+    db.setTokenBalance(user, db.getTokenBalance(user) + reward);
 
     // Add to history
     if (!user.history) user.history = [];
@@ -996,7 +1207,7 @@ app.post('/api/verify', (req, res) => {
 
     saveUsersObj(users);
 
-    res.json({ success: true, message: 'Verification successful', reward: reward, newBalance: user.tokens || user.balance_tokens || 0 });
+    res.json({ success: true, message: 'Verification successful', reward: reward, newBalance: db.getTokenBalance(user) });
 });
 
 // API: Redeem Code
@@ -1051,8 +1262,7 @@ app.post(['/api/complete-task', '/api/earn'], (req, res) => {
     }
 
     // Add reward
-    if (user.tokens !== undefined) user.tokens = (user.tokens || 0) + (parseInt(finalReward) || 0);
-    else user.balance_tokens = (user.balance_tokens || 0) + (parseInt(finalReward) || 0);
+    db.setTokenBalance(user, db.getTokenBalance(user) + (parseInt(finalReward) || 0));
 
     if (oneTimeTasks.includes(finalTaskId)) {
         user.completedTasks.push(finalTaskId);
@@ -1073,13 +1283,70 @@ app.post(['/api/complete-task', '/api/earn'], (req, res) => {
         success: true,
         message: 'Task Completed!',
         reward: finalReward,
-        newBalance: user.tokens !== undefined ? user.tokens : user.balance_tokens
+        newBalance: db.getTokenBalance(user)
     });
 });
 
 // Helper: get users object
 function getUsersObj() { return db.data.users || {}; }
 function saveUsersObj(users) { db.data.users = users; db.save(); }
+
+// API: Get Virtual Number Platforms (Sorted by Popularity)
+app.get('/api/number/platforms', (req, res) => {
+    const stats = db.data.virtualNumberStats || {};
+    const providers = db.data.providers || {};
+
+    // Get all platforms from SMS providers
+    const platformSet = new Set();
+    const platformCountryCodes = {};
+
+    Object.values(providers).forEach(provider => {
+        if (provider.type === 'sms' && provider.status === 'active' && provider.platforms) {
+            Object.keys(provider.platforms).forEach(platform => {
+                platformSet.add(platform);
+                // Store country codes for this platform
+                if (!platformCountryCodes[platform]) {
+                    platformCountryCodes[platform] = provider.platforms[platform];
+                }
+            });
+        }
+    });
+
+    // Default platforms if none configured
+    const defaultPlatforms = ['telegram', 'whatsapp', 'instagram', 'twitter', 'tiktok', 'other'];
+    if (platformSet.size === 0) {
+        defaultPlatforms.forEach(p => platformSet.add(p));
+    }
+
+    // Platform metadata for display
+    const platformMeta = {
+        telegram: { name: 'Telegram', icon: 'fab fa-telegram', color: '#229ed9' },
+        whatsapp: { name: 'WhatsApp', icon: 'fab fa-whatsapp', color: '#22c55e' },
+        instagram: { name: 'Instagram', icon: 'fab fa-instagram', color: '#e1306c' },
+        twitter: { name: 'Twitter', icon: 'fab fa-twitter', color: '#1da1f2' },
+        tiktok: { name: 'TikTok', icon: 'fab fa-tiktok', color: '#fff' },
+        facebook: { name: 'Facebook', icon: 'fab fa-facebook', color: '#1877f2' },
+        other: { name: 'Other', icon: 'fas fa-ellipsis-h', color: 'var(--text-sub)' }
+    };
+
+    // Build platforms array with usage stats
+    const platforms = Array.from(platformSet).map(id => ({
+        id,
+        name: platformMeta[id]?.name || id.charAt(0).toUpperCase() + id.slice(1),
+        icon: platformMeta[id]?.icon || 'fas fa-mobile-alt',
+        color: platformMeta[id]?.color || '#f59e0b',
+        usage: stats[id] || 0,
+        countryCodes: platformCountryCodes[id] || ['1'] // Default to US
+    }));
+
+    // Sort by usage (popularity) - descending
+    platforms.sort((a, b) => b.usage - a.usage);
+
+    res.json({
+        success: true,
+        platforms
+    });
+});
 
 // API: Generate Virtual Number
 app.post('/api/number/generate', async (req, res) => {
@@ -1088,36 +1355,54 @@ app.post('/api/number/generate', async (req, res) => {
     const user = users[userId];
     if (!user) return res.json({ success: false, message: 'User not found' });
     const tokenCost = cost || 15;
-    const userTokens = user.tokens || user.balance_tokens || 0;
+    const userTokens = db.getTokenBalance(user);
     if (userTokens < tokenCost) return res.json({ success: false, message: 'Insufficient tokens' });
+
+    // Track platform usage for popularity ranking
+    if (!db.data.virtualNumberStats) db.data.virtualNumberStats = {};
+    db.data.virtualNumberStats[platform] = (db.data.virtualNumberStats[platform] || 0) + 1;
+    db.save();
+
+    // Get country code for this platform from provider settings
+    let countryCode = '1'; // Default to US
+    const providers = db.data.providers || {};
+    const smsProviders = Object.values(providers).filter(p => p.type === 'sms' && p.status === 'active');
+
+    // Find the first provider that has country codes configured for this platform
+    for (const provider of smsProviders) {
+        if (provider.platforms && provider.platforms[platform] && provider.platforms[platform].length > 0) {
+            countryCode = provider.platforms[platform][0]; // Use first country code
+            break;
+        }
+    }
 
     // Try real SMS provider via bot's apiGateway
     let number = null;
     let sessionId = 'num_' + Date.now() + '_' + userId;
+
     try {
         const apiGateway = require('../services/api-gateway');
         const result = await apiGateway.executeWithFailover('sms', async (provider) => {
             const axios = require('axios');
-            const r = await axios.post(`${provider.apiUrl}/numbers`, { platform }, {
+            const r = await axios.post(`${provider.apiUrl}/numbers`, {
+                platform,
+                countryCode
+            }, {
                 headers: { 'X-API-KEY': provider.apiKey }, timeout: 8000
             });
             return r.data;
         });
         if (result && result.number) number = result.number;
-    } catch (e) { }
-
-    // Demo fallback: generate a realistic US phone number when no SMS provider is configured
-    if (!number) {
-        const areaCodes = ['201', '202', '212', '213', '310', '312', '347', '404', '415', '469', '503', '512', '614', '617', '646', '702', '713', '718', '786', '818', '917', '929'];
-        const area = areaCodes[Math.floor(Math.random() * areaCodes.length)];
-        const mid = String(Math.floor(Math.random() * 900) + 100);
-        const last = String(Math.floor(Math.random() * 9000) + 1000);
-        number = `+1 ${area} ${mid} ${last}`;
-        sessionId = 'demo_' + sessionId;
+    } catch (e) {
+        console.error('[NUMBER] API error:', e.message);
     }
 
-    if (user.tokens !== undefined) user.tokens = Math.max(0, user.tokens - tokenCost);
-    else user.balance_tokens = (user.balance_tokens || 0) - tokenCost;
+    // No demo! Return error if no provider available
+    if (!number) {
+        return res.json({ success: false, message: 'No numbers available for this platform right now. Please try again later.' });
+    }
+
+    db.setTokenBalance(user, db.getTokenBalance(user) - tokenCost);
     if (!user.history) user.history = [];
     user.history.unshift({ type: 'number', date: new Date().toISOString(), reward: `-${tokenCost} Tokens`, detail: number });
     saveUsersObj(users);
@@ -1127,7 +1412,7 @@ app.post('/api/number/generate', async (req, res) => {
     db.data.numberSessions[sessionId] = { number, userId, platform, createdAt: Date.now(), otp: null };
     db.save();
 
-    res.json({ success: true, number, sessionId, newBalance: user.tokens || user.balance_tokens || 0 });
+    res.json({ success: true, number, sessionId, newBalance: db.getTokenBalance(user) });
 });
 
 // API: Check OTP for Number
@@ -1146,7 +1431,7 @@ app.post('/api/mail/generate', async (req, res) => {
     const user = users[userId];
     if (!user) return res.json({ success: false, message: 'User not found' });
     const tokenCost = cost || 10;
-    const mailTokens = user.tokens || user.balance_tokens || 0;
+    const mailTokens = db.getTokenBalance(user);
     if (mailTokens < tokenCost) return res.json({ success: false, message: 'Insufficient tokens' });
 
     let emailData = null;
@@ -1162,8 +1447,7 @@ app.post('/api/mail/generate', async (req, res) => {
         return res.json({ success: false, message: 'All email providers temporarily unavailable. Please try again later.' });
     }
 
-    if (user.tokens !== undefined) user.tokens = Math.max(0, user.tokens - tokenCost);
-    else user.balance_tokens = (user.balance_tokens || 0) - tokenCost;
+    db.setTokenBalance(user, db.getTokenBalance(user) - tokenCost);
     if (!user.history) user.history = [];
     user.history.unshift({ type: 'mail', date: new Date().toISOString(), reward: `-${tokenCost} Tokens`, detail: emailData.email });
     saveUsersObj(users);
@@ -1173,7 +1457,7 @@ app.post('/api/mail/generate', async (req, res) => {
     db.data.mailSessions[sessionId] = { ...emailData, userId, createdAt: Date.now() };
     db.save();
 
-    res.json({ success: true, email: emailData.email, sessionId, newBalance: user.tokens || user.balance_tokens || 0 });
+    res.json({ success: true, email: emailData.email, sessionId, newBalance: db.getTokenBalance(user) });
 });
 
 // API: Check Mail Inbox
@@ -1192,13 +1476,12 @@ app.get('/api/mail/inbox', async (req, res) => {
             const user = users[userId];
             if (!user) return res.json({ success: false, message: 'User not found', messages: [] });
 
-            const field = user.tokens !== undefined ? 'tokens' : 'balance_tokens';
-            const bal = user[field] || 0;
+            const bal = db.getTokenBalance(user);
             if (bal < cost) {
                 return res.json({ success: false, message: 'Insufficient tokens', newBalance: bal, messages: [] });
             }
 
-            user[field] = bal - cost;
+            db.setTokenBalance(user, bal - cost);
             if (!user.history) user.history = [];
             user.history.unshift({ type: 'mail_inbox_refresh', amount: cost, currency: 'tokens', date: Date.now() });
             saveUsersObj(users);
@@ -1225,7 +1508,7 @@ app.get('/api/mail/inbox', async (req, res) => {
                 const users = getUsersObj();
                 const user = users[userId];
                 if (user) {
-                    newBalance = user.tokens !== undefined ? user.tokens : user.balance_tokens;
+                    newBalance = db.getTokenBalance(user);
                 }
             } catch (e) { }
         }
@@ -1259,16 +1542,15 @@ app.post('/api/admin/users/:userId/tokens', (req, res) => {
     if (!users[userId]) return res.json({ success: false, message: 'User not found' });
     const u = users[userId];
 
-    const field = u.tokens !== undefined ? 'tokens' : 'balance_tokens';
-    const cur = u[field] || 0;
+    const cur = db.getTokenBalance(u);
     const amt = parseInt(tokens) || 0;
 
-    if (action === 'add') u[field] = cur + amt;
-    else if (action === 'subtract') u[field] = Math.max(0, cur - amt);
-    else u[field] = amt;
+    if (action === 'add') db.setTokenBalance(u, cur + amt);
+    else if (action === 'subtract') db.setTokenBalance(u, Math.max(0, cur - amt));
+    else db.setTokenBalance(u, amt);
 
     saveUsersObj(users);
-    res.json({ success: true, newBalance: u[field] });
+    res.json({ success: true, newBalance: db.getTokenBalance(u) });
 });
 
 // API: Admin - Ban/Unban User
@@ -1303,7 +1585,7 @@ app.get('/api/admin/user-detail/:userId', (req, res) => {
         id: userId,
         firstName: u.firstName || u.first_name || '',
         username: u.username || '',
-        tokens: u.tokens || u.balance_tokens || 0,
+        tokens: db.getTokenBalance(u),
         Gems: u.Gems || 0,
         usd: u.usd || 0,
         referralCount: u.referralCount || u.invites || 0,
@@ -1338,6 +1620,11 @@ app.post('/api/exchange/convert', (req, res) => {
 
     if (from === to) {
         return res.json({ success: false, message: 'Please select different currencies' });
+    }
+
+    // Restriction: Cannot convert Tokens/Gems back to USD
+    if (to === 'usd' && from !== 'usd') {
+        return res.json({ success: false, message: 'Converting back to USD is not allowed.' });
     }
 
     // Currency field names
@@ -1376,8 +1663,11 @@ app.post('/api/exchange/convert', (req, res) => {
     else targetAmount = Math.floor(targetAmount);
 
     // Update balances
-    user[fromField] = balance - amt;
-    user[toField] = (user[toField] || 0) + targetAmount;
+    if (from === 'tokens') db.setTokenBalance(user, db.getTokenBalance(user) - amt);
+    else user[fromField] = Math.max(0, balance - amt);
+
+    if (to === 'tokens') db.setTokenBalance(user, db.getTokenBalance(user) + targetAmount);
+    else user[toField] = Math.max(0, (user[toField] || 0) + targetAmount);
 
     // History record
     if (!user.history) user.history = [];
@@ -1392,10 +1682,82 @@ app.post('/api/exchange/convert', (req, res) => {
     saveUsersObj(users);
     res.json({
         success: true,
-        tokens: user.tokens ?? user.balance_tokens,
+        tokens: db.getTokenBalance(user),
         Gems: user.Gems || 0,
         usd: user.usd || 0,
         toAmount: targetAmount
+    });
+});
+
+// API: User Transfer Assets
+app.post('/api/user/transfer', async (req, res) => {
+    const { fromUserId, toUserId, amount, asset } = req.body;
+    if (!fromUserId || !toUserId || isNaN(amount) || amount <= 0 || !asset) {
+        return res.json({ success: false, message: 'Invalid transfer details' });
+    }
+
+    const users = getUsersObj();
+    const fromUser = users[fromUserId.toString()];
+    const toUser = users[toUserId.toString()];
+
+    if (!fromUser) return res.json({ success: false, message: 'Sender not found' });
+    if (!toUser) return res.json({ success: false, message: 'Recipient not found' });
+    if (String(fromUserId) === String(toUserId)) return res.json({ success: false, message: 'Cannot transfer to yourself' });
+
+    // Identify field names based on asset type
+    let field = asset; // usd, Gems, tokens
+    if (asset === 'tokens') {
+        field = fromUser.tokens !== undefined ? 'tokens' : 'balance_tokens';
+    }
+
+    const balance = fromUser[field] || 0;
+    if (balance < amount) return res.json({ success: false, message: 'Insufficient balance' });
+
+    // Perform transfer
+    if (asset === 'tokens') {
+        db.setTokenBalance(fromUser, db.getTokenBalance(fromUser) - (asset === 'usd' ? parseFloat(amount.toFixed(2)) : parseInt(amount)));
+    } else {
+        fromUser[field] = Math.max(0, balance - (asset === 'usd' ? parseFloat(amount.toFixed(2)) : parseInt(amount)));
+    }
+
+    // Recipient might use a different field name for tokens
+    let toField = asset;
+    if (asset === 'tokens') {
+        toField = toUser.tokens !== undefined ? 'tokens' : 'balance_tokens';
+    }
+    if (asset === 'tokens') {
+        db.setTokenBalance(toUser, db.getTokenBalance(toUser) + (asset === 'usd' ? parseFloat(amount.toFixed(2)) : parseInt(amount)));
+    } else {
+        toUser[toField] = (toUser[toField] || 0) + (asset === 'usd' ? parseFloat(amount.toFixed(2)) : parseInt(amount));
+    }
+
+    // History Records
+    if (!fromUser.history) fromUser.history = [];
+    fromUser.history.unshift({
+        type: 'transfer_out',
+        amount, asset,
+        to: toUserId,
+        date: Date.now()
+    });
+
+    if (!toUser.history) toUser.history = [];
+    toUser.history.unshift({
+        type: 'transfer_in',
+        amount, asset,
+        from: fromUserId,
+        date: Date.now()
+    });
+
+    saveUsersObj(users);
+
+    res.json({
+        success: true,
+        message: `Successfully transferred ${amount} ${asset} to User #${toUserId}`,
+        newBalances: {
+            tokens: db.getTokenBalance(fromUser),
+            Gems: fromUser.Gems || 0,
+            usd: fromUser.usd || 0
+        }
     });
 });
 
@@ -1556,7 +1918,7 @@ app.get('/api/admin/stats', (req, res) => {
     usersList.forEach(u => {
         if (u.lastActive && (now - u.lastActive < day)) active++;
         revenue += (u.balance || 0);
-        totalTokens += (u.balance_tokens || u.tokens || 0);
+        totalTokens += db.getTokenBalance(u);
         if (u.successfulVerifications > 0 || u.verified) verifiedUsers++;
     });
 
@@ -1695,6 +2057,63 @@ app.get('/api/admin/groups', (req, res) => {
     res.json({ success: true, groups });
 });
 
+// API: Admin - Group Settings for specific group (GET)
+app.get('/api/admin/groups/:chatId/settings', (req, res) => {
+    const { chatId } = req.params;
+    const settings = db.getGroupSettings(chatId);
+    res.json({ success: true, settings });
+});
+
+// API: Admin - Group Settings for specific group (POST)
+app.post('/api/admin/groups/:chatId/settings', (req, res) => {
+    const { chatId } = req.params;
+    const newSettings = req.body;
+
+    const updated = db.updateGroupSettings(chatId, newSettings);
+    if (updated) {
+        res.json({ success: true, settings: db.getGroupSettings(chatId) });
+    } else {
+        res.json({ success: false, message: 'Failed to update settings' });
+    }
+});
+
+// API: Admin - Group Settings (GET) - global settings
+app.get('/api/admin/groups/settings', (req, res) => {
+    const settings = db.data.settings?.groupRules || {};
+    res.json({ success: true, settings });
+});
+
+// API: Admin - Group Settings (POST) - global settings
+app.post('/api/admin/groups/settings', (req, res) => {
+    const newSettings = req.body;
+    if (!db.data.settings) db.data.settings = {};
+    db.data.settings.groupRules = { ...db.data.settings.groupRules, ...newSettings };
+    db.save();
+    res.json({ success: true, settings: db.data.settings.groupRules });
+});
+
+// API: Admin - Group Rule Toggle
+app.post('/api/admin/groups/toggle', (req, res) => {
+    const { key, chatId } = req.body;
+    if (!key) return res.json({ success: false, message: 'Key required' });
+
+    if (chatId) {
+        // Toggle for specific group
+        const settings = db.getGroupSettings(chatId);
+        settings[key] = !settings[key];
+        db.updateGroupSettings(chatId, settings);
+        res.json({ success: true, settings });
+    } else {
+        // Toggle global setting
+        const settings = db.data.settings?.groupRules || {};
+        settings[key] = !settings[key];
+        if (!db.data.settings) db.data.settings = {};
+        db.data.settings.groupRules = settings;
+        db.save();
+        res.json({ success: true, settings });
+    }
+});
+
 // API: Admin - VPN Management
 app.get('/api/admin/vpn', (req, res) => {
     const vpns = [];
@@ -1805,20 +2224,69 @@ app.get('/api/admin/costs', (req, res) => {
     const settings = db.getSettings();
     const adminSettings = db.data.adminSettings || {};
     const costs = settings.costs || {};
+    const cardPrices = db.data.cardPrices || {};
+    const vpnPrices = db.data.vpnPrices || {};
+    const creditRates = adminSettings.creditRates || { crypto: 0.01, bkash: 1, nagad: 1 };
 
     res.json({
         success: true,
         costs: {
-            dailyReward: settings.dailyBonus || 0,
+            // Rewards & Bonuses
+            quizReward: settings.quizReward || 0,
+            spaceReward: settings.spaceReward || 0,
             inviteBonus: settings.refBonus || 0,
             welcomeBonus: adminSettings.welcomeCredits || 0,
             adReward: settings.adReward || 5,
+            zeroBalanceAdReward: settings.zeroBalanceAdReward || 5,
+            taskReward: settings.taskReward || 10,
+
+            // System Costs
+            premiumEmailCost: settings.premiumEmailCost || 0,
+
+            // System Fees
             transferFee: settings.transferFee || 0,
             supportCost: settings.supportCost || 0,
+
+            // Service Costs (Tokens)
             gmailCost: costs.gmail || 0,
             verificationCost: costs.verification || 0,
             numberCost: costs.number || 0,
-            mailCost: costs.mail || 0
+            geminiCost: costs.gemini || 50,
+            chatgptCost: costs.gpt || 100,
+            spotifyCost: costs.spotify || 50,
+            youtubeCost: costs.youtube || 50,
+            teacherCost: costs.teacher || 100,
+            militaryCost: costs.military || 100,
+
+            // USD Costs
+            accountsUSD: costs.accountsUSD || 1.00,
+            vpnUSD: costs.vpnUSD || 2.00,
+            vccUSD: costs.vccUSD || 5.00,
+            premiumMailUSD: costs.premiumMailUSD || 0.50,
+
+            // Credit Exchange Rates
+            cryptoRate: creditRates.crypto || 0.01,
+            bkashRate: creditRates.bkash || 1,
+            nagadRate: creditRates.nagad || 1,
+
+            // Exchange Rates (USD/Tokens/Gems)
+            usdToToken: settings.usdToToken || 100,
+            gemToToken: settings.gemToToken || 100,
+            tokenToGem: settings.tokenToGem || 1,
+            takaToGem: settings.takaToGem || 100,
+            platformFee: settings.platformFee || 20,
+
+            // Card Prices (TC)
+            geminiCardPrice: cardPrices.gemini || 150,
+            chatgptCardPrice: cardPrices.chatgpt || 200,
+            spotifyCardPrice: cardPrices.spotify || 50,
+
+            // VPN Prices (TC)
+            nordvpnPrice: vpnPrices.nordvpn || 100,
+            expressvpnPrice: vpnPrices.expressvpn || 120,
+            surfsharkPrice: vpnPrices.surfshark || 80,
+            cyberghostPrice: vpnPrices.cyberghost || 70,
+            protonvpnPrice: vpnPrices.protonvpn || 90
         },
         sellingRewards: db.data.sellingRewards || {},
         dbSize: (fs.existsSync(db.DB_FILE) ? (fs.statSync(db.DB_FILE).size / 1024).toFixed(2) : 0) + ' KB'
@@ -1831,25 +2299,70 @@ app.post('/api/admin/costs', (req, res) => {
     if (!payload) return res.json({ success: false, message: 'Invalid payload' });
 
     if (!db.data.settings) db.data.settings = {};
+    if (!db.data.adminSettings) db.data.adminSettings = {};
 
     // Base Settings & Rewards
-    if (payload.dailyReward !== undefined) db.data.settings.dailyBonus = parseInt(payload.dailyReward);
+    if (payload.quizReward !== undefined) db.data.settings.quizReward = parseInt(payload.quizReward);
+    if (payload.spaceReward !== undefined) db.data.settings.spaceReward = parseInt(payload.spaceReward);
     if (payload.inviteBonus !== undefined) db.data.settings.refBonus = parseInt(payload.inviteBonus);
     if (payload.adReward !== undefined) db.data.settings.adReward = parseInt(payload.adReward);
+    if (payload.zeroBalanceAdReward !== undefined) db.data.settings.zeroBalanceAdReward = parseInt(payload.zeroBalanceAdReward);
+    if (payload.taskReward !== undefined) db.data.settings.taskReward = parseInt(payload.taskReward);
+
+    // System Costs
+    if (payload.premiumEmailCost !== undefined) db.data.settings.premiumEmailCost = parseInt(payload.premiumEmailCost);
+
     if (payload.transferFee !== undefined) db.data.settings.transferFee = parseInt(payload.transferFee);
     if (payload.supportCost !== undefined) db.data.settings.supportCost = parseInt(payload.supportCost);
-    
+
     if (payload.welcomeBonus !== undefined) {
-        if (!db.data.adminSettings) db.data.adminSettings = {};
         db.data.adminSettings.welcomeCredits = parseInt(payload.welcomeBonus);
     }
 
-    // Service Costs (Nested in costs.services)
+    // Credit Exchange Rates
+    if (!db.data.adminSettings.creditRates) db.data.adminSettings.creditRates = {};
+    if (payload.cryptoRate !== undefined) db.data.adminSettings.creditRates.crypto = parseFloat(payload.cryptoRate);
+    if (payload.bkashRate !== undefined) db.data.adminSettings.creditRates.bkash = parseFloat(payload.bkashRate);
+    if (payload.nagadRate !== undefined) db.data.adminSettings.creditRates.nagad = parseFloat(payload.nagadRate);
+
+    // Exchange Rates (USD/Tokens/Gems)
+    if (payload.usdToToken !== undefined) db.data.settings.usdToToken = parseInt(payload.usdToToken) || 100;
+    if (payload.gemToToken !== undefined) db.data.settings.gemToToken = parseInt(payload.gemToToken) || 100;
+    if (payload.tokenToGem !== undefined) db.data.settings.tokenToGem = parseFloat(payload.tokenToGem) || 1;
+    if (payload.takaToGem !== undefined) db.data.settings.takaToGem = parseInt(payload.takaToGem) || 100;
+    if (payload.platformFee !== undefined) db.data.settings.platformFee = parseInt(payload.platformFee) || 20;
+
+    // Service Costs (Nested in costs)
     if (!db.data.settings.costs) db.data.settings.costs = {};
     if (payload.gmailCost !== undefined) db.data.settings.costs.gmail = parseInt(payload.gmailCost);
     if (payload.verificationCost !== undefined) db.data.settings.costs.verification = parseInt(payload.verificationCost);
     if (payload.numberCost !== undefined) db.data.settings.costs.number = parseInt(payload.numberCost);
-    if (payload.mailCost !== undefined) db.data.settings.costs.mail = parseInt(payload.mailCost);
+    if (payload.geminiCost !== undefined) db.data.settings.costs.gemini = parseInt(payload.geminiCost);
+    if (payload.chatgptCost !== undefined) db.data.settings.costs.gpt = parseInt(payload.chatgptCost);
+    if (payload.spotifyCost !== undefined) db.data.settings.costs.spotify = parseInt(payload.spotifyCost);
+    if (payload.youtubeCost !== undefined) db.data.settings.costs.youtube = parseInt(payload.youtubeCost);
+    if (payload.teacherCost !== undefined) db.data.settings.costs.teacher = parseInt(payload.teacherCost);
+    if (payload.militaryCost !== undefined) db.data.settings.costs.military = parseInt(payload.militaryCost);
+
+    // USD Costs
+    if (payload.accountsUSD !== undefined) db.data.settings.costs.accountsUSD = parseFloat(payload.accountsUSD);
+    if (payload.vpnUSD !== undefined) db.data.settings.costs.vpnUSD = parseFloat(payload.vpnUSD);
+    if (payload.vccUSD !== undefined) db.data.settings.costs.vccUSD = parseFloat(payload.vccUSD);
+    if (payload.premiumMailUSD !== undefined) db.data.settings.costs.premiumMailUSD = parseFloat(payload.premiumMailUSD);
+
+    // Card Prices
+    if (!db.data.cardPrices) db.data.cardPrices = {};
+    if (payload.geminiCardPrice !== undefined) db.data.cardPrices.gemini = parseInt(payload.geminiCardPrice);
+    if (payload.chatgptCardPrice !== undefined) db.data.cardPrices.chatgpt = parseInt(payload.chatgptCardPrice);
+    if (payload.spotifyCardPrice !== undefined) db.data.cardPrices.spotify = parseInt(payload.spotifyCardPrice);
+
+    // VPN Prices
+    if (!db.data.vpnPrices) db.data.vpnPrices = {};
+    if (payload.nordvpnPrice !== undefined) db.data.vpnPrices.nordvpn = parseInt(payload.nordvpnPrice);
+    if (payload.expressvpnPrice !== undefined) db.data.vpnPrices.expressvpn = parseInt(payload.expressvpnPrice);
+    if (payload.surfsharkPrice !== undefined) db.data.vpnPrices.surfshark = parseInt(payload.surfsharkPrice);
+    if (payload.cyberghostPrice !== undefined) db.data.vpnPrices.cyberghost = parseInt(payload.cyberghostPrice);
+    if (payload.protonvpnPrice !== undefined) db.data.vpnPrices.protonvpn = parseInt(payload.protonvpnPrice);
 
     // Selling Rewards
     if (payload.sellingRewards) {
@@ -1857,7 +2370,7 @@ app.post('/api/admin/costs', (req, res) => {
     }
 
     db.save();
-    res.json({ success: true, message: 'Settings saved successfully' });
+    res.json({ success: true, message: 'All cost configurations saved successfully' });
 });
 
 // API: Admin - Reset Transactions (alias)
@@ -1999,6 +2512,540 @@ app.delete('/api/admin/providers/:id', (req, res) => {
         res.json({ success: false });
     }
 });
+
+// =============================================
+// PREMIUM EMAIL MANAGEMENT API
+// =============================================
+
+// GET: List all premium emails
+app.get('/api/admin/premium-emails', (req, res) => {
+    const emails = db.data.premiumEmails || [];
+    res.json({
+        success: true,
+        emails: emails.map(e => ({
+            id: e.id,
+            email: e.email,
+            password: e.password,
+            imap: e.imap || '',
+            active: e.active !== false,
+            messageCount: (e.messages || []).length,
+            addedAt: e.addedAt
+        }))
+    });
+});
+
+// POST: Add or update a premium email
+app.post('/api/admin/premium-emails', (req, res) => {
+    const { id, email, password, imap, active } = req.body;
+
+    if (!email || !password) {
+        return res.json({ success: false, message: 'Email and password required' });
+    }
+
+    if (!db.data.premiumEmails) db.data.premiumEmails = [];
+
+    if (id) {
+        // Update existing
+        const idx = db.data.premiumEmails.findIndex(e => e.id === id);
+        if (idx !== -1) {
+            db.data.premiumEmails[idx].email = email;
+            db.data.premiumEmails[idx].password = password;
+            db.data.premiumEmails[idx].imap = imap || db.data.premiumEmails[idx].imap;
+            db.data.premiumEmails[idx].active = active !== false;
+            db.save();
+            return res.json({ success: true, id });
+        }
+    }
+
+    // Add new
+    const newEmail = {
+        id: 'pe_' + Date.now(),
+        email,
+        password,
+        imap: imap || '',
+        active: active !== false,
+        messages: [],
+        addedAt: Date.now()
+    };
+    db.data.premiumEmails.push(newEmail);
+    db.save();
+    res.json({ success: true, id: newEmail.id });
+});
+
+// POST: Bulk import premium emails
+app.post('/api/admin/premium-emails/import', (req, res) => {
+    const { emails } = req.body;
+
+    if (!Array.isArray(emails) || emails.length === 0) {
+        return res.json({ success: false, message: 'No emails to import' });
+    }
+
+    if (!db.data.premiumEmails) db.data.premiumEmails = [];
+
+    let imported = 0;
+    for (const item of emails) {
+        if (item.email && item.password) {
+            db.data.premiumEmails.push({
+                id: 'pe_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+                email: item.email,
+                password: item.password,
+                imap: item.imap || '',
+                active: true,
+                messages: [],
+                addedAt: Date.now()
+            });
+            imported++;
+        }
+    }
+
+    db.save();
+    res.json({ success: true, imported });
+});
+
+// POST: Toggle email active status
+app.post('/api/admin/premium-emails/:id/toggle', (req, res) => {
+    const { id } = req.params;
+    const { active } = req.body;
+
+    if (!db.data.premiumEmails) {
+        return res.json({ success: false, message: 'No premium emails found' });
+    }
+
+    const idx = db.data.premiumEmails.findIndex(e => e.id === id);
+    if (idx === -1) {
+        return res.json({ success: false, message: 'Email not found' });
+    }
+
+    db.data.premiumEmails[idx].active = active === true;
+    db.save();
+    res.json({ success: true });
+});
+
+// DELETE: Remove a premium email
+app.delete('/api/admin/premium-emails/:id', (req, res) => {
+    const { id } = req.params;
+
+    if (!db.data.premiumEmails) {
+        return res.json({ success: false, message: 'No premium emails found' });
+    }
+
+    const before = db.data.premiumEmails.length;
+    db.data.premiumEmails = db.data.premiumEmails.filter(e => e.id !== id);
+    db.save();
+
+    res.json({ success: db.data.premiumEmails.length < before });
+});
+
+// GET: Get messages for a specific email
+app.get('/api/admin/premium-emails/:id/messages', (req, res) => {
+    const { id } = req.params;
+
+    if (!db.data.premiumEmails) {
+        return res.json({ success: false, message: 'No premium emails found' });
+    }
+
+    const email = db.data.premiumEmails.find(e => e.id === id);
+    if (!email) {
+        return res.json({ success: false, message: 'Email not found' });
+    }
+
+    res.json({
+        success: true,
+        messages: email.messages || [],
+        email: email.email
+    });
+});
+
+// =============================================
+// USER PREMIUM EMAIL API
+// =============================================
+
+// API: User - Get available premium emails (only active ones, without passwords)
+app.get('/api/premium-emails', (req, res) => {
+    const emails = (db.data.premiumEmails || []).filter(e => e.active !== false);
+    res.json({
+        success: true,
+        emails: emails.map(e => ({
+            id: e.id,
+            email: e.email,
+            messageCount: (e.messages || []).length,
+            addedAt: e.addedAt
+        }))
+    });
+});
+
+// API: User - Get a single premium email by ID
+app.get('/api/premium-emails/:id', (req, res) => {
+    const { id } = req.params;
+
+    if (!db.data.premiumEmails) {
+        return res.json({ success: false, message: 'No premium emails found' });
+    }
+
+    const email = db.data.premiumEmails.find(e => e.id === id && e.active !== false);
+    if (!email) {
+        return res.json({ success: false, message: 'Email not found or inactive' });
+    }
+
+    res.json({
+        success: true,
+        email: {
+            id: email.id,
+            email: email.email,
+            messageCount: (email.messages || []).length,
+            addedAt: email.addedAt
+        }
+    });
+});
+
+// API: User - Get messages for a specific premium email
+app.get('/api/premium-emails/:id/messages', (req, res) => {
+    const { id } = req.params;
+
+    if (!db.data.premiumEmails) {
+        return res.json({ success: false, message: 'No premium emails found' });
+    }
+
+    const email = db.data.premiumEmails.find(e => e.id === id && e.active !== false);
+    if (!email) {
+        return res.json({ success: false, message: 'Email not found or inactive' });
+    }
+
+    res.json({
+        success: true,
+        email: email.email,
+        messages: email.messages || []
+    });
+});
+
+// API: User - Assign a premium email to user (mark as assigned)
+app.post('/api/premium-emails/assign', (req, res) => {
+    const { userId, emailId } = req.body;
+
+    if (!userId || !emailId) {
+        return res.json({ success: false, message: 'User ID and Email ID required' });
+    }
+
+    const user = db.getUser(userId);
+    if (!user) {
+        return res.json({ success: false, message: 'User not found' });
+    }
+
+    if (!db.data.premiumEmails) {
+        return res.json({ success: false, message: 'No premium emails available' });
+    }
+
+    const email = db.data.premiumEmails.find(e => e.id === emailId && e.active !== false);
+    if (!email) {
+        return res.json({ success: false, message: 'Email not found or inactive' });
+    }
+
+    // Check if already assigned to someone else
+    if (email.assignedTo && email.assignedTo !== userId) {
+        return res.json({ success: false, message: 'Email already assigned to another user' });
+    }
+
+    // Assign email to user
+    email.assignedTo = userId;
+    email.assignedAt = Date.now();
+    db.save();
+
+    res.json({
+        success: true,
+        email: {
+            id: email.id,
+            email: email.email,
+            password: email.password // Only returned when assigned
+        }
+    });
+});
+
+// =============================================
+// USER VCC CARDS API
+// =============================================
+
+// API: Get all card types organized by provider
+app.get('/api/cards/types', (req, res) => {
+    const cardPrices = db.data.cardPrices || {};
+    const cards = db.data.cards || {};
+
+    // Define card type metadata (icon, color, gradient)
+    const cardTypeMeta = {
+        gemini: {
+            name: 'Gemini Card',
+            icon: 'fas fa-gem',
+            color: '#10b981',
+            gradient: 'linear-gradient(135deg, #10b981, #059669)',
+            description: 'Premium virtual card for AI services and online purchases'
+        },
+        chatgpt: {
+            name: 'ChatGPT Card',
+            icon: 'fas fa-robot',
+            color: '#8b5cf6',
+            gradient: 'linear-gradient(135deg, #8b5cf6, #6d28d9)',
+            description: 'Virtual card optimized for AI subscriptions'
+        },
+        spotify: {
+            name: 'Spotify Card',
+            icon: 'fab fa-spotify',
+            color: '#1db954',
+            gradient: 'linear-gradient(135deg, #1db954, #15873d)',
+            description: 'Virtual card for music streaming services'
+        },
+        netflix: {
+            name: 'Netflix Card',
+            icon: 'fas fa-film',
+            color: '#e50914',
+            gradient: 'linear-gradient(135deg, #e50914, #b81d24)',
+            description: 'Virtual card for streaming subscriptions'
+        },
+        amazon: {
+            name: 'Amazon Card',
+            icon: 'fab fa-amazon',
+            color: '#ff9900',
+            gradient: 'linear-gradient(135deg, #ff9900, #cc7a00)',
+            description: 'Virtual card for online shopping'
+        },
+        other: {
+            name: 'Universal Card',
+            icon: 'fas fa-credit-card',
+            color: '#f59e0b',
+            gradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
+            description: 'General purpose virtual card'
+        }
+    };
+
+    const cardTypes = Object.keys(cardPrices).map(key => {
+        const meta = cardTypeMeta[key] || cardTypeMeta.other;
+        const availableCards = cards[key] || [];
+        return {
+            id: key,
+            name: meta.name,
+            icon: meta.icon,
+            color: meta.color,
+            gradient: meta.gradient,
+            description: meta.description,
+            price: cardPrices[key],
+            availableCount: availableCards.length
+        };
+    }).filter(type => type.availableCount > 0); // Only show types with available cards
+
+    res.json({ success: true, cardTypes });
+});
+
+// API: Get specific card type details
+app.get('/api/cards/type/:id', (req, res) => {
+    const { id } = req.params;
+    const cardPrices = db.data.cardPrices || {};
+    const cards = db.data.cards || {};
+
+    if (!cardPrices[id]) {
+        return res.json({ success: false, message: 'Card type not found' });
+    }
+
+    const cardTypeMeta = {
+        gemini: {
+            name: 'Gemini Card',
+            icon: 'fas fa-gem',
+            color: '#10b981',
+            gradient: 'linear-gradient(135deg, #10b981, #059669)',
+            description: 'Premium virtual card for AI services and online purchases'
+        },
+        chatgpt: {
+            name: 'ChatGPT Card',
+            icon: 'fas fa-robot',
+            color: '#8b5cf6',
+            gradient: 'linear-gradient(135deg, #8b5cf6, #6d28d9)',
+            description: 'Virtual card optimized for AI subscriptions'
+        },
+        spotify: {
+            name: 'Spotify Card',
+            icon: 'fab fa-spotify',
+            color: '#1db954',
+            gradient: 'linear-gradient(135deg, #1db954, #15873d)',
+            description: 'Virtual card for music streaming services'
+        },
+        netflix: {
+            name: 'Netflix Card',
+            icon: 'fas fa-film',
+            color: '#e50914',
+            gradient: 'linear-gradient(135deg, #e50914, #b81d24)',
+            description: 'Virtual card for streaming subscriptions'
+        },
+        amazon: {
+            name: 'Amazon Card',
+            icon: 'fab fa-amazon',
+            color: '#ff9900',
+            gradient: 'linear-gradient(135deg, #ff9900, #cc7a00)',
+            description: 'Virtual card for online shopping'
+        },
+        other: {
+            name: 'Universal Card',
+            icon: 'fas fa-credit-card',
+            color: '#f59e0b',
+            gradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
+            description: 'General purpose virtual card'
+        }
+    };
+
+    const meta = cardTypeMeta[id] || cardTypeMeta.other;
+    const availableCards = cards[id] || [];
+
+    res.json({
+        success: true,
+        cardType: {
+            id,
+            name: meta.name,
+            icon: meta.icon,
+            color: meta.color,
+            gradient: meta.gradient,
+            description: meta.description,
+            price: cardPrices[id],
+            availableCount: availableCards.length
+        }
+    });
+});
+
+// API: Generate a card and deduct credits
+app.post('/api/cards/generate', (req, res) => {
+    const { userId, cardTypeId } = req.body;
+
+    if (!userId || !cardTypeId) {
+        return res.json({ success: false, message: 'User ID and Card Type ID required' });
+    }
+
+    const users = getUsersObj();
+    const user = users[userId];
+    if (!user) {
+        return res.json({ success: false, message: 'User not found' });
+    }
+
+    const cardPrices = db.data.cardPrices || {};
+    const cards = db.data.cards || {};
+
+    if (!cardPrices[cardTypeId]) {
+        return res.json({ success: false, message: 'Card type not found' });
+    }
+
+    const availableCards = cards[cardTypeId] || [];
+    if (availableCards.length === 0) {
+        return res.json({ success: false, message: 'No cards available for this type' });
+    }
+
+    const price = cardPrices[cardTypeId];
+    const userTokens = db.getTokenBalance(user);
+
+    if (userTokens < price) {
+        return res.json({ success: false, message: 'Insufficient tokens' });
+    }
+
+    // Get the first available card
+    const card = availableCards[0];
+
+    // Remove card from inventory
+    cards[cardTypeId] = availableCards.slice(1);
+
+    // Deduct tokens
+    db.setTokenBalance(user, userTokens - price);
+
+    // Add to history
+    if (!user.history) user.history = [];
+    user.history.unshift({
+        type: 'card',
+        cardType: cardTypeId,
+        date: new Date().toISOString(),
+        reward: `-${price} Tokens`,
+        detail: card.number
+    });
+
+    saveUsersObj(users);
+    db.save();
+
+    res.json({
+        success: true,
+        card: {
+            number: card.number,
+            expiry: card.expiry,
+            cvv: card.cvv,
+            holder: card.holder || 'CARD HOLDER'
+        },
+        newBalance: db.getTokenBalance(user)
+    });
+});
+
+// =============================================
+// ADMIN CARD INVENTORY MANAGEMENT API
+// =============================================
+
+// API: Admin - Get Card Inventory
+app.get('/api/admin/cards/inventory', (req, res) => {
+    const cards = db.data.cards || {};
+    const inventory = [];
+
+    // Convert cards object to flat array
+    Object.keys(cards).forEach(type => {
+        const typeCards = cards[type] || [];
+        typeCards.forEach((card, index) => {
+            inventory.push({
+                id: card.id || `${type}_${index}`,
+                type: type,
+                number: card.number,
+                expiry: card.expiry,
+                cvv: card.cvv,
+                holder: card.holder
+            });
+        });
+    });
+
+    res.json({ success: true, cards: inventory });
+});
+
+// API: Admin - Add Card to Inventory
+app.post('/api/admin/cards/inventory', (req, res) => {
+    const { type, number, expiry, cvv, holder } = req.body;
+
+    if (!type || !number || !expiry || !cvv || !holder) {
+        return res.json({ success: false, message: 'All card details are required' });
+    }
+
+    if (!db.data.cards) db.data.cards = {};
+    if (!db.data.cards[type]) db.data.cards[type] = [];
+
+    const newCard = {
+        id: `card_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        number,
+        expiry,
+        cvv,
+        holder
+    };
+
+    db.data.cards[type].push(newCard);
+    db.save();
+
+    res.json({ success: true, card: newCard });
+});
+
+// API: Admin - Delete Card from Inventory
+app.delete('/api/admin/cards/inventory/:id', (req, res) => {
+    const { id } = req.params;
+    const { type } = req.query;
+
+    if (!db.data.cards || !type || !db.data.cards[type]) {
+        return res.json({ success: false, message: 'Card type not found' });
+    }
+
+    const beforeCount = db.data.cards[type].length;
+    db.data.cards[type] = db.data.cards[type].filter(c => c.id !== id);
+    db.save();
+
+    if (db.data.cards[type].length < beforeCount) {
+        res.json({ success: true });
+    } else {
+        res.json({ success: false, message: 'Card not found' });
+    }
+});
+
+// =============================================
 
 // API: Detailed System Info
 app.get('/api/admin/system/info', (req, res) => {
@@ -2254,7 +3301,7 @@ app.post('/api/accounts/buy', (req, res) => {
     if (idx === -1) return res.json({ success: false, message: 'Account not found or already sold' });
 
     const account = allAccounts[idx];
-    const userTokens = user.tokens !== undefined ? user.tokens : (user.balance_tokens || 0);
+    const userTokens = db.getTokenBalance(user);
 
     if (userTokens < account.price) {
         return res.json({ success: false, message: `Insufficient tokens. Need ${account.price} TC.` });
@@ -2262,11 +3309,7 @@ app.post('/api/accounts/buy', (req, res) => {
 
     // Deduct tokens
     const price = parseInt(account.price || 0);
-    if (user.tokens !== undefined) {
-        user.tokens = Math.max(0, user.tokens - price);
-    } else {
-        user.balance_tokens = Math.max(0, (user.balance_tokens || 0) - price);
-    }
+    db.setTokenBalance(user, userTokens - price);
 
     // Mark sold
     account.sold = true;
@@ -2486,6 +3529,33 @@ app.get('/api/admin/metrics', (req, res) => {
         const uptimeSeconds = process.uptime();
         const dbSize = fs.existsSync(db.DB_FILE) ? (fs.statSync(db.DB_FILE).size / 1024).toFixed(2) + ' KB' : '0 KB';
 
+        // Disk usage (best-effort)
+        let disk = null;
+        try {
+            const { execSync } = require('child_process');
+            // Windows: use WMIC
+            const out = execSync('wmic logicaldisk get size,freespace,caption', { stdio: ['ignore', 'pipe', 'ignore'] }).toString();
+            // Pick system drive (first with a caption like C:)
+            const lines = out.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+            const dataLines = lines.slice(1);
+            const first = dataLines.map(l => l.split(/\s+/)).find(parts => parts[0] && parts[0].includes(':'));
+            if (first && first.length >= 3) {
+                const caption = first[0];
+                const free = parseInt(first[1]);
+                const size = parseInt(first[2]);
+                if (!isNaN(free) && !isNaN(size) && size > 0) {
+                    const used = size - free;
+                    disk = {
+                        drive: caption,
+                        sizeBytes: size,
+                        freeBytes: free,
+                        usedBytes: used,
+                        usedPercent: Math.round((used / size) * 100)
+                    };
+                }
+            }
+        } catch (e) { }
+
         // Active users calculation (last 24 hours)
         const usersList = Object.values(db.data.users || {});
         let activeUsers = 0;
@@ -2501,8 +3571,10 @@ app.get('/api/admin/metrics', (req, res) => {
                 memory: memUsage,
                 dbSize: dbSize,
                 uptime: uptimeSeconds,
+                dbUptime: uptimeSeconds,
                 callbacks: totalCallbacks,
-                activeUsers: activeUsers
+                activeUsers: activeUsers,
+                disk
             }
         });
     } catch (e) {
@@ -2670,8 +3742,8 @@ app.post('/api/check-required-joins', async (req, res) => {
     }
 
     // Channel and Group IDs
-    const requiredChannel = '-1002188442004'; // @AutosVerifych
-    const requiredGroup = '-1002088203586';   // @AutosVerify
+    const requiredChannel = config.REQUIRED_CHANNEL;
+    const requiredGroup = config.REQUIRED_GROUP;
 
     try {
         let channelJoined = false;
@@ -2713,8 +3785,8 @@ app.post('/api/check-required-joins', async (req, res) => {
             canProceed: channelJoined && groupJoined,
             channelJoined: channelJoined,
             groupJoined: groupJoined,
-            channelLink: 'https://t.me/AutosVerifych',
-            groupLink: 'https://t.me/AutosVerify'
+            channelLink: `https://t.me/${(config.REQUIRED_CHANNEL_NAME || '').replace('@', '')}`,
+            groupLink: `https://t.me/${(config.REQUIRED_GROUP_NAME || '').replace('@', '')}`
         });
     } catch (error) {
         console.error('[JOIN CHECK] Error:', error);
@@ -2734,57 +3806,57 @@ app.post('/api/check-required-joins', async (req, res) => {
 app.get('/api/user-activity', (req, res) => {
     try {
         // Get recent user activities from database
-        const users = db.getUsers();
-        const activities = [];
+        // Collect recent activity from ALL users, then sort
+        let allActivities = [];
+        const userList = Object.values(db.data.users || {});
 
-        // Collect recent purchase/activity data from user histories
-        users.slice(0, 20).forEach(user => {
+        userList.forEach(user => {
             if (user.history && user.history.length > 0) {
-                const recentHistory = user.history.slice(0, 2); // Last 2 activities per user
-                recentHistory.forEach(h => {
-                    let action = 'purchase';
-                    let item = h.type || 'item';
-                    let amount = 0;
+                // Take last 5 from each user to ensure we find enough recently
+                user.history.slice(0, 5).forEach(h => {
+                    let action = 'spend';
+                    let item = h.type || 'activity';
+                    let amount = h.amount || 0;
+                    let currency = (h.asset || h.currency || 'TC').toUpperCase();
 
-                    // Parse amount from reward string
-                    if (h.reward) {
-                        const match = h.reward.match(/-?(\d+)/);
-                        if (match) amount = parseInt(match[1]);
+                    // Map types to actions
+                    if (['ad_reward', 'mission_reward', 'daily_bonus', 'redeem', 'transfer_in', 'quiz_reward', 'bonus', 'deposit', 'scratch_reward'].includes(h.type)) {
+                        action = 'reward';
                     }
 
-                    // Determine action type
-                    if (h.reward && h.reward.includes('+')) {
-                        action = 'earn';
-                    } else if (h.type === 'mail') {
-                        action = 'mail';
-                        item = 'Temp Mail';
-                    } else if (h.type === 'number') {
-                        action = 'purchase';
-                        item = 'Number';
-                    } else if (h.type === 'account_purchase') {
-                        action = 'purchase';
-                        item = h.category || 'Account';
-                    } else if (h.type === 'verification') {
-                        action = 'verify';
-                        item = 'Verify';
+                    if (h.type === 'mail') item = 'Temp Mail';
+                    else if (h.type === 'number') item = 'Number';
+                    else if (h.type === 'account_purchase') item = h.category || 'Account';
+                    else if (h.type === 'verification') item = 'Verify';
+                    else if (h.type === 'transfer_out') { item = 'Transfer'; action = 'spend'; }
+                    else if (h.type === 'transfer_in') { item = 'Receive'; action = 'reward'; }
+                    else if (h.type === 'exchange') { item = 'Exchange'; action = 'spend'; }
+
+                    // Fallback for amount parsing if h.amount is missing
+                    if (!amount && h.reward) {
+                        const m = h.reward.match(/-?(\d+)/);
+                        if (m) amount = parseInt(m[1]);
                     }
 
-                    activities.push({
+                    allActivities.push({
                         username: user.username || user.firstName || 'User',
-                        user: user.username || user.firstName || 'User',
                         action: action,
                         item: item,
                         amount: amount,
-                        currency: 'TC',
+                        currency: currency,
                         date: h.date || Date.now()
                     });
                 });
             }
         });
 
-        // Sort by date (newest first) and take top 10
-        activities.sort((a, b) => (b.date || 0) - (a.date || 0));
-        const recentActivities = activities.slice(0, 10);
+        // Filter out zero amounts if possible, but keep if it's all we have
+        let validActivities = allActivities.filter(a => a.amount > 0);
+        if (validActivities.length === 0) validActivities = allActivities;
+
+        // Sort by date (newest first) and take top 12
+        validActivities.sort((a, b) => (b.date || 0) - (a.date || 0));
+        const recentActivities = validActivities.slice(0, 12);
 
         // If no activities found, return empty success
         if (recentActivities.length === 0) {
@@ -2925,7 +3997,11 @@ app.get('/api/user/item-sales/rewards', (req, res) => {
 
 // User: Submit item for sale
 app.post('/api/user/item-sales/submit', (req, res) => {
-    const { userId, itemType, details, email, password, note, is2fa } = req.body;
+    const { userId, itemType, isSubscription, rewardCurrency, accountName, accountLogo,
+        email, password, is2fa, twoFA,
+        customName, iconBase64, appUrl,
+        serviceName, apiKey, apiQuota, extraInfo,
+        vpnName, vpnPlan, cardType, cardNumber, cardExpiry, cardCVV, cardHolder, cardCountry, cardBillingAddress } = req.body;
     if (!userId || !itemType) return res.json({ success: false, message: 'Missing fields' });
 
     if (!db.data.itemSales) db.data.itemSales = {};
@@ -2935,12 +4011,34 @@ app.post('/api/user/item-sales/submit', (req, res) => {
         id: saleId,
         userId: userId.toString(),
         itemType,
-        details: details || '',
+        isSubscription: !!isSubscription,
+        rewardCurrency: rewardCurrency || (itemType === 'Card' ? 'Tokens' : 'USD'),
+        accountName: accountName || '',
+        accountLogo: accountLogo || '',
+        // Account fields
         email: email || '',
         password: password || '',
-        note: note || '',
         is2fa: !!is2fa,
+        twoFA: twoFA || null,
+        // ... other fields remain ...
+        customName: customName || '',
+        iconBase64: iconBase64 || '',
+        appUrl: appUrl || '',
+        serviceName: serviceName || '',
+        apiKey: apiKey || '',
+        apiQuota: apiQuota || '',
+        extraInfo: extraInfo || '',
+        vpnName: vpnName || '',
+        vpnPlan: vpnPlan || '',
+        cardType: cardType || '',
+        cardNumber: cardNumber || '',
+        cardExpiry: cardExpiry || '',
+        cardCVV: cardCVV || '',
+        cardHolder: cardHolder || '',
+        cardCountry: cardCountry || '',
+        cardBillingAddress: cardBillingAddress || '',
         status: 'pending',
+        stock: 1,
         createdAt: Date.now(),
         updatedAt: Date.now()
     };
@@ -2950,6 +4048,7 @@ app.post('/api/user/item-sales/submit', (req, res) => {
 
     res.json({ success: true, message: 'Item submitted successfully! Waiting for admin approval.', sale: saleData });
 });
+
 
 // User: Get my sale submissions
 app.get('/api/user/item-sales/my', (req, res) => {
@@ -2963,6 +4062,30 @@ app.get('/api/user/item-sales/my', (req, res) => {
     res.json({ success: true, items: sales });
 });
 
+// Public: Get all approved user items with stock > 0 (for shop display)
+app.get('/api/user/item-sales/approved', (req, res) => {
+    const items = Object.values(db.data.itemSales || {})
+        .filter(s => s.status === 'approved' && (s.stock || 0) > 0)
+        .map(s => ({
+            id: s.id,
+            itemType: s.itemType,
+            customName: s.customName || '',
+            serviceName: s.serviceName || '',
+            vpnName: s.vpnName || '',
+            vpnPlan: s.vpnPlan || '',
+            cardType: s.cardType || '',
+            iconBase64: s.iconBase64 || '',
+            appUrl: s.appUrl || '',
+            is2fa: s.is2fa,
+            twoFA: s.twoFA ? { appCode: s.twoFA.appCode ? '***' : '' } : null,
+            stock: s.stock || 1,
+            price: s.price || s.sellingPrice || 0,
+            createdAt: s.createdAt
+        }))
+        .sort((a, b) => b.createdAt - a.createdAt);
+    res.json({ success: true, items });
+});
+
 // Admin: Get all sale submissions (pending/approved/rejected)
 app.get('/api/admin/item-sales/all', (req, res) => {
     const sales = Object.values(db.data.itemSales || {});
@@ -2973,9 +4096,9 @@ app.get('/api/admin/item-sales/all', (req, res) => {
     res.json({ success: true, pending, history });
 });
 
-// Admin: Update sale status (Approve/Reject)
+// Admin: Update sale status (Approve/Reject/Offer) + set listing price
 app.post('/api/admin/item-sales/update', (req, res) => {
-    const { saleId, status, rewardAmount } = req.body;
+    const { saleId, status, rewardAmount, sellingPrice, stock } = req.body;
     if (!saleId || !status) return res.json({ success: false, message: 'Missing fields' });
 
     if (!db.data.itemSales || !db.data.itemSales[saleId]) {
@@ -2986,20 +4109,180 @@ app.post('/api/admin/item-sales/update', (req, res) => {
     sale.status = status;
     sale.updatedAt = Date.now();
 
-    // If approved and reward specified, credit the user
-    if (status === 'approved' && rewardAmount > 0) {
-        db.addCredit(sale.userId, parseInt(rewardAmount));
-        db.addTransaction(sale.userId, 'bonus', parseInt(rewardAmount), 'Tokens', `Reward for selling ${sale.itemType}`, 'gift');
+    // Set listing price if provided
+    if (sellingPrice !== undefined) sale.price = parseInt(sellingPrice) || 0;
+    // Set stock if provided
+    if (stock !== undefined) sale.stock = parseInt(stock) || 1;
+    // Store proposed reward if it's an offer or approval
+    if (rewardAmount !== undefined) sale.rewardOffer = parseInt(rewardAmount) || 0;
+    // Set expiration date (7 days from approval) - item expires if not sold
+    if (status === 'approved') {
+        sale.expiresAt = Date.now() + (7 * 24 * 60 * 60 * 1000); // 7 days
     }
 
+    // NOTE: Seller does NOT get paid immediately on approval.
+    // They will only receive payment when the item is actually sold to a buyer.
+    // Platform fee will be deducted from the reward (configurable percentage).
+    // If item expires unsold after 7 days, it will be removed and seller gets nothing.
+
+    // Get platform fee % for notifications
+    const platformFeePercent = db.data.settings?.platformFee || 20;
+    const sellerReceives = Math.floor(sale.rewardOffer * (100 - platformFeePercent) / 100);
+
     db.save();
+
+    // Notify User
+    if (bot) {
+        let msg = '';
+        const itemName = sale.accountName || sale.customName || sale.itemType || 'Item';
+        if (status === 'offer_sent') {
+            msg = `📩 <b>Price Offer Received!</b>\n\nAdmin has proposed a reward of <b>${sale.rewardOffer} ${sale.rewardCurrency || 'Tokens'}</b> for your item: <b>${itemName}</b>.\n\n💡 <b>Important:</b> If you accept and the item sells, you will receive <b>${sellerReceives} ${sale.rewardCurrency || 'Tokens'}</b> (after ${platformFeePercent}% platform fee).\n\nPlease open the app to Accept or Reject this price.`;
+        } else if (status === 'approved') {
+            msg = `✅ <b>Item Approved!</b>\n\nYour item <b>${itemName}</b> has been approved and is now listed for sale.\n\n💰 <b>Payment:</b> You will receive <b>${sellerReceives} ${sale.rewardCurrency || 'Tokens'}</b> after sale (${platformFeePercent}% platform fee deducted).\n⏰ <b>Expiration:</b> Your item will be available for <b>7 days</b>. If not sold by then, it will expire and be removed.\n\nYou'll be notified when someone purchases it.`;
+        } else if (status === 'rejected') {
+            msg = `❌ <b>Item Rejected</b>\n\nYour item <b>${itemName}</b> was rejected by Admin. (Reason: Quality or Policy).`;
+        }
+
+        if (msg) {
+            bot.sendMessage(sale.userId, msg, { parse_mode: 'HTML' }).catch(e => console.error('Notify error:', e.message));
+        }
+    }
+
     res.json({ success: true, message: `Submission ${status} successfully.` });
+});
+
+// User: Accept or Reject Admin Offer
+app.post('/api/user/item-sales/offer-action', (req, res) => {
+    const { saleId, action, userId } = req.body; // action: 'accept' or 'reject'
+    if (!saleId || !action || !userId) return res.json({ success: false, message: 'Missing fields' });
+
+    if (!db.data.itemSales || !db.data.itemSales[saleId]) {
+        return res.json({ success: false, message: 'Submission not found' });
+    }
+
+    const sale = db.data.itemSales[saleId];
+    if (sale.userId !== userId.toString()) return res.json({ success: false, message: 'Unauthorized' });
+    if (sale.status !== 'offer_sent') return res.json({ success: false, message: 'No pending offer for this item' });
+
+    if (action === 'accept') {
+        sale.status = 'approved';
+        sale.updatedAt = Date.now();
+        sale.expiresAt = Date.now() + (7 * 24 * 60 * 60 * 1000); // 7 days expiration
+        // NOTE: Seller does NOT get paid immediately when accepting offer.
+        // They will only receive payment when the item is actually sold to a buyer.
+        // Platform fee will be deducted (configurable percentage).
+        // Item expires after 7 days if not sold.
+        db.save();
+        const platformFeePercent = db.data.settings?.platformFee || 20;
+        return res.json({ success: true, message: `Offer accepted! Your item is now listed for sale. You will receive ${100 - platformFeePercent}% of the price after sale (${platformFeePercent}% platform fee). Item expires in 7 days if not sold.` });
+    } else if (action === 'reject') {
+        const itemName = sale.accountName || sale.customName || sale.itemType || 'Item';
+        const sellerName = sale.username || 'User';
+
+        // Notify Admin of rejection
+        if (bot) {
+            const adminMsg = `⚠️ <b>Offer Rejected</b>\n\nUser @${sellerName} (#${userId}) has rejected your price offer for <b>${itemName}</b>. The item data has been deleted.`;
+            bot.sendMessage(config.ADMIN_ID, adminMsg, { parse_mode: 'HTML' }).catch(e => console.error('Admin notify error:', e.message));
+        }
+
+        // Delete the item immediately as requested
+        delete db.data.itemSales[saleId];
+        db.save();
+        return res.json({ success: true, message: 'Offer rejected. Item deleted.' });
+    }
+
+    return res.json({ success: false, message: 'Invalid action' });
+});
+
+// User: Buy approved item
+app.post('/api/user/item-sales/buy', (req, res) => {
+    const { userId, saleId } = req.body;
+    if (!userId || !saleId) return res.json({ success: false, message: 'Missing fields' });
+
+    const user = db.getUser(userId);
+    if (!user) return res.json({ success: false, message: 'User not found' });
+
+    if (!db.data.itemSales || !db.data.itemSales[saleId]) {
+        return res.json({ success: false, message: 'Item not found' });
+    }
+
+    const sale = db.data.itemSales[saleId];
+    if (sale.status !== 'approved' || (sale.stock || 0) <= 0) {
+        return res.json({ success: false, message: 'Item no longer available' });
+    }
+
+    const price = parseFloat(sale.price) || 0;
+
+    // Deduction logic: Always USD as requested
+    const balance = user.usd || 0;
+    if (balance < price) return res.json({ success: false, message: `Insufficient balance. Need $${price.toFixed(2)}.` });
+
+    user.usd = parseFloat((balance - price).toFixed(2));
+    db.addTransaction(userId, 'service', price, 'USD', `Bought ${sale.itemType}: ${sale.accountName || sale.customName || sale.cardType}`, 'shopping-cart');
+
+    // Process Purchase
+    sale.stock = (sale.stock || 1) - 1;
+    if (sale.stock <= 0) sale.status = 'sold';
+
+    // PAY SELLER - Only when item is actually sold to a buyer
+    if (sale.rewardOffer > 0) {
+        const seller = db.getUser(sale.userId);
+        if (seller) {
+            const currency = sale.rewardCurrency || (sale.itemType === 'Card' ? 'Tokens' : 'USD');
+            // Get platform fee % from settings (default 20%)
+            const platformFeePercent = db.data.settings?.platformFee || 20;
+            // Calculate seller payment: (100 - fee)% of reward
+            const platformFee = Math.floor(sale.rewardOffer * (platformFeePercent / 100));
+            const sellerPayment = sale.rewardOffer - platformFee;
+
+            db.addCredit(sale.userId, sellerPayment, currency);
+            db.addTransaction(sale.userId, 'bonus', sellerPayment, currency, `Payment for sold ${sale.itemType}: ${sale.accountName || sale.customName || sale.cardType || 'Item'} (after ${platformFeePercent}% fee)`, 'gift');
+
+            // Notify seller that their item was sold
+            if (bot) {
+                const itemName = sale.accountName || sale.customName || sale.cardType || sale.itemType || 'Item';
+                const sellerMsg = `🎉 <b>Item Sold!</b>\n\nYour item <b>${itemName}</b> has been purchased by a buyer.\n\n💰 Listed Price: <b>${sale.rewardOffer} ${currency}</b>\n💸 Platform Fee (${platformFeePercent}%): <b>-${platformFee} ${currency}</b>\n✅ You Received: <b>${sellerPayment} ${currency}</b>\n\nThank you for using our marketplace!`;
+                bot.sendMessage(sale.userId, sellerMsg, { parse_mode: 'HTML' }).catch(e => console.error('Seller notify error:', e.message));
+            }
+        }
+    }
+
+    // Record purchase for buyer
+    if (!user.purchasedItems) user.purchasedItems = [];
+    user.purchasedItems.push({
+        saleId: sale.id,
+        itemType: sale.itemType,
+        details: {
+            email: sale.email,
+            password: sale.password,
+            twoFA: sale.twoFA,
+            cardNumber: sale.cardNumber,
+            cardExpiry: sale.cardExpiry,
+            cardCVV: sale.cardCVV
+        },
+        boughtAt: Date.now()
+    });
+
+    db.save();
+
+    res.json({
+        success: true,
+        message: 'Purchase successful! Check your history for details.',
+        details: {
+            email: sale.email,
+            password: sale.password,
+            twoFA: sale.twoFA,
+            cardNumber: sale.cardNumber,
+            cardExpiry: sale.cardExpiry,
+            cardCVV: sale.cardCVV
+        }
+    });
 });
 
 app.get('/api/admin/global-history', (req, res) => {
     const users = db.data.users || {};
     let allHistory = [];
-    
+
     Object.keys(users).forEach(userId => {
         const user = users[userId];
         const userHistory = user.history || [];
@@ -3018,7 +4301,12 @@ app.get('/api/admin/global-history', (req, res) => {
     res.json({ success: true, history: allHistory.slice(0, 500) });
 });
 
-function startServer() {
+async function startServer() {
+    // CRITICAL: Wait for database to load before accepting requests
+    // This prevents race conditions where users log in before data is fetched from Firebase
+    console.log(`[DEBUG] Waiting for database readiness...`);
+    await db.dbReady;
+
     console.log(`[DEBUG] Attempting to start server on PORT: ${PORT}`);
     try {
         const server = app.listen(PORT, '0.0.0.0', () => {
@@ -3045,5 +4333,90 @@ if (require.main === module) {
     startServer();
 }
 
-module.exports = { startServer, setBot };
+// --- AI SYSTEM MONITOR ----------------------------------------------------
+async function monitorSystemWithAI() {
+    if (!openai || !bot) return;
+
+    try {
+        const users = Object.values(db.data.users || {});
+        const stats = {
+            totalUsers: users.length,
+            activeToday: users.filter(u => Date.now() - (u.lastActive || 0) < 86400000).length,
+            failedVerifications: users.reduce((acc, u) => acc + (u.failedVerifications || 0), 0),
+            successfulVerifications: users.reduce((acc, u) => acc + (u.successfulVerifications || 0), 0),
+            highBalances: users.filter(u => (u.tokens || 0) > 2000).map(u => ({ id: u.id, username: u.username, tokens: u.tokens })),
+            systemLoad: {
+                freeMem: Math.round(os.freemem() / 1024 / 1024) + 'MB',
+                totalMem: Math.round(os.totalmem() / 1024 / 1024) + 'MB',
+                cpuCount: os.cpus().length,
+                uptimeMinutes: Math.round(os.uptime() / 60)
+            }
+        };
+
+        const completion = await openai.chat.completions.create({
+            model: "gpt-3.5-turbo",
+            messages: [
+                { role: "system", content: "You are a professional security and system Auditor for a Telegram Bot ecosystem. Review the incoming stats JSON and look for patterns of fraud (suspiciously high balances), high failure rates in verifications, or low server memory. Return a concise bullet-point summary of any issues. If everything is optimal, return 'SYSTEM_HEALTHY'." },
+                { role: "user", content: JSON.stringify(stats) }
+            ]
+        });
+
+        const report = completion.choices[0].message.content;
+
+        if (report && report.trim() !== 'SYSTEM_HEALTHY' && report.trim() !== '"SYSTEM_HEALTHY"') {
+            bot.sendMessage(config.ADMIN_ID,
+                `🛡️ **AI SECURITY AUDITOR REPORT**\n\n` +
+                `${report}\n\n` +
+                `🔍 *Stats based on ${users.length} total users.*`,
+                { parse_mode: 'Markdown' }
+            ).catch(() => { });
+        }
+    } catch (e) {
+        console.error('AI Auditor Error:', e.message);
+    }
+}
+
+// Check every 4 hours
+setInterval(monitorSystemWithAI, 1000 * 60 * 60 * 4);
+
+// --- EXPIRED ITEMS CLEANUP ------------------------------------------------
+// Items that are not sold within 7 days will be removed and seller loses them
+async function cleanupExpiredItems() {
+    if (!db.data.itemSales) return;
+
+    const now = Date.now();
+    const sales = Object.values(db.data.itemSales);
+    let expiredCount = 0;
+
+    for (const sale of sales) {
+        // Check if item is approved but not sold, and has expired
+        if (sale.status === 'approved' && sale.expiresAt && sale.expiresAt < now) {
+            const itemName = sale.accountName || sale.customName || sale.itemType || 'Item';
+
+            // Notify seller that item expired
+            if (bot) {
+                const expiredMsg = `⏰ <b>Item Expired</b>\n\nYour item <b>${itemName}</b> was not sold within 7 days and has been removed from the marketplace.\n\n❌ The item has been permanently deleted.\n\nTip: You can submit a new item for sale anytime!`;
+                bot.sendMessage(sale.userId, expiredMsg, { parse_mode: 'HTML' }).catch(e => console.error('Expired item notify error:', e.message));
+            }
+
+            // Delete the expired item
+            delete db.data.itemSales[sale.id];
+            expiredCount++;
+
+            console.log(`[CLEANUP] Expired item removed: ${sale.id} - ${itemName}`);
+        }
+    }
+
+    if (expiredCount > 0) {
+        db.save();
+        console.log(`[CLEANUP] Removed ${expiredCount} expired items`);
+    }
+}
+
+// Run cleanup every 6 hours
+setInterval(cleanupExpiredItems, 1000 * 60 * 60 * 6);
+// Also run on startup
+cleanupExpiredItems();
+
+module.exports = { startServer, setBot, monitorSystemWithAI };
 

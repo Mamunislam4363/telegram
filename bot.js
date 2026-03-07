@@ -214,23 +214,7 @@ bot.on('polling_error', (err) => {
     }
 });
 
-// Force all logs to a file so we can see what the user sees
-const fsLog = require('fs');
-const logFile = require('path').join(__dirname, 'global_log.txt');
-const originalConsoleLog = console.log;
-const originalConsoleError = console.error;
-
-console.log = function (...args) {
-    const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ');
-    fsLog.appendFileSync(logFile, `[LOG] ${new Date().toISOString()} ${msg}\n`);
-    originalConsoleLog.apply(console, args);
-};
-
-console.error = function (...args) {
-    const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ');
-    fsLog.appendFileSync(logFile, `[ERR] ${new Date().toISOString()} ${msg}\n`);
-    originalConsoleError.apply(console, args);
-};
+// File logging disabled as requested by user
 
 console.log('🤖 Telegram Verification Bot Started');
 console.log('📊 Activity: Bot is running and waiting for users...');
@@ -417,16 +401,16 @@ async function checkMembership(userId) {
 
 // Helper: Show mandatory join message (smart - shows only missing items)
 function showMandatoryJoin(chatId, membership, msgId = null) {
-    const requiredChannel = (config.REQUIRED_CHANNEL || '').toString().trim();
-    const requiredGroup = (config.REQUIRED_GROUP || '').toString().trim();
+    const channelName = config.REQUIRED_CHANNEL_NAME || '@AutosVerify';
+    const groupName = config.REQUIRED_GROUP_NAME || '@AutosVerifyCh';
 
     // Determine what's missing
     const missingItems = [];
-    if (requiredChannel && !membership.channel) {
-        missingItems.push({ label: '📢 Channel', username: requiredChannel });
+    if (!membership.channel) {
+        missingItems.push({ label: '📢 Channel', name: channelName });
     }
-    if (requiredGroup && !membership.group) {
-        missingItems.push({ label: '💬 Group', username: requiredGroup });
+    if (!membership.group) {
+        missingItems.push({ label: '💬 Group', name: groupName });
     }
 
     // Build message
@@ -435,21 +419,21 @@ function showMandatoryJoin(chatId, membership, msgId = null) {
         const item = missingItems[0];
         msg += `You left our ${item.label} and your access has been *revoked*\n\n`;
         msg += `Please rejoin to continue using the bot:\n\n`;
-        msg += `❌ ${item.label}: \`${item.username}\``;
+        msg += `❌ ${item.label}: \`${item.name}\``;
     } else {
         msg += `You are not a member of our required communities.\n\n`;
         msg += `Please join to use the bot:\n\n`;
         missingItems.forEach(item => {
-            msg += `❌ ${item.label}: \`${item.username}\`\n`;
+            msg += `❌ ${item.label}: \`${item.name}\`\n`;
         });
     }
     msg += `\n\n✅ After joining, click *I Joined* below to verify.`;
 
-    // Build join buttons (only for missing items)
+    // Build join buttons
     const buttons = [];
     const joinRow = missingItems.map(item => ({
         text: `Join ${item.label}`,
-        url: `https://t.me/${item.username.replace('@', '')}`
+        url: `https://t.me/${item.name.replace('@', '')}`
     }));
     if (joinRow.length) buttons.push(joinRow);
     buttons.push([{ text: '✅ I Joined - Verify Now', callback_data: 'verify_membership' }]);
@@ -615,8 +599,8 @@ async function sendMainMenu(chatId, user, msgFrom) {
         reply_markup: {
             inline_keyboard: [
                 [{ text: '🚀 Launch App', web_app: { url: appUrl } }],
-                [{ text: '📢 Join Channel', url: `https://t.me/${(config.REQUIRED_CHANNEL || '').replace('@', '')}` }],
-                [{ text: '👥 Join Group', url: `https://t.me/${(config.REQUIRED_GROUP || '').replace('@', '')}` }],
+                [{ text: '📢 Join Channel', url: `https://t.me/${(config.REQUIRED_CHANNEL_NAME || '@AutosVerify').replace('@', '')}` }],
+                [{ text: '👥 Join Group', url: `https://t.me/${(config.REQUIRED_GROUP_NAME || '@AutosVerifyCh').replace('@', '')}` }],
                 [{ text: '📺 YouTube Channel', url: 'https://youtube.com/@MamunIslamyts' }]
             ]
         }
@@ -642,6 +626,11 @@ bot.on('my_chat_member', (update) => {
         // Bot added to group/channel
         db.saveGroup(chat.id, chat.title, chat.type);
         console.log(`[GROUP] Added to ${chat.type}: ${chat.title} (${chat.id})`);
+
+        // Notify Admin of new group/channel ID
+        if (config.ADMIN_ID) {
+            bot.sendMessage(config.ADMIN_ID, `🤖 **Bot Added to New ${chat.type.toUpperCase()}**\n\n📌 **Title:** ${chat.title}\n🆔 **Chat ID:** \`${chat.id}\`\n\n_Use this ID in config.js if you want to set it as a backup chat._`, { parse_mode: 'Markdown' }).catch(() => { });
+        }
     } else if (['left', 'kicked'].includes(newStatus)) {
         // Bot removed
         if (db.data.groups && db.data.groups[chat.id]) {
@@ -659,18 +648,54 @@ bot.on('message', async (msg) => {
         db.saveGroup(msg.chat.id, msg.chat.title, msg.chat.type);
     }
 
-    // Chat reward logic: Award 5 tokens per message in the required group
-    const requiredGroup = (config.REQUIRED_GROUP || '').replace('@', '').toLowerCase();
-    const chatUsername = (msg.chat && msg.chat.username) ? msg.chat.username.toLowerCase() : '';
+    // AUTO-DELETE: Join/Leave/Service Messages
+    if (['group', 'supergroup'].includes(msg.chat.type)) {
+        const groupSettings = db.getGroupSettings(msg.chat.id);
 
-    if (chatUsername === requiredGroup && msg.from && !msg.from.is_bot) {
+        // Check if auto-delete is enabled for this group
+        if (groupSettings && groupSettings.autoDeleteServiceMessages) {
+            const isServiceMessage = msg.new_chat_members ||
+                msg.left_chat_member ||
+                msg.group_chat_created ||
+                msg.supergroup_chat_created ||
+                msg.channel_chat_created ||
+                msg.migrate_to_chat_id ||
+                msg.migrate_from_chat_id ||
+                msg.pinned_message ||
+                (msg.text && (
+                    msg.text.includes('joined the group') ||
+                    msg.text.includes('left the group') ||
+                    msg.text.includes('added by') ||
+                    msg.text.includes('removed by')
+                ));
+
+            if (isServiceMessage) {
+                // Delete after 3 seconds delay
+                setTimeout(async () => {
+                    try {
+                        await bot.deleteMessage(msg.chat.id, msg.message_id);
+                        console.log(`[AUTO-DELETE] Deleted service message in ${msg.chat.id}`);
+                    } catch (e) {
+                        // Silent fail - bot might not have delete permission
+                        console.log(`[AUTO-DELETE] Failed to delete message: ${e.message}`);
+                    }
+                }, 3000);
+            }
+        }
+    }
+
+    // Chat reward logic: Award 5 tokens per message in the required group
+    const requiredGroup = String(config.REQUIRED_GROUP || '').toLowerCase();
+    const chatUsername = (msg.chat && msg.chat.username) ? '@' + msg.chat.username.toLowerCase() : '';
+    const chatId = String(msg.chat.id);
+
+    if ((chatUsername === requiredGroup || chatId === requiredGroup) && msg.from && !msg.from.is_bot) {
         const userId = msg.from.id;
         const user = db.getUser(userId);
         if (user) {
             const reward = 5;
-            user.tokens = (user.tokens || user.balance_tokens || 0) + reward;
-            if (user.balance_tokens !== undefined) user.balance_tokens = user.tokens;
-            
+            db.setTokenBalance(user, db.getTokenBalance(user) + reward);
+
             if (!user.history) user.history = [];
             user.history.unshift({
                 type: 'chat_reward',
@@ -886,11 +911,11 @@ setInterval(() => {
             // Notify admin
             if (broadcast.createdBy) {
                 bot.sendMessage(broadcast.createdBy,
-                    `✅ **Scheduled Broadcast Sent!**\n\n` +
-                    `📊 **Results:**\n` +
-                    `✅ Successful: ${successCount}\n` +
-                    `❌ Failed: ${failCount}\n` +
-                    `📈 Total: ${users.length}`,
+                    `📢 **Scheduled Broadcast Sent!**\n\n` +
+                    `📊 **Broadcast Results:**\n` +
+                    `✅ **Successful:** \`${successCount}\` users\n` +
+                    `❌ **Failed:** \`${failCount}\` users\n` +
+                    `📈 **Total Attempted:** \`${users.length}\` users`,
                     { parse_mode: 'Markdown' }
                 ).catch(() => { });
             }
@@ -903,100 +928,7 @@ setInterval(() => {
 
 console.log('📅 Broadcast scheduler started');
 
-// ==================== AUTO BACKUP SYSTEM ====================
 
-// Helper: Clean old backups (keep only latest 5)
-function cleanOldBackups() {
-    try {
-        const fs = require('fs');
-        const path = require('path');
-        const backupDir = path.join(__dirname, 'backups');
-
-        if (!fs.existsSync(backupDir)) return;
-
-        // Get all backup files
-        const allFiles = fs.readdirSync(backupDir);
-        const files = allFiles
-            .filter(f => (f.startsWith('auto_backup_') || f.startsWith('backup_')) && f.endsWith('.json'))
-            .map(f => ({
-                name: f,
-                path: path.join(backupDir, f),
-                time: fs.statSync(path.join(backupDir, f)).mtime.getTime()
-            }))
-            .sort((a, b) => b.time - a.time); // Sort by newest first
-
-        console.log(`[BACKUP CLEANUP] Found ${files.length} valid backup files.`);
-
-        // Keep only latest 3, delete the rest
-        if (files.length > 3) {
-            const filesToDelete = files.slice(3);
-            console.log(`[BACKUP CLEANUP] Deleting ${filesToDelete.length} old files...`);
-
-            filesToDelete.forEach(file => {
-                try {
-                    fs.unlinkSync(file.path);
-                    console.log(`🗑️ Deleted old backup: ${file.name}`);
-                } catch (err) {
-                    console.error(`❌ Failed to delete ${file.name}:`, err.message);
-                }
-            });
-        } else {
-            console.log(`[BACKUP CLEANUP] No files to delete (Limit: 3).`);
-        }
-    } catch (error) {
-        console.error('❌ Backup cleanup failed:', error.message);
-    }
-}
-
-// Auto backup every 12 hours
-setInterval(() => {
-    try {
-        console.log('🔄 Creating automatic backup...');
-
-        const backupFile = db.createBackup(true);
-        const backupName = require('path').basename(backupFile);
-
-        // Clean old backups (keep only latest 5)
-        cleanOldBackups();
-
-        // Send backup to admin
-        const adminId = config.ADMIN_ID;
-        if (adminId) {
-            bot.sendDocument(adminId, backupFile, {
-                caption: `🔄 **Automatic Backup**\n\n` +
-                    `File: \`${backupName}\`\n` +
-                    `Time: ${new Date().toLocaleString()}\n\n` +
-                    `This backup is created every 12 hours automatically.\n` +
-                    `Use Admin Panel → Backup & Restore to restore this backup if needed.`,
-                parse_mode: 'Markdown'
-            }).then(() => {
-                console.log('✅ Backup sent to admin successfully');
-            }).catch(err => {
-                console.error('❌ Failed to send backup to admin:', err.message);
-            });
-        }
-    } catch (error) {
-        console.error('❌ Backup creation failed:', error);
-    }
-}, 12 * 60 * 60 * 1000); // 12 hours
-
-// Initial backup on startup DISABLED to prevent nodemon restart loops
-/*
-setTimeout(() => {
-    try {
-        console.log('🔄 Creating initial backup on startup...');
-        const backupFile = db.createBackup(true);
-        console.log('✅ Initial backup created:', require('path').basename(backupFile));
-
-        // Clean old backups
-        cleanOldBackups();
-    } catch (error) {
-        console.error('❌ Initial backup failed:', error);
-    }
-}, 5000); 
-*/
-
-console.log('💾 Auto backup system started (every 12 hours)');
 
 // Auto Cleanup History (Every 24 Hours)
 setInterval(() => {
@@ -1011,65 +943,6 @@ setInterval(() => {
 
 
 
-/* ==========================================================================================
- * AUTOMATED BACKUP SERVICE
- * Runs every 5 hours. Sends database.json to Admin via Backup Bot. Deletes file after success.
- * ========================================================================================= */
-if (config.BACKUP_BOT_TOKEN) {
-    const backupBot = new TelegramBot(config.BACKUP_BOT_TOKEN, { polling: false });
-
-    const runAutoBackup = async () => {
-        try {
-            console.log('⏳ Starting Auto-Backup...');
-            const backupPath = db.createBackup(true); // true = auto mode
-            if (!fs.existsSync(backupPath)) {
-                console.error('❌ Backup generation failed: File not found');
-                return;
-            }
-
-            const now = new Date();
-            const dateStr = now.toLocaleDateString('en-GB'); // DD/MM/YYYY
-            const timeStr = now.toLocaleTimeString('en-US'); // HH:MM:SS AM/PM
-
-            const caption = `📦 **Auto Backup**\n\n📅 **Date:** ${dateStr}\n⏰ **Time:** ${timeStr}\n\n_File stored securely._`;
-
-            // Wait for file stream availability
-            await new Promise(r => setTimeout(r, 1000));
-
-            if (config.ADMIN_ID) {
-                await backupBot.sendDocument(config.ADMIN_ID, fs.createReadStream(backupPath), {
-                    caption: caption,
-                    parse_mode: 'Markdown'
-                });
-
-                console.log('✅ Auto-Backup sent successfully!');
-
-                // Delete Local File (Privacy/Space)
-                try {
-                    db.deleteAllBackups();
-                    console.log('🗑️ Local backup files deleted as per security policy.');
-                } catch (delErr) {
-                    console.error('⚠️ Failed to clean local backups:', delErr);
-                }
-            } else {
-                console.error('❌ Admin ID not set for backups.');
-            }
-
-        } catch (error) {
-            console.error('❌ Auto-Backup Error:', error.message);
-        }
-    };
-
-    // Schedule: Every 15 Days
-    const BACKUP_INTERVAL = 15 * 24 * 60 * 60 * 1000; // 15 Days
-    setInterval(runAutoBackup, BACKUP_INTERVAL);
-    // console.log(`🛡️ Auto-Backup Service initialized (Interval: 15 days).`);
-} else {
-    // console.warn('⚠️ BACKUP_BOT_TOKEN missing. Auto-Backup disabled.');
-}
-
-// Export bot for web panel notifications
-module.exports = { bot };
 
 // ==================== HELPERS ====================
 

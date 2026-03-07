@@ -2,7 +2,7 @@ require('dotenv').config();
 
 module.exports = {
     // Get your token from @BotFather on Telegram
-    TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || '8160315112:AAFXkQvshWwMqNaPYFX7T6mgOjtDK9W8GKw',
+    TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
 
     // Bot Username (needed for webapp links) - Get from @BotFather
     BOT_USERNAME: process.env.BOT_USERNAME || 'AutosVerify_bot',
@@ -17,51 +17,52 @@ module.exports = {
     ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'admin123',
 
     // Public URL for web panel (your domain or IP)
-    PUBLIC_URL: process.env.PUBLIC_URL || 'https://mamunislam.netlify.app',  // Domain URL
+    PUBLIC_URL: process.env.PUBLIC_URL || 'https://mamunislam.netlify.app', 
 
     // OAUTH CONFIGURATION (FOR GMAIL SERVICE SYSTEM)
-    // Create credentials at: https://console.cloud.google.com/apis/credentials
-    GMAIL_CLIENT_ID: process.env.GMAIL_CLIENT_ID || '144971511452-tb0ohi6g0o4q3metmsrtj7ev2vadipi4.apps.googleusercontent.com',
-    GMAIL_CLIENT_SECRET: process.env.GMAIL_CLIENT_SECRET || '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',
-    // Dynamic Redirect URI based on Public URL
+    GMAIL_CLIENT_ID: process.env.GMAIL_CLIENT_ID,
+    GMAIL_CLIENT_SECRET: process.env.GMAIL_CLIENT_SECRET,
     get OAUTH_REDIRECT_URI() {
         return (process.env.OAUTH_REDIRECT_URI || `${this.PUBLIC_URL}/auth/google/callback`);
     },
 
-    // Mini App Subdomain (Telegram Mini App URL)
-    MINI_APP_URL: process.env.MINI_APP_URL || 'https://mamunislam.netlify.app',  // Telegram Mini App subdomain
+    // Mini App URL
+    MINI_APP_URL: process.env.MINI_APP_URL || 'https://mamunislam.netlify.app',
 
-    // Mandatory Channel & Group (users MUST join to use the bot)
-    REQUIRED_CHANNEL: '@AutosVerify',  // Channel username or ID
-    REQUIRED_GROUP: '@AutosVerifyCh',  // Group username or ID
+    // Mandatory Channel & Group (IDs are preferred for stability)
+    REQUIRED_CHANNEL: process.env.REQUIRED_CHANNEL_ID || '@AutosVerify',
+    REQUIRED_GROUP: process.env.REQUIRED_GROUP_ID || '@AutosVerifyCh',
+    REQUIRED_CHANNEL_NAME: process.env.REQUIRED_CHANNEL_NAME || '@AutosVerify',
+    REQUIRED_GROUP_NAME: process.env.REQUIRED_GROUP_NAME || '@AutosVerifyCh',
 
-    // Payment Methods (Enable/Disable)
+    // Encryption Key for sensitive data in DB
+    ENCRYPTION_KEY: process.env.ENCRYPTION_KEY || 'default_secret_key_32_bytes_long____',
+
+    // Payment Methods
     PAYMENT_METHODS: {
         crypto: {
             enabled: true,
             name: 'Cryptocurrency (USDT TRC20)',
             address: process.env.USDT_ADDRESS || 'YOUR_USDT_TRC20_ADDRESS_HERE',
-            ratePerCredit: 0.01  // 1 credit = 0.01 USDT
+            ratePerCredit: 0.01
         },
     },
 
     // Support Settings
-    SUPPORT_CHANNEL: '@Onlin_Income_Support',  // Support channel/group
-    SUPPORT_COST: 10,  // Credits required to access support (editable by admin)
+    SUPPORT_CHANNEL: '@Onlin_Income_Support',
+    SUPPORT_COST: 10,
 
     // Default Referral Bonus
-    REFERRAL_BONUS: 50, // Default credits per referral
+    REFERRAL_BONUS: 50,
 
-    // Command settings
-    DEFAULT_TYPE: 'spotify',
-
-    // Remote API Access (Frontend on Hostinger)
-    API_KEY: process.env.API_KEY || 'tg_bot_remote_access_key_123', // CHANGE THIS!
-    API_BASE_URL: process.env.API_BASE_URL || 'https://mamunislam.netlify.app', // Your VPS URL
-
-    // SmtpLabs API (Gmail Automation)
-    SMTPLABS_API_KEY: 'smtplabs_SQGEMA1yD2cEgFJFJn38Uh7dGcDydAWYut7R7RzZQD3Hbvox',
+    // SmtpLabs API
+    SMTPLABS_API_KEY: process.env.SMTPLABS_API_KEY,
 
     // Automated Backup Bot
-    BACKUP_BOT_TOKEN: '8395111217:AAEGWAPDvBbWThgZ6FGB_5ok58l_B3X3Zqo'
+    BACKUP_BOT_TOKEN: process.env.BACKUP_BOT_TOKEN,
+    BACKUP_CHAT_ID: process.env.BACKUP_CHAT_ID || '8125978050',
+
+    // OpenAI Configuration
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
+    OPENAI_MODEL: process.env.OPENAI_MODEL || 'gpt-3.5-turbo'
 };

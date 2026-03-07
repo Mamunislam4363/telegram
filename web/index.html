@@ -37,6 +37,16 @@
     <link rel="stylesheet" href="style.css?v=2.1">
     <style>
         /* CSS PATCH FOR NEW FEATURES */
+        select option {
+            background-color: #1a100a !important;
+            color: #ffffff !important;
+        }
+
+        /* Ensure placeholders are visible */
+        ::placeholder {
+            color: rgba(255, 255, 255, 0.4) !important;
+            opacity: 1;
+        }
 
         /* MOBILE VIEWPORT ENFORCEMENT */
         body {
@@ -153,8 +163,8 @@
             font-size: 13px;
             font-weight: 700;
             z-index: 9999999;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             display: none;
             text-align: center;
             min-width: 200px;
@@ -1353,7 +1363,7 @@
             <div id="homePage" class="page active">
 
                 <!-- LIVE BROADCAST FEED (RESTORED PILL DESIGN) -->
-                <div class="broadcast-wrapper" style="margin-top:20px; margin-bottom:15px; padding:0 16px">
+                <div class="broadcast-wrapper" style="margin-top:15px; margin-bottom:15px; padding:0 16px">
                     <div class="bc-pill-new">
                         <div class="bcp-icon">
                             <i class="fas fa-bullhorn"></i>
@@ -1381,15 +1391,24 @@
                     <div class="wc-balance-row">
                         <div class="wc-balance-item">
                             <div class="wc-bal-left">
+                                <div class="wc-bal-icon usd"
+                                    style="background: linear-gradient(135deg, #22c55e, #16a34a); color: #fff;"><i
+                                        class="fas fa-dollar-sign"></i></div>
+                                <div class="wc-bal-label">Balance</div>
+                            </div>
+                            <div class="wc-bal-value" id="home-usd">$0.00</div>
+                        </div>
+                        <div class="wc-balance-item">
+                            <div class="wc-bal-left">
                                 <div class="wc-bal-icon token"><i class="fas fa-coins"></i></div>
-                                <div class="wc-bal-label" data-i18n="tokensLabel">Tokens</div>
+                                <div class="wc-bal-label">Tokens</div>
                             </div>
                             <div class="wc-bal-value" id="home-tc">0</div>
                         </div>
                         <div class="wc-balance-item">
                             <div class="wc-bal-left">
                                 <div class="wc-bal-icon Gems"><i class="fas fa-gem"></i></div>
-                                <div class="wc-bal-label" data-i18n="gemsLabel">Gems</div>
+                                <div class="wc-bal-label">Gems</div>
                             </div>
                             <div class="wc-bal-value" id="home-js">0</div>
                         </div>
@@ -1428,25 +1447,30 @@
                     </div>
 
                     <div class="grid-btn" onclick="nav('numberService')">
-                        <div class="grid-btn-icon" style="background: linear-gradient(135deg,#4a044e,#9333ea);"><i class="fas fa-phone"></i></div>
+                        <div class="grid-btn-icon" style="background: linear-gradient(135deg,#4a044e,#9333ea);"><i
+                                class="fas fa-phone"></i></div>
                         <div class="grid-btn-text" data-i18n="number">Number</div>
                     </div>
 
                     <div class="grid-btn" onclick="nav('emailMenu')">
-                        <div class="grid-btn-icon" style="background: linear-gradient(135deg,#7f1d1d,#dc2626);"><i class="fas fa-envelope"></i></div>
+                        <div class="grid-btn-icon" style="background: linear-gradient(135deg,#7f1d1d,#dc2626);"><i
+                                class="fas fa-envelope"></i></div>
                         <div class="grid-btn-text" data-i18n="email">Email</div>
                     </div>
 
                     <div class="grid-btn" onclick="nav('itemSell')">
-                        <div class="grid-btn-icon" style="background: linear-gradient(135deg,#1e3a8a,#1d4ed8);"><i class="fas fa-shopping-basket"></i></div>
+                        <div class="grid-btn-icon" style="background: linear-gradient(135deg,#1e3a8a,#1d4ed8);"><i
+                                class="fas fa-shopping-basket"></i></div>
                         <div class="grid-btn-text" data-i18n="itemSell">Item Sell</div>
                     </div>
                     <div class="grid-btn" onclick="nav('accountsStore')">
-                        <div class="grid-btn-icon" style="background: linear-gradient(135deg,#f59e0b,#d97706);"><i class="fas fa-user-shield"></i></div>
+                        <div class="grid-btn-icon" style="background: linear-gradient(135deg,#f59e0b,#d97706);"><i
+                                class="fas fa-user-shield"></i></div>
                         <div class="grid-btn-text" data-i18n="accounts">Accounts</div>
                     </div>
                     <div class="grid-btn" onclick="nav('history')">
-                        <div class="grid-btn-icon" style="background: linear-gradient(135deg,#6366f1,#4338ca);"><i class="fas fa-history"></i></div>
+                        <div class="grid-btn-icon" style="background: linear-gradient(135deg,#6366f1,#4338ca);"><i
+                                class="fas fa-history"></i></div>
                         <div class="grid-btn-text" data-i18n="history">History</div>
                     </div>
                 </div>
@@ -1523,39 +1547,39 @@
                         <div
                             style="font-size:11px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">
                             Select Platform</div>
-                        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
-                            <button class="num-platform-btn" onclick="selectNumPlatform(this,'telegram')"
-                                style="background:rgba(147,51,234,0.15); border:2px solid #9333ea; border-radius:14px; padding:14px 8px; display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer;">
-                                <i class="fab fa-telegram" style="font-size:22px; color:#229ed9;"></i>
-                                <span style="font-size:10px; font-weight:700; color:var(--text-main);">Telegram</span>
-                            </button>
-                            <button class="num-platform-btn" onclick="selectNumPlatform(this,'whatsapp')"
-                                style="background:var(--accent-bg); border:2px solid var(--border-color); border-radius:14px; padding:14px 8px; display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer;">
-                                <i class="fab fa-whatsapp" style="font-size:22px; color:#22c55e;"></i>
-                                <span style="font-size:10px; font-weight:700; color:var(--text-main);">WhatsApp</span>
-                            </button>
-                            <button class="num-platform-btn" onclick="selectNumPlatform(this,'instagram')"
-                                style="background:var(--accent-bg); border:2px solid var(--border-color); border-radius:14px; padding:14px 8px; display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer;">
-                                <i class="fab fa-instagram" style="font-size:22px; color:#e1306c;"></i>
-                                <span style="font-size:10px; font-weight:700; color:var(--text-main);">Instagram</span>
-                            </button>
-                            <button class="num-platform-btn" onclick="selectNumPlatform(this,'twitter')"
-                                style="background:var(--accent-bg); border:2px solid var(--border-color); border-radius:14px; padding:14px 8px; display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer;">
-                                <i class="fab fa-twitter" style="font-size:22px; color:#1da1f2;"></i>
-                                <span style="font-size:10px; font-weight:700; color:var(--text-main);">Twitter</span>
-                            </button>
-                            <button class="num-platform-btn" onclick="selectNumPlatform(this,'tiktok')"
-                                style="background:var(--accent-bg); border:2px solid var(--border-color); border-radius:14px; padding:14px 8px; display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer;">
-                                <i class="fab fa-tiktok" style="font-size:22px; color:#fff;"></i>
-                                <span style="font-size:10px; font-weight:700; color:var(--text-main);">TikTok</span>
-                            </button>
-                            <button class="num-platform-btn" onclick="selectNumPlatform(this,'other')"
-                                style="background:var(--accent-bg); border:2px solid var(--border-color); border-radius:14px; padding:14px 8px; display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer;">
-                                <i class="fas fa-ellipsis-h" style="font-size:22px; color:var(--text-sub);"></i>
-                                <span style="font-size:10px; font-weight:700; color:var(--text-main);">Other</span>
-                            </button>
+                        <div id="numPlatformList" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+                            <!-- Platforms will be loaded dynamically from API -->
                         </div>
                     </div>
+
+                    <script>
+                        // Load platforms when page becomes visible
+                        document.addEventListener('DOMContentLoaded', function () {
+                            const observer = new MutationObserver(function (mutations) {
+                                mutations.forEach(function (mutation) {
+                                    const page = document.getElementById('numberServicePage');
+                                    if (page && page.classList.contains('active')) {
+                                        if (typeof loadNumPlatforms === 'function') {
+                                            loadNumPlatforms();
+                                        }
+                                    }
+                                });
+                            });
+
+                            const page = document.getElementById('numberServicePage');
+                            if (page) {
+                                observer.observe(page, { attributes: true, attributeFilter: ['class'] });
+                            }
+
+                            // Also try to load immediately if page is already active
+                            setTimeout(function () {
+                                const page = document.getElementById('numberServicePage');
+                                if (page && page.style.display !== 'none' && typeof loadNumPlatforms === 'function') {
+                                    loadNumPlatforms();
+                                }
+                            }, 100);
+                        });
+                    </script>
 
                     <!-- Generate Button -->
                     <button id="numGenerateBtn" onclick="generateVirtualNumber()"
@@ -1668,6 +1692,28 @@
             <!-- TEMP MAIL PAGE -->
             <div id="mailServicePage" class="page">
                 <div class="content-body" style="padding:20px; padding-bottom:140px;">
+                    <!-- Balance Display -->
+                    <div
+                        style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:14px 18px;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div
+                                style="width:38px; height:38px; background:rgba(239,68,68,0.15); border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                                <i class="fas fa-coins" style="color:#ef4444; font-size:16px;"></i>
+                            </div>
+                            <div>
+                                <div
+                                    style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase;">
+                                    Your Balance</div>
+                                <div id="tempMailBalanceDisplay"
+                                    style="font-size:16px; font-weight:800; color:var(--text-main);">0 TC</div>
+                            </div>
+                        </div>
+                        <div
+                            style="font-size:11px; color:#ef4444; font-weight:700; background:rgba(239,68,68,0.1); padding:5px 12px; border-radius:20px; border:1px solid rgba(239,68,68,0.3);">
+                            <span id="tempMailCostBadge">10 TC / Email</span>
+                        </div>
+                    </div>
+
                     <!-- Active Email State (Always show this, auto-generate if needed) -->
                     <div id="tempMailActive" style="display:block;">
                         <!-- Email Address Display -->
@@ -1745,6 +1791,28 @@
             <!-- PREMIUM MAIL PAGE -->
             <div id="premiumMailPage" class="page">
                 <div class="content-body" style="padding:20px; padding-bottom:140px;">
+                    <!-- Balance Display -->
+                    <div
+                        style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:14px 18px;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div
+                                style="width:38px; height:38px; background:rgba(245,158,11,0.15); border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                                <i class="fas fa-coins" style="color:#f59e0b; font-size:16px;"></i>
+                            </div>
+                            <div>
+                                <div
+                                    style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase;">
+                                    Your Balance</div>
+                                <div id="premiumMailBalanceDisplay"
+                                    style="font-size:16px; font-weight:800; color:var(--text-main);">0 TC</div>
+                            </div>
+                        </div>
+                        <div
+                            style="font-size:11px; color:#f59e0b; font-weight:700; background:rgba(245,158,11,0.1); padding:5px 12px; border-radius:20px; border:1px solid rgba(245,158,11,0.3);">
+                            <span id="premiumMailCostBadge">20 TC / Email</span>
+                        </div>
+                    </div>
+
                     <!-- Active Email State (Always show this, auto-generate if needed) -->
                     <div id="premiumMailActive" style="display:block;">
                         <!-- Email Address Display -->
@@ -1778,13 +1846,13 @@
 
                         <!-- Action Buttons -->
                         <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:20px;">
-                            <button class="mail-action-btn" onclick="generateTempMail('premium')">
+                            <button class="mail-action-btn" onclick="loadPremiumEmailsFromAdmin()">
                                 <i class="fas fa-crown"></i> NEW GMAIL
                             </button>
                             <button class="mail-action-btn renew" onclick="renewTempMail('premium')">
                                 <i class="fas fa-history"></i> RENEW GMAIL
                             </button>
-                            <button class="mail-action-btn refresh" onclick="refreshInbox('premium')">
+                            <button class="mail-action-btn refresh" onclick="refreshPremiumInbox()">
                                 <i class="fas fa-sync"></i> REFRESH
                             </button>
                         </div>
@@ -1968,7 +2036,7 @@
                 <!-- MENU LIST (MATCHING SCREENSHOT) -->
                 <div style="margin-top: 20px;">
 
-                    <!-- Deposit -->
+                    <!-- 1. Deposit -->
                     <div class="menu-item" onclick="nav('deposit')">
                         <div class="mi-left">
                             <div class="mi-icon green"><i class="fas fa-wallet"></i></div>
@@ -1977,16 +2045,7 @@
                         <i class="fas fa-chevron-right" style="color:var(--text-sub); font-size:12px;"></i>
                     </div>
 
-                    <!-- Invite & Earn (Moved UP) -->
-                    <div class="menu-item" onclick="nav('invite')">
-                        <div class="mi-left">
-                            <div class="mi-icon pink"><i class="fas fa-share-alt"></i></div>
-                            <div class="mi-t" data-i18n="inviteEarn">Invite & Earn</div>
-                        </div>
-                        <i class="fas fa-chevron-right" style="color:var(--text-sub); font-size:12px;"></i>
-                    </div>
-
-                    <!-- Verification (Moved UP) -->
+                    <!-- 2. Verification -->
                     <div class="menu-item" onclick="nav('verify')">
                         <div class="mi-left">
                             <div class="mi-icon blue"><i class="fas fa-check-circle"></i></div>
@@ -1995,7 +2054,7 @@
                         <i class="fas fa-chevron-right" style="color:var(--text-sub); font-size:12px;"></i>
                     </div>
 
-                    <!-- Services -->
+                    <!-- 3. Services -->
                     <div class="menu-item" onclick="nav('services')">
                         <div class="mi-left">
                             <div class="mi-icon yellow"><i class="fas fa-th"></i></div>
@@ -2004,7 +2063,7 @@
                         <i class="fas fa-chevron-right" style="color:var(--text-sub); font-size:12px;"></i>
                     </div>
 
-                    <!-- Shop -->
+                    <!-- 4. Shop -->
                     <div class="menu-item" onclick="nav('shop')">
                         <div class="mi-left">
                             <div class="mi-icon purple"><i class="fas fa-shopping-cart"></i></div>
@@ -2013,16 +2072,7 @@
                         <i class="fas fa-chevron-right" style="color:var(--text-sub); font-size:12px;"></i>
                     </div>
 
-                    <!-- Leaderboard -->
-                    <div class="menu-item" onclick="nav('leaderboard')">
-                        <div class="mi-left">
-                            <div class="mi-icon orange"><i class="fas fa-medal"></i></div>
-                            <div class="mi-t" data-i18n="leaderboard">Leaderboard</div>
-                        </div>
-                        <i class="fas fa-chevron-right" style="color:var(--text-sub); font-size:12px;"></i>
-                    </div>
-
-                    <!-- Exchange -->
+                    <!-- 5. Exchange -->
                     <div class="menu-item" onclick="nav('exchange')">
                         <div class="mi-left">
                             <div class="mi-icon cyan"><i class="fas fa-exchange-alt"></i></div>
@@ -2031,7 +2081,17 @@
                         <i class="fas fa-chevron-right" style="color:var(--text-sub); font-size:12px;"></i>
                     </div>
 
-                    <!-- Redeem Code -->
+                    <!-- 6. Transfer Assets (Moved here) -->
+                    <div class="menu-item" onclick="nav('transfer')">
+                        <div class="mi-left">
+                            <div class="mi-icon pink" style="background:rgba(236,72,153,0.15); color:#ec4899;"><i
+                                    class="fas fa-paper-plane"></i></div>
+                            <div class="mi-t">Transfer Assets</div>
+                        </div>
+                        <i class="fas fa-chevron-right" style="color:var(--text-sub); font-size:12px;"></i>
+                    </div>
+
+                    <!-- 7. Redeem Code -->
                     <div class="menu-item" onclick="nav('redeem')">
                         <div class="mi-left">
                             <div class="mi-icon orange"><i class="fas fa-ticket-alt"></i></div>
@@ -2040,7 +2100,7 @@
                         <i class="fas fa-chevron-right" style="color:var(--text-sub); font-size:12px;"></i>
                     </div>
 
-                    <!-- Virtual Number -->
+                    <!-- 7. Virtual Number -->
                     <div class="menu-item" onclick="nav('numberService')">
                         <div class="mi-left">
                             <div class="mi-icon purple"><i class="fas fa-phone-alt"></i></div>
@@ -2049,7 +2109,7 @@
                         <i class="fas fa-chevron-right" style="color:var(--text-sub); font-size:12px;"></i>
                     </div>
 
-                    <!-- Email Services -->
+                    <!-- 8. Email Services -->
                     <div class="menu-item" onclick="nav('emailMenu')">
                         <div class="mi-left">
                             <div class="mi-icon red" style="background:rgba(220,38,38,0.15); color:#ef4444;"><i
@@ -2059,7 +2119,26 @@
                         <i class="fas fa-chevron-right" style="color:var(--text-sub); font-size:12px;"></i>
                     </div>
 
-                    <!-- History (Moved DOWN) -->
+                    <!-- 9. Item Sell -->
+                    <div class="menu-item" onclick="nav('itemSell')">
+                        <div class="mi-left">
+                            <div class="mi-icon blue" style="background:rgba(30,58,138,0.15); color:#3b82f6;"><i
+                                    class="fas fa-shopping-basket"></i></div>
+                            <div class="mi-t" data-i18n="itemSell">Item Sell</div>
+                        </div>
+                        <i class="fas fa-chevron-right" style="color:var(--text-sub); font-size:12px;"></i>
+                    </div>
+
+                    <!-- 10. Invite & Earn -->
+                    <div class="menu-item" onclick="nav('invite')">
+                        <div class="mi-left">
+                            <div class="mi-icon pink"><i class="fas fa-share-alt"></i></div>
+                            <div class="mi-t" data-i18n="inviteEarn">Invite & Earn</div>
+                        </div>
+                        <i class="fas fa-chevron-right" style="color:var(--text-sub); font-size:12px;"></i>
+                    </div>
+
+                    <!-- 11. History -->
                     <div class="menu-item" onclick="nav('history')">
                         <div class="mi-left">
                             <div class="mi-icon purple"><i class="fas fa-history"></i></div>
@@ -2068,7 +2147,7 @@
                         <i class="fas fa-chevron-right" style="color:var(--text-sub); font-size:12px;"></i>
                     </div>
 
-                    <!-- Language -->
+                    <!-- 12. Language -->
                     <div class="menu-item" onclick="openLanguageModal()" id="langMenuItem">
                         <div class="mi-left">
                             <div class="mi-icon" style="background:rgba(99,102,241,0.15); color:#818cf8;"><i
@@ -2082,6 +2161,7 @@
                         </div>
                         <i class="fas fa-chevron-right" style="color:var(--text-sub); font-size:12px;"></i>
                     </div>
+
 
                     <!-- Support Team -->
                     <div class="menu-item" onclick="window.open('https://t.me/Onlin_Income_Support')">
@@ -2328,9 +2408,9 @@
                 </div>
             </div>
 
-            <!-- SHOP/PREMIUM ITEMS PAGE -->
-            <div id="shopPage" class="page">
-                <div style="margin-top:16px;">
+            <!-- SHOP PAGE (formerly Subscriptions) -->
+            <div id="shopPage" class="page" style="padding-bottom: 115px; padding-top: 5px; margin-top: 0;">
+                <div style="margin-top:0px;">
 
                     <!-- Section Label -->
                     <div
@@ -2855,7 +2935,7 @@
                     </div>
                     <div class="em-card" onclick="showAdAndEarn('watch_ad')">
                         <div class="em-icon" style="color:#38bdf8"><i class="fas fa-play-circle"></i></div>
-                        <div class="em-title">WISH AD</div>
+                        <div class="em-title">WATCH AD</div>
                         <div class="em-desc">Watch a short ad and earn 5 tokens</div>
                     </div>
                     <div class="em-card" onclick="startScratchFlow()">
@@ -2868,56 +2948,31 @@
 
                 <div class="em-btn-coming">MORE EARNING WAYS COMING SOON!</div>
 
-                <!-- Ad Viewer Modal -->
-                <div id="adViewerModal"
-                    style="display:none; position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); align-items:center; justify-content:center;">
-                    <div
-                        style="background:var(--bg-card,#1a1a1a); border-radius:20px; padding:24px; max-width:360px; width:92%; margin:auto; position:relative; border:1px solid rgba(255,255,255,0.1);">
-                        <div
-                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                            <div style="font-size:15px; font-weight:800; color:var(--text-main,#fff);">📺 Watch Ad &amp; Earn</div>
-                            <button id="adCloseBtn" onclick="closeAdModal()"
-                                style="display:none; background:rgba(255,255,255,0.1); border:none; color:#fff; border-radius:8px; padding:4px 10px; cursor:pointer; font-size:12px;">?
-                                Close</button>
-                        </div>
-                        <div id="adContainer"
-                            style="min-height:120px; background:#000; border-radius:12px; display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:16px;">
-                            <div id="adLoadingMsg" style="color:#888; font-size:13px; text-align:center; padding:20px;">
-                                <i class="fas fa-spinner fa-spin"
-                                    style="font-size:24px; color:#f59e0b; display:block; margin-bottom:8px;"></i>
-                                Loading Ad...
-                            </div>
-                        </div>
-                        <div style="text-align:center;">
-                            <div id="adTimerText"
-                                style="font-size:13px; color:#f59e0b; font-weight:700; margin-bottom:10px;"></div>
-                            <button id="adClaimBtn" onclick="claimAdReward()"
-                                style="display:none; width:100%; background:linear-gradient(135deg,#f59e0b,#d97706); color:#000; font-weight:800; border:none; border-radius:12px; padding:14px; font-size:15px; cursor:pointer;">
-                                ?? Claim Reward
-                            </button>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             <!-- QUIZ PAGE -->
             <div id="quizPage" class="page">
                 <div class="content-body" style="padding:24px; text-align:center;">
-                    <div style="background:var(--bg-card); border-radius:24px; padding:30px; border:1px solid var(--border-color); margin-bottom:24px;">
-                        <div style="width:60px; height:60px; background:rgba(34,197,94,0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:24px; color:#22c55e;">
+                    <div
+                        style="background:var(--bg-card); border-radius:24px; padding:30px; border:1px solid var(--border-color); margin-bottom:24px;">
+                        <div
+                            style="width:60px; height:60px; background:rgba(34,197,94,0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:24px; color:#22c55e;">
                             <i class="fas fa-brain"></i>
                         </div>
-                        <div id="quizQuestion" style="font-size:18px; font-weight:800; color:#fff; line-height:1.4; margin-bottom:24px;">
+                        <div id="quizQuestion"
+                            style="font-size:18px; font-weight:800; color:#fff; line-height:1.4; margin-bottom:24px;">
                             Loading Question...
                         </div>
                         <div id="quizOptions" style="display:flex; flex-direction:column; gap:12px;">
                             <!-- JS WILL POPULATE -->
                         </div>
                     </div>
-                    <button class="gv-btn" onclick="nav('quizLeaderboard')" style="background:rgba(255,255,255,0.05); color:#fff; border:1px solid rgba(255,255,255,0.1);">
+                    <button class="gv-btn" onclick="nav('quizLeaderboard')"
+                        style="background:rgba(255,255,255,0.05); color:#fff; border:1px solid rgba(255,255,255,0.1);">
                         <i class="fas fa-trophy"></i> View Leaderboard
                     </button>
-                    <div style="margin-top:20px; font-size:11px; color:var(--text-sub); font-weight:700; text-transform:uppercase;">
+                    <div
+                        style="margin-top:20px; font-size:11px; color:var(--text-sub); font-weight:700; text-transform:uppercase;">
                         Correct: +10 TC | Wrong: +5 TC
                     </div>
                 </div>
@@ -2926,12 +2981,14 @@
             <!-- QUIZ LEADERBOARD PAGE -->
             <div id="quizLeaderboardPage" class="page">
                 <div class="content-body" style="padding:20px;">
-                    <div style="background:linear-gradient(135deg, #22c55e, #16a34a); border-radius:24px; padding:24px; text-align:center; color:#fff; margin-bottom:24px; box-shadow:0 10px 30px rgba(34,197,94,0.2);">
+                    <div
+                        style="background:linear-gradient(135deg, #22c55e, #16a34a); border-radius:24px; padding:24px; text-align:center; color:#fff; margin-bottom:24px; box-shadow:0 10px 30px rgba(34,197,94,0.2);">
                         <i class="fas fa-crown" style="font-size:32px; margin-bottom:12px; display:block;"></i>
                         <div style="font-size:20px; font-weight:900;">QUIZ KINGS</div>
                         <div style="font-size:11px; opacity:0.8; font-weight:700;">TOP 20 SCHOLARS</div>
                     </div>
-                    <div id="quizLeaderboardList" style="background:var(--bg-card); border-radius:24px; border:1px solid var(--border-color); overflow:hidden;">
+                    <div id="quizLeaderboardList"
+                        style="background:var(--bg-card); border-radius:24px; border:1px solid var(--border-color); overflow:hidden;">
                         <!-- JS WILL POPULATE -->
                     </div>
                 </div>
@@ -2941,26 +2998,32 @@
             <div id="scratchPage" class="page">
                 <div class="content-body" style="padding:24px; text-align:center;">
                     <div style="font-size:20px; font-weight:900; color:#fff; margin-bottom:30px;">LUCKY SCRATCH</div>
-                    
-                    <div style="position:relative; width:280px; height:280px; margin:0 auto 30px; border-radius:24px; overflow:hidden; box-shadow:0 10px 40px rgba(0,0,0,0.5); border:4px solid #f59e0b;">
+
+                    <div
+                        style="position:relative; width:280px; height:280px; margin:0 auto 30px; border-radius:24px; overflow:hidden; box-shadow:0 10px 40px rgba(0,0,0,0.5); border:4px solid #f59e0b;">
                         <!-- Result displayed behind canvas -->
-                        <div id="scratchResult" style="position:absolute; inset:0; background:#1a1a1a; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:1;">
+                        <div id="scratchResult"
+                            style="position:absolute; inset:0; background:#1a1a1a; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:1;">
                             <div id="scratchValue" style="font-size:48px; font-weight:900; color:#f59e0b;">?</div>
                             <div style="font-size:13px; font-weight:800; color:#fff;">TOKENS</div>
                         </div>
                         <!-- Drawing canvas -->
-                        <canvas id="scratchCanvas" width="280" height="280" style="position:absolute; inset:0; z-index:2; cursor:crosshair;"></canvas>
+                        <canvas id="scratchCanvas" width="280" height="280"
+                            style="position:absolute; inset:0; z-index:2; cursor:crosshair;"></canvas>
                     </div>
 
-                    <div id="scratchInstructions" style="font-size:13px; color:var(--text-sub); font-weight:700; background:rgba(255,255,255,0.03); padding:12px; border-radius:12px; margin-bottom:24px;">
+                    <div id="scratchInstructions"
+                        style="font-size:13px; color:var(--text-sub); font-weight:700; background:rgba(255,255,255,0.03); padding:12px; border-radius:12px; margin-bottom:24px;">
                         Gently scratch the card to reveal your prize!
                     </div>
 
-                    <button id="newScratchBtn" class="gv-btn" onclick="showAdAndEarn('scratch_retry')" style="display:none; background:linear-gradient(135deg,#f59e0b,#d97706); color:#000;">
+                    <button id="newScratchBtn" class="gv-btn" onclick="showAdAndEarn('scratch_retry')"
+                        style="display:none; background:linear-gradient(135deg,#f59e0b,#d97706); color:#000;">
                         Try Again (1 Ad)
                     </button>
-                    
-                    <div style="margin-top:20px; font-size:10px; color:var(--text-sub); font-weight:700; text-transform:uppercase;">
+
+                    <div
+                        style="margin-top:20px; font-size:10px; color:var(--text-sub); font-weight:700; text-transform:uppercase;">
                         Win 1, 5, or 10 Tokens!
                     </div>
                 </div>
@@ -2970,41 +3033,36 @@
             <div id="exchangePage" class="page">
                 <div class="content-body" style="padding:0;">
                     <!-- Section Title with Icon -->
-                    <div style="display:flex; align-items:center; gap:12px; margin-bottom:24px; padding:0 4px;">
-                        <div
-                            style="width:44px; height:44px; background:linear-gradient(135deg, #10b981, #059669); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; color:#fff;">
-                            <i class="fas fa-exchange-alt"></i>
-                        </div>
-                        <div style="font-size:18px; font-weight:800; color:#fff;">Exchange Assets</div>
-                    </div>
 
-                    <!-- Balance Row -->
-                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; margin-bottom:24px;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:20px;">
+                        <!-- Tokens -->
                         <div
-                            style="background:rgba(255,255,255,0.03); padding:12px; border-radius:16px; border:1px solid rgba(255,255,255,0.05); text-align:center;">
-                            <div style="font-size:10px; color:var(--text-sub); margin-bottom:4px; font-weight:700;">
+                            style="background:rgba(255,255,255,0.02); padding:10px 6px; border-radius:16px; border:1px solid var(--border-color); text-align:center;">
+                            <div style="font-size:8px; color:var(--text-sub); font-weight:800; margin-bottom:4px;">
                                 TOKENS</div>
-                            <div id="exBalTokens" style="font-size:15px; font-weight:900; color:#f59e0b;">0</div>
-                        </div>
-                        <div
-                            style="background:rgba(255,255,255,0.03); padding:12px; border-radius:16px; border:1px solid rgba(255,255,255,0.05); text-align:center;">
-                            <div style="font-size:10px; color:var(--text-sub); margin-bottom:4px; font-weight:700;">GEMS
+                            <div id="exBalTokens" style="font-size:16px; font-weight:900; color:var(--accent-color);">0
                             </div>
-                            <div id="exBalGems" style="font-size:15px; font-weight:900; color:#38bdf8;">0</div>
                         </div>
+                        <!-- Gems -->
                         <div
-                            style="background:rgba(255,255,255,0.03); padding:12px; border-radius:16px; border:1px solid rgba(255,255,255,0.05); text-align:center;">
-                            <div style="font-size:10px; color:var(--text-sub); margin-bottom:4px; font-weight:700;">USD
+                            style="background:rgba(255,255,255,0.02); padding:10px 6px; border-radius:16px; border:1px solid var(--border-color); text-align:center;">
+                            <div style="font-size:8px; color:var(--text-sub); font-weight:800; margin-bottom:4px;">GEMS
                             </div>
-                            <div id="exBalUsd" style="font-size:15px; font-weight:900; color:#22c55e;">0.00</div>
+                            <div id="exBalGems" style="font-size:16px; font-weight:900; color:#22d3ee;">0</div>
+                        </div>
+                        <!-- USD -->
+                        <div
+                            style="background:rgba(255,255,255,0.02); padding:10px 6px; border-radius:16px; border:1px solid var(--border-color); text-align:center;">
+                            <div style="font-size:8px; color:var(--text-sub); font-weight:800; margin-bottom:4px;">USD
+                            </div>
+                            <div id="exBalUsd" style="font-size:16px; font-weight:900; color:#10b981;">0.00</div>
                         </div>
                     </div>
 
-                    <!-- Exchange Form Container -->
                     <div
-                        style="background:rgba(255,255,255,0.02); border-radius:24px; padding:20px; border:1px solid rgba(255,255,255,0.05);">
+                        style="background:rgba(255,255,255,0.03); padding:20px; border-radius:24px; border:1px solid rgba(255,255,255,0.05);">
                         <!-- From Currency -->
-                        <div style="margin-bottom:20px;">
+                        <div style="margin-bottom:16px;">
                             <label
                                 style="font-size:12px; color:var(--text-sub); display:block; margin-bottom:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Convert
                                 From</label>
@@ -3020,15 +3078,15 @@
                         </div>
 
                         <!-- Swap Button -->
-                        <div style="display:flex; justify-content:center; margin:-10px 0;">
+                        <div style="display:flex; justify-content:center; margin:-12px 0;">
                             <button onclick="swapExchangeCurrencies()"
-                                style="background:#10b981; border:none; width:40px; height:40px; border-radius:50%; color:#fff; cursor:pointer; z-index:2; box-shadow:0 4px 12px rgba(16,185,129,0.3); transition:all 0.2s;">
-                                <i class="fas fa-sync-alt"></i>
+                                style="background:#10b981; border:none; width:36px; height:36px; border-radius:50%; color:#fff; cursor:pointer; z-index:2; box-shadow:0 4px 12px rgba(16,185,129,0.3); transition:all 0.2s;">
+                                <i class="fas fa-sync-alt" style="font-size:12px;"></i>
                             </button>
                         </div>
 
-                        <!-- To Currency -->
-                        <div style="margin-bottom:24px; margin-top:10px;">
+                        <!-- To Currency (Restored & Filtered) -->
+                        <div style="margin-bottom:16px;">
                             <label
                                 style="font-size:12px; color:var(--text-sub); display:block; margin-bottom:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Convert
                                 To</label>
@@ -3036,16 +3094,16 @@
                                 style="background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:4px;">
                                 <select id="exToCurrency" onchange="updateExchangePreview()"
                                     style="background:transparent; color:#fff; border:none; padding:12px; width:100%; outline:none; font-weight:700;">
-                                    <option value="usd">USD BALANCE</option>
                                     <option value="tokens">TOKENS (TC)</option>
                                     <option value="Gems">GEMS (JS)</option>
+                                    <!-- USD removed from To currency -->
                                 </select>
                             </div>
                         </div>
 
                         <!-- Input Amount -->
-                        <div style="margin-bottom:24px;">
-                            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                        <div style="margin-bottom:16px;">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
                                 <label
                                     style="font-size:12px; color:var(--text-sub); font-weight:700; text-transform:uppercase;">Amount
                                     to exchange</label>
@@ -3054,31 +3112,31 @@
                                     0</span>
                             </div>
                             <div
-                                style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:16px;">
+                                style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:12px;">
                                 <input type="number" id="exFromAmount" oninput="updateExchangePreview()"
                                     placeholder="0.00"
-                                    style="background:transparent; border:none; color:#fff; width:100%; font-size:24px; font-weight:900; outline:none; text-align:center;">
+                                    style="background:transparent; border:none; color:#fff; width:100%; font-size:22px; font-weight:900; outline:none; text-align:center;">
                             </div>
                         </div>
 
                         <!-- Preview Box -->
                         <div
-                            style="background:linear-gradient(135deg, rgba(16,185,129,0.1), rgba(16,185,129,0.05)); padding:20px; border-radius:20px; border:1px solid rgba(16,185,129,0.2); margin-bottom:24px; text-align:center;">
+                            style="background:linear-gradient(135deg, rgba(16,185,129,0.1), rgba(16,185,129,0.05)); padding:16px; border-radius:20px; border:1px solid rgba(16,185,129,0.2); margin-bottom:16px; text-align:center;">
                             <div
-                                style="display:flex; justify-content:space-between; margin-bottom:12px; border-bottom:1px solid rgba(16,185,129,0.1); padding-bottom:12px;">
+                                style="display:flex; justify-content:space-between; margin-bottom:8px; border-bottom:1px solid rgba(16,185,129,0.1); padding-bottom:8px;">
                                 <span style="font-size:12px; color:var(--text-sub); font-weight:700;">YOU WILL
                                     RECEIVE</span>
                                 <span id="exRateHint" style="font-size:11px; color:#10b981; font-weight:700;">RATE:
                                     -</span>
                             </div>
                             <input type="text" id="exToAmount" readonly value="0.00"
-                                style="background:transparent; border:none; color:#fff; font-size:32px; font-weight:900; width:100%; text-align:center; outline:none;">
-                            <div id="exFeeHint" style="font-size:11px; color:#ef4444; margin-top:8px; font-weight:600;">
+                                style="background:transparent; border:none; color:#fff; font-size:28px; font-weight:900; width:100%; text-align:center; outline:none;">
+                            <div id="exFeeHint" style="font-size:11px; color:#ef4444; margin-top:4px; font-weight:600;">
                             </div>
                         </div>
 
                         <button class="gv-btn" onclick="exchangeTokens()"
-                            style="width:100%; height:56px; background:linear-gradient(135deg, #10b981, #059669); color:#fff; font-size:16px; font-weight:900; border-radius:18px; box-shadow:0 8px 20px rgba(16,185,129,0.3);">
+                            style="width:100%; height:52px; background:linear-gradient(135deg, #10b981, #059669); color:#fff; font-size:15px; font-weight:900; border-radius:18px; box-shadow:0 8px 16px rgba(16,185,129,0.3);">
                             <i class="fas fa-check-circle"></i> CONFIRM EXCHANGE
                         </button>
                     </div>
@@ -3086,6 +3144,26 @@
                     <div
                         style="margin-top:20px; text-align:center; font-size:11px; color:var(--text-sub); font-weight:600;">
                         <i class="fas fa-shield-alt" style="margin-right:4px;"></i> Secure Instant Exchange
+                    </div>
+
+                    <!-- Exchange History Container -->
+                    <div style="margin-top:32px;">
+                        <div
+                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; padding:0 4px;">
+                            <h3 style="font-size:15px; font-weight:800; color:#fff; margin:0;">EXCHANGE HISTORY</h3>
+                            <span
+                                style="font-size:10px; color:#10b981; font-weight:800; text-transform:uppercase;">Recent</span>
+                        </div>
+                        <div id="exchangeHistoryList" style="display:flex; flex-direction:column; gap:12px;">
+                            <!-- Populated by script.js -->
+                            <div
+                                style="text-align:center; padding:30px; background:rgba(255,255,255,0.02); border-radius:20px; border:1px dashed rgba(255,255,255,0.1);">
+                                <i class="fas fa-history"
+                                    style="font-size:24px; color:rgba(255,255,255,0.1); margin-bottom:10px; display:block;"></i>
+                                <span style="font-size:12px; color:rgba(255,255,255,0.3); font-weight:700;">No history
+                                    yet</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -3162,168 +3240,273 @@
 
             <!-- VCC CARDS PAGE -->
             <div id="vccCardsPage" class="page">
+                <!-- Balance Display -->
+                <div
+                    style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:14px 18px; margin-top:20px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <div
+                            style="width:38px; height:38px; background:rgba(245,158,11,0.15); border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                            <i class="fas fa-dollar-sign" style="color:#f59e0b; font-size:16px;"></i>
+                        </div>
+                        <div>
+                            <div
+                                style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase;">
+                                Your Balance</div>
+                            <div id="vccCardsBalanceDisplay"
+                                style="font-size:16px; font-weight:800; color:var(--text-main);">$0.00</div>
+                        </div>
+                    </div>
+                    <div
+                        style="font-size:11px; color:#f59e0b; font-weight:700; background:rgba(245,158,11,0.1); padding:5px 12px; border-radius:20px; border:1px solid rgba(245,158,11,0.3);">
+                        Premium VCC
+                    </div>
+                </div>
+
                 <div class="section-header-title">PREMIUM VCC CARDS</div>
                 <div id="cardsList" style="display:grid; grid-template-columns:1fr; gap:12px; margin-top:16px;">
                     <!-- Populated by script.js renderCards() -->
                 </div>
-                <button onclick="nav('services')"
-                    style="margin-top:20px; width:100%; padding:15px; border-radius:14px; background:rgba(255,255,255,0.05); color:var(--text-sub); border:1px solid var(--border-color); font-weight:700;">
-                    BACK TO SERVICES
-                </button>
             </div>
 
             <!-- VPN SERVICES PAGE -->
             <div id="vpnServicesPage" class="page">
+                <!-- Balance Display -->
+                <div
+                    style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:14px 18px; margin-top:20px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <div
+                            style="width:38px; height:38px; background:rgba(59,130,246,0.15); border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                            <i class="fas fa-dollar-sign" style="color:#3b82f6; font-size:16px;"></i>
+                        </div>
+                        <div>
+                            <div
+                                style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase;">
+                                Your Balance</div>
+                            <div id="vpnServicesBalanceDisplay"
+                                style="font-size:16px; font-weight:800; color:var(--text-main);">$0.00</div>
+                        </div>
+                    </div>
+                    <div
+                        style="font-size:11px; color:#3b82f6; font-weight:700; background:rgba(59,130,246,0.1); padding:5px 12px; border-radius:20px; border:1px solid rgba(59,130,246,0.3);">
+                        Premium VPN
+                    </div>
+                </div>
+
                 <div class="section-header-title">PREMIUM VPN SERVICES</div>
                 <div id="vpnList" style="display:grid; grid-template-columns:1fr; gap:12px; margin-top:16px;">
                     <!-- Populated by script.js renderVPN() -->
                 </div>
-                <button onclick="nav('services')"
-                    style="margin-top:20px; width:100%; padding:15px; border-radius:14px; background:rgba(255,255,255,0.05); color:var(--text-sub); border:1px solid var(--border-color); font-weight:700;">
-                    BACK TO SERVICES
+            </div>
+        </div>
+
+        <div id="transferPage" class="page"
+            style="display:none; flex-direction:column; justify-content:flex-start; padding-top:0; padding-bottom:120px; padding-left:20px; padding-right:20px;">
+            <div class="gv-card"
+                style="margin-top:0; padding:24px; border-radius:28px; background:var(--bg-card); border:1px solid var(--border-color);">
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:24px;">
+                    <div
+                        style="width:40px; height:40px; background:rgba(236,72,153,0.1); border-radius:12px; display:flex; align-items:center; justify-content:center; color:#ec4899; font-size:18px;">
+                        <i class="fas fa-paper-plane"></i>
+                    </div>
+                    <div style="font-size:18px; font-weight:800; color:#fff;">Transfer Assets</div>
+                </div>
+
+                <!-- Recipient ID -->
+                <div style="margin-bottom:20px;">
+                    <label
+                        style="font-size:12px; color:var(--text-sub); display:block; margin-bottom:10px; font-weight:700; text-transform:uppercase;">Recipient
+                        User ID</label>
+                    <div
+                        style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:12px;">
+                        <input type="number" id="transferToUser" placeholder="Enter Recipient ID"
+                            style="background:transparent; border:none; color:#fff; width:100%; font-size:16px; font-weight:700; outline:none;">
+                    </div>
+                </div>
+
+                <!-- Asset Type -->
+                <div style="margin-bottom:20px;">
+                    <label
+                        style="font-size:12px; color:var(--text-sub); display:block; margin-bottom:10px; font-weight:700; text-transform:uppercase;">Select
+                        Asset</label>
+                    <div
+                        style="background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:4px;">
+                        <select id="transferAssetType"
+                            style="background:transparent; color:#fff; border:none; padding:12px; width:100%; outline:none; font-weight:700;">
+                            <option value="tokens">TOKENS (TC)</option>
+                            <option value="usd">USD BALANCE</option>
+                            <option value="Gems">GEMS (JS)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Amount -->
+                <div style="margin-bottom:24px;">
+                    <label
+                        style="font-size:12px; color:var(--text-sub); display:block; margin-bottom:10px; font-weight:700; text-transform:uppercase;">Amount</label>
+                    <div
+                        style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:12px;">
+                        <input type="number" id="transferAmount" placeholder="0.00"
+                            style="background:transparent; border:none; color:#fff; width:100%; font-size:24px; font-weight:900; outline:none; text-align:center;">
+                    </div>
+                </div>
+
+                <button class="gv-btn" onclick="transferTokens()"
+                    style="width:100%; height:56px; background:linear-gradient(135deg, #ec4899, #be185d); color:#fff; font-size:16px; font-weight:900; border-radius:18px; box-shadow:0 8px 16px rgba(236,72,153,0.3);">
+                    <i class="fas fa-paper-plane"></i> SEND ASSETS
                 </button>
+            </div>
+
+            <div
+                style="margin-top:20px; background:rgba(236,72,153,0.05); padding:16px; border-radius:16px; border:1px dashed rgba(236,72,153,0.3);">
+                <div style="color:#ec4899; font-size:12px; font-weight:700; margin-bottom:6px;"><i
+                        class="fas fa-info-circle"></i> Important Note</div>
+                <div style="color:var(--text-sub); font-size:11px; line-height:1.5;">Transfers are permanent and cannot
+                    be reversed. Please double-check the Recipient User ID before sending.</div>
             </div>
         </div>
 
         <div id="redeemPage" class="page"
-            style="display:none; flex-direction:column; justify-content:flex-start; padding-top:0; padding-bottom:20px">
-
-            <div class="section-title" style="margin-top:0; margin-bottom:8px; padding-top:0">REDEEM COUPON</div>
-            <div class="gv-input-box"
-                style="margin-bottom:12px; background:var(--bg-card); padding:10px; border-radius:16px; border:1px solid var(--border-color)">
-                <input type="text" class="gv-input" id="redeemCodeInput" placeholder="Enter Coupon Code"
-                    style="width:100%; background:transparent; border:none; outline:none; color:var(--text-main); font-size:16px; font-weight:700; padding:10px">
+            style="display:none; flex-direction:column; justify-content:flex-start; padding-top:10px; padding-bottom:120px; padding-left:20px; padding-right:20px;">
+            <div class="gv-card"
+                style="padding:24px; border-radius:28px; background:var(--bg-card); border:1px solid var(--border-color);">
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:24px;">
+                    <div
+                        style="width:40px; height:40px; background:rgba(245,158,11,0.1); border-radius:12px; display:flex; align-items:center; justify-content:center; color:#f59e0b; font-size:18px;">
+                        <i class="fas fa-ticket-alt"></i>
+                    </div>
+                    <div style="font-size:18px; font-weight:800; color:#fff;">Redeem Coupon</div>
+                </div>
+                <div class="gv-input-box"
+                    style="margin-bottom:18px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:12px;">
+                    <input type="text" class="gv-input" id="redeemCodeInput" placeholder="Enter Coupon Code"
+                        style="width:100%; background:transparent; border:none; outline:none; color:#fff; font-size:16px; font-weight:700; padding:4px">
+                </div>
+                <button class="gv-btn" onclick="redeemCode()"
+                    style="width:100%; height:56px; background:linear-gradient(135deg, #f59e0b, #d97706); border:none; border-radius:18px; font-weight:900; color:#000; font-size:16px; box-shadow:0 8px 16px rgba(245,158,11,0.2);">
+                    REDEEM NOW
+                </button>
             </div>
-            <button class="gv-btn" onclick="redeemCode()"
-                style="width:100%; padding:16px; background:#f59e0b; border:none; border-radius:16px; font-weight:800; color:#000; font-size:16px">
-                REDEEM NOW
-            </button>
         </div>
 
-        <!-- ACCOUNTS STORE PAGE -->
+        <!-- PREMIUM ITEMS PAGE (formerly Accounts Store) -->
         <div id="accountsStorePage" class="page" style="padding-bottom: 115px; padding-top: 0; margin-top: -110px;">
-            <div style="text-align:center; margin-bottom: 25px;">
-                <div style="font-size:22px; font-weight:800; color:var(--text-main); margin-bottom:8px">Premium
-                    Accounts
-                </div>
-                <div style="color:#888; font-size:12px; max-width:280px; margin:0 auto; line-height:1.5">
-                    Purchase verified premium accounts instantly. Email &amp; password delivered on purchase.
-                </div>
-            </div>
-
-            <!-- Explore Categories Toggle -->
-            <div class="explore-categories">
-                <div class="ec-title">PREMIUM CATEGORIES</div>
-                <div class="ec-grid-icon" onclick="toggleAccountsView()"><i class="fas fa-th"></i></div>
-            </div>
-
-            <!-- Grid View (Hidden by default) -->
-            <div id="accountsGridView" class="services-grid" style="display:none;">
-                <div class="sg-card" onclick="nav('accountDetail'); showAccountCategory('gmail')">
-                    <div class="sg-card-icon" style="background:linear-gradient(135deg,#ea4335,#c5221f)">
-                        <i class="fas fa-envelope"></i>
+            <!-- Balance Display -->
+            <div
+                style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:14px 18px; margin-top:20px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div
+                        style="width:38px; height:38px; background:rgba(34,197,94,0.15); border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                        <i class="fas fa-dollar-sign" style="color:#22c55e; font-size:16px;"></i>
                     </div>
-                    <span>Gmail</span>
-                </div>
-                <div class="sg-card" onclick="nav('accountDetail'); showAccountCategory('netflix')">
-                    <div class="sg-card-icon" style="background:linear-gradient(135deg,#e50914,#b81d24)">
-                        <i class="fas fa-film"></i>
+                    <div>
+                        <div style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase;">
+                            Your Balance</div>
+                        <div id="accountsStoreBalanceDisplay"
+                            style="font-size:16px; font-weight:800; color:var(--text-main);">$0.00</div>
                     </div>
-                    <span>Netflix</span>
                 </div>
-                <div class="sg-card" onclick="nav('accountDetail'); showAccountCategory('spotify')">
-                    <div class="sg-card-icon" style="background:linear-gradient(135deg,#1db954,#15873d)">
-                        <i class="fab fa-spotify"></i>
-                    </div>
-                    <span>Spotify</span>
-                </div>
-                <div class="sg-card" onclick="nav('accountDetail'); showAccountCategory('disney')">
-                    <div class="sg-card-icon" style="background:linear-gradient(135deg,#113ccf,#0b25a0)">
-                        <i class="fas fa-star"></i>
-                    </div>
-                    <span>Disney+</span>
-                </div>
-                <div class="sg-card" onclick="nav('accountDetail'); showAccountCategory('youtube')">
-                    <div class="sg-card-icon" style="background:linear-gradient(135deg,#ff0000,#cc0000)">
-                        <i class="fab fa-youtube"></i>
-                    </div>
-                    <span>YouTube</span>
-                </div>
-                <div class="sg-card" onclick="nav('accountDetail'); showAccountCategory('amazon')">
-                    <div class="sg-card-icon" style="background:linear-gradient(135deg,#ff9900,#cc7a00)">
-                        <i class="fab fa-amazon"></i>
-                    </div>
-                    <span>Amazon</span>
+                <div
+                    style="font-size:11px; color:#22c55e; font-weight:700; background:rgba(34,197,94,0.1); padding:5px 12px; border-radius:20px; border:1px solid rgba(34,197,94,0.3);">
+                    Premium Store
                 </div>
             </div>
 
-            <!-- List View (Default) -->
-            <div id="accountsListView" style="display:flex; flex-direction:column; gap:12px;">
-                <!-- Gmail Accounts -->
-                <div class="service-card" onclick="nav('accountDetail'); showAccountCategory('gmail')">
-                    <div class="sc-icon" style="background:linear-gradient(135deg,#ea4335,#c5221f)">
-                        <i class="fas fa-envelope"></i>
-                    </div>
-                    <div class="sc-info">
-                        <h3>Gmail Accounts</h3>
-                        <p>VERIFIED GMAIL ACCOUNTS</p>
-                    </div>
-                    <div class="sc-arrow"><i class="fas fa-chevron-right"></i></div>
+            <div style="text-align:center; margin-bottom:20px;">
+                <div style="font-size:22px; font-weight:800; color:var(--text-main); margin-bottom:6px;">Premium Items
                 </div>
-                <!-- Netflix Accounts -->
-                <div class="service-card" onclick="nav('accountDetail'); showAccountCategory('netflix')">
-                    <div class="sc-icon" style="background:linear-gradient(135deg,#e50914,#b81d24)">
-                        <i class="fas fa-film"></i>
+                <div style="color:#888; font-size:12px; max-width:280px; margin:0 auto; line-height:1.5">Verified
+                    accounts, VPN, apps &amp; more. Credentials delivered after purchase.</div>
+            </div>
+
+            <!-- Tab Bar: Subscriptions / VPN / Account -->
+            <div id="premiumItemsTabs"
+                style="display:flex; gap:8px; margin-bottom:20px; background:rgba(0,0,0,0.3); border-radius:16px; padding:6px;">
+                <button onclick="switchPremiumTab('vpn')" id="ptab-vpn"
+                    style="flex:1; padding:10px; border-radius:12px; border:none; font-size:12px; font-weight:800; cursor:pointer; background:var(--accent-color); color:#000; transition:0.2s;">
+                    <i class="fas fa-shield-alt" style="margin-right:5px;"></i>VPN
+                </button>
+                <button onclick="switchPremiumTab('account')" id="ptab-account"
+                    style="flex:1; padding:10px; border-radius:12px; border:none; font-size:12px; font-weight:800; cursor:pointer; background:transparent; color:var(--text-sub); transition:0.2s;">
+                    <i class="fas fa-user-circle" style="margin-right:5px;"></i>ACCOUNT
+                </button>
+            </div>
+
+            <!-- VPN TAB -->
+            <div id="premiumTab-vpn" style="display:block;">
+                <div
+                    style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:1px; margin-bottom:14px;">
+                    🛡️ VPN Accounts</div>
+                <div id="premiumVPNList" style="display:flex; flex-direction:column; gap:12px; margin-bottom:20px;">
+                    <!-- Populated by JS -->
+                    <div style="text-align:center; padding:40px; color:var(--text-sub);"><i
+                            class="fas fa-spinner fa-spin"></i>
+                        <div style="margin-top:8px; font-size:12px;">Loading VPN...</div>
                     </div>
-                    <div class="sc-info">
-                        <h3>Netflix</h3>
-                        <p>PREMIUM NETFLIX ACCOUNTS</p>
-                    </div>
-                    <div class="sc-arrow"><i class="fas fa-chevron-right"></i></div>
                 </div>
-                <!-- Spotify Accounts -->
-                <div class="service-card" onclick="nav('accountDetail'); showAccountCategory('spotify')">
-                    <div class="sc-icon" style="background:linear-gradient(135deg,#1db954,#15873d)">
-                        <i class="fab fa-spotify"></i>
+            </div>
+
+            <!-- ACCOUNT TAB (hidden by default) -->
+            <div id="premiumTab-account" style="display:none;">
+                <div
+                    style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:1px; margin-bottom:14px;">
+                    🔐 Premium Accounts</div>
+                <div id="accountsListView" style="display:flex; flex-direction:column; gap:12px;">
+                    <!-- Gmail Accounts -->
+                    <div class="service-card" onclick="nav('accountDetail'); showAccountCategory('gmail')">
+                        <div class="sc-icon" style="background:linear-gradient(135deg,#ea4335,#c5221f)"><i
+                                class="fas fa-envelope"></i></div>
+                        <div class="sc-info">
+                            <h3>Gmail Accounts</h3>
+                            <p>VERIFIED GMAIL ACCOUNTS</p>
+                        </div>
+                        <div class="sc-arrow"><i class="fas fa-chevron-right"></i></div>
                     </div>
-                    <div class="sc-info">
-                        <h3>Spotify Premium</h3>
-                        <p>PREMIUM SPOTIFY ACCOUNTS</p>
+                    <div class="service-card" onclick="nav('accountDetail'); showAccountCategory('netflix')">
+                        <div class="sc-icon" style="background:linear-gradient(135deg,#e50914,#b81d24)"><i
+                                class="fas fa-film"></i></div>
+                        <div class="sc-info">
+                            <h3>Netflix</h3>
+                            <p>PREMIUM NETFLIX ACCOUNTS</p>
+                        </div>
+                        <div class="sc-arrow"><i class="fas fa-chevron-right"></i></div>
                     </div>
-                    <div class="sc-arrow"><i class="fas fa-chevron-right"></i></div>
-                </div>
-                <!-- Disney+ Accounts -->
-                <div class="service-card" onclick="nav('accountDetail'); showAccountCategory('disney')">
-                    <div class="sc-icon" style="background:linear-gradient(135deg,#113ccf,#0b25a0)">
-                        <i class="fas fa-star"></i>
+                    <div class="service-card" onclick="nav('accountDetail'); showAccountCategory('spotify')">
+                        <div class="sc-icon" style="background:linear-gradient(135deg,#1db954,#15873d)"><i
+                                class="fab fa-spotify"></i></div>
+                        <div class="sc-info">
+                            <h3>Spotify Premium</h3>
+                            <p>PREMIUM SPOTIFY ACCOUNTS</p>
+                        </div>
+                        <div class="sc-arrow"><i class="fas fa-chevron-right"></i></div>
                     </div>
-                    <div class="sc-info">
-                        <h3>Disney+</h3>
-                        <p>PREMIUM DISNEY+ ACCOUNTS</p>
+                    <div class="service-card" onclick="nav('accountDetail'); showAccountCategory('disney')">
+                        <div class="sc-icon" style="background:linear-gradient(135deg,#113ccf,#0b25a0)"><i
+                                class="fas fa-star"></i></div>
+                        <div class="sc-info">
+                            <h3>Disney+</h3>
+                            <p>PREMIUM DISNEY+ ACCOUNTS</p>
+                        </div>
+                        <div class="sc-arrow"><i class="fas fa-chevron-right"></i></div>
                     </div>
-                    <div class="sc-arrow"><i class="fas fa-chevron-right"></i></div>
-                </div>
-                <!-- YouTube Premium -->
-                <div class="service-card" onclick="nav('accountDetail'); showAccountCategory('youtube')">
-                    <div class="sc-icon" style="background:linear-gradient(135deg,#ff0000,#cc0000)">
-                        <i class="fab fa-youtube"></i>
+                    <div class="service-card" onclick="nav('accountDetail'); showAccountCategory('youtube')">
+                        <div class="sc-icon" style="background:linear-gradient(135deg,#ff0000,#cc0000)"><i
+                                class="fab fa-youtube"></i></div>
+                        <div class="sc-info">
+                            <h3>YouTube Premium</h3>
+                            <p>PREMIUM YOUTUBE ACCOUNTS</p>
+                        </div>
+                        <div class="sc-arrow"><i class="fas fa-chevron-right"></i></div>
                     </div>
-                    <div class="sc-info">
-                        <h3>YouTube Premium</h3>
-                        <p>PREMIUM YOUTUBE ACCOUNTS</p>
+                    <div class="service-card" onclick="nav('accountDetail'); showAccountCategory('amazon')">
+                        <div class="sc-icon" style="background:linear-gradient(135deg,#ff9900,#cc7a00)"><i
+                                class="fab fa-amazon"></i></div>
+                        <div class="sc-info">
+                            <h3>Amazon Prime</h3>
+                            <p>PREMIUM AMAZON ACCOUNTS</p>
+                        </div>
+                        <div class="sc-arrow"><i class="fas fa-chevron-right"></i></div>
                     </div>
-                    <div class="sc-arrow"><i class="fas fa-chevron-right"></i></div>
-                </div>
-                <!-- Amazon Prime -->
-                <div class="service-card" onclick="nav('accountDetail'); showAccountCategory('amazon')">
-                    <div class="sc-icon" style="background:linear-gradient(135deg,#ff9900,#cc7a00)">
-                        <i class="fab fa-amazon"></i>
-                    </div>
-                    <div class="sc-info">
-                        <h3>Amazon Prime</h3>
-                        <p>PREMIUM AMAZON ACCOUNTS</p>
-                    </div>
-                    <div class="sc-arrow"><i class="fas fa-chevron-right"></i></div>
+                    <div id="userApprovedAccounts"></div>
                 </div>
             </div>
 
@@ -3331,11 +3514,12 @@
             <div
                 style="margin-top:20px; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.2); border-radius:16px; padding:14px 16px; display:flex; align-items:center; gap:12px;">
                 <i class="fas fa-info-circle" style="color:#ef4444; font-size:16px;"></i>
-                <div style="font-size:11px; color:#888; line-height:1.5; font-weight:600;">
-                    ALL ACCOUNTS ARE VERIFIED &amp; GUARANTEED. CREDENTIALS WILL BE SHOWN AFTER PURCHASE.
-                </div>
+                <div style="font-size:11px; color:#888; line-height:1.5; font-weight:600;">ALL ITEMS ARE VERIFIED &amp;
+                    GUARANTEED. CREDENTIALS WILL BE SHOWN AFTER PURCHASE.</div>
             </div>
         </div>
+
+
 
         <!-- ACCOUNT DETAIL PAGE (Shows credentials) -->
         <div id="accountDetailPage" class="page">
@@ -3514,59 +3698,369 @@
                 <div class="scc-arrow" style="margin-left:auto; background:transparent; color:#f59e0b"><i
                         class="fas fa-paper-plane"></i></div>
             </div>
-        </div>            <!-- Item Sell Page -->
-            <div id="itemSellPage" class="page">
-                <div class="content-body" style="padding:20px; padding-bottom:140px;">
-                    <div class="adc-header" style="margin-bottom: 24px;">
-                        <h2 style="font-size:24px; font-weight:800; color:#fff; text-align:center; text-transform: uppercase; letter-spacing: 1px;">Sell Your Items</h2>
-                        <p style="text-align:center; color:var(--text-sub); font-size:13px; margin-top:4px;">Turn your verified accounts into Tokens/Gems</p>
-                    </div>
+        </div>
+        <!-- Item Sell Page -->
+        <div id="itemSellPage" class="page" style="padding-bottom: 115px; padding-top: 0; margin-top: -125px;">
+            <div class="content-body" style="padding:20px; padding-bottom:140px;">
+                <div class="adc-header" style="margin-bottom: 24px;">
+                    <h2
+                        style="font-size:24px; font-weight:800; color:#fff; text-align:center; text-transform: uppercase; letter-spacing: 1px;">
+                        Sell Items</h2>
+                    <p style="text-align:center; color:var(--text-sub); font-size:13px; margin-top:4px;">Turn your
+                        verified items into Dollars or Tokens</p>
+                </div>
 
-                    <!-- Category Selection Grid -->
-                    <div id="itemSellCategoryGrid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:24px;">
-                        <div class="sell-cat-card" onclick="selectSellCategory('Gmail', 'fas fa-envelope', 'linear-gradient(135deg, #ea4335, #b21f14)')">
-                            <div class="scc-icon" style="background: linear-gradient(135deg, #ea4335, #b21f14);"><i class="fas fa-envelope"></i></div>
-                            <div class="scc-name">Gmail</div>
-                        </div>
-                        <div class="sell-cat-card" onclick="selectSellCategory('TikTok', 'fab fa-tiktok', 'linear-gradient(135deg, #000, #333)')">
-                            <div class="scc-icon" style="background: linear-gradient(135deg, #000, #333);"><i class="fab fa-tiktok"></i></div>
-                            <div class="scc-name">TikTok Account</div>
-                        </div>
-                        <div class="sell-cat-card" onclick="selectSellCategory('Facebook', 'fab fa-facebook', 'linear-gradient(135deg, #1877f2, #0d47a1)')">
-                            <div class="scc-icon" style="background: linear-gradient(135deg, #1877f2, #0d47a1);"><i class="fab fa-facebook"></i></div>
-                            <div class="scc-name">Facebook Account</div>
-                        </div>
-                        <div class="sell-cat-card" onclick="selectSellCategory('Telegram', 'fab fa-telegram', 'linear-gradient(135deg, #229ed9, #0077b5)')">
-                            <div class="scc-icon" style="background: linear-gradient(135deg, #229ed9, #0077b5);"><i class="fab fa-telegram"></i></div>
-                            <div class="scc-name">Telegram Session</div>
-                        </div>
-                        <div class="sell-cat-card" onclick="selectSellCategory('Discord', 'fab fa-discord', 'linear-gradient(135deg, #5865f2, #2c3491)')">
-                            <div class="scc-icon" style="background: linear-gradient(135deg, #5865f2, #2c3491);"><i class="fab fa-discord"></i></div>
-                            <div class="scc-name">Discord Token</div>
-                        </div>
-                        <div class="sell-cat-card" onclick="selectSellCategory('Other', 'fas fa-plus', 'linear-gradient(135deg, #10b981, #059669)')">
-                            <div class="scc-icon" style="background: linear-gradient(135deg, #10b981, #059669);"><i class="fas fa-plus"></i></div>
-                            <div class="scc-name">Other Items</div>
-                        </div>
-                    </div>
+                <!-- Subscriptions/Accounts Type Toggle -->
+                <div
+                    style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:16px; padding:12px; margin-bottom:20px; display:flex; gap:8px;">
+                    <button onclick="setSellItemType('subscription')" id="btnSellTypeSub"
+                        style="flex:1; padding:12px; border-radius:12px; border:none; background:var(--accent-color); color:#000; font-weight:800; font-size:12px; transition:0.2s;">SHOP</button>
+                    <button onclick="setSellItemType('account')" id="btnSellTypeAcc"
+                        style="flex:1; padding:12px; border-radius:12px; border:none; background:rgba(255,255,255,0.05); color:var(--text-sub); font-weight:800; font-size:12px; transition:0.2s;">ACCOUNTS</button>
+                    <input type="hidden" id="selIsSubscription" value="true">
+                </div>
 
-                    <!-- Selling Form (Initially Hidden) -->
-                    <div id="itemSellFormContainer" style="display:none; animation: slideUp 0.3s ease-out;">
-                        <div style="background:var(--bg-card); border-radius:24px; padding:24px; border:1px solid var(--border-color); position:relative; overflow:hidden;">
-                            <!-- Selected Category Header -->
-                            <div style="display:flex; align-items:center; gap:16px; margin-bottom:24px; padding-bottom:16px; border-bottom:1px solid var(--border-color);">
-                                <div id="selectedCatIcon" style="width:50px; height:50px; border-radius:14px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:22px; box-shadow:0 8px 16px rgba(0,0,0,0.3);"></div>
-                                <div>
-                                    <div style="font-size:12px; color:var(--text-sub); text-transform:uppercase; font-weight:700;">Selling Category</div>
-                                    <div id="selectedCatName" style="font-size:20px; font-weight:900; color:#fff;"></div>
+                <!-- Category Selection Grid -->
+                <div id="itemSellCategoryGrid"
+                    style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:24px;">
+                    <div class="sell-cat-card" data-sell-type="account"
+                        onclick="selectSellCategory('Gmail', 'fas fa-envelope', 'linear-gradient(135deg, #ea4335, #b21f14)')">
+                        <div class="scc-icon" style="background: linear-gradient(135deg, #ea4335, #b21f14);"><i
+                                class="fas fa-envelope"></i></div>
+                        <div class="scc-name">Gmail</div>
+                    </div>
+                    <div class="sell-cat-card" data-sell-type="account"
+                        onclick="selectSellCategory('TikTok', 'fab fa-tiktok', 'linear-gradient(135deg, #000, #333)')">
+                        <div class="scc-icon" style="background: linear-gradient(135deg, #000, #333);"><i
+                                class="fab fa-tiktok"></i></div>
+                        <div class="scc-name">TikTok Account</div>
+                    </div>
+                    <div class="sell-cat-card" data-sell-type="account"
+                        onclick="selectSellCategory('Facebook', 'fab fa-facebook', 'linear-gradient(135deg, #1877f2, #0d47a1)')">
+                        <div class="scc-icon" style="background: linear-gradient(135deg, #1877f2, #0d47a1);"><i
+                                class="fab fa-facebook"></i></div>
+                        <div class="scc-name">Facebook Account</div>
+                    </div>
+                    <div class="sell-cat-card" data-sell-type="account"
+                        onclick="selectSellCategory('Telegram', 'fab fa-telegram', 'linear-gradient(135deg, #229ed9, #0077b5)')">
+                        <div class="scc-icon" style="background: linear-gradient(135deg, #229ed9, #0077b5);"><i
+                                class="fab fa-telegram"></i></div>
+                        <div class="scc-name">Telegram Session</div>
+                    </div>
+                    <div class="sell-cat-card" data-sell-type="account"
+                        onclick="selectSellCategory('Discord', 'fab fa-discord', 'linear-gradient(135deg, #5865f2, #2c3491)')">
+                        <div class="scc-icon" style="background: linear-gradient(135deg, #5865f2, #2c3491);"><i
+                                class="fab fa-discord"></i></div>
+                        <div class="scc-name">Discord Token</div>
+                    </div>
+                    <div class="sell-cat-card" data-sell-type="subscription"
+                        onclick="selectSellCategory('Gemini', 'fas fa-gem', 'linear-gradient(135deg, #4285f4, #1967d2)')">
+                        <div class="scc-icon" style="background: linear-gradient(135deg, #4285f4, #1967d2);"><i
+                                class="fas fa-gem"></i></div>
+                        <div class="scc-name">Gemini</div>
+                    </div>
+                    <div class="sell-cat-card" data-sell-type="subscription"
+                        onclick="selectSellCategory('ChatGPT', 'fas fa-robot', 'linear-gradient(135deg, #10a37f, #0d7a5f)')">
+                        <div class="scc-icon" style="background: linear-gradient(135deg, #10a37f, #0d7a5f);"><i
+                                class="fas fa-robot"></i></div>
+                        <div class="scc-name">ChatGPT</div>
+                    </div>
+                    <div class="sell-cat-card" data-sell-type="subscription"
+                        onclick="selectSellCategory('API Key', 'fas fa-key', 'linear-gradient(135deg, #f59e0b, #b45309)')">
+                        <div class="scc-icon" style="background: linear-gradient(135deg, #f59e0b, #b45309);"><i
+                                class="fas fa-key"></i></div>
+                        <div class="scc-name">API Key</div>
+                    </div>
+                    <div class="sell-cat-card" data-sell-type="account"
+                        onclick="selectSellCategory('Account', 'fas fa-user-circle', 'linear-gradient(135deg, #6366f1, #4338ca)')">
+                        <div class="scc-icon" style="background: linear-gradient(135deg, #6366f1, #4338ca);"><i
+                                class="fas fa-user-circle"></i></div>
+                        <div class="scc-name">Account</div>
+                    </div>
+                    <div class="sell-cat-card" data-sell-type="account"
+                        onclick="selectSellCategory('VPN', 'fas fa-shield-alt', 'linear-gradient(135deg, #0ea5e9, #0369a1)')">
+                        <div class="scc-icon" style="background: linear-gradient(135deg, #0ea5e9, #0369a1);"><i
+                                class="fas fa-shield-alt"></i></div>
+                        <div class="scc-name">VPN</div>
+                    </div>
+                    <div class="sell-cat-card" data-sell-type="subscription"
+                        onclick="selectSellCategory('Card', 'fas fa-credit-card', 'linear-gradient(135deg, #8b5cf6, #6d28d9)')">
+                        <div class="scc-icon" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9);"><i
+                                class="fas fa-credit-card"></i></div>
+                        <div class="scc-name">Card</div>
+                    </div>
+                    <div class="sell-cat-card" data-sell-type="both"
+                        onclick="selectSellCategory('Other', 'fas fa-plus', 'linear-gradient(135deg, #ec4899, #be185d)')">
+                        <div class="scc-icon" style="background: linear-gradient(135deg, #ec4899, #be185d);"><i
+                                class="fas fa-plus"></i></div>
+                        <div class="scc-name">Other</div>
+                    </div>
+                </div>
+
+                <div id="itemSellFormContainer" style="display:none; animation: slideUp 0.3s ease-out;">
+                    <div
+                        style="background:var(--bg-card); border-radius:24px; padding:24px; border:1px solid var(--border-color); position:relative; overflow:hidden;">
+                        <!-- Selected Category Header -->
+                        <div
+                            style="display:flex; align-items:center; gap:16px; margin-bottom:24px; padding-bottom:16px; border-bottom:1px solid var(--border-color);">
+                            <div id="selectedCatIcon"
+                                style="width:50px; height:50px; border-radius:14px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:22px; box-shadow:0 8px 16px rgba(0,0,0,0.3);">
+                            </div>
+                            <div>
+                                <div
+                                    style="font-size:12px; color:var(--text-sub); text-transform:uppercase; font-weight:700;">
+                                    Selling Category</div>
+                                <div id="selectedCatName" style="font-size:20px; font-weight:900; color:#fff;"></div>
+                            </div>
+                            <button onclick="resetSellCategory()"
+                                style="margin-left:auto; background:rgba(255,255,255,0.05); border:none; width:36px; height:36px; border-radius:50%; color:var(--text-sub); cursor:pointer;"><i
+                                    class="fas fa-times"></i></button>
+                        </div>
+
+                        <input type="hidden" id="selItemCategory">
+
+                        <!-- OTHER ITEM: Custom name + icon upload -->
+                        <div id="otherItemFields" style="display:none; margin-bottom:16px;">
+                            <div style="margin-bottom:14px;">
+                                <label
+                                    style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px;">Item
+                                    Name <span style="color:#ef4444;">*</span></label>
+                                <input type="text" id="selItemCustomName"
+                                    placeholder="e.g. Netflix, Spotify, Custom App"
+                                    style="width:100%; height:54px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:14px; color:#fff; padding:0 16px; font-weight:600; outline:none; font-size:15px;"
+                                    onfocus="this.style.borderColor='var(--accent-color)'"
+                                    onblur="this.style.borderColor='var(--border-color)'">
+                            </div>
+                            <div style="margin-bottom:14px;">
+                                <label
+                                    style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px;">Item
+                                    Icon / Profile Picture <span style="color:#ef4444;">*</span></label>
+                                <div style="display:flex; align-items:center; gap:12px;">
+                                    <div id="customIconPreview"
+                                        style="width:54px; height:54px; border-radius:14px; background:#222; border:2px dashed #444; display:flex; align-items:center; justify-content:center; font-size:22px; color:#555; overflow:hidden; flex-shrink:0;">
+                                        <i class="fas fa-image"></i>
+                                    </div>
+                                    <label
+                                        style="flex:1; display:block; cursor:pointer; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:14px; padding:14px 16px; text-align:center; color:var(--text-sub); font-size:13px; font-weight:700;">
+                                        <i class="fas fa-upload" style="margin-right:8px;"></i>Upload Icon
+                                        <input type="file" id="selItemIconFile" accept="image/*" style="display:none;"
+                                            onchange="previewCustomIcon(this)">
+                                    </label>
                                 </div>
-                                <button onclick="resetSellCategory()" style="margin-left:auto; background:rgba(255,255,255,0.05); border:none; width:36px; height:36px; border-radius:50%; color:var(--text-sub); cursor:pointer;"><i class="fas fa-times"></i></button>
+                            </div>
+                        </div>
+
+                        <!-- API KEY FIELDS -->
+                        <div id="apiKeyFields" style="display:none; margin-bottom:16px;">
+                            <div
+                                style="background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.2); border-radius:12px; padding:12px 14px; margin-bottom:14px; font-size:12px; color:#f59e0b; font-weight:600;">
+                                <i class="fas fa-info-circle" style="margin-right:6px;"></i>Provide API key details.
+                                Admin will verify before listing.
+                            </div>
+                            <div style="margin-bottom:12px;">
+                                <label
+                                    style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px;">Service
+                                    / Platform Name <span style="color:#ef4444;">*</span></label>
+                                <input type="text" id="apiServiceName" placeholder="e.g. OpenAI, Google Cloud, AWS..."
+                                    style="width:100%; height:50px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; color:#fff; padding:0 14px; font-weight:600; outline:none;"
+                                    onfocus="this.style.borderColor='var(--accent-color)'"
+                                    onblur="this.style.borderColor='var(--border-color)'">
+                            </div>
+                            <div style="margin-bottom:12px;">
+                                <label
+                                    style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px;">API
+                                    Key <span style="color:#ef4444;">*</span></label>
+                                <input type="text" id="apiKeyValue" placeholder="Paste your API key here..."
+                                    style="width:100%; height:50px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; color:#fff; padding:0 14px; font-weight:600; outline:none; font-family:monospace;"
+                                    onfocus="this.style.borderColor='var(--accent-color)'"
+                                    onblur="this.style.borderColor='var(--border-color)'">
+                            </div>
+                            <div style="margin-bottom:12px;">
+                                <label
+                                    style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px;">Monthly
+                                    Quota / Limit <span style="color:#888; font-size:9px;">(Optional)</span></label>
+                                <input type="text" id="apiQuota" placeholder="e.g. $100/month, 1M tokens..."
+                                    style="width:100%; height:50px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; color:#fff; padding:0 14px; font-weight:600; outline:none;"
+                                    onfocus="this.style.borderColor='var(--accent-color)'"
+                                    onblur="this.style.borderColor='var(--border-color)'">
+                            </div>
+                            <div style="margin-bottom:12px;">
+                                <label
+                                    style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px;">Additional
+                                    Info <span style="color:#888; font-size:9px;">(Optional)</span></label>
+                                <textarea id="apiExtraInfo" placeholder="Usage notes, restrictions, account type..."
+                                    style="width:100%; height:80px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; color:#fff; padding:12px 14px; font-weight:600; outline:none; resize:none;"
+                                    onfocus="this.style.borderColor='var(--accent-color)'"
+                                    onblur="this.style.borderColor='var(--border-color)'"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- VPN FIELDS -->
+                        <div id="vpnFields" style="display:none; margin-bottom:16px;">
+                            <div
+                                style="background:rgba(14,165,233,0.08); border:1px solid rgba(14,165,233,0.2); border-radius:12px; padding:12px 14px; margin-bottom:14px; font-size:12px; color:#0ea5e9; font-weight:600;">
+                                <i class="fas fa-shield-alt" style="margin-right:6px;"></i>Provide your VPN account
+                                details. Admin will verify before listing.
+                            </div>
+                            <div style="margin-bottom:12px;">
+                                <label
+                                    style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px;">VPN
+                                    Name / Provider <span style="color:#ef4444;">*</span></label>
+                                <input type="text" id="vpnName" placeholder="e.g. NordVPN, ExpressVPN, Surfshark..."
+                                    style="width:100%; height:50px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; color:#fff; padding:0 14px; font-weight:600; outline:none;"
+                                    onfocus="this.style.borderColor='#0ea5e9'"
+                                    onblur="this.style.borderColor='var(--border-color)'">
+                            </div>
+                            <div style="margin-bottom:12px;">
+                                <label
+                                    style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px;">Email
+                                    <span style="color:#ef4444;">*</span></label>
+                                <input type="text" id="vpnEmail" placeholder="VPN account email"
+                                    style="width:100%; height:50px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; color:#fff; padding:0 14px; font-weight:600; outline:none;"
+                                    onfocus="this.style.borderColor='#0ea5e9'"
+                                    onblur="this.style.borderColor='var(--border-color)'">
+                            </div>
+                            <div style="margin-bottom:12px;">
+                                <label
+                                    style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px;">Password
+                                    <span style="color:#ef4444;">*</span></label>
+                                <input type="password" id="vpnPassword" placeholder="VPN account password"
+                                    style="width:100%; height:50px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; color:#fff; padding:0 14px; font-weight:600; outline:none;"
+                                    onfocus="this.style.borderColor='#0ea5e9'"
+                                    onblur="this.style.borderColor='var(--border-color)'">
+                            </div>
+                            <div style="margin-bottom:12px;">
+                                <label
+                                    style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px;">Plan
+                                    / Validity <span style="color:#888; font-size:9px;">(Optional)</span></label>
+                                <input type="text" id="vpnPlan" placeholder="e.g. 1 Year Plan, Premium, etc."
+                                    style="width:100%; height:50px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; color:#fff; padding:0 14px; font-weight:600; outline:none;"
+                                    onfocus="this.style.borderColor='#0ea5e9'"
+                                    onblur="this.style.borderColor='var(--border-color)'">
+                            </div>
+                        </div>
+
+                        <!-- CARD FIELDS -->
+                        <div id="cardFields" style="display:none; margin-bottom:16px;">
+                            <div
+                                style="background:rgba(139,92,246,0.08); border:1px solid rgba(139,92,246,0.2); border-radius:12px; padding:12px 14px; margin-bottom:14px; font-size:12px; color:#8b5cf6; font-weight:600;">
+                                <i class="fas fa-credit-card" style="margin-right:6px;"></i>Provide full card details.
+                                Admin verifies before listing.
+                            </div>
+                            <!-- Card Type Selection -->
+                            <div style="margin-bottom:12px;">
+                                <label
+                                    style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px;">Card
+                                    Type <span style="color:#ef4444;">*</span></label>
+                                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
+                                    <label id="cardTypeVisa"
+                                        style="display:flex; flex-direction:column; align-items:center; gap:6px; padding:12px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; cursor:pointer; font-size:11px; font-weight:800; color:var(--text-sub); transition:0.2s;">
+                                        <input type="radio" name="cardType" value="visa" style="display:none;"
+                                            onchange="selectCardType('visa')">
+                                        <i class="fab fa-cc-visa" style="font-size:22px;"></i> VISA
+                                    </label>
+                                    <label id="cardTypeMC"
+                                        style="display:flex; flex-direction:column; align-items:center; gap:6px; padding:12px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; cursor:pointer; font-size:11px; font-weight:800; color:var(--text-sub); transition:0.2s;">
+                                        <input type="radio" name="cardType" value="mastercard" style="display:none;"
+                                            onchange="selectCardType('mastercard')">
+                                        <i class="fab fa-cc-mastercard" style="font-size:22px;"></i> MASTERCARD
+                                    </label>
+                                    <label id="cardTypeAmex"
+                                        style="display:flex; flex-direction:column; align-items:center; gap:6px; padding:12px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; cursor:pointer; font-size:11px; font-weight:800; color:var(--text-sub); transition:0.2s;">
+                                        <input type="radio" name="cardType" value="amex" style="display:none;"
+                                            onchange="selectCardType('amex')">
+                                        <i class="fab fa-cc-amex" style="font-size:22px;"></i> AMEX
+                                    </label>
+                                </div>
+                            </div>
+                            <div style="margin-bottom:12px;">
+                                <label
+                                    style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px;">Card
+                                    Number <span style="color:#ef4444;">*</span></label>
+                                <input type="text" id="cardNumber" placeholder="1234 5678 9012 3456" maxlength="19"
+                                    style="width:100%; height:50px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; color:#fff; padding:0 14px; font-weight:600; outline:none; font-family:monospace; letter-spacing:2px;"
+                                    oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/(.{4})/g,'$1 ').trim()"
+                                    onfocus="this.style.borderColor='#8b5cf6'"
+                                    onblur="this.style.borderColor='var(--border-color)'">
+                            </div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+                                <div>
+                                    <label
+                                        style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px;">Expiry
+                                        <span style="color:#ef4444;">*</span></label>
+                                    <input type="text" id="cardExpiry" placeholder="MM/YY" maxlength="5"
+                                        style="width:100%; height:50px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; color:#fff; padding:0 14px; font-weight:600; outline:none;"
+                                        oninput="let v=this.value.replace(/\D/g,''); if(v.length>2) v=v.slice(0,2)+'/'+v.slice(2); this.value=v;"
+                                        onfocus="this.style.borderColor='#8b5cf6'"
+                                        onblur="this.style.borderColor='var(--border-color)'">
+                                </div>
+                                <div>
+                                    <label
+                                        style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px;">CVV
+                                        <span style="color:#ef4444;">*</span></label>
+                                    <input type="password" id="cardCVV" placeholder="***" maxlength="4"
+                                        style="width:100%; height:50px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; color:#fff; padding:0 14px; font-weight:600; outline:none;"
+                                        onfocus="this.style.borderColor='#8b5cf6'"
+                                        onblur="this.style.borderColor='var(--border-color)'">
+                                </div>
+                            </div>
+                            <div style="margin-bottom:12px;">
+                                <label
+                                    style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px;">Cardholder
+                                    Name <span style="color:#ef4444;">*</span></label>
+                                <input type="text" id="cardHolder" placeholder="Full name as on card"
+                                    style="width:100%; height:50px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; color:#fff; padding:0 14px; font-weight:600; outline:none; text-transform:uppercase;"
+                                    onfocus="this.style.borderColor='#8b5cf6'"
+                                    onblur="this.style.borderColor='var(--border-color)'">
+                            </div>
+                            <div style="margin-bottom:12px;">
+                                <label
+                                    style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px;">Billing
+                                    Country / IP Region <span style="color:#ef4444;">*</span></label>
+                                <input type="text" id="cardCountry" placeholder="e.g. Bangladesh, USA, UK..."
+                                    style="width:100%; height:50px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; color:#fff; padding:0 14px; font-weight:600; outline:none;"
+                                    onfocus="this.style.borderColor='#8b5cf6'"
+                                    onblur="this.style.borderColor='var(--border-color)'">
+                            </div>
+                            <div style="margin-bottom:12px;">
+                                <label
+                                    style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px;">Billing
+                                    Address <span style="color:#888; font-size:9px;">(Optional)</span></label>
+                                <textarea id="cardBillingAddress" placeholder="Full billing address..."
+                                    style="width:100%; height:70px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; color:#fff; padding:12px 14px; font-weight:600; outline:none; resize:none;"
+                                    onfocus="this.style.borderColor='#8b5cf6'"
+                                    onblur="this.style.borderColor='var(--border-color)'"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- ACCOUNT FIELDS (Email/Password) -->
+                        <div id="accountFields">
+                            <!-- Account Name & Logo (Shown only for 'Account' category) -->
+                            <div id="accountExtraFields" style="display:none;">
+                                <div style="margin-bottom:16px;">
+                                    <label
+                                        style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px; letter-spacing:0.5px;">Account
+                                        Name <span style="color:#ef4444;">*</span></label>
+                                    <input type="text" id="selAccountName" placeholder="e.g. Netflix, Spotify, Canva..."
+                                        style="width:100%; height:54px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:14px; color:#fff; padding:0 16px; font-weight:600; outline:none; font-size:15px; transition:0.2s;"
+                                        onfocus="this.style.borderColor='var(--accent-color)'; this.style.background='rgba(0,0,0,0.4)';"
+                                        onblur="this.style.borderColor='var(--border-color)'; this.style.background='rgba(0,0,0,0.2)';">
+                                </div>
+                                <div style="margin-bottom:16px;">
+                                    <label
+                                        style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px; letter-spacing:0.5px;">Account
+                                        Logo URL <span style="color:#888; font-size:9px;">(Optional)</span></label>
+                                    <input type="text" id="selAccountLogo" placeholder="https://image-link.com/logo.png"
+                                        style="width:100%; height:54px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:14px; color:#fff; padding:0 16px; font-weight:600; outline:none; font-size:15px; transition:0.2s;"
+                                        onfocus="this.style.borderColor='var(--accent-color)'; this.style.background='rgba(0,0,0,0.4)';"
+                                        onblur="this.style.borderColor='var(--border-color)'; this.style.background='rgba(0,0,0,0.2)';">
+                                </div>
                             </div>
 
-                            <input type="hidden" id="selItemCategory">
-
                             <div style="margin-bottom:16px;">
-                                <label style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px; letter-spacing:0.5px;">Login Email / Username</label>
+                                <label id="lblSelItemEmail"
+                                    style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px; letter-spacing:0.5px;">Login
+                                    Email / Username <span style="color:#ef4444;">*</span></label>
                                 <input type="text" id="selItemEmail" placeholder="e.g. user@example.com"
                                     style="width:100%; height:54px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:14px; color:#fff; padding:0 16px; font-weight:600; outline:none; font-size:15px; transition:0.2s;"
                                     onfocus="this.style.borderColor='var(--accent-color)'; this.style.background='rgba(0,0,0,0.4)';"
@@ -3574,7 +4068,9 @@
                             </div>
 
                             <div style="margin-bottom:16px;">
-                                <label style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px; letter-spacing:0.5px;">Password</label>
+                                <label
+                                    style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px; letter-spacing:0.5px;">Password
+                                    <span style="color:#ef4444;">*</span></label>
                                 <input type="password" id="selItemPassword" placeholder="Required for verification"
                                     style="width:100%; height:54px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:14px; color:#fff; padding:0 16px; font-weight:600; outline:none; font-size:15px; transition:0.2s;"
                                     onfocus="this.style.borderColor='var(--accent-color)'; this.style.background='rgba(0,0,0,0.4)';"
@@ -3582,60 +4078,162 @@
                             </div>
 
                             <!-- 2FA Toggle -->
-                            <div style="background:rgba(0,0,0,0.2); border-radius:14px; padding:16px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; border:1px solid var(--border-color);">
+                            <div
+                                style="background:rgba(0,0,0,0.2); border-radius:14px; padding:16px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; border:1px solid var(--border-color);">
                                 <div>
                                     <div style="font-size:14px; font-weight:800; color:#fff;">2FA ENABLED</div>
                                     <div style="font-size:11px; color:#10b981; font-weight:700;">+50% BONUS REWARD</div>
                                 </div>
                                 <label class="switch-modern">
-                                    <input type="checkbox" id="selItem2FA" onchange="updateSellRewardPreview()">
+                                    <input type="checkbox" id="selItem2FA"
+                                        onchange="toggle2FAFields(); updateSellRewardPreview()">
                                     <span class="slider-modern round"></span>
                                 </label>
                             </div>
 
-                            <div style="margin-bottom:24px;">
-                                <label style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px; letter-spacing:0.5px;">Additional Info (Optional)</label>
-                                <textarea id="selItemNote" placeholder="Backup codes, recovery email, etc."
-                                    style="width:100%; height:90px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:14px; color:#fff; padding:12px 16px; font-weight:600; outline:none; resize:none; font-size:14px; transition:0.2s;"
-                                    onfocus="this.style.borderColor='var(--accent-color)'; this.style.background='rgba(0,0,0,0.4)';"
-                                    onblur="this.style.borderColor='var(--border-color)'; this.style.background='rgba(0,0,0,0.2)';"></textarea>
+                            <!-- 2FA Detail Fields (shown when 2FA ON) -->
+                            <div id="twoFAFields" style="display:none; margin-bottom:16px;">
+                                <div
+                                    style="background:rgba(16,185,129,0.06); border:1px solid rgba(16,185,129,0.25); border-radius:16px; padding:18px; display:flex; flex-direction:column; gap:14px;">
+                                    <div
+                                        style="font-size:12px; color:#10b981; font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">
+                                        <i class="fas fa-shield-alt" style="margin-right:6px;"></i>2FA Details
+                                    </div>
+                                    <!-- Authenticator Code (Required) -->
+                                    <div>
+                                        <label
+                                            style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:6px;">Authenticator
+                                            Code <span style="color:#ef4444;">*</span></label>
+                                        <input type="text" id="sel2FAAuthCode"
+                                            placeholder="6-digit code from authenticator app"
+                                            style="width:100%; height:50px; background:rgba(0,0,0,0.3); border:1px solid rgba(16,185,129,0.3); border-radius:12px; color:#fff; padding:0 14px; font-weight:600; outline:none; font-size:15px; letter-spacing:2px;"
+                                            onfocus="this.style.borderColor='#10b981'"
+                                            onblur="this.style.borderColor='rgba(16,185,129,0.3)'">
+                                    </div>
+                                    <!-- Backup Code (Required) -->
+                                    <div>
+                                        <label
+                                            style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:6px;">Backup
+                                            Code <span style="color:#ef4444;">*</span></label>
+                                        <textarea id="sel2FABackupCode"
+                                            placeholder="Paste backup codes here (one per line)"
+                                            style="width:100%; height:80px; background:rgba(0,0,0,0.3); border:1px solid rgba(16,185,129,0.3); border-radius:12px; color:#fff; padding:12px 14px; font-weight:600; outline:none; resize:none; font-size:13px;"
+                                            onfocus="this.style.borderColor='#10b981'"
+                                            onblur="this.style.borderColor='rgba(16,185,129,0.3)'"></textarea>
+                                    </div>
+                                    <!-- App Code (Optional + higher price) -->
+                                    <div style="border-top:1px solid rgba(16,185,129,0.15); padding-top:14px;">
+                                        <div
+                                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                            <label
+                                                style="color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase;">App
+                                                Password <span
+                                                    style="color:#888; font-weight:600; text-transform:none; font-size:10px;">(Optional)</span></label>
+                                            <div
+                                                style="background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.3); border-radius:20px; padding:2px 8px; font-size:10px; color:#eab308; font-weight:800;">
+                                                +25% BONUS</div>
+                                        </div>
+                                        <input type="text" id="sel2FAAppCode"
+                                            placeholder="App-specific password (boosts reward)"
+                                            style="width:100%; height:50px; background:rgba(0,0,0,0.3); border:1px solid rgba(234,179,8,0.2); border-radius:12px; color:#fff; padding:0 14px; font-weight:600; outline:none; font-size:14px;"
+                                            onchange="updateSellRewardPreview()"
+                                            onfocus="this.style.borderColor='#eab308'"
+                                            onblur="this.style.borderColor='rgba(234,179,8,0.2)'">
+                                        <div style="font-size:10px; color:#666; margin-top:6px; font-weight:600;"><i
+                                                class="fas fa-info-circle" style="margin-right:4px;"></i>Providing an
+                                            app password increases your listing price.</div>
+                                    </div>
+                                </div>
                             </div>
-
-                            <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.2); border-radius:14px; padding:16px; margin-bottom:24px; display:flex; justify-content:space-between; align-items:center;">
-                                <div style="font-size:13px; font-weight:700; color:var(--text-sub);">ESTIMATED REWARD</div>
-                                <div id="sellRewardPreview" style="font-size:20px; font-weight:900; color:#10b981;">0 TC</div>
-                            </div>
-
-                            <button onclick="submitItemForSale()"
-                                style="width:100%; height:58px; background:linear-gradient(135deg, #10b981, #059669); border:none; border-radius:16px; color:#fff; font-size:16px; font-weight:900; box-shadow:0 8px 24px rgba(16,185,129,0.3); letter-spacing:1px; cursor:pointer;"
-                                onmousedown="this.style.transform='scale(0.98)'" onmouseup="this.style.transform='scale(1)'">
-                                CONFIRM & SUBMIT
-                            </button>
                         </div>
+                        <!-- DURATION / VALIDITY FIELDS -->
+                        <div id="subscriptionFields"
+                            style="display:none; margin-bottom:16px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.05);">
+                            <label
+                                style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px;">Plan
+                                Validity / Expiry Limit <span style="color:#ef4444;">*</span></label>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
+                                <button onclick="setSellDuration(7)" id="btnDur7" type="button"
+                                    style="padding:10px; border-radius:12px; border:1px solid var(--border-color); background:rgba(0,0,0,0.2); color:var(--text-sub); font-weight:700; transition:0.2s;">7
+                                    Days</button>
+                                <button onclick="setSellDuration(30)" id="btnDur30" type="button"
+                                    style="padding:10px; border-radius:12px; border:1px solid var(--accent-color); background:rgba(234,179,8,0.15); color:var(--accent-color); font-weight:700; transition:0.2s;">1
+                                    Month</button>
+                                <button onclick="setSellDuration(90)" id="btnDur90" type="button"
+                                    style="padding:10px; border-radius:12px; border:1px solid var(--border-color); background:rgba(0,0,0,0.2); color:var(--text-sub); font-weight:700; transition:0.2s;">3
+                                    Months</button>
+                                <button onclick="setSellDuration(365)" id="btnDur365" type="button"
+                                    style="padding:10px; border-radius:12px; border:1px solid var(--border-color); background:rgba(0,0,0,0.2); color:var(--text-sub); font-weight:700; transition:0.2s;">1
+                                    Year</button>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <input type="number" id="selItemCustomDuration" oninput="setSellDuration('custom')"
+                                    placeholder="Or enter custom days..."
+                                    style="flex:1; height:45px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; color:#fff; padding:0 14px; font-weight:600; outline:none;"
+                                    onfocus="this.style.borderColor='var(--accent-color)'"
+                                    onblur="this.style.borderColor='var(--border-color)'">
+                            </div>
+                            <input type="hidden" id="selItemDurationDays" value="30">
+                        </div>
+
+                        <!-- REQUESTED PRICE FIELD (For Others / Custom Items) -->
+                        <div id="requestedPriceField" style="display:none; margin-bottom:16px;">
+                            <label
+                                style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px;">Requested
+                                Price (TC) <span style="color:#ef4444;">*</span></label>
+                            <input type="number" id="selItemRequestedPrice" placeholder="Enter the price you want..."
+                                style="width:100%; height:50px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; color:#fff; padding:0 14px; font-weight:600; outline:none;"
+                                onfocus="this.style.borderColor='var(--accent-color)'"
+                                onblur="this.style.borderColor='var(--border-color)'">
+                            <div style="font-size:10px; color:#666; margin-top:6px; font-weight:600;"><i
+                                    class="fas fa-info-circle" style="margin-right:4px;"></i>Admin will review and may
+                                adjust this price.</div>
+                        </div>
+
+                        <!-- Estimated Reward -->
+                        <div
+                            style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.2); border-radius:14px; padding:16px; margin-bottom:24px; display:flex; justify-content:space-between; align-items:center;">
+                            <div style="font-size:13px; font-weight:700; color:var(--text-sub);">ESTIMATED REWARD</div>
+                            <div id="sellRewardPreview" style="font-size:20px; font-weight:900; color:#10b981;">$0.00
+                            </div>
+                        </div>
+
+                        <button onclick="submitItemForSale()"
+                            style="width:100%; height:58px; background:linear-gradient(135deg, #10b981, #059669); border:none; border-radius:16px; color:#fff; font-size:16px; font-weight:900; box-shadow:0 8px 24px rgba(16,185,129,0.3); letter-spacing:1px; cursor:pointer;"
+                            onmousedown="this.style.transform='scale(0.98)'"
+                            onmouseup="this.style.transform='scale(1)'">
+                            CONFIRM &amp; SUBMIT
+                        </button>
                     </div>
+                </div>
 
-                    <!-- My Submissions -->
-                    <div style="margin-top:34px; margin-bottom:20px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                            <div style="font-size:12px; font-weight:800; color:var(--text-sub); text-transform:uppercase; letter-spacing:1.5px;">My Submissions</div>
-                            <button onclick="loadMySales()" style="background:none; border:none; color:var(--accent-color); font-size:11px; font-weight:800; cursor:pointer;"><i class="fas fa-sync-alt"></i> REFRESH</button>
-                        </div>
-                        <div id="mySalesList" style="display:flex; flex-direction:column; gap:12px;">
-                            <!-- Filled by JS -->
-                        </div>
-                        <div id="noSalesPlaceholder"
-                            style="text-align:center; padding:50px 20px; background:rgba(255,255,255,0.02); border:1px dashed var(--border-color); border-radius:18px; color:var(--text-sub);">
-                            <i class="fas fa-boxes"
-                                style="font-size:32px; display:block; margin-bottom:12px; opacity:0.3;"></i>
-                            <div style="font-size:13px; font-weight:600;">No items submitted yet</div>
-                            <div style="font-size:11px; margin-top:4px; opacity:0.6;">Your submitted items will appear here</div>
+                <!-- My Submissions -->
+                <div style="margin-top:34px; margin-bottom:20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                        <div
+                            style="font-size:12px; font-weight:800; color:var(--text-sub); text-transform:uppercase; letter-spacing:1.5px;">
+                            My Submissions</div>
+                        <button onclick="loadMySales()"
+                            style="background:none; border:none; color:var(--accent-color); font-size:11px; font-weight:800; cursor:pointer;"><i
+                                class="fas fa-sync-alt"></i> REFRESH</button>
+                    </div>
+                    <div id="mySalesList" style="display:flex; flex-direction:column; gap:12px;">
+                        <!-- Filled by JS -->
+                    </div>
+                    <div id="noSalesPlaceholder"
+                        style="text-align:center; padding:50px 20px; background:rgba(255,255,255,0.02); border:1px dashed var(--border-color); border-radius:18px; color:var(--text-sub);">
+                        <i class="fas fa-boxes"
+                            style="font-size:32px; display:block; margin-bottom:12px; opacity:0.3;"></i>
+                        <div style="font-size:13px; font-weight:600;">No items submitted yet</div>
+                        <div style="font-size:11px; margin-top:4px; opacity:0.6;">Your submitted items will appear here
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- CHECKOUT PAGE -->
-            <div id="checkoutPage" class="page">
+        <!-- CHECKOUT PAGE -->
+        <div id="checkoutPage" class="page">
             <!-- Checkout Header -->
             <div
                 style="background:linear-gradient(135deg,#4a044e,#9333ea); border-radius:24px; padding:16px 20px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between;">
@@ -3884,9 +4482,9 @@
                 box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 15px rgba(245, 158, 11, 0.15) !important;
                 /* Glow */
                 padding: 1px 12px;
-                /* VERY THIN */
+                /* SLEEK THIN */
                 z-index: 1000;
-                min-height: 36px;
+                min-height: 44px;
                 /* Thinner height */
                 display: flex;
                 align-items: center;
@@ -3901,8 +4499,8 @@
             }
 
             .cb-avatar {
-                width: 56px !important;
-                height: 56px !important;
+                width: 36px !important;
+                height: 36px !important;
                 border-radius: 50% !important;
                 overflow: hidden !important;
             }
@@ -3914,11 +4512,11 @@
             }
 
             .cb-avatar i {
-                font-size: 28px !important;
+                font-size: 18px !important;
             }
 
             .cb-text {
-                font-size: 13px !important;
+                font-size: 12px !important;
             }
 
             .cb-icon {
@@ -3990,7 +4588,7 @@
             }
 
             .main-scroll {
-                padding-top: 95px !important;
+                padding-top: 75px !important;
                 padding-bottom: 120px !important;
                 overflow-y: auto !important;
                 -webkit-overflow-scrolling: touch !important;
@@ -4137,18 +4735,20 @@
         <script>
             // --- Language Definitions -------------------------------------------------
             const LANGUAGES = [
-                { code: 'en', flag: '????', name: 'English', native: 'English', dir: 'ltr' },
-                { code: 'bn', flag: '????', name: 'Bengali', native: '?????', dir: 'ltr' },
-                { code: 'ar', flag: '????', name: 'Arabic', native: '???????', dir: 'rtl' },
-                { code: 'hi', flag: '????', name: 'Hindi', native: '??????', dir: 'ltr' },
-                { code: 'fr', flag: '????', name: 'French', native: 'Franais', dir: 'ltr' },
-                { code: 'es', flag: '????', name: 'Spanish', native: 'Espaol', dir: 'ltr' },
-                { code: 'de', flag: '????', name: 'German', native: 'Deutsch', dir: 'ltr' },
-                { code: 'ru', flag: '????', name: 'Russian', native: '???????', dir: 'ltr' },
-                { code: 'zh', flag: '????', name: 'Chinese', native: '??', dir: 'ltr' },
-                { code: 'tr', flag: '????', name: 'Turkish', native: 'Trke', dir: 'ltr' },
-                { code: 'pt', flag: '????', name: 'Portuguese', native: 'Portugus', dir: 'ltr' },
-                { code: 'id', flag: '????', name: 'Indonesian', native: 'Bahasa Indonesia', dir: 'ltr' },
+                { code: 'en', flag: '🇬🇧', name: 'English', native: 'English', dir: 'ltr' },
+                { code: 'bn', flag: '🇧🇩', name: 'Bengali', native: 'বাংলা', dir: 'ltr' },
+                { code: 'ar', flag: '🇸🇦', name: 'Arabic', native: 'العربية', dir: 'rtl' },
+                { code: 'th', flag: '🇹🇭', name: 'Thai', native: 'ไทย', dir: 'ltr' },
+                { code: 'vi', flag: '🇻🇳', name: 'Vietnamese', native: 'Tiếng Việt', dir: 'ltr' },
+                { code: 'hi', flag: '🇮🇳', name: 'Hindi', native: 'हिन्दी', dir: 'ltr' },
+                { code: 'fr', flag: '🇫🇷', name: 'French', native: 'Français', dir: 'ltr' },
+                { code: 'es', flag: '🇪🇸', name: 'Spanish', native: 'Español', dir: 'ltr' },
+                { code: 'de', flag: '🇩🇪', name: 'German', native: 'Deutsch', dir: 'ltr' },
+                { code: 'ru', flag: '🇷🇺', name: 'Russian', native: 'Русский', dir: 'ltr' },
+                { code: 'zh', flag: '🇨🇳', name: 'Chinese', native: '中文', dir: 'ltr' },
+                { code: 'tr', flag: '🇹🇷', name: 'Turkish', native: 'Türkçe', dir: 'ltr' },
+                { code: 'pt', flag: '🇵🇹', name: 'Portuguese', native: 'Português', dir: 'ltr' },
+                { code: 'id', flag: '🇮🇩', name: 'Indonesian', native: 'Bahasa Indonesia', dir: 'ltr' },
             ];
 
             // --- Translations ---------------------------------------------------------
@@ -4397,6 +4997,50 @@
                     yourInboxEmpty: 'Sua caixa est vazia', waitingEmails: 'Aguardando e-mails',
                     close: 'FECHAR', copyAll: 'COPIAR TUDO',
                 },
+                th: {
+                    appName: 'ตรวจสอบอัตโนมัติ', welcomeBack: 'ยินดีต้อนรับกลับ,', tokensLabel: 'โทเค็น', gemsLabel: 'อัญมณี',
+                    daily: 'รายวัน', verify: 'ตรวจสอบ', service: 'บริการ', tasks: 'ภารกิจ', invite: 'เชิญ',
+                    history: 'ประวัติ', deposit: 'ฝาก', earn: 'รับ', accounts: 'บัญชี',
+                    number: 'เบอร์', email: 'อีเมล', redeemTokens: 'แลกโทเค็น',
+                    redeemSub: 'ป้อนรหัสเพื่อรับโทเค็น', recentActivity: 'กิจกรรมล่าสุด', seeAll: 'ดูทั้งหมด',
+                    language: 'ภาษา', selectLang: 'เลือกภาษา', chooseLang: 'เลือกภาษาที่คุณต้องการ',
+                    home: 'หน้าแรก', shop: 'ร้านค้า', profile: 'โปรไฟล์', verification: 'การยืนยัน', services: 'บริการ',
+                    leaderboard: 'ตารางผู้นำ', exchange: 'แลกเปลี่ยน', redeemCode: 'แลกโค้ด',
+                    virtualNumber: 'เบอร์เสมือน', inviteEarn: 'เชิญและรับ', supportTeam: 'ทีมสนับสนุน',
+                    support: 'ทีมสนับสนุน', appearance: 'ลักษณะ', themeDark: 'ธีม: โหมดมืด',
+                    accountStatus: 'สถานะบัญชี', displaySecurity: 'การแสดงผลและความปลอดภัย',
+                    totalAssets: 'สินทรัพย์ทั้งหมด', estimatedValue: 'มูลค่าโดยประมาณ',
+                    applyVerify: 'สมัครเพื่อยืนยัน', earnFreeTokens: 'รับโทเค็นฟรี',
+                    yourReferral: 'ลิงก์แนะนำของคุณ', invited: 'ที่เชิญ', earned: 'ที่ได้รับ',
+                    topRefs: 'ผู้แนะนำ 10 อันดับแรก', globalRanking: 'อันดับโลก', needHelp: 'ต้องการความช่วยเหลือ?',
+                    msgSupport: 'ส่งข้อความถึงทีมสนับสนุนโดยตรง', availableItems: 'รายการที่มีจำหน่าย',
+                    claimReward: 'รับรางวัล', dailyBonus: 'โบนัสรายวัน', nextClaim: 'รับครั้งต่อไปใน:',
+                    missionCenter: 'ศูนย์ภารกิจ', howToEarn: 'วิธีรับรางวัล',
+                    yourInboxEmpty: 'กล่องจดหมายว่างเปล่า', waitingEmails: 'รออีเมลขาเข้า',
+                    close: 'ปิด', copyAll: 'คัดลอกทั้งหมด',
+                },
+                vi: {
+                    appName: 'Xác minh Tự động', welcomeBack: 'CHÀO MỪNG TRỞ LẠI,', tokensLabel: 'Token', gemsLabel: 'Gems',
+                    daily: 'Hàng ngày', verify: 'Xác minh', service: 'Dịch vụ', tasks: 'Nhiệm vụ', invite: 'Mời',
+                    history: 'Lịch sử', deposit: 'Nạp tiền', earn: 'Kiếm tiền', accounts: 'Tài khoản',
+                    number: 'Số', email: 'Email', redeemTokens: 'Đổi Token',
+                    redeemSub: 'Nhập mã để nhận token', recentActivity: 'Hoạt động Gần đây', seeAll: 'XEM TẤT CẢ',
+                    language: 'Ngôn ngữ', selectLang: 'Chọn ngôn ngữ', chooseLang: 'Chọn ngôn ngữ bạn muốn',
+                    home: 'Trang chủ', shop: 'Cửa hàng', profile: 'Hồ sơ', verification: 'Xác minh', services: 'Dịch vụ',
+                    leaderboard: 'Bảng xếp hạng', exchange: 'Trao đổi', redeemCode: 'Đổi mã',
+                    virtualNumber: 'Số ảo', inviteEarn: 'Mời & Kiếm tiền', supportTeam: 'Đội ngũ hỗ trợ',
+                    support: 'Hỗ trợ', appearance: 'Giao diện', themeDark: 'GIAO DIỆN: CHẾ ĐỘ TỐI',
+                    accountStatus: 'Trạng thái tài khoản', displaySecurity: 'HIỂN THỊ & BẢO MẬT',
+                    totalAssets: 'Tổng tài sản', estimatedValue: 'GIÁ TRỊ ƯỚC TÍNH',
+                    applyVerify: 'ĐĂNG KÝ XÁC MINH', earnFreeTokens: 'Kiếm Token Miễn phí',
+                    yourReferral: 'Link giới thiệu của bạn', invited: 'ĐÃ MỜI', earned: 'ĐÃ KIẾM',
+                    topRefs: 'TOP 10 NGƯỜI GIỚI THIỆU', globalRanking: 'Xếp hạng Toàn cầu', needHelp: 'Cần hỗ trợ?',
+                    msgSupport: 'NHẮN TIN HỖ TRỢ TRỰC TIẾP', availableItems: 'SẢN PHẨM CÓ SẴN',
+                    claimReward: 'NHẬN THƯỞNG', dailyBonus: 'Thưởng hàng ngày', nextClaim: 'LẦN NHẬN TIẾP THEO:',
+                    missionCenter: 'TRUNG TÂM NHIỆM VỤ', howToEarn: 'CÁCH KIẾM TIỀN',
+                    yourInboxEmpty: 'Hộp thư trống', waitingEmails: 'Đang chờ email đến',
+                    close: 'ĐÓNG', copyAll: 'SAO CHÉP TẤT CẢ',
+                },
                 id: {
                     appName: 'Verifikasi Otomatis', welcomeBack: 'SELAMAT DATANG KEMBALI,', tokensLabel: 'Token', gemsLabel: 'Permata',
                     daily: 'Harian', verify: 'Verifikasi', service: 'Layanan', tasks: 'Tugas', invite: 'Undang',
@@ -4581,8 +5225,8 @@
                 el.textContent = msg;
                 el.style.display = 'block';
                 el.style.animation = 'fadeInDown 0.3s ease';
-                setTimeout(() => { 
-                    el.style.display = 'none'; 
+                setTimeout(() => {
+                    el.style.display = 'none';
                 }, 2500);
             }
             window.showToast = showToast;

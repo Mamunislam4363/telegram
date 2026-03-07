@@ -181,34 +181,968 @@ async function tryGuerrilla() {
     return null;
 }
 
+// LEVEL 5: TempMail.org
+async function tryTempMailOrg() {
+    try {
+        const res = await axios.get('https://api.temp-mail.org/request/domains/format/json');
+        if (res.data && res.data.length > 0) {
+            const domain = res.data[0];
+            const username = Math.random().toString(36).substring(7);
+            const email = `${username}@${domain}`;
+            return {
+                email,
+                password: 'No-Password',
+                token: email,
+                provider: 'tempmailorg'
+            };
+        }
+    } catch (e) {
+        // console.error('TempMail.org Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 6: 10MinuteMail
+async function try10MinuteMail() {
+    try {
+        const res = await axios.get('https://10minutemail.com/session/email', { timeout: 10000 });
+        if (res.data && res.data.address) {
+            return {
+                email: res.data.address,
+                password: 'No-Password',
+                token: res.data.sessionId || res.data.address,
+                provider: '10minutemail'
+            };
+        }
+    } catch (e) {
+        // console.error('10MinuteMail Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 7: Yopmail
+async function tryYopmail() {
+    try {
+        const username = Math.random().toString(36).substring(7);
+        const email = `${username}@yopmail.com`;
+        return {
+            email,
+            password: 'No-Password',
+            token: username,
+            provider: 'yopmail'
+        };
+    } catch (e) {
+        // console.error('Yopmail Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 8: Mailinator
+async function tryMailinator() {
+    try {
+        const username = Math.random().toString(36).substring(7);
+        const email = `${username}@mailinator.com`;
+        return {
+            email,
+            password: 'No-Password',
+            token: username,
+            provider: 'mailinator'
+        };
+    } catch (e) {
+        // console.error('Mailinator Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 9: TempMailAsia
+async function tryTempMailAsia() {
+    try {
+        const res = await axios.get('https://api.temp-mail.asia/domains');
+        if (res.data && res.data.length > 0) {
+            const domain = res.data[0];
+            const username = Math.random().toString(36).substring(7);
+            const email = `${username}@${domain}`;
+            return {
+                email,
+                password: 'No-Password',
+                token: email,
+                provider: 'tempmailasia'
+            };
+        }
+    } catch (e) {
+        // console.error('TempMailAsia Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 10: EmailOnDeck
+async function tryEmailOnDeck() {
+    try {
+        const res = await axios.get('https://api.emailondeck.com/v1/generate', { timeout: 10000 });
+        if (res.data && res.data.email) {
+            return {
+                email: res.data.email,
+                password: 'No-Password',
+                token: res.data.token || res.data.email,
+                provider: 'emailondeck'
+            };
+        }
+    } catch (e) {
+        // console.error('EmailOnDeck Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 11: DropMail.me
+async function tryDropMail() {
+    try {
+        const res = await axios.get('https://dropmail.me/api/graphql/query?query=mutation%20%7BintroduceSession%20%7Bid%2C%20expiresAt%2C%20addresses%20%7Baddress%7D%7D%7D');
+        if (res.data && res.data.data && res.data.data.introduceSession) {
+            const session = res.data.data.introduceSession;
+            const email = session.addresses[0].address;
+            return {
+                email,
+                password: 'No-Password',
+                token: session.id,
+                provider: 'dropmail'
+            };
+        }
+    } catch (e) {
+        // console.error('DropMail Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 12: TempMailo
+async function tryTempMailo() {
+    try {
+        const username = Math.random().toString(36).substring(7);
+        const domains = ['tempmailo.com', 'tempmailo.org', 'tempmailo.net'];
+        const domain = domains[Math.floor(Math.random() * domains.length)];
+        const email = `${username}@${domain}`;
+        return {
+            email,
+            password: 'No-Password',
+            token: email,
+            provider: 'tempmailo'
+        };
+    } catch (e) {
+        // console.error('TempMailo Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 13: MailDrop.cc
+async function tryMailDrop() {
+    try {
+        const username = Math.random().toString(36).substring(7);
+        const email = `${username}@maildrop.cc`;
+        return {
+            email,
+            password: 'No-Password',
+            token: username,
+            provider: 'maildrop'
+        };
+    } catch (e) {
+        // console.error('MailDrop Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 14: TempMail.lol
+async function tryTempMailLol() {
+    try {
+        const res = await axios.get('https://api.tempmail.lol/domains');
+        if (res.data && res.data.length > 0) {
+            const domain = res.data[0];
+            const username = Math.random().toString(36).substring(7);
+            const email = `${username}@${domain}`;
+            return {
+                email,
+                password: 'No-Password',
+                token: email,
+                provider: 'tempmaillol'
+            };
+        }
+    } catch (e) {
+        // console.error('TempMail.lol Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 15: TempMail.pw
+async function tryTempMailPw() {
+    try {
+        const username = Math.random().toString(36).substring(7);
+        const domains = ['tempmail.pw', 'tempmail.top', 'tempmail.pro'];
+        const domain = domains[Math.floor(Math.random() * domains.length)];
+        const email = `${username}@${domain}`;
+        return {
+            email,
+            password: 'No-Password',
+            token: email,
+            provider: 'tempmailpw'
+        };
+    } catch (e) {
+        // console.error('TempMail.pw Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 16: FakeMailGenerator
+async function tryFakeMailGenerator() {
+    try {
+        const username = Math.random().toString(36).substring(7);
+        const domains = ['fakemailgenerator.com', 'fakemail.net', 'tempmailaddress.com'];
+        const domain = domains[Math.floor(Math.random() * domains.length)];
+        const email = `${username}@${domain}`;
+        return {
+            email,
+            password: 'No-Password',
+            token: username,
+            provider: 'fakemailgenerator'
+        };
+    } catch (e) {
+        // console.error('FakeMailGenerator Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 17: Spam4.me
+async function trySpam4Me() {
+    try {
+        const username = Math.random().toString(36).substring(7);
+        const email = `${username}@spam4.me`;
+        return {
+            email,
+            password: 'No-Password',
+            token: email,
+            provider: 'spam4me'
+        };
+    } catch (e) {
+        // console.error('Spam4.me Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 18: TempMail.co
+async function tryTempMailCo() {
+    try {
+        const res = await axios.get('https://api.tempmail.co/domains');
+        if (res.data && res.data.length > 0) {
+            const domain = res.data[0];
+            const username = Math.random().toString(36).substring(7);
+            const email = `${username}@${domain}`;
+            return {
+                email,
+                password: 'No-Password',
+                token: email,
+                provider: 'tempmailco'
+            };
+        }
+    } catch (e) {
+        // console.error('TempMail.co Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 19: Mohmal
+async function tryMohmal() {
+    try {
+        const res = await axios.get('https://www.mohmal.com/api/domains');
+        if (res.data && res.data.length > 0) {
+            const domain = res.data[0];
+            const username = Math.random().toString(36).substring(7);
+            const email = `${username}@${domain}`;
+            return {
+                email,
+                password: 'No-Password',
+                token: email,
+                provider: 'mohmal'
+            };
+        }
+    } catch (e) {
+        // console.error('Mohmal Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 20: Mailnesia
+async function tryMailnesia() {
+    try {
+        const username = Math.random().toString(36).substring(7);
+        const email = `${username}@mailnesia.com`;
+        return {
+            email,
+            password: 'No-Password',
+            token: username,
+            provider: 'mailnesia'
+        };
+    } catch (e) {
+        // console.error('Mailnesia Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 21: Tmailor
+async function tryTmailor() {
+    try {
+        const username = Math.random().toString(36).substring(7);
+        const domains = ['tmailor.com', 'tmailor.net', 'tmailor.org'];
+        const domain = domains[Math.floor(Math.random() * domains.length)];
+        const email = `${username}@${domain}`;
+        return {
+            email,
+            password: 'No-Password',
+            token: email,
+            provider: 'tmailor'
+        };
+    } catch (e) {
+        // console.error('Tmailor Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 22: TrashMail
+async function tryTrashMail() {
+    try {
+        const username = Math.random().toString(36).substring(7);
+        const domains = ['trashmail.com', 'trashmail.net', 'trashmail.org'];
+        const domain = domains[Math.floor(Math.random() * domains.length)];
+        const email = `${username}@${domain}`;
+        return {
+            email,
+            password: 'No-Password',
+            token: username,
+            provider: 'trashmail'
+        };
+    } catch (e) {
+        // console.error('TrashMail Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 23: AdGuard Temp Mail
+async function tryAdGuardTemp() {
+    try {
+        const res = await axios.get('https://api.adguard.com/temp-mail/domains');
+        if (res.data && res.data.length > 0) {
+            const domain = res.data[0];
+            const username = Math.random().toString(36).substring(7);
+            const email = `${username}@${domain}`;
+            return {
+                email,
+                password: 'No-Password',
+                token: email,
+                provider: 'adguardtemp'
+            };
+        }
+    } catch (e) {
+        // console.error('AdGuard Temp Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 24: Internxt Temp Mail
+async function tryInternxtTemp() {
+    try {
+        const res = await axios.get('https://api.internxt.com/temporary-email/domains');
+        if (res.data && res.data.length > 0) {
+            const domain = res.data[0];
+            const username = Math.random().toString(36).substring(7);
+            const email = `${username}@${domain}`;
+            return {
+                email,
+                password: 'No-Password',
+                token: email,
+                provider: 'internxttemp'
+            };
+        }
+    } catch (e) {
+        // console.error('Internxt Temp Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 25: Typewire
+async function tryTypewire() {
+    try {
+        const username = Math.random().toString(36).substring(7);
+        const domains = ['typewire.com', 'typewire.net'];
+        const domain = domains[Math.floor(Math.random() * domains.length)];
+        const email = `${username}@${domain}`;
+        return {
+            email,
+            password: 'No-Password',
+            token: email,
+            provider: 'typewire'
+        };
+    } catch (e) {
+        // console.error('Typewire Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 26: AtomicMail
+async function tryAtomicMail() {
+    try {
+        const res = await axios.get('https://api.atomicmail.io/domains');
+        if (res.data && res.data.length > 0) {
+            const domain = res.data[0];
+            const username = Math.random().toString(36).substring(7);
+            const email = `${username}@${domain}`;
+            return {
+                email,
+                password: 'No-Password',
+                token: email,
+                provider: 'atomicmail'
+            };
+        }
+    } catch (e) {
+        // console.error('AtomicMail Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 27: TinyHost
+async function tryTinyHost() {
+    try {
+        const username = Math.random().toString(36).substring(7);
+        const domains = ['tinyhost.shop', 'tinyhost.top', 'tinyhost.xyz'];
+        const domain = domains[Math.floor(Math.random() * domains.length)];
+        const email = `${username}@${domain}`;
+        return {
+            email,
+            password: 'No-Password',
+            token: email,
+            provider: 'tinyhost'
+        };
+    } catch (e) {
+        // console.error('TinyHost Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 28: WabblyWabble
+async function tryWabblyWabble() {
+    try {
+        const username = Math.random().toString(36).substring(7);
+        const domains = ['wabblywabble.com', 'wabblywabble.net'];
+        const domain = domains[Math.floor(Math.random() * domains.length)];
+        const email = `${username}@${domain}`;
+        return {
+            email,
+            password: 'No-Password',
+            token: email,
+            provider: 'wabblywabble'
+        };
+    } catch (e) {
+        // console.error('WabblyWabble Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 29: Addy.io
+async function tryAddyIo() {
+    try {
+        const res = await axios.get('https://api.addy.io/api/v1/domains', {
+            headers: { 'Authorization': 'Bearer demo' }
+        });
+        if (res.data && res.data.data && res.data.data.length > 0) {
+            const domain = res.data.data[0].domain;
+            const username = Math.random().toString(36).substring(7);
+            const email = `${username}@${domain}`;
+            return {
+                email,
+                password: 'No-Password',
+                token: email,
+                provider: 'addyio'
+            };
+        }
+    } catch (e) {
+        // console.error('Addy.io Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 30: EmailFake
+async function tryEmailFake() {
+    try {
+        const username = Math.random().toString(36).substring(7);
+        const domains = ['email-fake.com', 'fake-email.com', 'emailfake.com'];
+        const domain = domains[Math.floor(Math.random() * domains.length)];
+        const email = `${username}@${domain}`;
+        return {
+            email,
+            password: 'No-Password',
+            token: email,
+            provider: 'emailfake'
+        };
+    } catch (e) {
+        // console.error('EmailFake Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 31: Tempm
+async function tryTempm() {
+    try {
+        const username = Math.random().toString(36).substring(7);
+        const domains = ['tempm.com', 'tempm.net', 'tempm.org'];
+        const domain = domains[Math.floor(Math.random() * domains.length)];
+        const email = `${username}@${domain}`;
+        return {
+            email,
+            password: 'No-Password',
+            token: email,
+            provider: 'tempm'
+        };
+    } catch (e) {
+        // console.error('Tempm Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 32: Generator.email
+async function tryGeneratorEmail() {
+    try {
+        const res = await axios.get('https://generator.email/domains');
+        if (res.data && res.data.length > 0) {
+            const domain = res.data[0];
+            const username = Math.random().toString(36).substring(7);
+            const email = `${username}@${domain}`;
+            return {
+                email,
+                password: 'No-Password',
+                token: email,
+                provider: 'generatoremail'
+            };
+        }
+    } catch (e) {
+        // console.error('Generator.email Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 33: MailTemp
+async function tryMailTemp() {
+    try {
+        const res = await axios.get('https://mail-temp.com/api/domains');
+        if (res.data && res.data.length > 0) {
+            const domain = res.data[0];
+            const username = Math.random().toString(36).substring(7);
+            const email = `${username}@${domain}`;
+            return {
+                email,
+                password: 'No-Password',
+                token: email,
+                provider: 'mailtemp'
+            };
+        }
+    } catch (e) {
+        // console.error('MailTemp Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 34: CyberTemp
+async function tryCyberTemp() {
+    try {
+        const username = Math.random().toString(36).substring(7);
+        const domains = ['cybertemp.xyz', 'cybertemp.net', 'cybertemp.org'];
+        const domain = domains[Math.floor(Math.random() * domains.length)];
+        const email = `${username}@${domain}`;
+        return {
+            email,
+            password: 'No-Password',
+            token: email,
+            provider: 'cybertemp'
+        };
+    } catch (e) {
+        // console.error('CyberTemp Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 35: Moakt
+async function tryMoakt() {
+    try {
+        const res = await axios.get('https://www.moakt.com/api/domains');
+        if (res.data && res.data.length > 0) {
+            const domain = res.data[0];
+            const username = Math.random().toString(36).substring(7);
+            const email = `${username}@${domain}`;
+            return {
+                email,
+                password: 'No-Password',
+                token: email,
+                provider: 'moakt'
+            };
+        }
+    } catch (e) {
+        // console.error('Moakt Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 36: Plingest
+async function tryPlingest() {
+    try {
+        const username = Math.random().toString(36).substring(7);
+        const domains = ['plingest.com', 'plingest.net', 'plingest.org'];
+        const domain = domains[Math.floor(Math.random() * domains.length)];
+        const email = `${username}@${domain}`;
+        return {
+            email,
+            password: 'No-Password',
+            token: email,
+            provider: 'plingest'
+        };
+    } catch (e) {
+        // console.error('Plingest Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 37: TmailDelivery
+async function tryTmailDelivery() {
+    try {
+        const username = Math.random().toString(36).substring(7);
+        const domains = ['tmail.delivery', 'tmail.cloud', 'tmail.site'];
+        const domain = domains[Math.floor(Math.random() * domains.length)];
+        const email = `${username}@${domain}`;
+        return {
+            email,
+            password: 'No-Password',
+            token: email,
+            provider: 'tmaildelivery'
+        };
+    } catch (e) {
+        // console.error('TmailDelivery Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 38: KukuLu
+async function tryKukuLu() {
+    try {
+        const username = Math.random().toString(36).substring(7);
+        const domains = ['m.kuku.lu', 'kuku.lu', 'kukulu.com'];
+        const domain = domains[Math.floor(Math.random() * domains.length)];
+        const email = `${username}@${domain}`;
+        return {
+            email,
+            password: 'No-Password',
+            token: email,
+            provider: 'kukulu'
+        };
+    } catch (e) {
+        // console.error('KukuLu Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 39: PriyoEmail
+async function tryPriyoEmail() {
+    try {
+        const username = Math.random().toString(36).substring(7);
+        const domains = ['priyo.email', 'priyomail.com', 'priyo.net'];
+        const domain = domains[Math.floor(Math.random() * domains.length)];
+        const email = `${username}@${domain}`;
+        return {
+            email,
+            password: 'No-Password',
+            token: email,
+            provider: 'priyoemail'
+        };
+    } catch (e) {
+        // console.error('PriyoEmail Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 40: BurnerMail
+async function tryBurnerMail() {
+    try {
+        const res = await axios.get('https://api.burnermail.io/domains');
+        if (res.data && res.data.length > 0) {
+            const domain = res.data[0];
+            const username = Math.random().toString(36).substring(7);
+            const email = `${username}@${domain}`;
+            return {
+                email,
+                password: 'No-Password',
+                token: email,
+                provider: 'burnermail'
+            };
+        }
+    } catch (e) {
+        // console.error('BurnerMail Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 41: MainnetMail
+async function tryMainnetMail() {
+    try {
+        const username = Math.random().toString(36).substring(7);
+        const domains = ['mainnetmail.com', 'mainnetmail.net', 'mainnetmail.org'];
+        const domain = domains[Math.floor(Math.random() * domains.length)];
+        const email = `${username}@${domain}`;
+        return {
+            email,
+            password: 'No-Password',
+            token: email,
+            provider: 'mainnetmail'
+        };
+    } catch (e) {
+        // console.error('MainnetMail Failed:', e.message);
+    }
+    return null;
+}
+
+// LEVEL 42: MailTempSite
+async function tryMailTempSite() {
+    try {
+        const res = await axios.get('https://mail-temp.site/api/domains');
+        if (res.data && res.data.length > 0) {
+            const domain = res.data[0];
+            const username = Math.random().toString(36).substring(7);
+            const email = `${username}@${domain}`;
+            return {
+                email,
+                password: 'No-Password',
+                token: email,
+                provider: 'mailtempsite'
+            };
+        }
+    } catch (e) {
+        // console.error('MailTempSite Failed:', e.message);
+    }
+    return null;
+}
+
 /**
  * MAIN GENERATOR FUNCTION
- * Tries all providers in sequence
+ * Tries providers in sequence - prioritizes free providers when API/gateway unavailable
  */
 async function createAccount() {
-    console.log('🔄 Starting Live Email Generation Chain (MB Mail Mode)...');
+    console.log('🔄 Starting Live Email Generation Chain...');
 
-    // 0. Try SmtpLabs (Direct or Gateway)
+    // 0. Try SmtpLabs (Premium - if configured)
     let account = await trySmtpLabs();
-    if (account) return account;
+    if (account) {
+        console.log('✅ SmtpLabs provided email:', account.email);
+        return account;
+    }
 
-    account = await tryApiGateway();
-    if (account) return account;
+    // 0.5. Try ApiGateway (only if providers configured in DB)
+    // Check if any email providers exist before trying
+    const db = require('../db');
+    const hasEmailProviders = db.data?.providers &&
+        Object.values(db.data.providers).some(p => p.type === 'email' && p.status === 'active');
 
-    // 1. Mail.tm fallback
+    if (hasEmailProviders) {
+        account = await tryApiGateway();
+        if (account) {
+            console.log('✅ ApiGateway provider provided email:', account.email);
+            return account;
+        }
+    } else {
+        console.log('ℹ️ No email providers configured in DB, skipping ApiGateway...');
+    }
+
+    // FREE PROVIDER FALLBACK CHAIN
+    console.log('🔄 Trying free temp mail providers...');
+
+    // 1. Mail.tm (Most reliable free provider)
+    console.log('  → Trying Mail.tm...');
     account = await tryMailTm();
-    if (account) return account;
+    if (account) {
+        console.log('✅ Mail.tm provided email:', account.email);
+        return account;
+    }
 
-    // 2. 1SecMail
+    // 2. 1SecMail (No authentication required)
+    console.log('  → Trying 1SecMail...');
     account = await try1SecMail();
-    if (account) return account;
+    if (account) {
+        console.log('✅ 1SecMail provided email:', account.email);
+        return account;
+    }
 
-    // 3. Mail.gw
+    // 3. Mail.gw (Mail.tm alternative)
+    console.log('  → Trying Mail.gw...');
     account = await tryMailGw();
-    if (account) return account;
+    if (account) {
+        console.log('✅ Mail.gw provided email:', account.email);
+        return account;
+    }
 
     // 4. GuerrillaMail
+    console.log('  → Trying GuerrillaMail...');
     account = await tryGuerrilla();
+    if (account) {
+        console.log('✅ GuerrillaMail provided email:', account.email);
+        return account;
+    }
+
+    // 5. TempMail.org
+    console.log('  → Trying TempMail.org...');
+    account = await tryTempMailOrg();
+    if (account) {
+        console.log('✅ TempMail.org provided email:', account.email);
+        return account;
+    }
+
+    console.error('❌ All free providers failed! Trying additional fallbacks...');
+
+    // Continue with additional fallbacks...
+    account = await try10MinuteMail();
+    if (account) return account;
+
+    // 7. Yopmail
+    account = await tryYopmail();
+    if (account) return account;
+
+    // 8. Mailinator
+    account = await tryMailinator();
+    if (account) return account;
+
+    // 9. TempMailAsia
+    account = await tryTempMailAsia();
+    if (account) return account;
+
+    // 10. EmailOnDeck
+    account = await tryEmailOnDeck();
+    if (account) return account;
+
+    // 11. DropMail
+    account = await tryDropMail();
+    if (account) return account;
+
+    // 12. TempMailo
+    account = await tryTempMailo();
+    if (account) return account;
+
+    // 13. MailDrop
+    account = await tryMailDrop();
+    if (account) return account;
+
+    // 14. TempMail.lol
+    account = await tryTempMailLol();
+    if (account) return account;
+
+    // 15. TempMail.pw
+    account = await tryTempMailPw();
+    if (account) return account;
+
+    // 16. FakeMailGenerator
+    account = await tryFakeMailGenerator();
+    if (account) return account;
+
+    // 17. Spam4.me
+    account = await trySpam4Me();
+    if (account) return account;
+
+    // 18. TempMail.co
+    account = await tryTempMailCo();
+    if (account) return account;
+
+    // 19. Mohmal
+    account = await tryMohmal();
+    if (account) return account;
+
+    // 20. Mailnesia
+    account = await tryMailnesia();
+    if (account) return account;
+
+    // 21. Tmailor
+    account = await tryTmailor();
+    if (account) return account;
+
+    // 22. TrashMail
+    account = await tryTrashMail();
+    if (account) return account;
+
+    // 23. AdGuard Temp
+    account = await tryAdGuardTemp();
+    if (account) return account;
+
+    // 24. Internxt Temp
+    account = await tryInternxtTemp();
+    if (account) return account;
+
+    // 25. Typewire
+    account = await tryTypewire();
+    if (account) return account;
+
+    // 26. AtomicMail
+    account = await tryAtomicMail();
+    if (account) return account;
+
+    // 27. TinyHost
+    account = await tryTinyHost();
+    if (account) return account;
+
+    // 28. WabblyWabble
+    account = await tryWabblyWabble();
+    if (account) return account;
+
+    // 29. Addy.io
+    account = await tryAddyIo();
+    if (account) return account;
+
+    // 30. EmailFake
+    account = await tryEmailFake();
+    if (account) return account;
+
+    // 31. Tempm
+    account = await tryTempm();
+    if (account) return account;
+
+    // 32. Generator.email
+    account = await tryGeneratorEmail();
+    if (account) return account;
+
+    // 33. MailTemp
+    account = await tryMailTemp();
+    if (account) return account;
+
+    // 34. CyberTemp
+    account = await tryCyberTemp();
+    if (account) return account;
+
+    // 35. Moakt
+    account = await tryMoakt();
+    if (account) return account;
+
+    // 36. Plingest
+    account = await tryPlingest();
+    if (account) return account;
+
+    // 37. TmailDelivery
+    account = await tryTmailDelivery();
+    if (account) return account;
+
+    // 38. KukuLu
+    account = await tryKukuLu();
+    if (account) return account;
+
+    // 39. PriyoEmail
+    account = await tryPriyoEmail();
+    if (account) return account;
+
+    // 40. BurnerMail
+    account = await tryBurnerMail();
+    if (account) return account;
+
+    // 41. MainnetMail
+    account = await tryMainnetMail();
+    if (account) return account;
+
+    // 42. MailTempSite
+    account = await tryMailTempSite();
     if (account) return account;
 
     console.error('❌ All providers failed!');
@@ -299,33 +1233,77 @@ async function getOtp(token, email) {
         } catch (e) { }
     }
 
-    // 3. 1SecMail
+    // 3. 1SecMail and similar email-based providers
     if (token.includes('@') || (email && email.includes('@'))) {
         try {
             const checkEmail = email || token;
             if (checkEmail.includes('@')) {
                 const [user, domain] = checkEmail.split('@');
-                const res = await axios.get(`https://www.1secmail.com/api/v1/?action=getMessages&login=${user}&domain=${domain}`);
-                if (res.data && res.data.length > 0) {
-                    const id = res.data[0].id;
-                    const msgRes = await axios.get(`https://www.1secmail.com/api/v1/?action=readMessage&login=${user}&domain=${domain}&id=${id}`);
-                    const body = msgRes.data.textBody || msgRes.data.body || '';
-                    const subject = msgRes.data.subject || '';
 
-                    // Use advanced OTP extractor
-                    const result = otpExtractor.extractOTP(subject + '\n\n' + body, subject);
+                // Try 1SecMail API first (works for many providers)
+                try {
+                    const res = await axios.get(`https://www.1secmail.com/api/v1/?action=getMessages&login=${user}&domain=${domain}`, { timeout: 5000 });
+                    if (res.data && res.data.length > 0) {
+                        const id = res.data[0].id;
+                        const msgRes = await axios.get(`https://www.1secmail.com/api/v1/?action=readMessage&login=${user}&domain=${domain}&id=${id}`, { timeout: 5000 });
+                        const body = msgRes.data.textBody || msgRes.data.body || '';
+                        const subject = msgRes.data.subject || '';
 
-                    return {
-                        otp: result.otp,
-                        confidence: result.confidence,
-                        fullMessage: body,
-                        // Added for compatibility
-                        text: body,
-                        subject: subject,
-                        date: msgRes.data.date || new Date().toISOString(),
-                        sender: msgRes.data.from
-                    };
-                }
+                        // Use advanced OTP extractor
+                        const result = otpExtractor.extractOTP(subject + '\n\n' + body, subject);
+
+                        return {
+                            otp: result.otp,
+                            confidence: result.confidence,
+                            fullMessage: body,
+                            text: body,
+                            subject: subject,
+                            date: msgRes.data.date || new Date().toISOString(),
+                            sender: msgRes.data.from
+                        };
+                    }
+                } catch (e) { }
+
+                // Try Mail.tm API for temp-mail.org style emails
+                try {
+                    // Some providers use mail.tm compatible APIs
+                    const tmRes = await axios.get(`https://api.mail.tm/addresses/${user}@${domain}/messages`, { timeout: 5000 });
+                    if (tmRes.data && tmRes.data.length > 0) {
+                        const msg = tmRes.data[0];
+                        const body = msg.text || msg.html || '';
+                        const subject = msg.subject || '';
+                        const result = otpExtractor.extractOTP(subject + '\n\n' + body, subject);
+                        return {
+                            otp: result.otp,
+                            confidence: result.confidence,
+                            fullMessage: body,
+                            text: body,
+                            subject: subject,
+                            date: msg.createdAt || new Date().toISOString(),
+                            sender: msg.from || 'Unknown'
+                        };
+                    }
+                } catch (e) { }
+
+                // Try temp-mail.org API
+                try {
+                    const tmoRes = await axios.get(`https://api.temp-mail.org/request/mail/id/${Buffer.from(checkEmail).toString('base64')}/format/json`, { timeout: 5000 });
+                    if (tmoRes.data && tmoRes.data.length > 0) {
+                        const msg = tmoRes.data[0];
+                        const body = msg.mail_text || msg.mail_html || '';
+                        const subject = msg.mail_subject || '';
+                        const result = otpExtractor.extractOTP(subject + '\n\n' + body, subject);
+                        return {
+                            otp: result.otp,
+                            confidence: result.confidence,
+                            fullMessage: body,
+                            text: body,
+                            subject: subject,
+                            date: msg.mail_timestamp || new Date().toISOString(),
+                            sender: msg.mail_from || 'Unknown'
+                        };
+                    }
+                } catch (e) { }
             }
         } catch (e) { }
     }

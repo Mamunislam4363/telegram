@@ -554,7 +554,7 @@ async function verifyTeacher(verificationUrl) {
                     idExtended: String(university.sheerId),
                     name: university.name
                 },
-                deviceFingerprintHash: deviceFingerprint,
+                deviceFingerprintHash: generateRealisticFingerprint(),
                 externalUserId: externalUserId,
                 locale: 'en-US',
                 metadata: {
@@ -708,7 +708,7 @@ async function verifyGPT(verificationUrl) {
                 idExtended: school.idExtended,
                 name: school.name
             },
-            deviceFingerprintHash: '686f727269626c656861636b',
+            deviceFingerprintHash: generateRealisticFingerprint(),
             locale: 'en-US',
             metadata: {
                 verificationId: verificationId,
