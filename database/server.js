@@ -4055,10 +4055,13 @@ async function startServer() {
 if (require.main === module) {
     startServer();
 
-    // Also start the Telegram bot
-    console.log(`[DEBUG] Starting Telegram bot...`);
+    // Also start the Telegram bot with better error handling
+    console.log('[DEBUG] Starting Telegram bot from server.js...');
     try {
-        const botModule = require('../bot.js');
+        const path = require('path');
+        const botPath = path.join(__dirname, '..', 'bot.js');
+        console.log('[DEBUG] Loading bot from:', botPath);
+        require(botPath);
         console.log('✅ Telegram bot module loaded successfully');
     } catch (e) {
         console.error('❌ Failed to load bot module:', e.message);
