@@ -1,4 +1,7 @@
 // Helper: Check if userId is valid before making API calls
+// API Base URL - for Netlify deployment, backend will be on different domain
+const API_BASE = (typeof window !== 'undefined' && window.API_BASE) || 'http://localhost:3000';
+
 function isValidUserId(userId) {
     if (!userId) return false;
     const numericId = typeof userId === 'number' ? userId : parseInt(userId);
@@ -103,7 +106,7 @@ function applyFeatureFlagsToHome() {
 }
 
 function loadFeatureFlags() {
-    return fetch('/api/features')
+    return fetch(API_BASE + '/api/features')
         .then(r => r.json())
         .then(data => {
             if (data && data.success && data.features) {
@@ -164,7 +167,7 @@ async function uploadDepositScreenshot(input, targetId) {
     formData.append('file', file);
 
     try {
-        const res = await fetch('/api/upload/screenshot', {
+        const res = await fetch(API_BASE + '/api/upload/screenshot', {
             method: 'POST',
             body: formData
         });
@@ -622,7 +625,7 @@ function exchangeTokens() {
 
     if (!confirm('Confirm exchange of ' + formatCurrencyAmount(amt, fromCur) + ' to ' + formatCurrencyAmount(preview.toAmount, toCur) + '?')) return;
 
-    fetch('/api/exchange/convert', {
+    fetch(API_BASE + '/api/exchange/convert', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: userData.id, from: fromCur, to: toCur, amount: amt })
@@ -914,7 +917,7 @@ let currentCryptoMethod = null;
 
 async function fetchCryptoConfig() {
     try {
-        const res = await fetch('/api/deposit/config');
+        const res = await fetch(API_BASE + '/api/deposit/config');
         const data = await res.json();
         if (data.success) {
             cryptoConfig = data.cryptoMethods;
@@ -1022,7 +1025,7 @@ async function submitCryptoDeposit() {
     if (!txnId || txnId.length < 5) return window.showToast('Please enter a valid Transaction ID / Hash.');
 
     try {
-        const res = await fetch('/api/deposit/submit', {
+        const res = await fetch(API_BASE + '/api/deposit/submit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1057,7 +1060,7 @@ async function submitFaucetDeposit() {
     if (!txnId) return window.showToast('Please enter your FaucetPay Transaction ID.');
 
     try {
-        const res = await fetch('/api/deposit/submit', {
+        const res = await fetch(API_BASE + '/api/deposit/submit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1160,7 +1163,7 @@ function verifyAndComplete(type, buttonElement, amount) {
 
     // For Telegram tasks, verify membership first
     if (type === 'tg' || type === 'tg_ch') {
-        fetch('/api/verify-membership', {
+        fetch(API_BASE + '/api/verify-membership', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1202,7 +1205,7 @@ function verifyAndComplete(type, buttonElement, amount) {
 function completeTaskReward(type, buttonElement, amount) {
     buttonElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> COMPLETING...';
 
-    fetch('/api/earn', {
+    fetch(API_BASE + '/api/earn', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: userData.id, taskType: type, amount: amount })
@@ -1290,7 +1293,7 @@ function showAdAndEarn(context = 'watch_ad') {
 
     window.showToast("🎬 Loading Ad...");
 
-    fetch('/api/ads/config')
+    fetch(API_BASE + '/api/ads/config')
         .then(r => r.json())
         .then(data => {
             const ads = data.ads || {};
@@ -1355,7 +1358,7 @@ async function claimAdReward() {
     adRewardClaimed = true;
 
     try {
-        const res = await fetch('/api/ad/claim', {
+        const res = await fetch(API_BASE + '/api/ad/claim', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: userData.id, context: currentAdContext })
@@ -1566,7 +1569,7 @@ async function redeemCode() {
     }
 
     try {
-        const res = await fetch('/api/redeem', {
+        const res = await fetch(API_BASE + '/api/redeem', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: userData.id, code: code })
@@ -1895,7 +1898,7 @@ function registerAndFetchUser() {
         }
     }
 
-    fetch('/api/register', {
+    fetch(API_BASE + '/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -2074,7 +2077,7 @@ function loadBroadcast() {
     ];
 
     // Try to get real user activity from API
-    fetch('/api/user-activity')
+    fetch(API_BASE + '/api/user-activity')
         .then(r => r.json())
         .then(data => {
             if (data.success && data.activities && data.activities.length > 0) {
@@ -2294,7 +2297,7 @@ async function transferTokens() {
     if (!confirm(`Are you sure you want to transfer ${amount} ${assetNames[assetType]} to User #${targetUserId}?`)) return;
 
     try {
-        const response = await fetch('/api/user/transfer', {
+        const response = await fetch(API_BASE + '/api/user/transfer', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -2368,7 +2371,7 @@ window.appCostConfig = window.appCostConfig || {
 
 async function loadAppCostConfig() {
     try {
-        const res = await fetch('/api/admin/costs');
+        const res = await fetch(API_BASE + '/api/admin/costs');
         const data = await res.json();
         if (!data?.success || !data.costs) return;
         const c = data.costs;
@@ -2414,7 +2417,7 @@ function getShopItems() {
 
 // Fetch from backend and update UI
 function syncAdminData() {
-    fetch('/api/admin/services')
+    fetch(API_BASE + '/api/admin/services')
         .then(r => r.json())
         .then(data => {
             if (data.success && data.services) {
@@ -2422,7 +2425,7 @@ function syncAdminData() {
                 renderServicesList();
             }
         });
-    fetch('/api/admin/shop')
+    fetch(API_BASE + '/api/admin/shop')
         .then(r => r.json())
         .then(data => {
             if (data.success && data.shopItems) {
@@ -2430,7 +2433,7 @@ function syncAdminData() {
             }
         });
     // Also fetch approved user-submitted items
-    fetch('/api/user/item-sales/approved')
+    fetch(API_BASE + '/api/user/item-sales/approved')
         .then(r => r.json())
         .then(data => {
             if (data.success) {
@@ -2439,13 +2442,13 @@ function syncAdminData() {
         })
         .catch(() => { })
         .finally(() => renderShopItems());
-    fetch('/api/admin/cards').then(r => r.json()).then(data => {
+    fetch(API_BASE + '/api/admin/cards').then(r => r.json()).then(data => {
         if (data.success) {
             localStorage.setItem('adminCards', JSON.stringify(data.cards));
             if (typeof currentPage !== 'undefined' && currentPage === 'vccCards') renderCards();
         }
     });
-    fetch('/api/admin/vpn').then(r => r.json()).then(data => {
+    fetch(API_BASE + '/api/admin/vpn').then(r => r.json()).then(data => {
         if (data.success) {
             localStorage.setItem('adminVPNs', JSON.stringify(data.vpns));
             if (typeof currentPage !== 'undefined' && currentPage === 'vpnServices') renderVPN();
@@ -2684,7 +2687,7 @@ function renderAccounts() {
     const container = document.getElementById('accountsStoreList');
     if (!container) return;
 
-    fetch('/api/accounts')
+    fetch(API_BASE + '/api/accounts')
         .then(r => r.json())
         .then(data => {
             if (!data.success || !data.accounts || data.accounts.length === 0) {
@@ -2744,7 +2747,7 @@ function buyPremiumAccount(accountId, type, price) {
     }
 
     // Purchase directly without confirmation
-    fetch('/api/accounts/buy', {
+    fetch(API_BASE + '/api/accounts/buy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: userData.id, accountId })
@@ -2933,7 +2936,7 @@ function buyAccountFromCategory(category) {
         btn.style.pointerEvents = 'none';
     }
 
-    fetch('/api/accounts/buy-category', {
+    fetch(API_BASE + '/api/accounts/buy-category', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: userData.id, category: category, price: cat.price })
@@ -3069,7 +3072,7 @@ function loadNumPlatforms() {
     const list = document.getElementById('numPlatformList');
     if (!list) return;
 
-    fetch('/api/number/platforms')
+    fetch(API_BASE + '/api/number/platforms')
         .then(r => r.json())
         .then(data => {
             if (data.success && data.platforms) {
@@ -3126,7 +3129,7 @@ function generateVirtualNumber() {
     const btn = document.getElementById('numGenerateBtn');
     if (btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...'; btn.disabled = true; }
 
-    fetch('/api/number/generate', {
+    fetch(API_BASE + '/api/number/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: userData.id, platform: selectedNumPlatform, cost })
@@ -4099,7 +4102,7 @@ async function loadPremiumEmailsFromAdmin() {
         }
 
         // No assigned email, fetch available emails
-        const res = await fetch('/api/premium-emails');
+        const res = await fetch(API_BASE + '/api/premium-emails');
         const data = await res.json();
 
         if (!data.success || !data.emails || data.emails.length === 0) {
@@ -4116,7 +4119,7 @@ async function loadPremiumEmailsFromAdmin() {
         const availableEmail = data.emails[0];
 
         // Try to assign this email to user
-        const assignRes = await fetch('/api/premium-emails/assign', {
+        const assignRes = await fetch(API_BASE + '/api/premium-emails/assign', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: userData.id, emailId: availableEmail.id })
@@ -4174,7 +4177,7 @@ function displayPremiumEmailList(emails) {
 // Select and assign a premium email
 async function selectPremiumEmail(emailId, emailAddress) {
     try {
-        const res = await fetch('/api/premium-emails/assign', {
+        const res = await fetch(API_BASE + '/api/premium-emails/assign', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: userData.id, emailId: emailId })
@@ -4430,7 +4433,7 @@ async function checkRequiredJoins() {
     }
 
     try {
-        const response = await fetch('/api/check-required-joins', {
+        const response = await fetch(API_BASE + '/api/check-required-joins', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -4608,7 +4611,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 window.verifyJoinsAndProceed = verifyJoinsAndProceed;
 
 function fetchEmailServiceConfig() {
-    fetch('/api/admin/email-services')
+    fetch(API_BASE + '/api/admin/email-services')
         .then(r => r.json())
         .then(data => {
             if (data.success) {
@@ -4705,7 +4708,7 @@ let sellingRewards = {};
 
 async function fetchSellingRewards() {
     try {
-        const res = await fetch('/api/user/item-sales/rewards');
+        const res = await fetch(API_BASE + '/api/user/item-sales/rewards');
         const data = await res.json();
         if (data.success) {
             sellingRewards = data.rewards;
@@ -5083,7 +5086,7 @@ async function submitItemForSale() {
     }
 
     try {
-        const res = await fetch('/api/user/item-sales/submit', {
+        const res = await fetch(API_BASE + '/api/user/item-sales/submit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -5208,7 +5211,7 @@ async function loadMySales() {
 
 async function respondToOffer(saleId, action) {
     try {
-        const res = await fetch('/api/user/item-sales/offer-action', {
+        const res = await fetch(API_BASE + '/api/user/item-sales/offer-action', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ saleId, action, userId: userData.id })
@@ -5322,7 +5325,7 @@ async function loadQuiz() {
     oEl.innerHTML = '';
 
     try {
-        const res = await fetch('/api/quiz/generate');
+        const res = await fetch(API_BASE + '/api/quiz/generate');
         const data = await res.json();
 
         if (data.success) {
@@ -5369,7 +5372,7 @@ async function submitQuizAnswer(idx) {
     setActionCooldown('quiz');
 
     try {
-        const res = await fetch('/api/quiz/submit', {
+        const res = await fetch(API_BASE + '/api/quiz/submit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: userData.id, correct: isCorrect, reward })
@@ -5399,7 +5402,7 @@ async function renderQuizLeaderboard() {
     list.innerHTML = '<div style="padding:40px; text-align:center; color:#888;">Loading...</div>';
 
     try {
-        const res = await fetch('/api/quiz/leaderboard');
+        const res = await fetch(API_BASE + '/api/quiz/leaderboard');
         const data = await res.json();
 
         if (data.success && data.leaderboard) {
@@ -5535,7 +5538,7 @@ async function claimScratchReward(reward) {
     if (window.confetti) confetti({ particleCount: 50, spread: 50 });
 
     try {
-        const res = await fetch('/api/scratch/claim', {
+        const res = await fetch(API_BASE + '/api/scratch/claim', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: userData.id, reward })

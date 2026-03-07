@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node bot.js",
+    "api": "node database/server.js",
     "dev": "nodemon bot.js",
     "pm2:start": "pm2 start bot.js --name telegram-bot",
     "pm2:restart": "pm2 restart telegram-bot",
