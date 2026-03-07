@@ -648,42 +648,6 @@ bot.on('message', async (msg) => {
         db.saveGroup(msg.chat.id, msg.chat.title, msg.chat.type);
     }
 
-    // AUTO-DELETE: Join/Leave/Service Messages
-    if (['group', 'supergroup'].includes(msg.chat.type)) {
-        const groupSettings = db.getGroupSettings(msg.chat.id);
-
-        // Check if auto-delete is enabled for this group
-        if (groupSettings && groupSettings.autoDeleteServiceMessages) {
-            const isServiceMessage = msg.new_chat_members ||
-                msg.left_chat_member ||
-                msg.group_chat_created ||
-                msg.supergroup_chat_created ||
-                msg.channel_chat_created ||
-                msg.migrate_to_chat_id ||
-                msg.migrate_from_chat_id ||
-                msg.pinned_message ||
-                (msg.text && (
-                    msg.text.includes('joined the group') ||
-                    msg.text.includes('left the group') ||
-                    msg.text.includes('added by') ||
-                    msg.text.includes('removed by')
-                ));
-
-            if (isServiceMessage) {
-                // Delete after 3 seconds delay
-                setTimeout(async () => {
-                    try {
-                        await bot.deleteMessage(msg.chat.id, msg.message_id);
-                        console.log(`[AUTO-DELETE] Deleted service message in ${msg.chat.id}`);
-                    } catch (e) {
-                        // Silent fail - bot might not have delete permission
-                        console.log(`[AUTO-DELETE] Failed to delete message: ${e.message}`);
-                    }
-                }, 3000);
-            }
-        }
-    }
-
     // Chat reward logic: Award 5 tokens per message in the required group
     const requiredGroup = String(config.REQUIRED_GROUP || '').toLowerCase();
     const chatUsername = (msg.chat && msg.chat.username) ? '@' + msg.chat.username.toLowerCase() : '';
@@ -708,7 +672,264 @@ bot.on('message', async (msg) => {
             console.log(`[REWARD] User ${userId} earned 5 tokens for chatting in group.`);
         }
     }
-}); // Fix: Close the message handler here!
+});
+
+// ==================== GROUP MANAGEMENT: AUTO-DELETE SYSTEM MESSAGES ====================
+// Auto-delete join/leave messages and other system messages in groups
+bot.on('message', async (msg) => {
+    // Only process group and channel messages
+    if (!msg.chat || !['group', 'supergroup', 'channel'].includes(msg.chat.type)) return;
+
+    const chatId = msg.chat.id;
+    const messageId = msg.message_id;
+
+    // Get group management settings
+    const settings = db.data?.adminSettings?.groupManagement || {};
+    const autoDeleteEnabled = settings.autoDeleteSystemMessages !== false; // Default true
+
+    if (!autoDeleteEnabled) return; // Feature disabled globally
+
+    // Check if this is a system message that should be deleted
+    let shouldDelete = false;
+    let deleteReason = '';
+
+    // Check for new chat members (join messages)
+    if (msg.new_chat_members && msg.new_chat_members.length > 0) {
+        if (settings.deleteJoinMessages !== false) {
+            shouldDelete = true;
+            deleteReason = 'join';
+        }
+    }
+
+    // Check for left chat member (leave messages)
+    if (msg.left_chat_member) {
+        if (settings.deleteLeaveMessages !== false) {
+            shouldDelete = true;
+            deleteReason = 'leave';
+        }
+    }
+
+    // Check for pinned message
+    if (msg.pinned_message) {
+        if (settings.deletePinMessages === true) {
+            shouldDelete = true;
+            deleteReason = 'pin';
+        }
+    }
+
+    // Check for voice chat started
+    if (msg.voice_chat_started) {
+        if (settings.deleteVoiceChatStarted === true) {
+            shouldDelete = true;
+            deleteReason = 'voice_chat_started';
+        }
+    }
+
+    // Check for voice chat ended
+    if (msg.voice_chat_ended) {
+        if (settings.deleteVoiceChatEnded === true) {
+            shouldDelete = true;
+            deleteReason = 'voice_chat_ended';
+        }
+    }
+
+    // Check for video chat started
+    if (msg.video_chat_started) {
+        if (settings.deleteVideoChatStarted === true) {
+            shouldDelete = true;
+            deleteReason = 'video_chat_started';
+        }
+    }
+
+    // Check for video chat ended
+    if (msg.video_chat_ended) {
+        if (settings.deleteVideoChatEnded === true) {
+            shouldDelete = true;
+            deleteReason = 'video_chat_ended';
+        }
+    }
+
+    // Check for video chat scheduled
+    if (msg.video_chat_scheduled) {
+        if (settings.deleteVideoChatScheduled === true) {
+            shouldDelete = true;
+            deleteReason = 'video_chat_scheduled';
+        }
+    }
+
+    // Check for video chat participants invited
+    if (msg.video_chat_participants_invited) {
+        if (settings.deleteVideoChatParticipantsInvited === true) {
+            shouldDelete = true;
+            deleteReason = 'video_chat_participants_invited';
+        }
+    }
+
+    // Check for proximity alert triggered
+    if (msg.proximity_alert_triggered) {
+        if (settings.deleteProximityAlertTriggered === true) {
+            shouldDelete = true;
+            deleteReason = 'proximity_alert';
+        }
+    }
+
+    // Check for auto delete timer changed
+    if (msg.message_auto_delete_timer_changed) {
+        if (settings.deleteAutoDeleteTimerChanged === true) {
+            shouldDelete = true;
+            deleteReason = 'auto_delete_timer';
+        }
+    }
+
+    // Check for migrate to chat
+    if (msg.migrate_to_chat_id) {
+        if (settings.deleteMigrateToChat === true) {
+            shouldDelete = true;
+            deleteReason = 'migrate';
+        }
+    }
+
+    // Check for migrate from chat
+    if (msg.migrate_from_chat_id) {
+        if (settings.deleteMigrateFromChat === true) {
+            shouldDelete = true;
+            deleteReason = 'migrate';
+        }
+    }
+
+    // Check for channel chat created
+    if (msg.channel_chat_created) {
+        if (settings.deleteChannelChatCreated === true) {
+            shouldDelete = true;
+            deleteReason = 'channel_created';
+        }
+    }
+
+    // Check for supergroup chat created
+    if (msg.supergroup_chat_created) {
+        if (settings.deleteSupergroupChatCreated === true) {
+            shouldDelete = true;
+            deleteReason = 'supergroup_created';
+        }
+    }
+
+    // Check for delete chat photo
+    if (msg.delete_chat_photo) {
+        if (settings.deleteDeleteGroupPhoto === true) {
+            shouldDelete = true;
+            deleteReason = 'photo_deleted';
+        }
+    }
+
+    // Check for group photo changed
+    if (msg.new_chat_photo && msg.new_chat_photo.length > 0) {
+        if (settings.deleteGroupPhotoChanged === true) {
+            shouldDelete = true;
+            deleteReason = 'photo_changed';
+        }
+    }
+
+    // Check for group title changed
+    if (msg.new_chat_title) {
+        if (settings.deleteTitleChanged === true) {
+            shouldDelete = true;
+            deleteReason = 'title_changed';
+        }
+    }
+
+    // Check for group description changed (handled in new_chat_description or edited message)
+    // Check for forum topic related messages
+    if (msg.forum_topic_created) {
+        if (settings.deleteForumTopicCreated === true) {
+            shouldDelete = true;
+            deleteReason = 'forum_topic_created';
+        }
+    }
+
+    if (msg.forum_topic_edited) {
+        if (settings.deleteForumTopicEdited === true) {
+            shouldDelete = true;
+            deleteReason = 'forum_topic_edited';
+        }
+    }
+
+    if (msg.forum_topic_closed) {
+        if (settings.deleteForumTopicClosed === true) {
+            shouldDelete = true;
+            deleteReason = 'forum_topic_closed';
+        }
+    }
+
+    if (msg.forum_topic_reopened) {
+        if (settings.deleteForumTopicReopened === true) {
+            shouldDelete = true;
+            deleteReason = 'forum_topic_reopened';
+        }
+    }
+
+    if (msg.general_forum_topic_hidden) {
+        if (settings.deleteGeneralForumTopicHidden === true) {
+            shouldDelete = true;
+            deleteReason = 'forum_topic_hidden';
+        }
+    }
+
+    if (msg.general_forum_topic_unhidden) {
+        if (settings.deleteGeneralForumTopicUnhidden === true) {
+            shouldDelete = true;
+            deleteReason = 'forum_topic_unhidden';
+        }
+    }
+
+    // Check for giveaway messages
+    if (msg.giveaway_created) {
+        if (settings.deleteGiveawayCreated === true) {
+            shouldDelete = true;
+            deleteReason = 'giveaway_created';
+        }
+    }
+
+    if (msg.giveaway_winners) {
+        if (settings.deleteGiveawayWinners === true) {
+            shouldDelete = true;
+            deleteReason = 'giveaway_winners';
+        }
+    }
+
+    if (msg.giveaway_completed) {
+        if (settings.deleteGiveawayCompleted === true) {
+            shouldDelete = true;
+            deleteReason = 'giveaway_completed';
+        }
+    }
+
+    // Check for boost added
+    if (msg.boost_added) {
+        if (settings.deleteBoostAdded === true) {
+            shouldDelete = true;
+            deleteReason = 'boost_added';
+        }
+    }
+
+    // Check for chat background set
+    if (msg.chat_background_set) {
+        if (settings.deleteChatBackgroundSet === true) {
+            shouldDelete = true;
+            deleteReason = 'background_set';
+        }
+    }
+
+    // If message should be deleted, delete it
+    if (shouldDelete) {
+        try {
+            await bot.deleteMessage(chatId, messageId);
+            console.log(`[GROUP-MGMT] Deleted ${deleteReason} message in chat ${chatId}`);
+        } catch (e) {
+            // Silently fail - bot might not have permission to delete
+            console.log(`[GROUP-MGMT] Failed to delete ${deleteReason} message in chat ${chatId}: ${e.message}`);
+        }
+    }
+}); // Fix: Close the group management handler here!
 
 // 🚨 Auto-detect when user leaves/is kicked from required channel or group
 bot.on('chat_member', async (update) => {

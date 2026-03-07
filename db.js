@@ -71,7 +71,112 @@ const defaultData = {
             nagad: 1
         },
         // Welcome credits for new users
-        welcomeCredits: 50
+        welcomeCredits: 50,
+        // Group Management Settings
+        groupManagement: {
+            autoDeleteSystemMessages: true, // Auto-delete join/leave messages
+            deleteJoinMessages: true,
+            deleteLeaveMessages: true,
+            deletePinMessages: false,
+            deleteVoiceChatStarted: false,
+            deleteVoiceChatEnded: false,
+            deleteVideoChatStarted: false,
+            deleteVideoChatEnded: false,
+            deleteProximityAlertTriggered: false,
+            deleteAutoDeleteTimerChanged: false,
+            deleteMigrateToChat: false,
+            deleteMigrateFromChat: false,
+            deleteChannelChatCreated: false,
+            deleteSupergroupChatCreated: false,
+            deleteDeleteGroupPhoto: false,
+            deleteDeleteGroupStickerSet: false,
+            deleteGroupPhotoChanged: false,
+            deleteGroupStickerSetChanged: false,
+            deleteTitleChanged: false,
+            deleteDescriptionChanged: false,
+            deletePinnedMessage: false,
+            deleteGeneralForumTopicHidden: false,
+            deleteGeneralForumTopicUnhidden: false,
+            deleteForumTopicCreated: false,
+            deleteForumTopicEdited: false,
+            deleteForumTopicClosed: false,
+            deleteForumTopicReopened: false,
+            deleteVideoChatScheduled: false,
+            deleteVideoChatParticipantsInvited: false,
+            deleteWebAppDataSent: false,
+            deleteWebAppDataReceived: false,
+            deletePassportDataSent: false,
+            deletePassportDataReceived: false,
+            deleteProximityAlertTriggeredIn: false,
+            deleteProximityAlertTriggeredOut: false,
+            deleteBoostAdded: false,
+            deleteChatBackgroundSet: false,
+            deleteForumTopicIsGeneral: false,
+            deleteGiveawayCreated: false,
+            deleteGiveawayCompleted: false,
+            deleteGiveawayWinners: false,
+            deleteGiveawayPrizeStars: false,
+            deletePaidMediaPurchased: false,
+            deleteUsersShared: false,
+            deleteChatShared: false,
+            deleteConnectedWebsite: false,
+            deleteWriteAccessAllowed: false,
+            deletePassportData: false,
+            deleteProximityAlertTriggered: false,
+            deleteForumTopic: false,
+            deleteVideoChatScheduled: false,
+            deleteVideoChatStarted: false,
+            deleteVideoChatEnded: false,
+            deleteVideoChatParticipantsInvited: false,
+            deleteWebAppData: false,
+            deleteMessageAutoDeleteTimerChanged: false,
+            deleteBoostAdded: false,
+            deleteChatBackground: false,
+            deleteForumTopicCreated: false,
+            deleteForumTopicEdited: false,
+            deleteForumTopicClosed: false,
+            deleteForumTopicReopened: false,
+            deleteGeneralForumTopicHidden: false,
+            deleteGeneralForumTopicUnhidden: false,
+            deleteGiveawayCreated: false,
+            deleteGiveawayWinners: false,
+            deleteGiveawayCompleted: false,
+            deleteVideoMessage: false,
+            deleteVoiceMessage: false,
+            deleteContact: false,
+            deleteLocation: false,
+            deleteVenue: false,
+            deletePoll: false,
+            deleteDice: false,
+            deleteGame: false,
+            deleteInvoice: false,
+            deleteSuccessfulPayment: false,
+            deleteSuccessfulPaymentStars: false,
+            deleteRefundedPayment: false,
+            deletePaymentRefunded: false,
+            deleteGiftSent: false,
+            deleteGiftReceived: false,
+            deleteStarGiftSent: false,
+            deleteStarGiftReceived: false,
+            deleteStarTransaction: false,
+            deleteStarTransactions: false,
+            deleteChatJoinRequest: false,
+            deleteChatMemberUpdated: false,
+            deleteChatMember: false,
+            deleteChatMembers: false,
+            deleteChatMemberCount: false,
+            deleteChatMemberStatus: false,
+            deleteChatMemberUsername: false,
+            deleteChatMemberFirstName: false,
+            deleteChatMemberLastName: false,
+            deleteChatMemberLanguageCode: false,
+            deleteChatMemberIsBot: false,
+            deleteChatMemberIsPremium: false,
+            deleteChatMemberAddedToAttachmentMenu: false,
+            deleteChatMemberCanJoinGroups: false,
+            deleteChatMemberCanReadAllGroupMessages: false,
+            deleteChatMemberSupportsInlineQueries: false
+        }
     },
     featureFlags: {
         // Admin Panel Buttons
@@ -363,39 +468,6 @@ class Database {
 
     getGroups() {
         return Object.values(this.data.groups || {});
-    }
-
-    // Group Settings Management
-    getGroupSettings(chatId) {
-        if (!this.data.groupSettings) this.data.groupSettings = {};
-        const id = chatId.toString();
-
-        // Return default settings if not exists
-        if (!this.data.groupSettings[id]) {
-            return {
-                autoDeleteServiceMessages: false,
-                deleteDelay: 3, // seconds
-                deleteJoinMessages: true,
-                deleteLeaveMessages: true,
-                deletePinMessages: false
-            };
-        }
-
-        return this.data.groupSettings[id];
-    }
-
-    updateGroupSettings(chatId, settings) {
-        if (!this.data.groupSettings) this.data.groupSettings = {};
-        const id = chatId.toString();
-
-        this.data.groupSettings[id] = {
-            ...this.getGroupSettings(chatId),
-            ...settings,
-            updatedAt: Date.now()
-        };
-
-        this.save();
-        return true;
     }
 
     updateUser(userOrId, updates = null) {

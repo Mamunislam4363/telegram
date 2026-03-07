@@ -1276,23 +1276,19 @@ function checkAllTasksCompleted() {
 }
 
 // ==========================================
-// AD VIEWER (Watch & Earn) - STRICT VERSION
+// ==========================================
+// AD VIEWER (Watch & Earn)
 // ==========================================
 
 let adWatchTimer = null;
 let adRewardClaimed = false;
 let currentAdContext = 'watch_ad';
-let adWatchStartTime = null;
-let adMinWatchDuration = 5000; // 5 seconds minimum watch time
-let adCompleted = false;
 
 function showAdAndEarn(context = 'watch_ad') {
     currentAdContext = context;
     adRewardClaimed = false;
-    adCompleted = false;
-    adWatchStartTime = Date.now();
 
-    window.showToast("🎬 Loading Ad... Watch full ad to earn!");
+    window.showToast("🎬 Loading Ad...");
 
     fetch('/api/ads/config')
         .then(r => r.json())
@@ -1307,8 +1303,7 @@ function showAdAndEarn(context = 'watch_ad') {
 
                 if (window[`show_${zoneId}`]) {
                     try { window[`show_${zoneId}`](); } catch (e) { }
-                    // STRICT: Don't auto-claim, wait for actual completion
-                    startAdWatchVerification();
+                    setTimeout(claimAdReward, 2000);
                 } else {
                     const script = document.createElement('script');
                     script.src = '//libtl.com/sdk.js';
@@ -1319,8 +1314,7 @@ function showAdAndEarn(context = 'watch_ad') {
                         if (window[`show_${zoneId}`]) {
                             try { window[`show_${zoneId}`](); } catch (e) { }
                         }
-                        // STRICT: Don't auto-claim, wait for actual completion
-                        startAdWatchVerification();
+                        setTimeout(claimAdReward, 2000);
                     };
                     document.body.appendChild(script);
                 }
@@ -1328,8 +1322,7 @@ function showAdAndEarn(context = 'watch_ad') {
 
             if (!adInjected && ads.adsense && ads.adsense.publisherId) {
                 adInjected = true;
-                // STRICT: User must watch, no auto reward
-                startAdWatchVerification();
+                setTimeout(claimAdReward, 1500);
             }
 
             if (!adInjected && ads.adsterra && ads.adsterra.publisherId) {
@@ -1340,103 +1333,19 @@ function showAdAndEarn(context = 'watch_ad') {
                 atScript.setAttribute('data-cfasync', 'false');
                 atScript.src = `//pl${cfg.adUnitId}.profitableratecpm.com/${cfg.publisherId}/invoke.js`;
                 document.body.appendChild(atScript);
-                // STRICT: Wait for actual watch completion
-                startAdWatchVerification();
+                setTimeout(claimAdReward, 2000);
             }
 
             if (!adInjected) {
-                window.showToast('❌ No ads available. Try again later.');
+                console.log('Ad: No provider ads injected, using fallback claim');
+                setTimeout(claimAdReward, 1500);
             }
         })
         .catch((err) => {
             console.error('Ad Config Fetch Error:', err);
-            window.showToast("❌ Failed to load ad. Please try again.");
+            window.showToast("Processing reward...");
+            setTimeout(claimAdReward, 2000);
         });
-}
-
-// STRICT: Verify ad is actually being watched
-function startAdWatchVerification() {
-    adWatchStartTime = Date.now();
-
-    // Show waiting message
-    window.showToast("⏳ Watch the full ad to earn tokens!");
-
-    // STRICT: Check if user actually watched the ad
-    adWatchTimer = setInterval(() => {
-        const elapsed = Date.now() - adWatchStartTime;
-        const remaining = Math.max(0, Math.ceil((adMinWatchDuration - elapsed) / 1000));
-
-        // Only show countdown for first few seconds
-        if (remaining > 0 && remaining <= 5) {
-            window.showToast(`⏳ ${remaining}s remaining...`);
-        }
-
-        // Check if minimum watch time reached
-        if (elapsed >= adMinWatchDuration && !adCompleted) {
-            adCompleted = true;
-            clearInterval(adWatchTimer);
-
-            // Now show claim button instead of auto-claiming
-            showAdClaimButton();
-        }
-    }, 1000);
-}
-
-// STRICT: Show manual claim button - user must interact to prove they watched
-function showAdClaimButton() {
-    // Create a modal or button for user to claim
-    const claimDiv = document.createElement('div');
-    claimDiv.id = 'adClaimButton';
-    claimDiv.style.cssText = `
-        position: fixed;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: linear-gradient(135deg, #f59e0b, #d97706);
-        color: #000;
-        padding: 16px 32px;
-        border-radius: 12px;
-        font-weight: 800;
-        font-size: 16px;
-        z-index: 9999;
-        cursor: pointer;
-        box-shadow: 0 4px 20px rgba(245, 158, 11, 0.4);
-        animation: pulse 1.5s infinite;
-    `;
-    claimDiv.innerHTML = '👆 CLICK TO CLAIM REWARD';
-    claimDiv.onclick = () => {
-        claimDiv.remove();
-        verifyAndClaimAdReward();
-    };
-    document.body.appendChild(claimDiv);
-
-    window.showToast("🎉 Ad completed! Click the button to claim your reward!");
-
-    // Auto-remove after 10 seconds if not clicked
-    setTimeout(() => {
-        if (document.getElementById('adClaimButton')) {
-            claimDiv.remove();
-            window.showToast("❌ Reward expired. Watch another ad to earn!");
-            adRewardClaimed = false;
-            adCompleted = false;
-        }
-    }, 10000);
-}
-
-// STRICT: Verify before claiming
-async function verifyAndClaimAdReward() {
-    if (adRewardClaimed) {
-        window.showToast("❌ Reward already claimed!");
-        return;
-    }
-
-    if (!adCompleted) {
-        window.showToast("❌ You must watch the full ad to earn!");
-        return;
-    }
-
-    // STRICT: Server-side verification
-    await claimAdReward();
 }
 
 function closeAdModal() { }
@@ -1449,12 +1358,7 @@ async function claimAdReward() {
         const res = await fetch('/api/ad/claim', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                userId: userData.id,
-                context: currentAdContext,
-                adCompleted: true, // Send completion status
-                watchDuration: Date.now() - adWatchStartTime
-            })
+            body: JSON.stringify({ userId: userData.id, context: currentAdContext })
         });
         const data = await res.json();
 
@@ -1464,7 +1368,7 @@ async function claimAdReward() {
             }
 
             let msg = `🎉 Reward claimed!`;
-            if (currentAdContext === 'watch_ad') msg = `📺 +${data.reward || 5} Tokens rewarded!`;
+            if (currentAdContext === 'watch_ad') msg = `📺 +5 Tokens rewarded for Watching Ad!`;
             else if (currentAdContext === 'quiz_direct') msg = `🧠 Quiz unlocked! Good luck.`;
             else if (currentAdContext === 'scratch_ad' || currentAdContext === 'scratch_retry') msg = `✨ Scratch card unlocked!`;
 
@@ -1473,9 +1377,10 @@ async function claimAdReward() {
             if (data.newBalance !== undefined) {
                 userData.tokens = data.newBalance;
                 updateBalanceUI();
-                loadRecentActivity();
+                loadRecentActivity(); // Refresh history after ad reward
             }
 
+            // Navigation
             if (currentAdContext === 'quiz_direct') {
                 showPage('quiz');
                 loadQuiz();
@@ -1484,12 +1389,11 @@ async function claimAdReward() {
                 initScratchCard();
             }
         } else {
-            window.showToast(data.message || '❌ Failed to claim reward');
+            window.showToast(data.message || 'Error claiming ad reward');
             adRewardClaimed = false;
         }
     } catch (e) {
         console.error('Ad Claim Error:', e);
-        window.showToast('❌ Network error. Try again!');
         adRewardClaimed = false;
     }
 }
@@ -2711,296 +2615,36 @@ window.renderShopItems = renderShopItems;
 
 
 
-// ========================
-// VCC CARDS - Organized by Provider/Type with Generation Flow
-// ========================
-let selectedCardType = null;
-let currentCardData = null;
-
 function renderCards() {
     const container = document.getElementById('cardsList');
     if (!container) return;
+    const cards = JSON.parse(localStorage.getItem('adminCards') || '[]');
+    let html = '';
 
-    // Fetch cards from API organized by provider/type
-    fetch('/api/cards/types')
-        .then(r => r.json())
-        .then(data => {
-            if (!data.success || !data.cardTypes || data.cardTypes.length === 0) {
-                container.innerHTML = '<div style="text-align:center; padding:40px 0; color:var(--text-sub); opacity:0.5;">No cards available</div>';
-                return;
-            }
-
-            // Group cards by provider/type
-            const cardTypes = data.cardTypes;
-
-            container.innerHTML = cardTypes.map(type => `
-                <div class="service-card" onclick="showCardTypeDetail('${type.id}')" 
-                    style="margin-bottom:12px; cursor:pointer; padding:16px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; display:flex; align-items:center; gap:14px; transition:all 0.2s;"
-                    onmouseover="this.style.borderColor='${type.color}'; this.style.background='rgba(255,255,255,0.03)';"
-                    onmouseout="this.style.borderColor='var(--border-color)'; this.style.background='var(--bg-card)';">
-                    <div class="sc-icon" style="background:${type.gradient}; width:50px; height:50px; border-radius:16px; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
-                        <i class="${type.icon}" style="color:#fff; font-size:22px;"></i>
-                    </div>
-                    <div class="sc-info" style="flex:1;">
-                        <h3 style="font-size:15px; font-weight:700; color:var(--text-main); margin:0;">${type.name}</h3>
-                        <p style="font-size:11px; color:var(--text-sub); margin:4px 0 0 0; font-weight:600;">
-                            <i class="fas fa-layer-group" style="margin-right:4px;"></i>${type.availableCount} cards available
-                        </p>
-                    </div>
-                    <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
-                        <div style="font-weight:900; color:#22c55e; font-size:15px; letter-spacing:0.5px;">${type.price} TC</div>
-                        <div style="font-size:10px; color:var(--text-sub); font-weight:600;">
-                            <i class="fas fa-chevron-right" style="color:${type.color};"></i>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        })
-        .catch(() => {
-            container.innerHTML = '<div style="text-align:center; padding:40px 0; color:var(--text-sub);">Failed to load cards</div>';
-        });
-}
-
-// Show card type detail page with Generate button
-function showCardTypeDetail(cardTypeId) {
-    selectedCardType = cardTypeId;
-
-    // Fetch card type details
-    fetch(`/api/cards/type/${cardTypeId}`)
-        .then(r => r.json())
-        .then(data => {
-            if (!data.success || !data.cardType) {
-                window.showToast('Card type not found');
-                return;
-            }
-
-            const type = data.cardType;
-            currentCardData = type;
-
-            // Create or update the card detail view
-            let detailContainer = document.getElementById('cardTypeDetail');
-            if (!detailContainer) {
-                // Create new page for card detail
-                const vccPage = document.getElementById('vccCardsPage');
-                detailContainer = document.createElement('div');
-                detailContainer.id = 'cardTypeDetail';
-                detailContainer.className = 'page';
-                detailContainer.style.cssText = 'display:none; padding:20px;';
-                vccPage.parentNode.insertBefore(detailContainer, vccPage.nextSibling);
-            }
-
-            detailContainer.innerHTML = `
-                <!-- Header -->
-                <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px; padding-top:20px;">
-                    <button onclick="hideCardTypeDetail()" 
-                        style="background:rgba(255,255,255,0.05); border:1px solid var(--border-color); border-radius:12px; width:40px; height:40px; display:flex; align-items:center; justify-content:center; color:var(--text-main); cursor:pointer;">
-                        <i class="fas fa-arrow-left"></i>
-                    </button>
-                    <div style="font-size:18px; font-weight:800; color:var(--text-main);">${type.name}</div>
-                </div>
-
-                <!-- Card Preview -->
-                <div style="background:${type.gradient}; border-radius:24px; padding:28px 20px; margin-bottom:20px; text-align:center; position:relative; overflow:hidden; box-shadow:0 8px 32px ${type.color}44;">
-                    <div style="position:absolute; top:0; left:0; right:0; bottom:0; background:radial-gradient(circle at 30% 50%, rgba(255,255,255,0.1), transparent 70%);"></div>
-                    <div style="position:relative; z-index:1;">
-                        <div style="width:70px; height:70px; background:rgba(255,255,255,0.2); border-radius:20px; display:flex; align-items:center; justify-content:center; margin:0 auto 14px; backdrop-filter:blur(10px);">
-                            <i class="${type.icon}" style="font-size:32px; color:#fff;"></i>
-                        </div>
-                        <div style="font-size:20px; font-weight:900; color:#fff; margin-bottom:6px;">${type.name}</div>
-                        <div style="font-size:12px; color:rgba(255,255,255,0.8); max-width:260px; margin:0 auto; line-height:1.5;">${type.description || 'Premium virtual card for online purchases'}</div>
-                    </div>
-                </div>
-
-                <!-- Price Card -->
-                <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:20px; padding:20px; margin-bottom:16px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                        <div style="font-size:12px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:1px;">Price</div>
-                        <div style="display:flex; align-items:center; gap:6px;">
-                            <i class="fas fa-coins" style="color:#fbbf24; font-size:14px;"></i>
-                            <span style="font-size:22px; font-weight:900; color:#fbbf24;">${type.price}</span>
-                            <span style="font-size:12px; color:var(--text-sub); font-weight:600;">TOKENS</span>
-                        </div>
-                    </div>
-                    <div style="height:1px; background:var(--border-color); margin-bottom:16px;"></div>
-                    <div style="font-size:11px; font-weight:700; color:var(--text-sub); margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">Features</div>
-                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-                        <i class="fas fa-check-circle" style="color:${type.color}; font-size:14px;"></i>
-                        <span style="font-size:13px; color:var(--text-main); font-weight:600;">Instant Delivery</span>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-                        <i class="fas fa-check-circle" style="color:${type.color}; font-size:14px;"></i>
-                        <span style="font-size:13px; color:var(--text-main); font-weight:600;">Valid Card Details</span>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-                        <i class="fas fa-check-circle" style="color:${type.color}; font-size:14px;"></i>
-                        <span style="font-size:13px; color:var(--text-main); font-weight:600;">Ready to Use</span>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <i class="fas fa-check-circle" style="color:${type.color}; font-size:14px;"></i>
-                        <span style="font-size:13px; color:var(--text-main); font-weight:600;">${type.availableCount} Cards in Stock</span>
-                    </div>
-                </div>
-
-                <!-- Card Details Box (Hidden by default, shown after generation) -->
-                <div id="cardDetailsBox" style="display:none; margin-bottom:16px;">
-                    <div style="background:rgba(34,197,94,0.08); border:1px solid rgba(34,197,94,0.3); border-radius:20px; padding:20px;">
-                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px;">
-                            <i class="fas fa-check-circle" style="color:#22c55e; font-size:16px;"></i>
-                            <span style="font-size:14px; font-weight:800; color:#22c55e;">CARD GENERATED SUCCESSFULLY</span>
-                        </div>
-                        <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:16px; font-family:monospace;">
-                            <div style="margin-bottom:12px;">
-                                <div style="font-size:10px; font-weight:700; color:var(--text-sub); margin-bottom:4px; text-transform:uppercase;">Card Number</div>
-                                <div id="generatedCardNumber" style="font-size:16px; font-weight:700; color:var(--text-main); background:rgba(255,255,255,0.05); padding:10px 12px; border-radius:10px; border:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
-                                    <span>-</span>
-                                    <i class="fas fa-copy" style="color:${type.color}; cursor:pointer;" onclick="copyCardDetail('number')"></i>
-                                </div>
-                            </div>
-                            <div style="display:flex; gap:12px; margin-bottom:12px;">
-                                <div style="flex:1;">
-                                    <div style="font-size:10px; font-weight:700; color:var(--text-sub); margin-bottom:4px; text-transform:uppercase;">Expiry</div>
-                                    <div id="generatedCardExpiry" style="font-size:14px; font-weight:700; color:var(--text-main); background:rgba(255,255,255,0.05); padding:10px 12px; border-radius:10px; border:1px solid var(--border-color);">-</div>
-                                </div>
-                                <div style="flex:1;">
-                                    <div style="font-size:10px; font-weight:700; color:var(--text-sub); margin-bottom:4px; text-transform:uppercase;">CVV</div>
-                                    <div id="generatedCardCvv" style="font-size:14px; font-weight:700; color:var(--text-main); background:rgba(255,255,255,0.05); padding:10px 12px; border-radius:10px; border:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
-                                        <span>-</span>
-                                        <i class="fas fa-copy" style="color:${type.color}; cursor:pointer;" onclick="copyCardDetail('cvv')"></i>
-                                    </div>
-                                </div>
-                            </div>
-                            <div>
-                                <div style="font-size:10px; font-weight:700; color:var(--text-sub); margin-bottom:4px; text-transform:uppercase;">Card Holder</div>
-                                <div id="generatedCardHolder" style="font-size:14px; font-weight:700; color:var(--text-main); background:rgba(255,255,255,0.05); padding:10px 12px; border-radius:10px; border:1px solid var(--border-color);">-</div>
-                            </div>
-                        </div>
-                        <div style="margin-top:12px; font-size:11px; color:#888; text-align:center; font-weight:600;">
-                            <i class="fas fa-exclamation-triangle" style="color:#f59e0b;"></i> Save these details! They won't be shown again.
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Generate Button -->
-                <button id="generateCardBtn" onclick="generateCard('${cardTypeId}')"
-                    style="width:100%; padding:16px; border:none; border-radius:16px; font-weight:900; font-size:15px; color:#fff; background:${type.gradient}; cursor:pointer; text-transform:uppercase; letter-spacing:1px; box-shadow:0 8px 24px ${type.color}44; transition:all 0.3s ease;">
-                    <i class="fas fa-magic"></i> GENERATE CARD
+    if (cards.length > 0) {
+        html += cards.map(c => `
+        <div class="service-card" style="margin-bottom:12px; cursor:default; padding:16px;">
+            <div class="sc-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706); width:50px; height:50px; border-radius:16px; flex-shrink:0;">
+                <i class="fas fa-credit-card"></i>
+            </div>
+            <div class="sc-info" style="flex:1; margin-left:14px;">
+                <h3 style="font-size:15px; font-weight:700; color:var(--text-main); margin:0;">${c.name}</h3>
+                <p style="font-size:11px; color:var(--text-sub); margin:4px 0 0 0; font-weight:600;">Stock: ${c.count}</p>
+            </div>
+            <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+                <div style="font-weight:900; color:#22c55e; font-size:15px; letter-spacing:0.5px;">${c.price} TC</div>
+                <button onclick="buyAccount('card', ${c.price}, '${c.id}')" 
+                    style="padding:6px 16px; border-radius:12px; background:#fbbf24; color:#000; font-weight:800; font-size:11px; border:none; cursor:pointer; box-shadow:0 4px 10px rgba(251,191,36,0.2);">
+                    BUY
                 </button>
+            </div>
+        </div>`).join('');
+    }
 
-                <!-- Availability Note -->
-                <div style="margin-top:16px; text-align:center;">
-                    <div style="font-size:11px; color:var(--text-sub); font-weight:600;">
-                        <i class="fas fa-circle" style="color:#22c55e; font-size:8px;"></i> Available &bull; Instant Delivery &bull; 24/7 Support
-                    </div>
-                </div>
-            `;
+    if (window._userCardHtml) html += window._userCardHtml;
 
-            // Hide vccCardsPage and show cardTypeDetail
-            document.getElementById('vccCardsPage').style.display = 'none';
-            detailContainer.style.display = 'block';
-            historyStack.push('cardTypeDetail');
-        })
-        .catch(() => {
-            window.showToast('Failed to load card details');
-        });
+    container.innerHTML = html || '<div style="text-align:center; padding:40px 0; color:var(--text-sub); opacity:0.5;">No cards available</div>';
 }
-window.showCardTypeDetail = showCardTypeDetail;
-
-function hideCardTypeDetail() {
-    const detailContainer = document.getElementById('cardTypeDetail');
-    if (detailContainer) {
-        detailContainer.style.display = 'none';
-    }
-    document.getElementById('vccCardsPage').style.display = 'block';
-    // Remove from history stack
-    const idx = historyStack.indexOf('cardTypeDetail');
-    if (idx > -1) historyStack.splice(idx, 1);
-}
-window.hideCardTypeDetail = hideCardTypeDetail;
-
-function generateCard(cardTypeId) {
-    if (!userData || !userData.id) {
-        window.showToast('Please login first.');
-        return;
-    }
-
-    const btn = document.getElementById('generateCardBtn');
-    if (btn) {
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> GENERATING...';
-        btn.style.pointerEvents = 'none';
-    }
-
-    fetch('/api/cards/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: userData.id, cardTypeId })
-    })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
-                // Update balance
-                userData.tokens = data.newBalance;
-                renderBalances();
-
-                // Show card details
-                const detailsBox = document.getElementById('cardDetailsBox');
-                const numberEl = document.getElementById('generatedCardNumber');
-                const expiryEl = document.getElementById('generatedCardExpiry');
-                const cvvEl = document.getElementById('generatedCardCvv');
-                const holderEl = document.getElementById('generatedCardHolder');
-
-                if (detailsBox) detailsBox.style.display = 'block';
-                if (numberEl) numberEl.innerHTML = `<span>${data.card.number}</span><i class="fas fa-copy" style="color:${currentCardData.color}; cursor:pointer;" onclick="copyCardDetail('number')"></i>`;
-                if (expiryEl) expiryEl.textContent = data.card.expiry;
-                if (cvvEl) cvvEl.innerHTML = `<span>${data.card.cvv}</span><i class="fas fa-copy" style="color:${currentCardData.color}; cursor:pointer;" onclick="copyCardDetail('cvv')"></i>`;
-                if (holderEl) holderEl.textContent = data.card.holder;
-
-                if (btn) {
-                    btn.innerHTML = '<i class="fas fa-check"></i> GENERATED';
-                    btn.style.background = '#22c55e';
-                    btn.style.boxShadow = '0 8px 24px rgba(34,197,94,0.3)';
-                }
-
-                // Haptic feedback
-                if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-
-                // Refresh cards list to update stock count
-                renderCards();
-            } else {
-                window.showToast(data.message || 'Card generation failed');
-                if (btn) {
-                    btn.innerHTML = '<i class="fas fa-magic"></i> GENERATE CARD';
-                    btn.style.pointerEvents = 'auto';
-                }
-            }
-        })
-        .catch(() => {
-            window.showToast('Network error. Please try again.');
-            if (btn) {
-                btn.innerHTML = '<i class="fas fa-magic"></i> GENERATE CARD';
-                btn.style.pointerEvents = 'auto';
-            }
-        });
-}
-window.generateCard = generateCard;
-
-function copyCardDetail(type) {
-    let text = '';
-    if (type === 'number') {
-        const el = document.getElementById('generatedCardNumber');
-        if (el) text = el.querySelector('span')?.textContent || '';
-    } else if (type === 'cvv') {
-        const el = document.getElementById('generatedCardCvv');
-        if (el) text = el.querySelector('span')?.textContent || '';
-    }
-
-    if (text) {
-        navigator.clipboard.writeText(text).then(() => {
-            window.showToast(`${type.toUpperCase()} copied!`);
-            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-        });
-    }
-}
-window.copyCardDetail = copyCardDetail;
 
 function renderVPN() {
     const container = document.getElementById('vpnList');

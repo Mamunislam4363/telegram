@@ -802,22 +802,11 @@ app.post('/api/quiz/submit', (req, res) => {
     res.json({ success: true, newBalance: db.getTokenBalance(user) });
 });
 
-// API: Claim Ad Reward - STRICT VERSION
+// API: Claim Ad Reward
 app.post('/api/ad/claim', (req, res) => {
-    const { userId, context, adCompleted, watchDuration } = req.body;
+    const { userId, context } = req.body;
     const user = db.getUser(userId);
     if (!user) return res.json({ success: false, message: 'User not found' });
-
-    // STRICT: Verify ad was actually completed
-    if (!adCompleted || !watchDuration) {
-        return res.json({ success: false, message: 'Ad not completed. Watch full ad to earn!' });
-    }
-
-    // STRICT: Minimum watch time verification (5 seconds = 5000ms)
-    const MIN_WATCH_TIME = 5000;
-    if (watchDuration < MIN_WATCH_TIME) {
-        return res.json({ success: false, message: `Watch time too short. Must watch at least ${MIN_WATCH_TIME / 1000} seconds!` });
-    }
 
     let amount = 0;
     let detail = 'Ad Reward';
@@ -832,15 +821,6 @@ app.post('/api/ad/claim', (req, res) => {
         amount = 2; // Default
     }
 
-    // STRICT: Check if user is trying to claim too frequently (anti-cheat)
-    const now = Date.now();
-    const lastClaim = user.lastAdClaim || 0;
-    const minClaimInterval = 25000; // 25 seconds minimum between claims
-
-    if (now - lastClaim < minClaimInterval) {
-        return res.json({ success: false, message: 'Claiming too fast. Please wait!' });
-    }
-
     if (amount > 0) {
         db.setTokenBalance(user, db.getTokenBalance(user) + amount);
         if (!user.history) user.history = [];
@@ -849,14 +829,8 @@ app.post('/api/ad/claim', (req, res) => {
             amount: amount,
             currency: 'tokens',
             date: Date.now(),
-            detail: detail,
-            watchDuration: watchDuration // Store for verification
+            detail: detail
         });
-
-        // Update last claim time (STRICT tracking)
-        user.lastAdClaim = now;
-        user.lastAdWatch = now;
-
         db.updateUser(user);
     }
 
@@ -930,27 +904,6 @@ app.post('/api/earn', async (req, res) => {
             : (parseInt(settings.adReward) || 5);
         const now = Date.now();
         const lastWatched = user.lastAdWatch || 0;
-
-        // STRICT: Verify ad completion data from frontend
-        const { adCompleted, watchDuration } = req.body;
-
-        if (!adCompleted || !watchDuration) {
-            return res.json({ success: false, message: 'Ad not completed! Watch full ad to earn tokens.' });
-        }
-
-        // STRICT: Minimum watch time check (5 seconds)
-        const MIN_WATCH_TIME = 5000;
-        if (watchDuration < MIN_WATCH_TIME) {
-            return res.json({ success: false, message: `Watch time too short! Watch at least ${MIN_WATCH_TIME / 1000} seconds.` });
-        }
-
-        // STRICT: Anti-cheat - check if claiming too fast
-        const lastClaim = user.lastAdClaim || 0;
-        const minClaimInterval = 25000; // 25 seconds
-        if (now - lastClaim < minClaimInterval) {
-            return res.json({ success: false, message: 'Claiming too fast! Please wait.' });
-        }
-
         const cooldownMs = 5 * 60 * 1000; // 5 minutes cooldown per ad
 
         // Bypass cooldown for zero balance trigger
@@ -960,8 +913,6 @@ app.post('/api/earn', async (req, res) => {
         }
 
         user.lastAdWatch = now;
-        user.lastAdClaim = now; // STRICT tracking
-
         db.setTokenBalance(user, db.getTokenBalance(user) + adReward);
         if (!user.history) user.history = [];
         user.history.unshift({
@@ -969,8 +920,7 @@ app.post('/api/earn', async (req, res) => {
             amount: adReward,
             currency: 'tokens',
             date: now,
-            detail: req.body.context === 'quiz_direct' ? 'Quiz Ad' : (req.body.context === 'zero_balance_trigger' ? 'Zero Balance Ad' : (req.body.context === 'scratch_ad' ? 'Scratch Ad' : 'Watch Ad')),
-            watchDuration: watchDuration // Store for verification
+            detail: req.body.context === 'quiz_direct' ? 'Quiz Ad' : (req.body.context === 'zero_balance_trigger' ? 'Zero Balance Ad' : (req.body.context === 'scratch_ad' ? 'Scratch Ad' : 'Watch Ad'))
         });
         db.updateUser(user);
         return res.json({ success: true, reward: adReward, newBalance: db.getTokenBalance(user) });
@@ -2057,33 +2007,13 @@ app.get('/api/admin/groups', (req, res) => {
     res.json({ success: true, groups });
 });
 
-// API: Admin - Group Settings for specific group (GET)
-app.get('/api/admin/groups/:chatId/settings', (req, res) => {
-    const { chatId } = req.params;
-    const settings = db.getGroupSettings(chatId);
-    res.json({ success: true, settings });
-});
-
-// API: Admin - Group Settings for specific group (POST)
-app.post('/api/admin/groups/:chatId/settings', (req, res) => {
-    const { chatId } = req.params;
-    const newSettings = req.body;
-
-    const updated = db.updateGroupSettings(chatId, newSettings);
-    if (updated) {
-        res.json({ success: true, settings: db.getGroupSettings(chatId) });
-    } else {
-        res.json({ success: false, message: 'Failed to update settings' });
-    }
-});
-
-// API: Admin - Group Settings (GET) - global settings
+// API: Admin - Group Settings (GET)
 app.get('/api/admin/groups/settings', (req, res) => {
-    const settings = db.data.settings?.groupRules || {};
+    const settings = db.getGroupSettings();
     res.json({ success: true, settings });
 });
 
-// API: Admin - Group Settings (POST) - global settings
+// API: Admin - Group Settings (POST)
 app.post('/api/admin/groups/settings', (req, res) => {
     const newSettings = req.body;
     if (!db.data.settings) db.data.settings = {};
@@ -2094,24 +2024,13 @@ app.post('/api/admin/groups/settings', (req, res) => {
 
 // API: Admin - Group Rule Toggle
 app.post('/api/admin/groups/toggle', (req, res) => {
-    const { key, chatId } = req.body;
+    const { key } = req.body;
     if (!key) return res.json({ success: false, message: 'Key required' });
 
-    if (chatId) {
-        // Toggle for specific group
-        const settings = db.getGroupSettings(chatId);
-        settings[key] = !settings[key];
-        db.updateGroupSettings(chatId, settings);
-        res.json({ success: true, settings });
-    } else {
-        // Toggle global setting
-        const settings = db.data.settings?.groupRules || {};
-        settings[key] = !settings[key];
-        if (!db.data.settings) db.data.settings = {};
-        db.data.settings.groupRules = settings;
-        db.save();
-        res.json({ success: true, settings });
-    }
+    const settings = db.getGroupSettings();
+    settings[key] = !settings[key];
+    db.save();
+    res.json({ success: true, settings });
 });
 
 // API: Admin - VPN Management
@@ -2514,6 +2433,95 @@ app.delete('/api/admin/providers/:id', (req, res) => {
 });
 
 // =============================================
+// GROUP MANAGEMENT API
+// =============================================
+
+// GET: Group Management Settings
+app.get('/api/admin/group-management', (req, res) => {
+    const settings = db.data?.adminSettings?.groupManagement || {};
+    res.json({
+        success: true,
+        settings: {
+            autoDeleteSystemMessages: settings.autoDeleteSystemMessages !== false,
+            deleteJoinMessages: settings.deleteJoinMessages !== false,
+            deleteLeaveMessages: settings.deleteLeaveMessages !== false,
+            deletePinMessages: settings.deletePinMessages === true,
+            deleteVoiceChatStarted: settings.deleteVoiceChatStarted === true,
+            deleteVoiceChatEnded: settings.deleteVoiceChatEnded === true,
+            deleteVideoChatStarted: settings.deleteVideoChatStarted === true,
+            deleteVideoChatEnded: settings.deleteVideoChatEnded === true,
+            deleteVideoChatScheduled: settings.deleteVideoChatScheduled === true,
+            deleteVideoChatParticipantsInvited: settings.deleteVideoChatParticipantsInvited === true,
+            deleteProximityAlertTriggered: settings.deleteProximityAlertTriggered === true,
+            deleteAutoDeleteTimerChanged: settings.deleteAutoDeleteTimerChanged === true,
+            deleteMigrateToChat: settings.deleteMigrateToChat === true,
+            deleteMigrateFromChat: settings.deleteMigrateFromChat === true,
+            deleteChannelChatCreated: settings.deleteChannelChatCreated === true,
+            deleteSupergroupChatCreated: settings.deleteSupergroupChatCreated === true,
+            deleteDeleteGroupPhoto: settings.deleteDeleteGroupPhoto === true,
+            deleteGroupPhotoChanged: settings.deleteGroupPhotoChanged === true,
+            deleteTitleChanged: settings.deleteTitleChanged === true,
+            deleteForumTopicCreated: settings.deleteForumTopicCreated === true,
+            deleteForumTopicEdited: settings.deleteForumTopicEdited === true,
+            deleteForumTopicClosed: settings.deleteForumTopicClosed === true,
+            deleteForumTopicReopened: settings.deleteForumTopicReopened === true,
+            deleteGeneralForumTopicHidden: settings.deleteGeneralForumTopicHidden === true,
+            deleteGeneralForumTopicUnhidden: settings.deleteGeneralForumTopicUnhidden === true,
+            deleteGiveawayCreated: settings.deleteGiveawayCreated === true,
+            deleteGiveawayWinners: settings.deleteGiveawayWinners === true,
+            deleteGiveawayCompleted: settings.deleteGiveawayCompleted === true,
+            deleteBoostAdded: settings.deleteBoostAdded === true,
+            deleteChatBackgroundSet: settings.deleteChatBackgroundSet === true
+        }
+    });
+});
+
+// POST: Update Group Management Settings
+app.post('/api/admin/group-management', (req, res) => {
+    const updates = req.body;
+
+    if (!db.data.adminSettings) db.data.adminSettings = {};
+    if (!db.data.adminSettings.groupManagement) db.data.adminSettings.groupManagement = {};
+
+    const gm = db.data.adminSettings.groupManagement;
+
+    // Update all provided settings
+    if (updates.autoDeleteSystemMessages !== undefined) gm.autoDeleteSystemMessages = updates.autoDeleteSystemMessages;
+    if (updates.deleteJoinMessages !== undefined) gm.deleteJoinMessages = updates.deleteJoinMessages;
+    if (updates.deleteLeaveMessages !== undefined) gm.deleteLeaveMessages = updates.deleteLeaveMessages;
+    if (updates.deletePinMessages !== undefined) gm.deletePinMessages = updates.deletePinMessages;
+    if (updates.deleteVoiceChatStarted !== undefined) gm.deleteVoiceChatStarted = updates.deleteVoiceChatStarted;
+    if (updates.deleteVoiceChatEnded !== undefined) gm.deleteVoiceChatEnded = updates.deleteVoiceChatEnded;
+    if (updates.deleteVideoChatStarted !== undefined) gm.deleteVideoChatStarted = updates.deleteVideoChatStarted;
+    if (updates.deleteVideoChatEnded !== undefined) gm.deleteVideoChatEnded = updates.deleteVideoChatEnded;
+    if (updates.deleteVideoChatScheduled !== undefined) gm.deleteVideoChatScheduled = updates.deleteVideoChatScheduled;
+    if (updates.deleteVideoChatParticipantsInvited !== undefined) gm.deleteVideoChatParticipantsInvited = updates.deleteVideoChatParticipantsInvited;
+    if (updates.deleteProximityAlertTriggered !== undefined) gm.deleteProximityAlertTriggered = updates.deleteProximityAlertTriggered;
+    if (updates.deleteAutoDeleteTimerChanged !== undefined) gm.deleteAutoDeleteTimerChanged = updates.deleteAutoDeleteTimerChanged;
+    if (updates.deleteMigrateToChat !== undefined) gm.deleteMigrateToChat = updates.deleteMigrateToChat;
+    if (updates.deleteMigrateFromChat !== undefined) gm.deleteMigrateFromChat = updates.deleteMigrateFromChat;
+    if (updates.deleteChannelChatCreated !== undefined) gm.deleteChannelChatCreated = updates.deleteChannelChatCreated;
+    if (updates.deleteSupergroupChatCreated !== undefined) gm.deleteSupergroupChatCreated = updates.deleteSupergroupChatCreated;
+    if (updates.deleteDeleteGroupPhoto !== undefined) gm.deleteDeleteGroupPhoto = updates.deleteDeleteGroupPhoto;
+    if (updates.deleteGroupPhotoChanged !== undefined) gm.deleteGroupPhotoChanged = updates.deleteGroupPhotoChanged;
+    if (updates.deleteTitleChanged !== undefined) gm.deleteTitleChanged = updates.deleteTitleChanged;
+    if (updates.deleteForumTopicCreated !== undefined) gm.deleteForumTopicCreated = updates.deleteForumTopicCreated;
+    if (updates.deleteForumTopicEdited !== undefined) gm.deleteForumTopicEdited = updates.deleteForumTopicEdited;
+    if (updates.deleteForumTopicClosed !== undefined) gm.deleteForumTopicClosed = updates.deleteForumTopicClosed;
+    if (updates.deleteForumTopicReopened !== undefined) gm.deleteForumTopicReopened = updates.deleteForumTopicReopened;
+    if (updates.deleteGeneralForumTopicHidden !== undefined) gm.deleteGeneralForumTopicHidden = updates.deleteGeneralForumTopicHidden;
+    if (updates.deleteGeneralForumTopicUnhidden !== undefined) gm.deleteGeneralForumTopicUnhidden = updates.deleteGeneralForumTopicUnhidden;
+    if (updates.deleteGiveawayCreated !== undefined) gm.deleteGiveawayCreated = updates.deleteGiveawayCreated;
+    if (updates.deleteGiveawayWinners !== undefined) gm.deleteGiveawayWinners = updates.deleteGiveawayWinners;
+    if (updates.deleteGiveawayCompleted !== undefined) gm.deleteGiveawayCompleted = updates.deleteGiveawayCompleted;
+    if (updates.deleteBoostAdded !== undefined) gm.deleteBoostAdded = updates.deleteBoostAdded;
+    if (updates.deleteChatBackgroundSet !== undefined) gm.deleteChatBackgroundSet = updates.deleteChatBackgroundSet;
+
+    db.save();
+    res.json({ success: true, settings: gm });
+});
+
+// =============================================
 // PREMIUM EMAIL MANAGEMENT API
 // =============================================
 
@@ -2758,291 +2766,6 @@ app.post('/api/premium-emails/assign', (req, res) => {
             password: email.password // Only returned when assigned
         }
     });
-});
-
-// =============================================
-// USER VCC CARDS API
-// =============================================
-
-// API: Get all card types organized by provider
-app.get('/api/cards/types', (req, res) => {
-    const cardPrices = db.data.cardPrices || {};
-    const cards = db.data.cards || {};
-
-    // Define card type metadata (icon, color, gradient)
-    const cardTypeMeta = {
-        gemini: {
-            name: 'Gemini Card',
-            icon: 'fas fa-gem',
-            color: '#10b981',
-            gradient: 'linear-gradient(135deg, #10b981, #059669)',
-            description: 'Premium virtual card for AI services and online purchases'
-        },
-        chatgpt: {
-            name: 'ChatGPT Card',
-            icon: 'fas fa-robot',
-            color: '#8b5cf6',
-            gradient: 'linear-gradient(135deg, #8b5cf6, #6d28d9)',
-            description: 'Virtual card optimized for AI subscriptions'
-        },
-        spotify: {
-            name: 'Spotify Card',
-            icon: 'fab fa-spotify',
-            color: '#1db954',
-            gradient: 'linear-gradient(135deg, #1db954, #15873d)',
-            description: 'Virtual card for music streaming services'
-        },
-        netflix: {
-            name: 'Netflix Card',
-            icon: 'fas fa-film',
-            color: '#e50914',
-            gradient: 'linear-gradient(135deg, #e50914, #b81d24)',
-            description: 'Virtual card for streaming subscriptions'
-        },
-        amazon: {
-            name: 'Amazon Card',
-            icon: 'fab fa-amazon',
-            color: '#ff9900',
-            gradient: 'linear-gradient(135deg, #ff9900, #cc7a00)',
-            description: 'Virtual card for online shopping'
-        },
-        other: {
-            name: 'Universal Card',
-            icon: 'fas fa-credit-card',
-            color: '#f59e0b',
-            gradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
-            description: 'General purpose virtual card'
-        }
-    };
-
-    const cardTypes = Object.keys(cardPrices).map(key => {
-        const meta = cardTypeMeta[key] || cardTypeMeta.other;
-        const availableCards = cards[key] || [];
-        return {
-            id: key,
-            name: meta.name,
-            icon: meta.icon,
-            color: meta.color,
-            gradient: meta.gradient,
-            description: meta.description,
-            price: cardPrices[key],
-            availableCount: availableCards.length
-        };
-    }).filter(type => type.availableCount > 0); // Only show types with available cards
-
-    res.json({ success: true, cardTypes });
-});
-
-// API: Get specific card type details
-app.get('/api/cards/type/:id', (req, res) => {
-    const { id } = req.params;
-    const cardPrices = db.data.cardPrices || {};
-    const cards = db.data.cards || {};
-
-    if (!cardPrices[id]) {
-        return res.json({ success: false, message: 'Card type not found' });
-    }
-
-    const cardTypeMeta = {
-        gemini: {
-            name: 'Gemini Card',
-            icon: 'fas fa-gem',
-            color: '#10b981',
-            gradient: 'linear-gradient(135deg, #10b981, #059669)',
-            description: 'Premium virtual card for AI services and online purchases'
-        },
-        chatgpt: {
-            name: 'ChatGPT Card',
-            icon: 'fas fa-robot',
-            color: '#8b5cf6',
-            gradient: 'linear-gradient(135deg, #8b5cf6, #6d28d9)',
-            description: 'Virtual card optimized for AI subscriptions'
-        },
-        spotify: {
-            name: 'Spotify Card',
-            icon: 'fab fa-spotify',
-            color: '#1db954',
-            gradient: 'linear-gradient(135deg, #1db954, #15873d)',
-            description: 'Virtual card for music streaming services'
-        },
-        netflix: {
-            name: 'Netflix Card',
-            icon: 'fas fa-film',
-            color: '#e50914',
-            gradient: 'linear-gradient(135deg, #e50914, #b81d24)',
-            description: 'Virtual card for streaming subscriptions'
-        },
-        amazon: {
-            name: 'Amazon Card',
-            icon: 'fab fa-amazon',
-            color: '#ff9900',
-            gradient: 'linear-gradient(135deg, #ff9900, #cc7a00)',
-            description: 'Virtual card for online shopping'
-        },
-        other: {
-            name: 'Universal Card',
-            icon: 'fas fa-credit-card',
-            color: '#f59e0b',
-            gradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
-            description: 'General purpose virtual card'
-        }
-    };
-
-    const meta = cardTypeMeta[id] || cardTypeMeta.other;
-    const availableCards = cards[id] || [];
-
-    res.json({
-        success: true,
-        cardType: {
-            id,
-            name: meta.name,
-            icon: meta.icon,
-            color: meta.color,
-            gradient: meta.gradient,
-            description: meta.description,
-            price: cardPrices[id],
-            availableCount: availableCards.length
-        }
-    });
-});
-
-// API: Generate a card and deduct credits
-app.post('/api/cards/generate', (req, res) => {
-    const { userId, cardTypeId } = req.body;
-
-    if (!userId || !cardTypeId) {
-        return res.json({ success: false, message: 'User ID and Card Type ID required' });
-    }
-
-    const users = getUsersObj();
-    const user = users[userId];
-    if (!user) {
-        return res.json({ success: false, message: 'User not found' });
-    }
-
-    const cardPrices = db.data.cardPrices || {};
-    const cards = db.data.cards || {};
-
-    if (!cardPrices[cardTypeId]) {
-        return res.json({ success: false, message: 'Card type not found' });
-    }
-
-    const availableCards = cards[cardTypeId] || [];
-    if (availableCards.length === 0) {
-        return res.json({ success: false, message: 'No cards available for this type' });
-    }
-
-    const price = cardPrices[cardTypeId];
-    const userTokens = db.getTokenBalance(user);
-
-    if (userTokens < price) {
-        return res.json({ success: false, message: 'Insufficient tokens' });
-    }
-
-    // Get the first available card
-    const card = availableCards[0];
-
-    // Remove card from inventory
-    cards[cardTypeId] = availableCards.slice(1);
-
-    // Deduct tokens
-    db.setTokenBalance(user, userTokens - price);
-
-    // Add to history
-    if (!user.history) user.history = [];
-    user.history.unshift({
-        type: 'card',
-        cardType: cardTypeId,
-        date: new Date().toISOString(),
-        reward: `-${price} Tokens`,
-        detail: card.number
-    });
-
-    saveUsersObj(users);
-    db.save();
-
-    res.json({
-        success: true,
-        card: {
-            number: card.number,
-            expiry: card.expiry,
-            cvv: card.cvv,
-            holder: card.holder || 'CARD HOLDER'
-        },
-        newBalance: db.getTokenBalance(user)
-    });
-});
-
-// =============================================
-// ADMIN CARD INVENTORY MANAGEMENT API
-// =============================================
-
-// API: Admin - Get Card Inventory
-app.get('/api/admin/cards/inventory', (req, res) => {
-    const cards = db.data.cards || {};
-    const inventory = [];
-
-    // Convert cards object to flat array
-    Object.keys(cards).forEach(type => {
-        const typeCards = cards[type] || [];
-        typeCards.forEach((card, index) => {
-            inventory.push({
-                id: card.id || `${type}_${index}`,
-                type: type,
-                number: card.number,
-                expiry: card.expiry,
-                cvv: card.cvv,
-                holder: card.holder
-            });
-        });
-    });
-
-    res.json({ success: true, cards: inventory });
-});
-
-// API: Admin - Add Card to Inventory
-app.post('/api/admin/cards/inventory', (req, res) => {
-    const { type, number, expiry, cvv, holder } = req.body;
-
-    if (!type || !number || !expiry || !cvv || !holder) {
-        return res.json({ success: false, message: 'All card details are required' });
-    }
-
-    if (!db.data.cards) db.data.cards = {};
-    if (!db.data.cards[type]) db.data.cards[type] = [];
-
-    const newCard = {
-        id: `card_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-        number,
-        expiry,
-        cvv,
-        holder
-    };
-
-    db.data.cards[type].push(newCard);
-    db.save();
-
-    res.json({ success: true, card: newCard });
-});
-
-// API: Admin - Delete Card from Inventory
-app.delete('/api/admin/cards/inventory/:id', (req, res) => {
-    const { id } = req.params;
-    const { type } = req.query;
-
-    if (!db.data.cards || !type || !db.data.cards[type]) {
-        return res.json({ success: false, message: 'Card type not found' });
-    }
-
-    const beforeCount = db.data.cards[type].length;
-    db.data.cards[type] = db.data.cards[type].filter(c => c.id !== id);
-    db.save();
-
-    if (db.data.cards[type].length < beforeCount) {
-        res.json({ success: true });
-    } else {
-        res.json({ success: false, message: 'Card not found' });
-    }
 });
 
 // =============================================

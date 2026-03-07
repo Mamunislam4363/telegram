@@ -166,8 +166,6 @@
                 <div class="nav-item" onclick="nav('buttons')"><i class="fas fa-toggle-on w-5"></i> Button Management
                 </div>
                 <div class="nav-item" onclick="nav('shopmanage')"><i class="fas fa-store w-5"></i> Shop Items</div>
-                <div class="nav-item" onclick="nav('cardinventory')"><i class="fas fa-credit-card w-5"></i> Card
-                    Inventory</div>
                 <div class="nav-item" onclick="nav('itemsales')"><i class="fas fa-shopping-basket w-5"></i> Item Sales
                     <span id="pendingSalesBadge"
                         class="hidden ml-auto bg-orange-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">0</span>
@@ -176,10 +174,10 @@
                 <div class="nav-item" onclick="nav('broadcast')"><i class="fas fa-bullhorn w-5"></i> Broadcast</div>
                 <div class="nav-item" onclick="nav('adnetworks')"><i class="fas fa-ad w-5"></i> Ad Networks</div>
                 <div class="nav-item" onclick="nav('providers')"><i class="fas fa-server w-5"></i> Providers</div>
+                <div class="nav-item" onclick="nav('groups')"><i class="fas fa-users-cog w-5"></i> Group Management
+                </div>
                 <div class="nav-item" onclick="nav('settings')"><i class="fas fa-cog w-5"></i> Settings</div>
                 <div class="nav-item" onclick="nav('database')"><i class="fas fa-database w-5"></i> Database Management
-                </div>
-                <div class="nav-item" onclick="nav('groups')"><i class="fas fa-users-cog w-5"></i> Group Management
                 </div>
             </nav>
 
@@ -612,6 +610,8 @@
                             <button onclick="saveUserChanges()"
                                 class="flex-1 gold-gradient py-3 rounded-xl font-bold text-black shadow-lg shadow-orange-500/20">SAVE
                                 CHANGES</button>
+                            <button onclick="document.getElementById('editUserModal').style.display='none'"
+                                class="flex-1 bg-white/5 border border-white/10 py-3 rounded-xl text-gray-400">CANCEL</button>
                         </div>
                     </div>
                 </div>
@@ -1005,6 +1005,7 @@
                             <i class="fas fa-users text-cyan-400 text-2xl mb-2"></i>
                             <span class="text-xs text-gray-400 uppercase tracking-wider mb-1">Active
                                 (24h)</span>
+                            <span id="metric-active" class="text-xl font-bold text-white relative z-10">0</span>
                         </div>
                     </div>
                 </div>
@@ -1014,7 +1015,7 @@
                     <button onclick="toggleSection('cost-management-content')"
                         class="w-full p-4 flex justify-between items-center hover:bg-white/5 transition-colors focus:outline-none">
                         <h3 class="text-lg font-bold text-orange-400 flex items-center"><i
-                                class="fas fa-coins mr-3"></i> Cost Management
+                                class="fas fa-coins mr-3"></i> Cost
                             <i id="icon-cost-management-content"
                                 class="fas fa-chevron-down text-gray-400 transition-transform duration-300"></i>
                     </button>
@@ -2142,6 +2143,129 @@
                 </div>
             </div>
 
+            <!-- GROUP MANAGEMENT PAGE -->
+            <div id="page-groups" class="page">
+                <div class="glass-card p-6 rounded-2xl mb-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="font-bold text-lg flex items-center gap-2">
+                                <i class="fas fa-users-cog text-green-400"></i> Group Management
+                            </h3>
+                            <p class="text-sm text-gray-400">Configure auto-delete settings for group system messages</p>
+                        </div>
+                        <button onclick="saveGroupManagementSettings()"
+                            class="gold-gradient px-4 py-2 rounded-xl font-bold text-sm">Save Settings</button>
+                    </div>
+                    <div id="groupManagementStatus" class="text-xs text-gray-400 mt-3"></div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Main Toggle -->
+                    <div class="glass-card p-6 rounded-2xl">
+                        <h4 class="font-bold mb-4 flex items-center gap-2">
+                            <i class="fas fa-power-off text-blue-400"></i> Main Control
+                        </h4>
+                        <div class="flex items-center justify-between p-4 bg-black/20 rounded-xl mb-4">
+                            <div>
+                                <div class="font-bold">Auto-Delete System Messages</div>
+                                <div class="text-xs text-gray-400">Master switch for all auto-delete features</div>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="gm_autoDeleteSystemMessages" class="sr-only peer" checked>
+                                <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Join/Leave -->
+                    <div class="glass-card p-6 rounded-2xl">
+                        <h4 class="font-bold mb-4 flex items-center gap-2">
+                            <i class="fas fa-user-plus text-green-400"></i> Join/Leave Messages
+                        </h4>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                                <div class="text-sm">Delete Join Messages</div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="gm_deleteJoinMessages" class="sr-only peer" checked>
+                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                                <div class="text-sm">Delete Leave Messages</div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="gm_deleteLeaveMessages" class="sr-only peer" checked>
+                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Group Changes -->
+                    <div class="glass-card p-6 rounded-2xl">
+                        <h4 class="font-bold mb-4 flex items-center gap-2">
+                            <i class="fas fa-edit text-yellow-400"></i> Group Changes
+                        </h4>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                                <div class="text-sm">Delete Title Changes</div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="gm_deleteTitleChanged" class="sr-only peer">
+                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-yellow-500"></div>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                                <div class="text-sm">Delete Photo Changes</div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="gm_deleteGroupPhotoChanged" class="sr-only peer">
+                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-yellow-500"></div>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                                <div class="text-sm">Delete Pinned Messages</div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="gm_deletePinMessages" class="sr-only peer">
+                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-yellow-500"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Video Chat -->
+                    <div class="glass-card p-6 rounded-2xl">
+                        <h4 class="font-bold mb-4 flex items-center gap-2">
+                            <i class="fas fa-video text-purple-400"></i> Video/Voice Chat
+                        </h4>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                                <div class="text-sm">Delete Video Chat Started</div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="gm_deleteVideoChatStarted" class="sr-only peer">
+                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                                <div class="text-sm">Delete Video Chat Ended</div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="gm_deleteVideoChatEnded" class="sr-only peer">
+                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Info Box -->
+                <div class="glass-card p-6 rounded-2xl mt-6">
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-info-circle text-blue-400 mt-1"></i>
+                        <div>
+                            <h4 class="font-bold mb-2">How It Works</h4>
+                            <p class="text-sm text-gray-400">When enabled, the bot will automatically delete system messages in groups where it has <b>Delete Messages</b> admin permission.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- DATABASE MANAGEMENT PAGE -->
             <div id="page-database" class="page">
                 <div class="glass-card p-6 rounded-2xl mb-8">
@@ -2622,10 +2746,32 @@
 
         // NAV
         function nav(p) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            if (event && event.currentTarget) event.currentTarget.classList.add('active');
+            document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+            const target = document.getElementById('page-' + p);
+            if (target) target.classList.add('active');
+            const titles = {
+                'dashboard': 'Dashboard', 'users': 'User Management',
+                'codes': 'Promo Codes', 'tasks': 'Tasks',
+                'settings': 'Configuration', 'cards': 'Cards',
+                'broadcast': 'Broadcast',
+                'trading': 'Trading Control',
+                'services': 'Services Management', 'shopmanage': 'Shop Management',
+                'buttons': 'Button Management',
+                'accounts': 'Premium Accounts', 'storage': 'Storage (Drive)',
+                'groups': 'Groups', 'premiumemail': 'Premium Email',
+                'adnetworks': 'Ad Network Integration', 'providers': 'Provider Management', 'database': 'Database Management',
+                'deposits': 'Deposit Management', 'history': 'Global History'
+            };
+            if (titles[p]) document.getElementById('page-title').innerText = titles[p];
+            if (p === 'deposits') {
+                loadDeposits();
+                loadCryptoConfig();
+            }
             if (p === 'trading') initTradingAdmin();
             if (p === 'services') renderAdminServices();
             if (p === 'shopmanage') renderAdminShopItems();
-            if (p === 'cardinventory') loadCardInventory();
             if (p === 'users') loadUsers();
             if (p === 'accounts') loadAccounts();
             if (p === 'groups') loadGroups();
@@ -2638,6 +2784,28 @@
             if (p === 'database') {
                 loadDbSchedule();
                 loadBackupHistory();
+            }
+        }
+
+        // DEPOSITS MANAGEMENT
+        let cryptoMethods = {};
+        async function loadDeposits() {
+            try {
+                const res = await fetch('/api/admin/deposits');
+                const data = await res.json();
+                if (data.success) {
+                    renderDeposits(data.pending, data.history);
+                }
+            } catch (e) { console.error('Failed to load deposits'); }
+        }
+
+        function renderDeposits(pending, history) {
+            const badge = document.getElementById('pendingBadge');
+            if (pending.length > 0) {
+                badge.textContent = pending.length;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
             }
 
             const pBody = document.querySelector('#pendingDepositsTable tbody');
@@ -4038,145 +4206,10 @@ Admins can use /settings command in the group to manage settings.`);
                 });
         }
 
-        // CARD INVENTORY MANAGEMENT
-        async function loadCardInventory() {
-            try {
-                const res = await fetch('/api/admin/cards/inventory');
-                const data = await res.json();
-                if (data.success) {
-                    renderCardInventory(data.cards);
-                }
-            } catch (e) {
-                console.error('Failed to load card inventory:', e);
-            }
-        }
-
-        function renderCardInventory(cards) {
-            const list = document.getElementById('card-inventory-list');
-            if (!list) return;
-
-            const filter = document.getElementById('card-inventory-filter')?.value || 'all';
-            let filteredCards = cards;
-
-            if (filter !== 'all') {
-                filteredCards = cards.filter(c => c.type === filter);
-            }
-
-            const typeNames = {
-                gemini: 'Gemini Card',
-                chatgpt: 'ChatGPT Card',
-                spotify: 'Spotify Card',
-                netflix: 'Netflix Card',
-                amazon: 'Amazon Card',
-                other: 'Universal Card'
-            };
-
-            const typeColors = {
-                gemini: '#10b981',
-                chatgpt: '#8b5cf6',
-                spotify: '#1db954',
-                netflix: '#e50914',
-                amazon: '#ff9900',
-                other: '#f59e0b'
-            };
-
-            if (filteredCards.length === 0) {
-                list.innerHTML = '<div class="text-center text-gray-500 py-8">No cards in inventory</div>';
-                return;
-            }
-
-            list.innerHTML = filteredCards.map(c => `
-                <div class="bg-black/20 rounded-xl p-4 border border-white/10">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center gap-2">
-                            <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold" style="background: ${typeColors[c.type] || typeColors.other}">
-                                <i class="fas fa-credit-card"></i>
-                            </div>
-                            <span class="font-bold text-sm">${typeNames[c.type] || c.type}</span>
-                        </div>
-                        <button onclick="deleteCardFromInventory('${c.id}', '${c.type}')" class="text-red-500 hover:text-red-400 text-xs">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                    <div class="space-y-1 text-xs font-mono text-gray-400">
-                        <div class="flex justify-between">
-                            <span>Number:</span>
-                            <span class="text-white">${c.number}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span>Expiry:</span>
-                            <span class="text-white">${c.expiry}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span>CVV:</span>
-                            <span class="text-white">${c.cvv}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span>Holder:</span>
-                            <span class="text-white">${c.holder}</span>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        async function addCardToInventory() {
-            const type = document.getElementById('card-inventory-type').value;
-            const number = document.getElementById('card-inventory-number').value.trim();
-            const expiry = document.getElementById('card-inventory-expiry').value.trim();
-            const cvv = document.getElementById('card-inventory-cvv').value.trim();
-            const holder = document.getElementById('card-inventory-holder').value.trim();
-
-            if (!number || !expiry || !cvv || !holder) {
-                alert('Please fill in all card details');
-                return;
-            }
-
-            try {
-                const res = await fetch('/api/admin/cards/inventory', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ type, number, expiry, cvv, holder })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    alert('Card added to inventory successfully!');
-                    clearCardInventoryForm();
-                    loadCardInventory();
-                } else {
-                    alert(data.message || 'Failed to add card');
-                }
-            } catch (e) {
-                alert('Network error');
-            }
-        }
-
-        async function deleteCardFromInventory(cardId, type) {
-            if (!confirm('Are you sure you want to delete this card from inventory?')) return;
-
-            try {
-                const res = await fetch(`/api/admin/cards/inventory/${cardId}?type=${type}`, {
-                    method: 'DELETE'
-                });
-                const data = await res.json();
-                if (data.success) {
-                    loadCardInventory();
-                } else {
-                    alert(data.message || 'Failed to delete card');
-                }
-            } catch (e) {
-                alert('Network error');
-            }
-        }
-
-        function clearCardInventoryForm() {
-            document.getElementById('card-inventory-number').value = '';
-            document.getElementById('card-inventory-expiry').value = '';
-            document.getElementById('card-inventory-cvv').value = '';
-            document.getElementById('card-inventory-holder').value = '';
-        }
-
         async function loadGlobalHistory() {
+            const body = document.getElementById('globalHistoryBody');
+            if (body) body.innerHTML = '<tr><td colspan="4" class="text-center text-gray-500 py-8">Loading history...</td></tr>';
+
             try {
                 const res = await fetch('/api/admin/global-history');
                 const data = await res.json();
@@ -4684,6 +4717,64 @@ Admins can use /settings command in the group to manage settings.`);
             } catch (e) {
                 alert('Network error deleting provider');
             }
+
+        // ==================== GROUP MANAGEMENT ====================
+        async function loadGroupManagementSettings() {
+            try {
+                const res = await fetch('/api/admin/group-management');
+                const data = await res.json();
+                
+                if (data.success && data.settings) {
+                    const s = data.settings;
+                    document.getElementById('gm_autoDeleteSystemMessages').checked = s.autoDeleteSystemMessages !== false;
+                    document.getElementById('gm_deleteJoinMessages').checked = s.deleteJoinMessages !== false;
+                    document.getElementById('gm_deleteLeaveMessages').checked = s.deleteLeaveMessages !== false;
+                    document.getElementById('gm_deleteTitleChanged').checked = s.deleteTitleChanged === true;
+                    document.getElementById('gm_deleteGroupPhotoChanged').checked = s.deleteGroupPhotoChanged === true;
+                    document.getElementById('gm_deletePinMessages').checked = s.deletePinMessages === true;
+                    document.getElementById('gm_deleteVideoChatStarted').checked = s.deleteVideoChatStarted === true;
+                    document.getElementById('gm_deleteVideoChatEnded').checked = s.deleteVideoChatEnded === true;
+                }
+            } catch (e) {
+                console.error('Error loading group management settings:', e);
+            }
+        }
+
+        async function saveGroupManagementSettings() {
+            const statusEl = document.getElementById('groupManagementStatus');
+            if (statusEl) statusEl.textContent = 'Saving...';
+            
+            const settings = {
+                autoDeleteSystemMessages: document.getElementById('gm_autoDeleteSystemMessages').checked,
+                deleteJoinMessages: document.getElementById('gm_deleteJoinMessages').checked,
+                deleteLeaveMessages: document.getElementById('gm_deleteLeaveMessages').checked,
+                deleteTitleChanged: document.getElementById('gm_deleteTitleChanged').checked,
+                deleteGroupPhotoChanged: document.getElementById('gm_deleteGroupPhotoChanged').checked,
+                deletePinMessages: document.getElementById('gm_deletePinMessages').checked,
+                deleteVideoChatStarted: document.getElementById('gm_deleteVideoChatStarted').checked,
+                deleteVideoChatEnded: document.getElementById('gm_deleteVideoChatEnded').checked
+            };
+            
+            try {
+                const res = await fetch('/api/admin/group-management', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    if (statusEl) statusEl.textContent = 'Settings saved successfully!';
+                    setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 3000);
+                } else {
+                    if (statusEl) statusEl.textContent = 'Error: ' + (data.message || 'Failed to save');
+                }
+            } catch (e) {
+                if (statusEl) statusEl.textContent = 'Network error saving settings';
+            }
+        }
+
         }
 
         // PREMIUM EMAIL MANAGEMENT
