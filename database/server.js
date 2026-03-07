@@ -4054,18 +4054,8 @@ async function startServer() {
 // If run directly
 if (require.main === module) {
     startServer();
-
-    // Also start the Telegram bot with better error handling
-    console.log('[DEBUG] Starting Telegram bot from server.js...');
-    try {
-        const path = require('path');
-        const botPath = path.join(__dirname, '..', 'bot.js');
-        console.log('[DEBUG] Loading bot from:', botPath);
-        require(botPath);
-        console.log('✅ Telegram bot module loaded successfully');
-    } catch (e) {
-        console.error('❌ Failed to load bot module:', e.message);
-    }
+    // Bot runs separately to avoid circular dependency
+    console.log('[INFO] Server started. Bot should be started separately via node bot.js');
 }
 
 // --- AI SYSTEM MONITOR ----------------------------------------------------

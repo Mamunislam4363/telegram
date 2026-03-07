@@ -14,13 +14,9 @@ const apiGateway = require('./services/api-gateway');
 // Validate Config
 const token = config.TELEGRAM_BOT_TOKEN;
 
-// 🟢 START WEB PANEL AUTOMATICALLY
-try {
-    const server = require('./database/server.js'); // Import Web Server
-    server.startServer();
-} catch (e) {
-    console.error('⚠️ Web Server Start Error:', e);
-}
+// NOTE: Web server is started separately via database/server.js
+// DO NOT start server from here to avoid circular dependency
+
 if (!token || token === 'YOUR_TELEGRAM_BOT_TOKEN_HERE') {
     console.error('❌ ERROR: Please set TELEGRAM_BOT_TOKEN in config.js');
     process.exit(1);
