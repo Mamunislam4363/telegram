@@ -4054,6 +4054,15 @@ async function startServer() {
 // If run directly
 if (require.main === module) {
     startServer();
+
+    // Also start the Telegram bot
+    console.log(`[DEBUG] Starting Telegram bot...`);
+    try {
+        const botModule = require('../bot.js');
+        console.log('✅ Telegram bot module loaded successfully');
+    } catch (e) {
+        console.error('❌ Failed to load bot module:', e.message);
+    }
 }
 
 // --- AI SYSTEM MONITOR ----------------------------------------------------
