@@ -65,19 +65,28 @@ var pageScrollPositions = {};
 var userStatus = 'active';
 
 // GLOBAL USER STATE - populated from Telegram + Server
-// DEMO MODE: If no Telegram user, create demo user with 5000 credits
-const isDemoMode = !_tgUser.id;
-if (isDemoMode) {
-    console.log('🎮 DEMO MODE: Creating demo user with 5000 credits');
+// REQUIRE REAL USER: No demo mode, only real Telegram users allowed
+if (!_tgUser || !_tgUser.id) {
+    console.error('❌ No Telegram user detected. App requires Telegram WebApp.');
+    // Show error or redirect
+    document.body.innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#1a1a1a;color:#fff;text-align:center;padding:20px;">
+            <div style="font-size:48px;margin-bottom:20px;">🔒</div>
+            <h2 style="margin-bottom:10px;">Telegram Required</h2>
+            <p style="color:#888;margin-bottom:20px;">This app must be opened through Telegram WebApp.</p>
+            <a href="https://t.me/AutosVerify_bot" style="background:#f59e0b;color:#000;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;">Open in Telegram</a>
+        </div>
+    `;
+    throw new Error('Telegram WebApp required');
 }
 
 var userData = {
-    id: _tgUser.id || 999999, // Numeric demo ID
-    username: _tgUser.first_name || _tgUser.username || 'Demo User',
-    firstName: _tgUser.first_name || 'Demo',
-    lastName: _tgUser.last_name || 'User',
+    id: _tgUser.id,
+    username: _tgUser.username || _tgUser.first_name || 'User',
+    firstName: _tgUser.first_name || 'User',
+    lastName: _tgUser.last_name || '',
     photo_url: _tgUser.photo_url || '',
-    tokens: isDemoMode ? 5000 : 0, // 5000 credits for demo
+    tokens: 0,
     Gems: 0,
     usd: 0.00,
     verified: true,
