@@ -228,9 +228,36 @@ bot.on('message', (msg) => {
     console.log(`[DEBUG] RAW MESSAGE RECEIVED from ${msg.from?.id}: ${msg.text}`);
 });
 
-// Global Error Handlers - silent
-process.on('unhandledRejection', (e) => { console.error('unhandledRejection:', e); });
-process.on('uncaughtException', (e) => { console.error('uncaughtException:', e); });
+// Global Error Handlers - improved for stability
+process.on('unhandledRejection', (e) => { 
+    console.error('[CRITICAL] unhandledRejection:', e);
+    // Keep bot alive even on errors
+});
+
+process.on('uncaughtException', (e) => { 
+    console.error('[CRITICAL] uncaughtException:', e);
+    // Log but don't crash - try to recover
+    setTimeout(() => {
+        console.log('[RECOVERY] Attempting to restart polling after crash...');
+        try {
+            bot.startPolling();
+        } catch (err) {
+            console.error('[RECOVERY FAILED] Could not restart polling:', err.message);
+        }
+    }, 5000);
+});
+
+// Keep-alive heartbeat to prevent Railway from killing the process
+setInterval(() => {
+    console.log(`[HEARTBEAT] Bot alive at ${new Date().toISOString()}`);
+}, 60000);
+
+// Graceful shutdown handling
+process.on('SIGTERM', () => {
+    console.log('[SHUTDOWN] SIGTERM received, stopping gracefully...');
+    bot.stopPolling();
+    process.exit(0);
+});
 
 // Manage State 
 const userState = {};

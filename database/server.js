@@ -2398,29 +2398,25 @@ app.delete('/api/admin/item-sales/:id', (req, res) => {
         db.save();
 
         return res.json({ success: true, message: 'Item deleted' });
-    } catch (e) {
-        return res.json({ success: false, message: e.message });
-    }
-});
+        // Duplicate database routes removed to resolve conflicts and prevent server restart loops.
+        // The primary implementations remain active at lines 252-288.
 
-// Duplicate database routes removed to resolve conflicts and prevent server restart loops.
-// The primary implementations remain active at lines 252-288.
-
-// API: Admin - Provider Management
-app.get('/api/admin/providers', (req, res) => {
-    const providers = db.data.providers || {};
-    // Hide real API keys partially
-    const list = Object.entries(providers).map(([id, p]) => ({
-        id: p.id || id,
+        // Health check endpoint for Railway and monitoring
+        app.get('/health', (req, res) => {
+            res.json({
+                status: 'ok',
+                timestamp: new Date().toISOString(),
+                uptime: process.uptime(),
+                firebase: db.data ? 'connected' : 'disconnected'
         name: p.name || 'Unknown',
-        type: p.type || 'sms',
-        apiUrl: p.apiUrl || '',
-        apiKey: '***' + (p.apiKey ? p.apiKey.slice(-4) : ''),
-        status: p.status || 'active',
-        priority: p.priority || 0
-    }));
-    res.json({ success: true, providers: list });
-});
+                type: p.type || 'sms',
+                apiUrl: p.apiUrl || '',
+                apiKey: '***' + (p.apiKey ? p.apiKey.slice(-4) : ''),
+                status: p.status || 'active',
+                priority: p.priority || 0
+            }));
+        res.json({ success: true, providers: list });
+    });
 
 app.post('/api/admin/providers', (req, res) => {
     const provider = req.body;
