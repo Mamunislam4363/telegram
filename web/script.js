@@ -2080,10 +2080,18 @@ function registerAndFetchUser() {
 // Fetch fresh balance from dedicated endpoint
 function fetchFreshBalance(userId) {
     console.log(`[DEBUG] Fetching fresh balance for ${userId}...`);
+
+    // Also show on-screen debug for mobile
+    showDebugInfo(`Fetching balance for ${userId}...`);
+
     fetch(`${API_BASE}/api/user/balance/${userId}`)
         .then(r => r.json())
         .then(data => {
             console.log(`[DEBUG] Balance API response:`, JSON.stringify(data, null, 2));
+
+            // Show on-screen debug
+            showDebugInfo(`API Response: ${JSON.stringify(data, null, 2).substring(0, 500)}`);
+
             if (data.success) {
                 const serverTokens = data.tokens ?? data.balance_tokens;
                 const serverGems = data.Gems ?? data.gems;
@@ -2091,6 +2099,9 @@ function fetchFreshBalance(userId) {
                 const serverInvites = data.invites ?? data.referralCount;
 
                 console.log(`[DEBUG] Fresh balance - tokens: ${serverTokens}, invites: ${serverInvites}`);
+
+                // Show on-screen debug
+                showDebugInfo(`Tokens: ${serverTokens}, Invites: ${serverInvites}`);
 
                 let updated = false;
                 if (serverTokens !== null && serverTokens !== undefined && serverTokens !== userData.tokens) {
@@ -2119,12 +2130,57 @@ function fetchFreshBalance(userId) {
                     if (currentPage === 'invite') {
                         loadInviteStats();
                     }
+
+                    // Show final values on screen
+                    showDebugInfo(`FINAL - Tokens: ${userData.tokens}, Invites: ${userData.invites}`);
                 }
             }
         })
         .catch(err => {
             console.error('[DEBUG] Balance API error:', err);
+            showDebugInfo(`API ERROR: ${err.message}`);
         });
+}
+
+// Debug overlay function - shows info on screen for mobile debugging
+function showDebugInfo(text) {
+    let debugEl = document.getElementById('debugOverlay');
+    if (!debugEl) {
+        debugEl = document.createElement('div');
+        debugEl.id = 'debugOverlay';
+        debugEl.style.cssText = `
+            position: fixed;
+            top: 100px;
+            left: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.9);
+            color: #0f0;
+            font-family: monospace;
+            font-size: 11px;
+            padding: 10px;
+            border-radius: 8px;
+            z-index: 99999;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            border: 2px solid #0f0;
+        `;
+        document.body.appendChild(debugEl);
+    }
+
+    const timestamp = new Date().toLocaleTimeString();
+    debugEl.textContent += `[${timestamp}] ${text}\n\n`;
+
+    // Auto-scroll to bottom
+    debugEl.scrollTop = debugEl.scrollHeight;
+
+    // Clear after 30 seconds
+    setTimeout(() => {
+        if (debugEl && debugEl.parentNode) {
+            debugEl.parentNode.removeChild(debugEl);
+        }
+    }, 30000);
 }
 
 // Legacy alias kept for compatibility
