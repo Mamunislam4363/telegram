@@ -679,6 +679,9 @@ app.post('/api/register', (req, res) => {
     // Migration/Fix: Ensure history exists and has welcome bonus if empty
     if (!user.history || user.history.length === 0) {
         const welcome = (typeof db.getWelcomeCredits === 'function') ? db.getWelcomeCredits() : 100;
+        // ACTUALLY ADD WELCOME BONUS TO USER BALANCE
+        const currentBalance = db.getTokenBalance(user);
+        db.setTokenBalance(user, currentBalance + welcome);
         user.history = [{
             type: 'bonus',
             amount: welcome,
@@ -3566,15 +3569,38 @@ app.post('/api/check-required-joins', async (req, res) => {
             }
         }
 
-        // If bot not available, allow access (fail-open for better UX)
+        // If bot not available, check from database user record
         if (!bot) {
+            // Check user's membership status from database
+            const user = db.getUser(userId);
+            const lastChecked = user?.lastMembershipCheck || 0;
+            const isRecent = (Date.now() - lastChecked) < (5 * 60 * 1000); // 5 minutes
+
+            if (isRecent && user?.membership) {
+                // Use cached membership data
+                const cachedChannel = user.membership.channel || false;
+                const cachedGroup = user.membership.group || false;
+                return res.json({
+                    success: true,
+                    allJoined: cachedChannel && cachedGroup,
+                    canProceed: cachedChannel && cachedGroup,
+                    channelJoined: cachedChannel,
+                    groupJoined: cachedGroup,
+                    channelLink: `https://t.me/${(config.REQUIRED_CHANNEL_NAME || '').replace('@', '')}`,
+                    groupLink: `https://t.me/${(config.REQUIRED_GROUP_NAME || '').replace('@', '')}`
+                });
+            }
+
+            // No cached data - block access for security
             return res.json({
                 success: true,
-                allJoined: true,
-                canProceed: true,
-                channelJoined: true,
-                groupJoined: true,
-                message: 'Bot not available - allowing access'
+                allJoined: false,
+                canProceed: false,
+                channelJoined: false,
+                groupJoined: false,
+                message: 'Verification required',
+                channelLink: `https://t.me/${(config.REQUIRED_CHANNEL_NAME || '').replace('@', '')}`,
+                groupLink: `https://t.me/${(config.REQUIRED_GROUP_NAME || '').replace('@', '')}`
             });
         }
 
@@ -3589,14 +3615,16 @@ app.post('/api/check-required-joins', async (req, res) => {
         });
     } catch (error) {
         console.error('[JOIN CHECK] Error:', error);
-        // Fail-open: allow access on error
+        // Fail-closed: block access on error for security
         res.json({
             success: true,
-            allJoined: true,
-            canProceed: true,
-            channelJoined: true,
-            groupJoined: true,
-            message: 'Error occurred - allowing access'
+            allJoined: false,
+            canProceed: false,
+            channelJoined: false,
+            groupJoined: false,
+            message: 'Verification required - please try again',
+            channelLink: `https://t.me/${(config.REQUIRED_CHANNEL_NAME || '').replace('@', '')}`,
+            groupLink: `https://t.me/${(config.REQUIRED_GROUP_NAME || '').replace('@', '')}`
         });
     }
 });
