@@ -2430,13 +2430,12 @@ function saveWallet() { renderBalances(); }
 
 function updateBalanceUI() { renderBalances(); }
 
-// Helper: Get short name (first 2 words max)
+// Helper: Get short name (first word only)
 function getShortName(fullName) {
     if (!fullName) return 'Guest';
     const parts = fullName.trim().split(/\s+/);
-    if (parts.length <= 2) return fullName;
-    // Return first 2 parts for long names like "Riad Al Mamun" -> "Riad Al"
-    return parts.slice(0, 2).join(' ');
+    // Return only first name/word to prevent long names from breaking layout
+    return parts[0] || 'Guest';
 }
 
 function renderBalances() {
