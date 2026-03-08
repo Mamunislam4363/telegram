@@ -80,6 +80,10 @@ if (!_tgUser || !_tgUser.id) {
     throw new Error('Telegram WebApp required');
 }
 
+// Show initial debug info
+showDebugInfo(`User ID: ${_tgUser.id}`);
+showDebugInfo(`API_BASE: ${API_BASE}`);
+
 var userData = {
     id: _tgUser.id,
     username: _tgUser.username || _tgUser.first_name || 'User',
