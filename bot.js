@@ -612,7 +612,7 @@ async function sendMainMenu(chatId, user, msgFrom) {
 
     // Welcome message matching screenshot style
     const welcomeText = `👋 *Hello, ${firstName}!*\n\n` +
-        `Welcome to Gemini Verified! 🚀\n\n` +
+        `Welcome to Auto Verified! 🚀\n\n` +
         `Launch our Mini App to start earning rewards, invite friends, and manage your assets.`;
 
     const appUrl = `${publicUrl}`;
