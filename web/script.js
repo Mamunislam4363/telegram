@@ -1353,17 +1353,36 @@ function showAdAndEarn(context = 'watch_ad') {
 
                 const runMonetag = () => {
                     try {
-                        window[`show_${zoneId}`]().then((event) => {
-                            // Monetag frontend callback is backend-confirmed
-                            if (event && (event.reward_event_type === 'valued' || event.event_type === 'impression')) {
-                                claimAdReward();
-                            } else {
-                                window.showToast('❌ Ad was shown but not monetized. No reward.');
+                        // Wait for SDK to be ready
+                        const checkSDK = setInterval(() => {
+                            if (!window[`show_${zoneId}`]) {
+                                console.log('Waiting for Monetag SDK...');
+                                return;
                             }
-                        }).catch(() => {
-                            window.showToast('❌ Ad was not completed. No reward.');
-                        });
+                            clearInterval(checkSDK);
+
+                            window[`show_${zoneId}`]().then((event) => {
+                                // Monetag frontend callback is backend-confirmed
+                                if (event && (event.reward_event_type === 'valued' || event.event_type === 'impression')) {
+                                    claimAdReward();
+                                } else {
+                                    window.showToast('❌ Ad was shown but not monetized. No reward.');
+                                }
+                            }).catch((err) => {
+                                console.error('Monetag show error:', err);
+                                window.showToast('❌ Ad was not completed. No reward.');
+                            });
+                        }, 500);
+
+                        // Timeout after 10 seconds
+                        setTimeout(() => {
+                            clearInterval(checkSDK);
+                            if (!window[`show_${zoneId}`]) {
+                                window.showToast('❌ Ad failed to initialize. Please try again later.');
+                            }
+                        }, 10000);
                     } catch (e) {
+                        console.error('Monetag runtime error:', e);
                         window.showToast('❌ Ad failed to start. Please try again.');
                     }
                 };
@@ -1377,12 +1396,18 @@ function showAdAndEarn(context = 'watch_ad') {
                     script.setAttribute('data-sdk', `show_${zoneId}`);
 
                     script.onload = () => {
-                        if (window[`show_${zoneId}`]) runMonetag();
-                        else window.showToast('❌ Ad failed to initialize. Please try again later.');
+                        // Give SDK time to initialize after script loads
+                        setTimeout(() => {
+                            if (window[`show_${zoneId}`]) {
+                                runMonetag();
+                            } else {
+                                window.showToast('❌ Ad SDK failed to initialize. Please try again later.');
+                            }
+                        }, 1000);
                     };
                     script.onerror = () => {
-                        console.log('Ad: Moneytag script failed');
-                        window.showToast('❌ Ad failed to load. Please try again later.');
+                        console.log('Ad: Moneytag script failed to load');
+                        window.showToast('❌ Ad network error. Please check your connection and try again.');
                     };
                     document.body.appendChild(script);
                 }
