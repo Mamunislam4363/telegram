@@ -498,7 +498,7 @@ bot.onText(/\/start/, async (msg) => {
         const user = db.getUser(userId);
 
         // Log user activity
-        originalConsoleLog(`👤 User: ${userId} (${username}) | 🚀 Started bot | ⏰ ${new Date().toLocaleTimeString()}`);
+        console.log(`👤 User: ${userId} (${username}) | 🚀 Started bot | ⏰ ${new Date().toLocaleTimeString()}`);
 
         // Referral Logic (Pending Verification)
         const refMatch = msg.text.split(' ')[1];
@@ -535,7 +535,10 @@ bot.onText(/\/start/, async (msg) => {
         await sendMainMenu(chatId, user, msg.from);
     } catch (e) {
         console.error('Error handling /start:', e);
-        bot.sendMessage(chatId, '❌ Bot error. Please try again in a moment.').catch(() => { });
+        const errorChatId = msg?.chat?.id;
+        if (errorChatId) {
+            bot.sendMessage(errorChatId, '❌ Bot error. Please try again in a moment.').catch(() => { });
+        }
     }
 });
 
@@ -970,7 +973,7 @@ bot.on('chat_member', async (update) => {
         if (newStatus === 'restricted' && update.new_chat_member.is_member) return; // Still member
 
         // User left or was kicked from a required chat - notify them
-        originalConsoleLog(`🚨 User ${userId} left monitored chat: ${chatUsername}`);
+        console.log(`🚨 User ${userId} left monitored chat: ${chatUsername}`);
 
         // Re-check full membership status
         const membership = await checkMembership(userId);
@@ -1010,7 +1013,7 @@ bot.on('callback_query', async (query) => {
         const username = query.from.username || query.from.first_name || 'Unknown';
 
         // Log user activity
-        originalConsoleLog(`👤 User: ${userId} (${username}) | 💬 Action: ${data} | ⏰ ${new Date().toLocaleTimeString()}`);
+        console.log(`👤 User: ${userId} (${username}) | 💬 Action: ${data} | ⏰ ${new Date().toLocaleTimeString()}`);
 
         // Ensure User Exists
         const user = db.getUser(userId);
