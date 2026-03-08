@@ -1979,7 +1979,7 @@ function registerAndFetchUser() {
                 userData.dailyStreak = data.dailyStreak || 0;
                 userData.lastDailyClaim = data.lastClaim || 0;
                 userData.completedTasks = data.completedTasks || [];
-                userData.invites = data.invites || 0;
+                userData.invites = (data.invites ?? userData.invites ?? 0);
                 // Use Telegram name (always fresh from Telegram)
                 userData.username = _tgUser.first_name || data.firstName || data.username || 'User';
                 userData.firstName = _tgUser.first_name || data.firstName || '';
