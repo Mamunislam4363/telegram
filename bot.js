@@ -221,6 +221,21 @@ console.log('📊 Activity: Bot is running and waiting for users...');
 
 bot.getMe().then(me => {
     console.log(`📊 Activity: Bot connected as @${me.username}`);
+    
+    // Set Menu Button (Mini App)
+    bot.setChatMenuButton({
+        menu_button: JSON.stringify({
+            type: 'web_app',
+            text: 'Verify Now',
+            web_app: {
+                url: config.MINI_APP_URL || 'https://autosverifybot-production.up.railway.app'
+            }
+        })
+    }).catch(err => {
+        // Silently log or handle menu button errors
+        // console.log(`[INFO] Menu button set error: ${err.message}`);
+    });
+
     if (!db.data.settings) db.data.settings = {};
     db.data.settings.botUsername = me.username;
     db.save();
