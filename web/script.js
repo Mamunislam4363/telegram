@@ -1972,9 +1972,9 @@ function registerAndFetchUser() {
         .then(data => {
             if (data.success) {
                 // Sync from server - check both tokens and balance_tokens fields
-                userData.tokens = data.tokens || data.balance_tokens || 0;
-                userData.Gems = data.Gems || data.gems || 0;
-                userData.usd = (data.usd !== undefined && data.usd !== null) ? data.usd : 0;
+                userData.tokens = (data.tokens ?? data.balance_tokens ?? userData.tokens ?? 0);
+                userData.Gems = (data.Gems ?? data.gems ?? userData.Gems ?? 0);
+                userData.usd = (data.usd ?? userData.usd ?? 0);
                 userData.verified = data.verified || false;
                 userData.dailyStreak = data.dailyStreak || 0;
                 userData.lastDailyClaim = data.lastClaim || 0;
