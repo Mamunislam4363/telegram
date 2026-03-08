@@ -14,10 +14,10 @@ module.exports = {
     ADMIN_ID: process.env.ADMIN_ID || '8125978050',
 
     // Admin Panel Password
-    ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'admin123',
+    ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'Mamunislam4363@',
 
     // Public URL for web panel (your domain or IP)
-    PUBLIC_URL: process.env.PUBLIC_URL || 'https://mamunislam.netlify.app', 
+    PUBLIC_URL: process.env.PUBLIC_URL || 'https://mamunislam.netlify.app',
 
     // OAUTH CONFIGURATION (FOR GMAIL SERVICE SYSTEM)
     GMAIL_CLIENT_ID: process.env.GMAIL_CLIENT_ID,

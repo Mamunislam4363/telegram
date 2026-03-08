@@ -550,8 +550,22 @@ bot.onText(/\/admin/, async (msg) => {
         return;
     }
 
+    // Check if admin login is enabled
+    const adminSettings = db.data?.adminSettings || {};
+    const loginEnabled = adminSettings.adminLoginEnabled !== false; // Default true
+
     const publicUrl = process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`;
-    const adminUrl = `${publicUrl}/admin`;
+
+    // If login is enabled, generate a secure token for this admin session
+    let adminUrl = `${publicUrl}/admin`;
+    if (loginEnabled) {
+        // Generate token via server module
+        const server = require('./database/server.js');
+        const token = server.generateAdminToken ? server.generateAdminToken() : null;
+        if (token) {
+            adminUrl = `${publicUrl}/admin?token=${token}&userId=${userId}`;
+        }
+    }
 
     const adminText = `👑 *Admin Panel Access*\n\n` +
         `Hello Admin *${username}*!\n\n` +
@@ -561,7 +575,8 @@ bot.onText(/\/admin/, async (msg) => {
         `• View analytics & stats\n` +
         `• Broadcast messages\n` +
         `• Configure settings\n\n` +
-        `*Admin ID:* \`${userId}\``;
+        `*Admin ID:* \`${userId}\`\n` +
+        `*Login Required:* ${loginEnabled ? '✅ Yes' : '❌ No'}`;
 
     const adminKeyboard = {
         reply_markup: {
@@ -573,7 +588,7 @@ bot.onText(/\/admin/, async (msg) => {
 
     try {
         await bot.sendMessage(chatId, adminText, { parse_mode: 'Markdown', ...adminKeyboard });
-        console.log(`[ADMIN] Admin ${username} (${userId}) accessed admin panel`);
+        console.log(`[ADMIN] Admin ${username} (${userId}) accessed admin panel. Login required: ${loginEnabled}`);
     } catch (e) {
         console.error('Error sending admin panel:', e);
     }

@@ -132,10 +132,25 @@ app.get('/admin', (req, res) => {
 
 // API: Admin Login Check
 app.post('/api/admin/login', (req, res) => {
-    const { password, token } = req.body;
+    const { password, token, userId } = req.body;
+
+    // Check if admin login is enabled
+    const adminSettings = db.data?.adminSettings || {};
+    const loginEnabled = adminSettings.adminLoginEnabled !== false; // Default true
+
+    // If login is disabled, allow access without password (but still verify admin ID)
+    if (!loginEnabled) {
+        // Verify the userId is an admin
+        const config = require('../config');
+        const isAdmin = String(userId) === String(config.ADMIN_ID) || config.ALLOWED_USER_IDS.includes(String(userId));
+        if (!isAdmin) {
+            return res.json({ success: false, message: 'Unauthorized access' });
+        }
+        return res.json({ success: true, token: 'admin-session-' + Date.now(), loginDisabled: true });
+    }
+
     // Token-based login (for bot auto-login)
     if (token) {
-        const validToken = generateAdminToken();
         // We check against stored pending tokens
         if (global._pendingAdminTokens && global._pendingAdminTokens[token] && Date.now() < global._pendingAdminTokens[token]) {
             delete global._pendingAdminTokens[token];
@@ -143,11 +158,34 @@ app.post('/api/admin/login', (req, res) => {
         }
         return res.json({ success: false, message: 'Invalid or expired token' });
     }
+
     // Password-based login
-    if (password === (config.ADMIN_PASSWORD || 'admin123')) {
+    if (password === (config.ADMIN_PASSWORD || 'Mamunislam4363@')) {
         res.json({ success: true, token: 'fake-jwt-token-' + Date.now() });
     } else {
         res.json({ success: false, message: 'Invalid password' });
+    }
+});
+
+// API: Get Admin Login Settings
+app.get('/api/admin/login-settings', (req, res) => {
+    const adminSettings = db.data?.adminSettings || {};
+    res.json({
+        success: true,
+        adminLoginEnabled: adminSettings.adminLoginEnabled !== false // Default true
+    });
+});
+
+// API: Update Admin Login Settings
+app.post('/api/admin/login-settings', (req, res) => {
+    try {
+        const { enabled } = req.body;
+        if (!db.data.adminSettings) db.data.adminSettings = {};
+        db.data.adminSettings.adminLoginEnabled = enabled === true;
+        db.save();
+        res.json({ success: true, adminLoginEnabled: db.data.adminSettings.adminLoginEnabled });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
     }
 });
 
@@ -1469,17 +1507,393 @@ app.get('/api/mail/inbox', async (req, res) => {
     }
 });
 
-// API: Admin - Get All Users
+// API: Check Required Joins for User
+app.post('/api/check-required-joins', async (req, res) => {
+    const { userId, channelId, groupId } = req.body;
+
+    if (!userId) {
+        return res.json({ success: false, message: 'userId required' });
+    }
+
+    try {
+        const user = db.getUser(userId);
+        if (!user) {
+            return res.json({ success: false, message: 'User not found' });
+        }
+
+        // Check if bot is available
+        if (!bot) {
+            return res.json({ success: true, canProceed: true, channelJoined: true, groupJoined: true });
+        }
+
+        const config = require('../config');
+        const requiredChannel = channelId || config.REQUIRED_CHANNEL || '@AutosVerify';
+        const requiredGroup = groupId || config.REQUIRED_GROUP || '@AutosVerifyCh';
+
+        let channelJoined = false;
+        let groupJoined = false;
+
+        try {
+            const channelMember = await bot.getChatMember(requiredChannel, userId);
+            const validStatuses = ['creator', 'administrator', 'member', 'restricted'];
+            channelJoined = validStatuses.includes(channelMember.status);
+        } catch (e) {
+            console.log(`[CHECK-JOINS] Channel check error: ${e.message}`);
+        }
+
+        try {
+            const groupMember = await bot.getChatMember(requiredGroup, userId);
+            const validStatuses = ['creator', 'administrator', 'member', 'restricted'];
+            groupJoined = validStatuses.includes(groupMember.status);
+        } catch (e) {
+            console.log(`[CHECK-JOINS] Group check error: ${e.message}`);
+        }
+
+        // Update user's verification status if both are joined
+        if (channelJoined && groupJoined) {
+            user.telegramVerified = true;
+            user.telegramVerifiedAt = Date.now();
+            db.updateUser(user);
+        }
+
+        res.json({
+            success: true,
+            canProceed: channelJoined && groupJoined,
+            channelJoined,
+            groupJoined,
+            telegramVerified: user.telegramVerified || false
+        });
+    } catch (e) {
+        console.error('[CHECK-JOINS] Error:', e);
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// API: Get Tasks (3-Task System: YouTube, Telegram Group, Telegram Channel)
+app.get('/api/tasks', (req, res) => {
+    const config = require('../config');
+    const tasks = [
+        {
+            id: 'youtube',
+            name: 'Subscribe to YouTube',
+            description: 'Watch ad, subscribe to YouTube channel, and claim reward',
+            reward: 50,
+            type: 'youtube',
+            url: 'https://youtube.com/@MamunIslamyts',
+            icon: 'fab fa-youtube',
+            color: '#ff0000',
+            requiresAd: true,
+            requiresVerification: true
+        },
+        {
+            id: 'telegram_group',
+            name: 'Join Telegram Group',
+            description: 'Watch ad, join Telegram group, verify membership, and claim reward',
+            reward: 30,
+            type: 'tg',
+            url: `https://t.me/${(config.REQUIRED_GROUP_NAME || 'AutosVerifyCh').replace('@', '')}`,
+            icon: 'fab fa-telegram',
+            color: '#229ed9',
+            requiresAd: true,
+            requiresVerification: true,
+            channelUsername: config.REQUIRED_GROUP || '@AutosVerifyCh'
+        },
+        {
+            id: 'telegram_channel',
+            name: 'Join Telegram Channel',
+            description: 'Watch ad, join Telegram channel, verify membership, and claim reward',
+            reward: 30,
+            type: 'tg_ch',
+            url: `https://t.me/${(config.REQUIRED_CHANNEL_NAME || 'AutosVerify').replace('@', '')}`,
+            icon: 'fab fa-telegram',
+            color: '#229ed9',
+            requiresAd: true,
+            requiresVerification: true,
+            channelUsername: config.REQUIRED_CHANNEL || '@AutosVerify'
+        }
+    ];
+
+    res.json({ success: true, tasks });
+});
+
+// API: Claim Task Reward (with ad watched verification)
+app.post('/api/tasks/claim', async (req, res) => {
+    const { userId, taskId, adWatched } = req.body;
+
+    if (!userId || !taskId) {
+        return res.json({ success: false, message: 'Missing parameters' });
+    }
+
+    const user = db.getUser(userId);
+    if (!user) {
+        return res.json({ success: false, message: 'User not found' });
+    }
+
+    // Check if ad was watched
+    if (!adWatched) {
+        return res.json({ success: false, message: 'Please watch the ad first' });
+    }
+
+    // Check if task already completed
+    if (!user.completedTasks) user.completedTasks = [];
+    if (user.completedTasks.includes(taskId)) {
+        return res.json({ success: false, message: 'Task already completed' });
+    }
+
+    // Verify task requirements based on type
+    const config = require('../config');
+    let verified = false;
+
+    try {
+        if (taskId === 'telegram_group' || taskId === 'tg') {
+            const member = await bot.getChatMember(config.REQUIRED_GROUP, userId);
+            const validStatuses = ['creator', 'administrator', 'member', 'restricted'];
+            verified = validStatuses.includes(member.status);
+        } else if (taskId === 'telegram_channel' || taskId === 'tg_ch') {
+            const member = await bot.getChatMember(config.REQUIRED_CHANNEL, userId);
+            const validStatuses = ['creator', 'administrator', 'member', 'restricted'];
+            verified = validStatuses.includes(member.status);
+        } else if (taskId === 'youtube') {
+            // YouTube verification - for now accept if ad was watched
+            verified = true;
+        }
+    } catch (e) {
+        console.error(`[TASK-CLAIM] Verification error: ${e.message}`);
+    }
+
+    if (!verified && (taskId.includes('telegram') || taskId === 'tg' || taskId === 'tg_ch')) {
+        return res.json({
+            success: false,
+            message: 'Please join the required Telegram group/channel first',
+            needsVerification: true
+        });
+    }
+
+    // Get reward amount based on task
+    const taskRewards = {
+        youtube: 50,
+        telegram_group: 30,
+        telegram_channel: 30,
+        tg: 30,
+        tg_ch: 30
+    };
+
+    const reward = taskRewards[taskId] || 10;
+
+    // Mark task complete and give tokens
+    user.completedTasks.push(taskId);
+    db.setTokenBalance(user, db.getTokenBalance(user) + reward);
+
+    // Add to history
+    if (!user.history) user.history = [];
+    user.history.unshift({
+        type: 'task_reward',
+        amount: reward,
+        currency: 'tokens',
+        taskId: taskId,
+        date: Date.now(),
+        detail: `Completed task: ${taskId}`
+    });
+
+    db.updateUser(user);
+
+    res.json({
+        success: true,
+        reward: reward,
+        newBalance: db.getTokenBalance(user),
+        message: `Task completed! +${reward} tokens`
+    });
+});
+
+// API: Check Ad Watch Status (for clean/claim functionality)
+app.post('/api/ad/check-status', (req, res) => {
+    const { userId, context } = req.body;
+
+    if (!userId) {
+        return res.json({ success: false, message: 'userId required' });
+    }
+
+    const user = db.getUser(userId);
+    if (!user) {
+        return res.json({ success: false, message: 'User not found' });
+    }
+
+    // Check if user has watched ad recently (within 5 minutes)
+    const lastAdWatch = user.lastAdWatch || 0;
+    const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+    const canClaim = lastAdWatch > fiveMinutesAgo;
+
+    res.json({
+        success: true,
+        canClaim: canClaim,
+        lastAdWatch: lastAdWatch,
+        message: canClaim ? 'You can claim your reward!' : 'Please watch the ad first'
+    });
+});
+
+// API: Mark Ad as Watched
+app.post('/api/ad/watch', (req, res) => {
+    const { userId, context } = req.body;
+
+    if (!userId) {
+        return res.json({ success: false, message: 'userId required' });
+    }
+
+    const user = db.getUser(userId);
+    if (!user) {
+        return res.json({ success: false, message: 'User not found' });
+    }
+
+    // Mark ad as watched
+    user.lastAdWatch = Date.now();
+    user.adWatchContext = context || 'general';
+    db.updateUser(user);
+
+    res.json({
+        success: true,
+        message: 'Ad marked as watched. You can now claim your reward!',
+        canClaim: true
+    });
+});
+
+// API: Get Referral Info
+app.get('/api/referral/:userId', (req, res) => {
+    const userId = req.params.userId;
+    const user = db.getUser(userId);
+
+    if (!user) {
+        return res.json({ success: false, message: 'User not found' });
+    }
+
+    // Get referred users list with verification status
+    const referredUsers = user.referredUsers || [];
+    const verifiedReferrals = referredUsers.filter(r => r.verified || r.rewarded).length;
+
+    res.json({
+        success: true,
+        referralCount: user.referralCount || 0,
+        verifiedReferrals: verifiedReferrals,
+        totalReferrals: referredUsers.length,
+        referralLink: `https://t.me/${config.BOT_USERNAME || 'AutosVerify_bot'}?start=ref_${userId}`,
+        referredUsers: referredUsers.map(r => ({
+            userId: r.userId,
+            date: r.date,
+            verified: r.verified || r.rewarded || false
+        }))
+    });
+});
+
+// API: Verify Referral (when invited user completes requirements)
+app.post('/api/referral/verify', async (req, res) => {
+    const { userId, referrerId } = req.body;
+
+    if (!userId || !referrerId) {
+        return res.json({ success: false, message: 'Missing parameters' });
+    }
+
+    const user = db.getUser(userId);
+    const referrer = db.getUser(referrerId);
+
+    if (!user || !referrer) {
+        return res.json({ success: false, message: 'User not found' });
+    }
+
+    // Check if user has completed requirements (joined Telegram)
+    let verified = false;
+    try {
+        const config = require('../config');
+        const [channelMember, groupMember] = await Promise.all([
+            bot.getChatMember(config.REQUIRED_CHANNEL, userId).catch(() => null),
+            bot.getChatMember(config.REQUIRED_GROUP, userId).catch(() => null)
+        ]);
+
+        const validStatuses = ['creator', 'administrator', 'member', 'restricted'];
+        const inChannel = channelMember && validStatuses.includes(channelMember.status);
+        const inGroup = groupMember && validStatuses.includes(groupMember.status);
+
+        verified = inChannel && inGroup;
+    } catch (e) {
+        console.error('[REFERRAL-VERIFY] Error:', e);
+    }
+
+    if (verified) {
+        // Update referral status
+        if (!referrer.referredUsers) referrer.referredUsers = [];
+        const refIndex = referrer.referredUsers.findIndex(r => r.userId === String(userId));
+
+        if (refIndex !== -1 && !referrer.referredUsers[refIndex].verified) {
+            referrer.referredUsers[refIndex].verified = true;
+            referrer.referredUsers[refIndex].verifiedAt = Date.now();
+
+            // Give bonus for verified referral
+            const refBonus = (db.data.settings && db.data.settings.refBonus) || 50;
+            db.setTokenBalance(referrer, db.getTokenBalance(referrer) + refBonus);
+
+            referrer.history.unshift({
+                type: 'referral_verified',
+                amount: refBonus,
+                currency: 'tokens',
+                date: Date.now(),
+                details: `Verified referral from user #${userId}`
+            });
+
+            db.updateUser(referrer);
+
+            // Notify referrer
+            bot.sendMessage(referrerId,
+                `🎉 *Referral Verified!*\n\n` +
+                `User ${user.firstName || userId} has joined and verified!\n` +
+                `💰 +${refBonus} Tokens added to your balance!`,
+                { parse_mode: 'Markdown' }
+            ).catch(() => { });
+        }
+
+        res.json({ success: true, verified: true, message: 'Referral verified successfully' });
+    } else {
+        res.json({
+            success: false,
+            verified: false,
+            message: 'User has not completed all requirements yet'
+        });
+    }
+});
+
+// API: Get User Verification Status
+app.get('/api/user/:userId/verification', (req, res) => {
+    const userId = req.params.userId;
+    const user = db.getUser(userId);
+
+    if (!user) {
+        return res.json({ success: false, message: 'User not found' });
+    }
+
+    res.json({
+        success: true,
+        userId: userId,
+        telegramVerified: user.telegramVerified || false,
+        verifiedAt: user.telegramVerifiedAt || null,
+        completedTasks: user.completedTasks || [],
+        referralCount: user.referralCount || 0,
+        verifiedReferrals: (user.referredUsers || []).filter(r => r.verified).length
+    });
+});
+
+// API: Admin - Get All Users with Verification Status
 app.get('/api/admin/users', (req, res) => {
     const users = getUsersObj();
     const list = Object.entries(users).map(([id, u]) => ({
-        id, username: u.username || 'Unknown', firstName: u.firstName || u.first_name || '',
+        id,
+        username: u.username || 'Unknown',
+        firstName: u.firstName || u.first_name || '',
         tokens: u.tokens || u.balance_tokens || 0,
         invites: u.invites || u.referralCount || 0,
-        verified: u.verified || false,
+        verified: u.successfulVerifications > 0 || u.verified || false,
         adminVerified: u.adminVerified || false,
+        telegramVerified: u.telegramVerified || false,
         banned: u.banned || u.blocked || false,
-        joinDate: u.joinDate || u.joinedAt || null, lastActive: u.lastActive || null
+        joinDate: u.joinDate || u.joinedAt || null,
+        lastActive: u.lastActive || null,
+        verifiedReferrals: (u.referredUsers || []).filter(r => r.verified).length
     }));
     res.json({ success: true, users: list, total: list.length });
 });
@@ -1887,14 +2301,25 @@ app.get('/api/admin/stats', (req, res) => {
         Object.values(db.data.cards).forEach(arr => totalCards += (arr ? arr.length : 0));
     }
 
-    // Count generated Gmails (from user transaction history or a general metric)
+    // Count generated Gmails (from user transaction history)
     let gmailsUsed = 0;
+    let tempEmailsGenerated = 0;
     usersList.forEach(u => {
         if (u.history) {
             u.history.forEach(h => {
-                if (h.type === 'email' || h.type === 'gmail' || h.type === 'mail') gmailsUsed++;
+                if (h.type === 'email' || h.type === 'gmail' || h.type === 'mail') {
+                    gmailsUsed++;
+                    tempEmailsGenerated++;
+                }
             });
         }
+    });
+
+    // Get available email sessions count from database
+    const mailSessionsCount = Object.keys(db.data.mailSessions || {}).length;
+    const activeEmailUsers = new Set();
+    Object.values(db.data.mailSessions || {}).forEach(session => {
+        if (session.userId) activeEmailUsers.add(session.userId);
     });
 
     res.json({
@@ -1908,6 +2333,9 @@ app.get('/api/admin/stats', (req, res) => {
         totalVpns,
         totalCards,
         gmailsUsed,
+        tempEmailsGenerated,
+        mailSessionsCount,
+        activeEmailUsers: activeEmailUsers.size,
         stats: {
             totalUsers: usersList.length,
             activeUsers: active,
@@ -1918,6 +2346,9 @@ app.get('/api/admin/stats', (req, res) => {
             totalVpns,
             totalCards,
             gmailsUsed,
+            tempEmailsGenerated,
+            mailSessionsCount,
+            activeEmailUsers: activeEmailUsers.size,
             dbSize: (fs.existsSync(db.DB_FILE) ? (fs.statSync(db.DB_FILE).size / 1024).toFixed(2) : 0) + ' KB'
         }
     });
@@ -3337,12 +3768,13 @@ app.get('/api/admin/ads', (req, res) => {
 });
 
 app.post('/api/admin/ads', (req, res) => {
-    const { network, publisherId, adUnitId, enabled } = req.body;
+    const { network, publisherId, adUnitId, directLink, enabled } = req.body;
     if (!network) return res.json({ success: false, message: 'Network required' });
     if (!db.data.adSettings) db.data.adSettings = {};
     db.data.adSettings[network] = {
         publisherId: publisherId || '',
         adUnitId: adUnitId || '',
+        directLink: directLink || '',
         enabled: enabled !== false
     };
     db.save();

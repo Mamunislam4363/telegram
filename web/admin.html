@@ -1080,6 +1080,43 @@
                                 </div>
                             </div>
 
+                            <!-- Activity Limits -->
+                            <div
+                                class="space-y-3 col-span-1 md:col-span-2 lg:col-span-1 border border-white/10 rounded-xl p-4 bg-black/20">
+                                <h4 class="text-sm font-semibold text-yellow-400 border-b border-white/10 pb-2 mb-3">
+                                    Activity Limits (Earn Section)</h4>
+                                <div class="grid grid-cols-1 gap-3">
+                                    <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Quiz Daily
+                                            Limit</label><input type="number" id="conf-quiz-limit"
+                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
+                                    </div>
+                                    <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Quiz
+                                            Recovery (hours)</label><input type="number" id="conf-quiz-recovery"
+                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
+                                    </div>
+                                    <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Scratch
+                                            Daily Limit</label><input type="number" id="conf-scratch-limit"
+                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
+                                    </div>
+                                    <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Scratch
+                                            Recovery (hours)</label><input type="number" id="conf-scratch-recovery"
+                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
+                                    </div>
+                                    <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Watch Ad
+                                            Daily Limit</label><input type="number" id="conf-ad-limit"
+                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
+                                    </div>
+                                    <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Watch Ad
+                                            Recovery (hours)</label><input type="number" id="conf-ad-recovery"
+                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
+                                    </div>
+                                    <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Ad
+                                            Cooldown (seconds)</label><input type="number" id="conf-ad-cooldown"
+                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- System Costs -->
                             <div
                                 class="space-y-3 col-span-1 md:col-span-2 lg:col-span-3 border border-white/10 rounded-xl p-4 bg-black/20">
@@ -1624,7 +1661,7 @@
                                     <label class="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" id="gf-welcome" class="sr-only peer" checked>
                                         <div
-                                            class="w-9 h-5 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500">
+                                            class="w-9 h-5 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500">
                                         </div>
                                     </label>
                                 </div>
@@ -1633,7 +1670,7 @@
                                     <label class="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" id="gf-antispam" class="sr-only peer" checked>
                                         <div
-                                            class="w-9 h-5 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500">
+                                            class="w-9 h-5 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500">
                                         </div>
                                     </label>
                                 </div>
@@ -1642,7 +1679,7 @@
                                     <label class="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" id="gf-verify" class="sr-only peer">
                                         <div
-                                            class="w-9 h-5 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500">
+                                            class="w-9 h-5 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500">
                                         </div>
                                     </label>
                                 </div>
@@ -1651,7 +1688,7 @@
                                     <label class="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" id="gf-autodelete" class="sr-only peer" checked>
                                         <div
-                                            class="w-9 h-5 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500">
+                                            class="w-9 h-5 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500">
                                         </div>
                                     </label>
                                 </div>
@@ -1816,6 +1853,12 @@
                                 <input id="ad-moneytag-unit" type="text" placeholder="e.g. 123456"
                                     class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white focus:border-green-500 outline-none">
                             </div>
+                            <div>
+                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Direct
+                                    Link</label>
+                                <input id="ad-moneytag-direct" type="text" placeholder="https://..."
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white focus:border-green-500 outline-none">
+                            </div>
                             <p class="text-xs text-gray-500">Interstitial / OnClick ad will show when user
                                 taps
                                 WATCH.
@@ -1907,7 +1950,7 @@
                                 <input id="ad-adsterra-unit" type="text" placeholder="e.g. abcdef1234567890"
                                     class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white focus:border-purple-500 outline-none">
                             </div>
-                            <p class="text-xs text-gray-500">Social Bar / Banner will display in the WATCH
+                            <p class="text-xs text-gray-500 mt-2">Social Bar / Banner will display in the WATCH
                                 section.</p>
                             <button onclick="saveAdNetwork('adsterra')"
                                 class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-2.5 rounded-xl transition-all">
@@ -1983,7 +2026,7 @@
                 <div class="glass-card p-6 rounded-2xl mt-6">
                     <div class="flex items-center justify-between mb-4">
                         <div>
-                            <h4 class="font-bold text-lg flex items-center gap-2">
+                            <h4 class="text-lg font-bold flex items-center gap-2">
                                 <i class="fas fa-envelope text-pink-400"></i> Premium Email Management
                             </h4>
                             <p class="text-sm text-gray-400">Import and manage premium email accounts. Users can select
@@ -2151,7 +2194,8 @@
                             <h3 class="font-bold text-lg flex items-center gap-2">
                                 <i class="fas fa-users-cog text-green-400"></i> Group Management
                             </h3>
-                            <p class="text-sm text-gray-400">Configure auto-delete settings for group system messages</p>
+                            <p class="text-sm text-gray-400">Configure auto-delete settings for group system messages
+                            </p>
                         </div>
                         <button onclick="saveGroupManagementSettings()"
                             class="gold-gradient px-4 py-2 rounded-xl font-bold text-sm">Save Settings</button>
@@ -2172,7 +2216,9 @@
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" id="gm_autoDeleteSystemMessages" class="sr-only peer" checked>
-                                <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                                <div
+                                    class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500">
+                                </div>
                             </label>
                         </div>
                     </div>
@@ -2187,14 +2233,18 @@
                                 <div class="text-sm">Delete Join Messages</div>
                                 <label class="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" id="gm_deleteJoinMessages" class="sr-only peer" checked>
-                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                                    <div
+                                        class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500">
+                                    </div>
                                 </label>
                             </div>
                             <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
                                 <div class="text-sm">Delete Leave Messages</div>
                                 <label class="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" id="gm_deleteLeaveMessages" class="sr-only peer" checked>
-                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                                    <div
+                                        class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500">
+                                    </div>
                                 </label>
                             </div>
                         </div>
@@ -2210,21 +2260,27 @@
                                 <div class="text-sm">Delete Title Changes</div>
                                 <label class="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" id="gm_deleteTitleChanged" class="sr-only peer">
-                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-yellow-500"></div>
+                                    <div
+                                        class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-yellow-500">
+                                    </div>
                                 </label>
                             </div>
                             <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
                                 <div class="text-sm">Delete Photo Changes</div>
                                 <label class="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" id="gm_deleteGroupPhotoChanged" class="sr-only peer">
-                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-yellow-500"></div>
+                                    <div
+                                        class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-yellow-500">
+                                    </div>
                                 </label>
                             </div>
                             <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
                                 <div class="text-sm">Delete Pinned Messages</div>
                                 <label class="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" id="gm_deletePinMessages" class="sr-only peer">
-                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-yellow-500"></div>
+                                    <div
+                                        class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-yellow-500">
+                                    </div>
                                 </label>
                             </div>
                         </div>
@@ -2240,14 +2296,18 @@
                                 <div class="text-sm">Delete Video Chat Started</div>
                                 <label class="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" id="gm_deleteVideoChatStarted" class="sr-only peer">
-                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
+                                    <div
+                                        class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500">
+                                    </div>
                                 </label>
                             </div>
                             <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
                                 <div class="text-sm">Delete Video Chat Ended</div>
                                 <label class="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" id="gm_deleteVideoChatEnded" class="sr-only peer">
-                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
+                                    <div
+                                        class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500">
+                                    </div>
                                 </label>
                             </div>
                         </div>
@@ -2260,7 +2320,8 @@
                         <i class="fas fa-info-circle text-blue-400 mt-1"></i>
                         <div>
                             <h4 class="font-bold mb-2">How It Works</h4>
-                            <p class="text-sm text-gray-400">When enabled, the bot will automatically delete system messages in groups where it has <b>Delete Messages</b> admin permission.</p>
+                            <p class="text-sm text-gray-400">When enabled, the bot will automatically delete system
+                                messages in groups where it has <b>Delete Messages</b> admin permission.</p>
                         </div>
                     </div>
                 </div>
@@ -2594,6 +2655,14 @@
                     document.getElementById('conf-adreward').value = c.adReward || 0;
                     if (document.getElementById('conf-zerobalance-adreward')) document.getElementById('conf-zerobalance-adreward').value = c.zeroBalanceAdReward || 5;
                     document.getElementById('conf-taskreward').value = c.taskReward || 0;
+                    // Activity Limits
+                    if (document.getElementById('conf-quiz-limit')) document.getElementById('conf-quiz-limit').value = c.quizLimit || 5;
+                    if (document.getElementById('conf-quiz-recovery')) document.getElementById('conf-quiz-recovery').value = c.quizRecoveryHours || 1;
+                    if (document.getElementById('conf-scratch-limit')) document.getElementById('conf-scratch-limit').value = c.scratchLimit || 5;
+                    if (document.getElementById('conf-scratch-recovery')) document.getElementById('conf-scratch-recovery').value = c.scratchRecoveryHours || 1;
+                    if (document.getElementById('conf-ad-limit')) document.getElementById('conf-ad-limit').value = c.adLimit || 50;
+                    if (document.getElementById('conf-ad-recovery')) document.getElementById('conf-ad-recovery').value = c.adRecoveryHours || 24;
+                    if (document.getElementById('conf-ad-cooldown')) document.getElementById('conf-ad-cooldown').value = c.adCooldownSeconds || 5;
                     // System Costs
                     if (document.getElementById('conf-premium-email-cost')) document.getElementById('conf-premium-email-cost').value = c.premiumEmailCost || 0;
                     // Fees
@@ -2655,7 +2724,7 @@
                     document.getElementById('reward-telegram').value = sr.telegram || 0;
                     document.getElementById('reward-discord').value = sr.discord || 0;
                     document.getElementById('reward-other').value = sr.other || 0;
-                    document.getElementById('reward-2fa-mult').value = sr['2faMultiplier'] || 1.5;
+                    document.getElementById('reward-2fa-mult').value = sr['2faMultiplier'] || 1.1;
                 }
             } catch (e) {
                 console.error('Failed to load costs:', e);
@@ -2671,6 +2740,14 @@
                 adReward: parseInt(document.getElementById('conf-adreward').value) || 0,
                 zeroBalanceAdReward: document.getElementById('conf-zerobalance-adreward') ? (parseInt(document.getElementById('conf-zerobalance-adreward').value) || 0) : undefined,
                 taskReward: parseInt(document.getElementById('conf-taskreward').value) || 0,
+                // Activity Limits
+                quizLimit: parseInt(document.getElementById('conf-quiz-limit').value) || 5,
+                quizRecoveryHours: parseInt(document.getElementById('conf-quiz-recovery').value) || 1,
+                scratchLimit: parseInt(document.getElementById('conf-scratch-limit').value) || 5,
+                scratchRecoveryHours: parseInt(document.getElementById('conf-scratch-recovery').value) || 1,
+                adLimit: parseInt(document.getElementById('conf-ad-limit').value) || 50,
+                adRecoveryHours: parseInt(document.getElementById('conf-ad-recovery').value) || 24,
+                adCooldownSeconds: parseInt(document.getElementById('conf-ad-cooldown').value) || 5,
                 // System Costs
                 premiumEmailCost: document.getElementById('conf-premium-email-cost') ? parseInt(document.getElementById('conf-premium-email-cost').value) || 0 : undefined,
                 transferFee: parseInt(document.getElementById('conf-transfer').value) || 0,
@@ -2952,9 +3029,11 @@
                         const cfg = ads[net] || {};
                         const pubEl = document.getElementById('ad-' + net + '-publisher');
                         const unitEl = document.getElementById('ad-' + net + '-unit');
+                        const directEl = document.getElementById('ad-' + net + '-direct');
                         const enEl = document.getElementById('ad-' + net + '-enabled');
                         if (pubEl) pubEl.value = cfg.publisherId || '';
                         if (unitEl) unitEl.value = cfg.adUnitId || '';
+                        if (directEl) directEl.value = cfg.directLink || '';
                         if (enEl) enEl.checked = cfg.enabled !== false;
                     });
                     // Preview
@@ -2969,6 +3048,7 @@
                                         <span class="font-bold text-white capitalize">${net}</span>
                                         <span class="text-gray-400">Publisher: <code class="text-yellow-400">${cfg.publisherId || '-'}</code></span>
                                         <span class="text-gray-400">Unit: <code class="text-blue-400">${cfg.adUnitId || '-'}</code></span>
+                                        <span class="text-gray-400">Direct Link: <code class="text-green-400">${cfg.directLink || '-'}</code></span>
                                         <span class="ml-auto px-2 py-0.5 rounded text-xs font-bold ${cfg.enabled ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">${cfg.enabled ? 'ENABLED' : 'DISABLED'}</span>
                                     </div>`
                             ).join('');
@@ -2980,6 +3060,8 @@
         function saveAdNetwork(network) {
             const publisherId = document.getElementById('ad-' + network + '-publisher').value.trim();
             const adUnitId = document.getElementById('ad-' + network + '-unit').value.trim();
+            const directLinkEl = document.getElementById('ad-' + network + '-direct');
+            const directLink = directLinkEl ? directLinkEl.value.trim() : '';
             const enabled = document.getElementById('ad-' + network + '-enabled').checked;
             const statusEl = document.getElementById('ad-' + network + '-status');
             statusEl.textContent = 'Saving...';
@@ -2987,7 +3069,7 @@
             fetch('/api/admin/ads', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ network, publisherId, adUnitId, enabled })
+                body: JSON.stringify({ network, publisherId, adUnitId, directLink, enabled })
             }).then(r => r.json()).then(data => {
                 if (data.success) {
                     statusEl.textContent = '✅ Saved successfully!';
@@ -2997,7 +3079,6 @@
                     statusEl.textContent = '❌ Error saving';
                     statusEl.style.color = '#f87171';
                 }
-                setTimeout(() => { statusEl.textContent = ''; }, 3000);
             }).catch(() => {
                 statusEl.textContent = '❌ Network error';
                 statusEl.style.color = '#f87171';
@@ -4718,62 +4799,62 @@ Admins can use /settings command in the group to manage settings.`);
                 alert('Network error deleting provider');
             }
 
-        // ==================== GROUP MANAGEMENT ====================
-        async function loadGroupManagementSettings() {
-            try {
-                const res = await fetch('/api/admin/group-management');
-                const data = await res.json();
-                
-                if (data.success && data.settings) {
-                    const s = data.settings;
-                    document.getElementById('gm_autoDeleteSystemMessages').checked = s.autoDeleteSystemMessages !== false;
-                    document.getElementById('gm_deleteJoinMessages').checked = s.deleteJoinMessages !== false;
-                    document.getElementById('gm_deleteLeaveMessages').checked = s.deleteLeaveMessages !== false;
-                    document.getElementById('gm_deleteTitleChanged').checked = s.deleteTitleChanged === true;
-                    document.getElementById('gm_deleteGroupPhotoChanged').checked = s.deleteGroupPhotoChanged === true;
-                    document.getElementById('gm_deletePinMessages').checked = s.deletePinMessages === true;
-                    document.getElementById('gm_deleteVideoChatStarted').checked = s.deleteVideoChatStarted === true;
-                    document.getElementById('gm_deleteVideoChatEnded').checked = s.deleteVideoChatEnded === true;
-                }
-            } catch (e) {
-                console.error('Error loading group management settings:', e);
-            }
-        }
+            // ==================== GROUP MANAGEMENT ====================
+            async function loadGroupManagementSettings() {
+                try {
+                    const res = await fetch('/api/admin/group-management');
+                    const data = await res.json();
 
-        async function saveGroupManagementSettings() {
-            const statusEl = document.getElementById('groupManagementStatus');
-            if (statusEl) statusEl.textContent = 'Saving...';
-            
-            const settings = {
-                autoDeleteSystemMessages: document.getElementById('gm_autoDeleteSystemMessages').checked,
-                deleteJoinMessages: document.getElementById('gm_deleteJoinMessages').checked,
-                deleteLeaveMessages: document.getElementById('gm_deleteLeaveMessages').checked,
-                deleteTitleChanged: document.getElementById('gm_deleteTitleChanged').checked,
-                deleteGroupPhotoChanged: document.getElementById('gm_deleteGroupPhotoChanged').checked,
-                deletePinMessages: document.getElementById('gm_deletePinMessages').checked,
-                deleteVideoChatStarted: document.getElementById('gm_deleteVideoChatStarted').checked,
-                deleteVideoChatEnded: document.getElementById('gm_deleteVideoChatEnded').checked
-            };
-            
-            try {
-                const res = await fetch('/api/admin/group-management', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(settings)
-                });
-                
-                const data = await res.json();
-                
-                if (data.success) {
-                    if (statusEl) statusEl.textContent = 'Settings saved successfully!';
-                    setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 3000);
-                } else {
-                    if (statusEl) statusEl.textContent = 'Error: ' + (data.message || 'Failed to save');
+                    if (data.success && data.settings) {
+                        const s = data.settings;
+                        document.getElementById('gm_autoDeleteSystemMessages').checked = s.autoDeleteSystemMessages !== false;
+                        document.getElementById('gm_deleteJoinMessages').checked = s.deleteJoinMessages !== false;
+                        document.getElementById('gm_deleteLeaveMessages').checked = s.deleteLeaveMessages !== false;
+                        document.getElementById('gm_deleteTitleChanged').checked = s.deleteTitleChanged === true;
+                        document.getElementById('gm_deleteGroupPhotoChanged').checked = s.deleteGroupPhotoChanged === true;
+                        document.getElementById('gm_deletePinMessages').checked = s.deletePinMessages === true;
+                        document.getElementById('gm_deleteVideoChatStarted').checked = s.deleteVideoChatStarted === true;
+                        document.getElementById('gm_deleteVideoChatEnded').checked = s.deleteVideoChatEnded === true;
+                    }
+                } catch (e) {
+                    console.error('Error loading group management settings:', e);
                 }
-            } catch (e) {
-                if (statusEl) statusEl.textContent = 'Network error saving settings';
             }
-        }
+
+            async function saveGroupManagementSettings() {
+                const statusEl = document.getElementById('groupManagementStatus');
+                if (statusEl) statusEl.textContent = 'Saving...';
+
+                const settings = {
+                    autoDeleteSystemMessages: document.getElementById('gm_autoDeleteSystemMessages').checked,
+                    deleteJoinMessages: document.getElementById('gm_deleteJoinMessages').checked,
+                    deleteLeaveMessages: document.getElementById('gm_deleteLeaveMessages').checked,
+                    deleteTitleChanged: document.getElementById('gm_deleteTitleChanged').checked,
+                    deleteGroupPhotoChanged: document.getElementById('gm_deleteGroupPhotoChanged').checked,
+                    deletePinMessages: document.getElementById('gm_deletePinMessages').checked,
+                    deleteVideoChatStarted: document.getElementById('gm_deleteVideoChatStarted').checked,
+                    deleteVideoChatEnded: document.getElementById('gm_deleteVideoChatEnded').checked
+                };
+
+                try {
+                    const res = await fetch('/api/admin/group-management', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(settings)
+                    });
+
+                    const data = await res.json();
+
+                    if (data.success) {
+                        if (statusEl) statusEl.textContent = 'Settings saved successfully!';
+                        setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 3000);
+                    } else {
+                        if (statusEl) statusEl.textContent = 'Error: ' + (data.message || 'Failed to save');
+                    }
+                } catch (e) {
+                    if (statusEl) statusEl.textContent = 'Network error saving settings';
+                }
+            }
 
         }
 

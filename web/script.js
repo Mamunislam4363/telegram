@@ -338,6 +338,9 @@ function showPage(targetId) {
         // If user is already on a disabled page, bounce them to home
         if (currentPage === 'mailService' && featureFlags && featureFlags.tempMail === false) nav('home');
         if (currentPage === 'numberService' && featureFlags && featureFlags.virtualNumber === false) nav('home');
+        if (currentPage === 'premiumMail' && featureFlags && featureFlags.premiumMail === false) nav('home');
+        if (currentPage === 'accountsStore' && featureFlags && featureFlags.accountsShop === false) nav('home');
+        if (currentPage === 'vccCards' && featureFlags && featureFlags.cardsVcc === false) nav('home');
     });
 
     // Normalize calls that pass DOM page ids (e.g. 'mailServicePage') into logical ids
@@ -459,14 +462,26 @@ function showPage(targetId) {
     if (targetId === 'accountsStore') {
         renderAccounts();
     }
+    if (targetId === 'vccCards') {
+        try { renderCards(); } catch (e) { }
+        refreshVccCardsData();
+    }
+    if (targetId === 'vpnServices') {
+        try { renderVPN(); } catch (e) { }
+        refreshVpnData();
+    }
     // Update virtual number balance when entering the number service page
     if (targetId === 'numberService') {
         updateNumBalance();
     }
     // Update balances when entering service pages with balance displays
     if (targetId === 'mailService' || targetId === 'premiumMail' || targetId === 'accountsStore' ||
-        targetId === 'vpnServices' || targetId === 'vccCards') {
+        targetId === 'vpnServices' || targetId === 'vccCards' || targetId === 'transfer') {
         renderBalances();
+        // Update transfer page specific balance display
+        if (targetId === 'transfer') {
+            updateTransferBalanceDisplay();
+        }
     }
     // Refresh History when entering history page
     if (targetId === 'history') {
@@ -772,6 +787,15 @@ function updateExchangeBalances() {
     if (t) t.textContent = (userData.tokens || 0).toString();
     if (j) j.textContent = (userData.Gems || 0).toString();
     if (u) u.textContent = (Math.round((userData.usd || 0) * 100) / 100).toFixed(2);
+}
+
+function updateTransferBalanceDisplay() {
+    const tokenEl = document.getElementById('transferTokenBalance');
+    const gemsEl = document.getElementById('transferGemsBalance');
+    const usdEl = document.getElementById('transferUsdBalance');
+    if (tokenEl) tokenEl.textContent = (userData.tokens || 0).toString();
+    if (gemsEl) gemsEl.textContent = (userData.Gems || 0).toString();
+    if (usdEl) usdEl.textContent = (Math.round((userData.usd || 0) * 100) / 100).toFixed(2);
 }
 
 function updateExchangePreview() {
@@ -1285,6 +1309,22 @@ let adRewardClaimed = false;
 let currentAdContext = 'watch_ad';
 
 function showAdAndEarn(context = 'watch_ad') {
+    // Check ad cooldown first (for all contexts except zero_balance_trigger which handles it differently)
+    if (context !== 'zero_balance_trigger' && typeof checkAdCooldown !== 'undefined') {
+        if (!checkAdCooldown()) {
+            return;
+        }
+    }
+
+    // Check ad limit for watch_ad context
+    if (context === 'watch_ad') {
+        const adLimit = window.appCostConfig?.adLimit || 50;
+        const adRecovery = window.appCostConfig?.adRecoveryHours || 24;
+        if (typeof checkActivityLimit !== 'undefined' && !checkActivityLimit('ad', adLimit, adRecovery, 'Watch Ad')) {
+            return;
+        }
+    }
+
     currentAdContext = context;
     adRewardClaimed = false;
 
@@ -1300,6 +1340,15 @@ function showAdAndEarn(context = 'watch_ad') {
                 adInjected = true;
                 const cfg = ads.moneytag;
                 const zoneId = cfg.adUnitId || cfg.publisherId;
+
+                // MoneyTag Direct Link (optional): open link to monetize via direct link
+                if (cfg.directLink && typeof cfg.directLink === 'string' && cfg.directLink.trim() !== '') {
+                    try {
+                        window.open(cfg.directLink.trim(), '_blank');
+                    } catch (e) { }
+                    setTimeout(claimAdReward, 2000);
+                    return;
+                }
 
                 if (window[`show_${zoneId}`]) {
                     try { window[`show_${zoneId}`](); } catch (e) { }
@@ -1368,9 +1417,15 @@ async function claimAdReward() {
             }
 
             let msg = `🎉 Reward claimed!`;
-            if (currentAdContext === 'watch_ad') msg = `📺 +5 Tokens rewarded for Watching Ad!`;
+            if (currentAdContext === 'watch_ad') msg = `📺 +${data.reward || 5} Tokens rewarded for Watching Ad!`;
             else if (currentAdContext === 'quiz_direct') msg = `🧠 Quiz unlocked! Good luck.`;
             else if (currentAdContext === 'scratch_ad' || currentAdContext === 'scratch_retry') msg = `✨ Scratch card unlocked!`;
+            else if (currentAdContext === 'zero_balance_trigger') {
+                const perAd = (window.appCostConfig && Number.isFinite(parseInt(window.appCostConfig.zeroBalanceAdReward)))
+                    ? parseInt(window.appCostConfig.zeroBalanceAdReward)
+                    : 5;
+                msg = `📺 +${perAd} Tokens earned! Watching more ads...`;
+            }
 
             window.showToast(msg);
 
@@ -1378,6 +1433,51 @@ async function claimAdReward() {
                 userData.tokens = data.newBalance;
                 updateBalanceUI();
                 loadRecentActivity(); // Refresh history after ad reward
+            }
+
+            // Increment ad activity counter for watch_ad context
+            if (currentAdContext === 'watch_ad' && typeof userActivityTracker !== 'undefined') {
+                userActivityTracker.increment('ad');
+            }
+
+            // Set last ad time for cooldown tracking
+            if (typeof adCooldownTracker !== 'undefined') {
+                adCooldownTracker.setLastAdTime();
+            }
+
+            // Handle zero balance ad system - continue showing ads until enough tokens
+            if (currentAdContext === 'zero_balance_trigger' && pendingServiceCost > 0) {
+                const currentTokens = userData.tokens || 0;
+                const perAd = (window.appCostConfig && Number.isFinite(parseInt(window.appCostConfig.zeroBalanceAdReward)))
+                    ? parseInt(window.appCostConfig.zeroBalanceAdReward)
+                    : 5;
+
+                if (currentTokens < pendingServiceCost) {
+                    // Still need more tokens - show another ad after short delay
+                    const stillNeeded = pendingServiceCost - currentTokens;
+                    const adsStillNeeded = Math.ceil(stillNeeded / perAd);
+
+                    window.showToast(`⏳ ${stillNeeded} more tokens needed. Watching ad ${adsStillNeeded > 1 ? '(' + adsStillNeeded + ' more)' : '(last one)'}...`);
+
+                    setTimeout(() => {
+                        adRewardClaimed = false; // Reset to allow claiming again
+                        showAdAndEarn('zero_balance_trigger');
+                    }, 2000);
+                    return; // Don't clear pending service yet
+                } else {
+                    // Now have enough tokens - execute the pending service
+                    window.showToast(`✅ You now have ${currentTokens} tokens! Proceeding with ${pendingServiceType}...`);
+
+                    setTimeout(() => {
+                        if (pendingServiceCallback && typeof pendingServiceCallback === 'function') {
+                            pendingServiceCallback();
+                        }
+                        // Clear pending service
+                        pendingServiceCost = 0;
+                        pendingServiceCallback = null;
+                        pendingServiceType = null;
+                    }, 1500);
+                }
             }
 
             // Navigation
@@ -1398,7 +1498,12 @@ async function claimAdReward() {
     }
 }
 
-function checkZeroBalanceAdTrigger(requiredAmount = 1) {
+// Global variables for zero balance ad system
+let pendingServiceCost = 0;
+let pendingServiceCallback = null;
+let pendingServiceType = null;
+
+function checkZeroBalanceAdTrigger(requiredAmount = 1, serviceCallback = null, serviceType = 'service') {
     const currentTokens = userData.tokens || 0;
     if (currentTokens < requiredAmount) {
         if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('warning');
@@ -1409,10 +1514,15 @@ function checkZeroBalanceAdTrigger(requiredAmount = 1) {
             : 5;
         const adsNeeded = Math.ceil(needed / perAd);
 
+        // Store pending service info for after ads
+        pendingServiceCost = requiredAmount;
+        pendingServiceCallback = serviceCallback;
+        pendingServiceType = serviceType;
+
         if (adsNeeded > 1) {
-            window.showToast(`Insufficient balance! You need ${requiredAmount} tokens. Watch ${adsNeeded} ads to earn tokens.`);
+            window.showToast(`⚠️ Insufficient balance! You need ${requiredAmount} tokens. Watch ${adsNeeded} ads to earn ${adsNeeded * perAd} tokens.`);
         } else {
-            window.showToast(`Insufficient balance! Watch a short ad to get ${perAd} tokens.`);
+            window.showToast(`⚠️ Insufficient balance! Watch a short ad to get ${perAd} tokens.`);
         }
 
         setTimeout(() => {
@@ -2314,6 +2424,7 @@ async function transferTokens() {
                 userData.Gems = res.newBalances.Gems;
                 userData.usd = res.newBalances.usd;
                 renderBalances();
+                updateTransferBalanceDisplay(); // Update transfer page balance display
                 loadRecentActivity(); // Refresh history after transfer
             }
             // Clear inputs
@@ -2646,6 +2757,22 @@ function renderCards() {
     container.innerHTML = html || '<div style="text-align:center; padding:40px 0; color:var(--text-sub); opacity:0.5;">No cards available</div>';
 }
 
+function refreshVccCardsData() {
+    const container = document.getElementById('cardsList');
+    if (container && (!localStorage.getItem('adminCards') || localStorage.getItem('adminCards') === '[]')) {
+        container.innerHTML = '<div style="text-align:center; padding:40px 0; color:var(--text-sub); opacity:0.6;"><i class="fas fa-spinner fa-spin"></i><div style="margin-top:10px; font-size:12px;">Loading cards...</div></div>';
+    }
+    fetch('/api/admin/cards')
+        .then(r => r.json())
+        .then(data => {
+            if (data && data.success) {
+                localStorage.setItem('adminCards', JSON.stringify(data.cards || []));
+                if (typeof currentPage !== 'undefined' && currentPage === 'vccCards') renderCards();
+            }
+        })
+        .catch(() => { });
+}
+
 function renderVPN() {
     const container = document.getElementById('vpnList');
     if (!container) return;
@@ -2919,7 +3046,8 @@ function buyAccountFromCategory(category) {
     const cat = ACCOUNT_CATEGORIES[category];
     if (!cat) return;
 
-    if (checkZeroBalanceAdTrigger()) return;
+    // Check zero balance and show ads if needed
+    if (checkZeroBalanceAdTrigger(cat.price, () => buyAccountFromCategory(category), cat.name)) return;
 
     if (userTokens < cat.price) {
         nav('earn');
@@ -3046,6 +3174,9 @@ function generateService(type) {
     const cost = s ? (s.cost || 10) : (type === 'number' ? 15 : 10);
     const name = s ? s.name : (type === 'number' ? 'Number Service' : 'Mail Service');
 
+    // Check zero balance and show ads if needed
+    if (checkZeroBalanceAdTrigger(cost, () => generateService(type), name)) return;
+
     if (Math.max(0, userData.tokens || 0) < cost) {
         nav('earn');
         return;
@@ -3119,8 +3250,11 @@ function updateNumBalance() {
 }
 
 function generateVirtualNumber() {
-    if (checkZeroBalanceAdTrigger()) return;
     const cost = 15;
+
+    // Check zero balance and show ads if needed
+    if (checkZeroBalanceAdTrigger(cost, () => generateVirtualNumber(), 'Virtual Number')) return;
+
     if (Math.max(0, userData.tokens || 0) < cost) { nav('earn'); return; }
     // Get number directly without confirmation
     const btn = document.getElementById('numGenerateBtn');
@@ -3407,7 +3541,6 @@ function updateMailBalance(type) {
 }
 
 function generateTempMail(type) {
-    if (checkZeroBalanceAdTrigger()) return;
     if (!type) type = 'temp';
     const cost = type === "temp"
         ? (parseInt(window.appCostConfig?.mailCost) || 10)
@@ -3419,6 +3552,9 @@ function generateTempMail(type) {
         nav('home');
         return;
     }
+
+    // Check zero balance and show ads if needed
+    if (checkZeroBalanceAdTrigger(cost, () => generateTempMail(type), type === 'temp' ? 'Gmail' : 'Premium Mail')) return;
 
     if (Math.max(0, userData.tokens || 0) < cost) { nav('earn'); return; }
 
@@ -5309,6 +5445,14 @@ function startQuizFlow() {
     // Set immediate cooldown to prevent double clicks
     localStorage.setItem('cooldown_quiz', Date.now());
 
+    // Check quiz limit before starting
+    const quizLimit = window.appCostConfig?.quizLimit || 5;
+    const quizRecovery = window.appCostConfig?.quizRecoveryHours || 1;
+    if (!checkActivityLimit('quiz', quizLimit, quizRecovery, 'Quiz')) {
+        nav('earn');
+        return;
+    }
+
     window.showToast("🎬 Preparing Quiz...");
     showAdAndEarn('quiz_direct');
 }
@@ -5382,6 +5526,12 @@ async function submitQuizAnswer(idx) {
             window.showToast(isCorrect ? `✅ CORRECT! +10 Tokens` : `❌ WRONG! +5 Tokens for trying.`);
             userData.tokens = data.newBalance;
             renderBalances();
+
+            // Increment quiz activity counter
+            if (typeof userActivityTracker !== 'undefined') {
+                userActivityTracker.increment('quiz');
+            }
+
             loadRecentActivity(); // Refresh history after quiz
             nav('home');
         } else {
@@ -5545,6 +5695,11 @@ async function claimScratchReward(reward) {
             window.showToast(`🎁 You won ${reward} tokens!`);
             userData.tokens = data.newBalance;
             renderBalances();
+
+            // Increment scratch activity counter
+            if (typeof userActivityTracker !== 'undefined') {
+                userActivityTracker.increment('scratch');
+            }
         } else {
             window.showToast(data.message || 'Error claiming scratch reward.');
         }
@@ -5556,6 +5711,13 @@ async function claimScratchReward(reward) {
 // Export new functions
 window.startQuizFlow = startQuizFlow;
 function startScratchFlow() {
+    // Check scratch limit before starting
+    const scratchLimit = window.appCostConfig?.scratchLimit || 5;
+    const scratchRecovery = window.appCostConfig?.scratchRecoveryHours || 1;
+    if (typeof checkActivityLimit !== 'undefined' && !checkActivityLimit('scratch', scratchLimit, scratchRecovery, 'Scratch Card')) {
+        return;
+    }
+
     if (isActionOnCooldown('scratch', 5)) return; // Check cooldown before showing ad
     showAdAndEarn('scratch_ad');
 }
