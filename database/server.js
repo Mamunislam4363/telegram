@@ -20,6 +20,7 @@ let backupBot = null;
 let totalCallbacks = 0;
 
 function getBackupBot() {
+    // Try to use dedicated backup bot first
     if (!backupBot && config.BACKUP_BOT_TOKEN) {
         try {
             const TelegramBot = require('node-telegram-bot-api');
@@ -27,6 +28,10 @@ function getBackupBot() {
         } catch (e) {
             console.error('❌ Failed to initialize Backup Bot:', e.message);
         }
+    }
+    // Fallback to main bot if backup bot token not available
+    if (!backupBot && bot) {
+        return bot;
     }
     return backupBot;
 }
@@ -726,10 +731,19 @@ app.post('/api/register', (req, res) => {
     const currentBalance = db.getTokenBalance(user);
     db.setTokenBalance(user, currentBalance); // ensures all 3 fields are in sync
 
-    // Handle referral on first registration - referrer is raw userId (no prefix)
+    // Handle referral on first registration - referrer can be userId or referral code
     if (referrer && !user.referredBy) {
-        const cleanReferrer = String(referrer).replace(/^ref_/, ''); // strip ref_ prefix if present
-        if (cleanReferrer && cleanReferrer !== String(userId)) {
+        let cleanReferrer = String(referrer).replace(/^ref_/, ''); // strip ref_ prefix if present
+
+        // Check if it's a referral code (6 chars, alphanumeric) or userId (numeric)
+        if (cleanReferrer.length === 6 && /^[A-Z0-9]{6}$/.test(cleanReferrer)) {
+            // It's a referral code - look up the userId
+            const referrerId = db.getUserIdByReferralCode(cleanReferrer);
+            if (referrerId && referrerId !== String(userId)) {
+                db.handleReferral(userId, referrerId);
+            }
+        } else if (/^\d+$/.test(cleanReferrer) && cleanReferrer !== String(userId)) {
+            // It's a numeric userId
             db.handleReferral(userId, cleanReferrer);
         }
     }
@@ -3208,9 +3222,10 @@ app.get('/api/premium-emails/:id', (req, res) => {
     });
 });
 
-// API: User - Get messages for a specific premium email
+// API: User - Get messages for a specific premium email (with optional target email filter)
 app.get('/api/premium-emails/:id/messages', (req, res) => {
     const { id } = req.params;
+    const { targetEmail } = req.query; // User's target email for filtering
 
     if (!db.data.premiumEmails) {
         return res.json({ success: false, message: 'No premium emails found' });
@@ -3221,10 +3236,59 @@ app.get('/api/premium-emails/:id/messages', (req, res) => {
         return res.json({ success: false, message: 'Email not found or inactive' });
     }
 
+    let messages = email.messages || [];
+
+    // Filter by target email if provided (per-user filtering)
+    if (targetEmail && targetEmail.trim()) {
+        const target = targetEmail.trim().toLowerCase();
+        messages = messages.filter(msg => {
+            // Check various recipient fields
+            const recipients = [
+                msg.to,
+                msg.toEmail,
+                msg.recipient,
+                msg.deliveredTo,
+                msg.xOriginalTo,
+                msg.headers?.to,
+                msg.headers?.deliveredTo,
+                msg.headers?.xOriginalTo
+            ].filter(Boolean).join(' ').toLowerCase();
+
+            // Also check subject and body for the target email (fallback)
+            const content = (msg.subject + ' ' + msg.body + ' ' + msg.preview || '').toLowerCase();
+
+            return recipients.includes(target) || content.includes(target);
+        });
+    }
+
     res.json({
         success: true,
         email: email.email,
-        messages: email.messages || []
+        targetEmail: targetEmail || null,
+        messages: messages
+    });
+});
+
+// API: User - Set target email for filtering (per-user setting)
+app.post('/api/premium-emails/target', (req, res) => {
+    const { userId, targetEmail } = req.body;
+
+    if (!userId) {
+        return res.json({ success: false, message: 'User ID required' });
+    }
+
+    const user = db.getUser(userId);
+    if (!user) {
+        return res.json({ success: false, message: 'User not found' });
+    }
+
+    // Save target email to user profile
+    user.premiumTargetEmail = targetEmail ? targetEmail.trim().toLowerCase() : '';
+    db.updateUser(user);
+
+    res.json({
+        success: true,
+        targetEmail: user.premiumTargetEmail
     });
 });
 
@@ -3602,6 +3666,13 @@ app.get('/api/admin/settings', (req, res) => {
             gmailClientSecret: apiKeys.gmailClientSecret || '',
             miniAppUrl: apiKeys.miniAppUrl || '',
             backupBotToken: apiKeys.backupBotToken || ''
+        },
+        motherEmail: db.data.motherEmail || {
+            enabled: false,
+            email: '',
+            password: '',
+            host: 'imap.gmail.com',
+            port: 993
         }
     });
 });
@@ -3648,12 +3719,11 @@ app.post('/api/admin/settings', (req, res) => {
         if (gems.price !== undefined) db.data.adminSettings.gems.currentPrice = parseFloat(gems.price);
         if (gems.enabled !== undefined) db.data.adminSettings.gems.enabled = (gems.enabled === true || gems.enabled === 'true');
     }
-
 });
 
 // API: Admin - Update API Keys
 app.post('/api/admin/apikeys', (req, res) => {
-    const { smtpLabsKey, gmailClientId, gmailClientSecret, miniAppUrl, backupBotToken } = req.body;
+    const { smtpLabsKey, gmailClientId, gmailClientSecret, miniAppUrl, backupBotToken, motherEmail } = req.body;
 
     if (!db.data.apiKeys) db.data.apiKeys = {};
 
@@ -3663,10 +3733,20 @@ app.post('/api/admin/apikeys', (req, res) => {
     if (miniAppUrl !== undefined) db.data.apiKeys.miniAppUrl = miniAppUrl;
     if (backupBotToken !== undefined) db.data.apiKeys.backupBotToken = backupBotToken;
 
+    // Save Mother Email settings
+    if (motherEmail) {
+        db.data.motherEmail = {
+            enabled: motherEmail.enabled === true,
+            email: motherEmail.email || '',
+            password: motherEmail.password || '',
+            host: motherEmail.host || 'imap.gmail.com',
+            port: parseInt(motherEmail.port) || 993
+        };
+    }
+
     db.save();
     res.json({ success: true, message: 'API Keys updated successfully' });
 });
-
 // =============================================
 // FEATURE FLAGS (BUTTON MANAGEMENT)
 // =============================================
@@ -4180,6 +4260,9 @@ app.get('/api/referrals/:userId', (req, res) => {
     const refBonus = (db.data.settings && db.data.settings.refBonus) || 50;
     const botUsername = (db.data.settings && db.data.settings.botUsername) || 'AutosVerify_bot';
 
+    // Generate or get existing referral code (anonymous short code)
+    const refCode = db.generateReferralCode(userId);
+
     // Get referred users
     const referredUsers = (user.referredUsers || []).map(ref => {
         const refUser = db.getUser(ref.userId);
@@ -4202,7 +4285,7 @@ app.get('/api/referrals/:userId', (req, res) => {
             invited: totalInvited,
             earned: totalEarned
         },
-        referralLink: `https://t.me/${botUsername}?start=ref_${userId}`
+        referralLink: `https://t.me/${botUsername}?start=ref_${refCode}`
     });
 });
 

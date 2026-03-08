@@ -541,9 +541,19 @@ bot.onText(/\/start/, async (msg) => {
         if (refMatch) {
             const cleanRef = String(refMatch).replace(/^ref_/, '');
             if (cleanRef !== String(userId)) {
+                // Check if it's a referral code (6 chars, alphanumeric) or userId (numeric)
+                let referrerId = cleanRef;
+                if (cleanRef.length === 6 && /^[A-Z0-9]{6}$/.test(cleanRef)) {
+                    // It's a referral code - look up the userId
+                    const codeUserId = db.getUserIdByReferralCode(cleanRef);
+                    if (codeUserId) {
+                        referrerId = codeUserId;
+                    }
+                }
+
                 // Store pending referrer if not already referred
                 if (!user.referredBy && !user.pendingReferrer) {
-                    user.pendingReferrer = cleanRef;
+                    user.pendingReferrer = referrerId;
                     db.updateUser(user);
                 }
             }
@@ -582,13 +592,6 @@ bot.onText(/\/start/, async (msg) => {
         }
 
         console.log(`[CMD] /start calling sendMainMenu for user ${userId}`);
-
-        // Send immediate acknowledgment first
-        try {
-            await bot.sendMessage(chatId, `👋 Hello ${msg.from.first_name || 'there'}! Loading your menu...`);
-        } catch (e) {
-            console.log(`[WARN] Could not send initial greeting: ${e.message}`);
-        }
 
         // Cleanup old persistent keyboards before sending the menu
         const cleanupMsg2 = await bot.sendMessage(chatId, "⏳ Initializing...", { reply_markup: { remove_keyboard: true } });

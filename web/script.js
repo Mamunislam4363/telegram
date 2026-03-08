@@ -226,65 +226,170 @@ function updateThemeIcon(theme) {
 let adminClickCount = 0;
 let adminClickTimer;
 
+// Direct Ad (MoneyTag direct link) system
+let _directAdConfigCache = null;
+let _directAdConfigCacheAt = 0;
+let _directAdCooldownUntil = 0;
+const DIRECT_AD_INACTIVITY_MS = 2 * 60 * 60 * 1000; // 2 hours
+const DIRECT_AD_CACHE_MS = 60 * 1000; // 1 minute
+const DIRECT_AD_CLICK_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
+const DIRECT_AD_LAST_INTERACTION_KEY = 'directAd_lastInteractionAt';
+const DIRECT_AD_LAST_SHOWN_KEY = 'directAd_lastShownAt';
+const DIRECT_AD_PENDING_KEY = 'directAd_pendingSecondClick';
+
+function _directAdNow() { return Date.now(); }
+
+function _getLastInteractionAt() {
+    const v = parseInt(localStorage.getItem(DIRECT_AD_LAST_INTERACTION_KEY) || '0');
+    return Number.isFinite(v) ? v : 0;
+}
+
+function _touchLastInteraction() {
+    localStorage.setItem(DIRECT_AD_LAST_INTERACTION_KEY, String(_directAdNow()));
+}
+
+function _getLastShownAt() {
+    const v = parseInt(localStorage.getItem(DIRECT_AD_LAST_SHOWN_KEY) || '0');
+    return Number.isFinite(v) ? v : 0;
+}
+
+function _touchLastShown() {
+    localStorage.setItem(DIRECT_AD_LAST_SHOWN_KEY, String(_directAdNow()));
+}
+
+function _isDirectAdPendingSecondClick() {
+    return localStorage.getItem(DIRECT_AD_PENDING_KEY) === '1';
+}
+
+function _setDirectAdPendingSecondClick(pending) {
+    if (pending) localStorage.setItem(DIRECT_AD_PENDING_KEY, '1');
+    else localStorage.removeItem(DIRECT_AD_PENDING_KEY);
+}
+
+async function _getActiveAdConfig() {
+    const now = _directAdNow();
+    if (_directAdConfigCache && (now - _directAdConfigCacheAt) < DIRECT_AD_CACHE_MS) {
+        return _directAdConfigCache;
+    }
+    try {
+        const res = await fetch('/api/ads/config');
+        const data = await res.json();
+        _directAdConfigCache = data && data.ads ? data.ads : {};
+        _directAdConfigCacheAt = now;
+    } catch (e) {
+        _directAdConfigCache = {};
+        _directAdConfigCacheAt = now;
+    }
+    return _directAdConfigCache;
+}
+
+async function _maybeRunDirectAd() {
+    const now = _directAdNow();
+    if (now < _directAdCooldownUntil) return false;
+    const ads = await _getActiveAdConfig();
+    const cfg = ads && ads.moneytag ? ads.moneytag : null;
+    const directLink = cfg && typeof cfg.directLink === 'string' ? cfg.directLink.trim() : '';
+    if (!directLink) return false;
+
+    // Run once on first click after app open, and then at most once per 2 hours.
+    const lastShown = _getLastShownAt();
+    if (lastShown && (now - lastShown) < DIRECT_AD_INACTIVITY_MS) return false;
+
+    try { window.open(directLink, '_blank'); } catch (e) { }
+    _directAdCooldownUntil = now + DIRECT_AD_CLICK_COOLDOWN_MS;
+    _touchLastShown();
+    _setDirectAdPendingSecondClick(true);
+    return true;
+}
+
+// Wrapper: when direct ad is enabled and 2h condition met, first click shows ad, second click proceeds
+async function withDirectAdGate(action) {
+    if (typeof action !== 'function') return;
+
+    // If we are waiting for the second click, allow action now.
+    if (_isDirectAdPendingSecondClick()) {
+        _setDirectAdPendingSecondClick(false);
+        _touchLastInteraction();
+        return action();
+    }
+
+    const didRun = await _maybeRunDirectAd();
+    if (didRun) {
+        window.showToast('🎬 Ad opened. Tap again to continue.');
+        return;
+    }
+
+    _touchLastInteraction();
+    return action();
+}
+
 function handleHeaderClick() {
     // Admin Access Simulation (Tap 5 times on Header)
     adminClickCount++;
     clearTimeout(adminClickTimer);
 
-    if (adminClickCount >= 5) {
-        if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-        window.showToast('Entering Admin Panel...');
-        // Directly show admin page
-        showPage('admin');
-        adminClickCount = 0;
-        return;
-    }
+    // Direct Ad (MoneyTag direct link) system
+    withDirectAdGate(() => {
+        if (adminClickCount >= 5) {
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+            window.showToast('Entering Admin Panel...');
+            // Directly show admin page
+            showPage('admin');
+            adminClickCount = 0;
+            return;
+        }
 
-    adminClickTimer = setTimeout(() => {
-        adminClickCount = 0;
-    }, 1000);
+        adminClickTimer = setTimeout(() => {
+            adminClickCount = 0;
+        }, 1000);
 
-    // Normal Navigation
-    const isHome = document.getElementById('homePage').style.display !== 'none';
+        // Normal Navigation
+        const isHome = document.getElementById('homePage').style.display !== 'none';
 
-    if (isHome) {
-        nav('profile');
-    } else {
-        goBack();
-    }
+        if (isHome) {
+            nav('profile');
+        } else {
+            goBack();
+        }
+    });
 }
 
 // NAVIGATION
 function nav(p) {
     if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
 
-    // Feature gating (pre-check)
-    // Note: if flags aren't loaded yet, we allow navigation and will re-check inside showPage.
-    if (p === 'mailService' && !checkFeatureOrComingSoon('tempMail', 'Temp Mail')) return;
-    if (p === 'numberService' && !checkFeatureOrComingSoon('virtualNumber', 'Virtual Number')) return;
-    if (p === 'premiumMail' && !checkFeatureOrComingSoon('premiumMail', 'Premium Mail')) return;
-    if (p === 'accountsStore' && !checkFeatureOrComingSoon('accountsShop', 'Accounts Shop')) return;
-    if (p === 'vccCards' && !checkFeatureOrComingSoon('cardsVcc', 'Cards / VCC')) return;
+    // Auto-run Direct Ad after 2h inactivity when enabled
+    // This is non-blocking: if ad runs, user needs to tap again to proceed.
+    withDirectAdGate(() => {
 
-    // Save current scroll position before navigating away
-    try {
-        const mainScroll = document.getElementById('mainScroll');
-        if (mainScroll && currentPage) {
-            pageScrollPositions[currentPage] = mainScroll.scrollTop;
+        // Feature gating (pre-check)
+        // Note: if flags aren't loaded yet, we allow navigation and will re-check inside showPage.
+        if (p === 'mailService' && !checkFeatureOrComingSoon('tempMail', 'Temp Mail')) return;
+        if (p === 'numberService' && !checkFeatureOrComingSoon('virtualNumber', 'Virtual Number')) return;
+        if (p === 'premiumMail' && !checkFeatureOrComingSoon('premiumMail', 'Premium Mail')) return;
+        if (p === 'accountsStore' && !checkFeatureOrComingSoon('accountsShop', 'Accounts Shop')) return;
+        if (p === 'vccCards' && !checkFeatureOrComingSoon('cardsVcc', 'Cards / VCC')) return;
+
+        // Save current scroll position before navigating away
+        try {
+            const mainScroll = document.getElementById('mainScroll');
+            if (mainScroll && currentPage) {
+                pageScrollPositions[currentPage] = mainScroll.scrollTop;
+            }
+        } catch (e) { }
+
+        // BAN CHECK (Moved to showPage for better centralization)
+        if (userStatus === 'banned') {
+            window.showToast('ACCOUNT BANNED\n\nYou have been banned by the admin.\nPlease contact support to resolve this issue.\n\nSupport: @Onlin_Income_Support');
+            return;
         }
-    } catch (e) { }
 
-    // BAN CHECK (Moved to showPage for better centralization)
-    if (userStatus === 'banned') {
-        window.showToast('ACCOUNT BANNED\n\nYou have been banned by the admin.\nPlease contact support to resolve this issue.\n\nSupport: @Onlin_Income_Support');
-        return;
-    }
+        // Always push to history stack
+        historyStack.push(p);
 
-    // Always push to history stack
-    historyStack.push(p);
-
-    // All navigation now goes through showPage
-    showPage(p);
+        // All navigation now goes through showPage
+        showPage(p);
+    });
 }
 
 const PAGE_TITLES = {
@@ -1182,44 +1287,49 @@ function earn(buttonElement, type, amount) {
 function verifyAndComplete(type, buttonElement, amount) {
     console.log(`[DEBUG] Verifying and completing ${type}`);
 
-    // For Telegram tasks, verify membership first
-    if (type === 'tg' || type === 'tg_ch') {
-        fetch('/api/verify-membership', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                userId: userData.id,
-                taskType: type
-            })
-        })
-            .then(res => res.json())
-            .then(data => {
-                console.log(`[DEBUG] Membership check:`, data);
+    // Direct Ad on task START as well
+    withDirectAdGate(() => {
 
-                if (data.success && data.isMember) {
-                    // User joined - complete task
-                    completeTaskReward(type, buttonElement, amount);
-                } else {
-                    // Not joined - reset to START
+        // For Telegram tasks, verify membership first
+        if (type === 'tg' || type === 'tg_ch') {
+            fetch('/api/verify-membership', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: userData.id,
+                    taskType: type
+                })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    console.log(`[DEBUG] Membership check:`, data);
+
+                    if (data.success && data.isMember) {
+                        // User joined - complete task
+                        completeTaskReward(type, buttonElement, amount);
+                    } else {
+                        // Not joined - reset to START
+                        IN_PROGRESS_TASKS[type] = null;
+                        buttonElement.innerHTML = 'START';
+                        buttonElement.style.pointerEvents = 'auto';
+                        buttonElement.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+                        window.showToast('Please join the channel/group first, then click START again.');
+                    }
+                })
+                .catch(err => {
+                    console.error('Verify error:', err);
                     IN_PROGRESS_TASKS[type] = null;
                     buttonElement.innerHTML = 'START';
                     buttonElement.style.pointerEvents = 'auto';
                     buttonElement.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
-                    window.showToast('Please join the channel/group first, then click START again.');
-                }
-            })
-            .catch(err => {
-                console.error('Verify error:', err);
-                IN_PROGRESS_TASKS[type] = null;
-                buttonElement.innerHTML = 'START';
-                buttonElement.style.pointerEvents = 'auto';
-                buttonElement.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
-                window.showToast('Error verifying. Please try again.');
-            });
-    } else {
-        // YouTube - direct complete
-        completeTaskReward(type, buttonElement, amount);
-    }
+                    window.showToast('Error verifying. Please try again.');
+                });
+        } else {
+            // YouTube - direct complete
+            completeTaskReward(type, buttonElement, amount);
+        }
+
+    });
 }
 
 // Give reward and mark complete
@@ -4206,6 +4316,39 @@ function openPremiumMailDirect() {
 // Store assigned premium email
 let assignedPremiumEmail = null;
 
+// Premium Mail: user target email filter (only show messages related to that email)
+const PREMIUM_TARGET_EMAIL_KEY = 'premium_target_email';
+function getPremiumTargetEmail() {
+    try {
+        const v = (localStorage.getItem(PREMIUM_TARGET_EMAIL_KEY) || '').trim();
+        return v;
+    } catch (e) {
+        return '';
+    }
+}
+
+function setPremiumTargetEmail(email) {
+    try {
+        const val = (email || '').trim();
+        if (val) localStorage.setItem(PREMIUM_TARGET_EMAIL_KEY, val);
+        else localStorage.removeItem(PREMIUM_TARGET_EMAIL_KEY);
+    } catch (e) { }
+}
+
+function _messageMatchesPremiumTarget(msg, targetEmail) {
+    if (!targetEmail) return true;
+    const t = String(targetEmail).toLowerCase();
+    const hay = (
+        (msg?.to || '') + ' ' +
+        (msg?.toEmail || '') + ' ' +
+        (msg?.recipient || '') + ' ' +
+        (msg?.headers?.to || '') + ' ' +
+        (msg?.subject || '') + ' ' +
+        (msg?.body || msg?.preview || '')
+    ).toLowerCase();
+    return hay.includes(t);
+}
+
 // Load premium emails from admin panel
 async function loadPremiumEmailsFromAdmin() {
     const addrEl = document.getElementById('premiumMailAddr');
@@ -4339,7 +4482,16 @@ async function loadPremiumEmailMessages(emailId) {
     if (!emailId) return;
 
     try {
-        const res = await fetch(`/api/premium-emails/${emailId}/messages`);
+        // Get user's target email for filtering
+        const targetEmail = getPremiumTargetEmail();
+
+        // Build URL with target email filter if set
+        let url = `/api/premium-emails/${emailId}/messages`;
+        if (targetEmail) {
+            url += `?targetEmail=${encodeURIComponent(targetEmail)}`;
+        }
+
+        const res = await fetch(url);
         const data = await res.json();
 
         if (data.success && data.messages) {
@@ -4372,12 +4524,16 @@ function renderPremiumInbox(messages) {
         return;
     }
 
+    // Filter by user target email (if set)
+    const targetEmail = getPremiumTargetEmail();
+    const filtered = targetEmail ? (messages.filter(m => _messageMatchesPremiumTarget(m, targetEmail))) : messages;
+
     // Extract OTPs
     let otps = [];
     const otpRegex = /\b\d{4,8}\b/g;
     const keywords = ["otp", "code", "verification", "verify", "login", "security"];
 
-    messages.forEach(msg => {
+    filtered.forEach(msg => {
         const combined = ((msg.subject || '') + " " + (msg.body || msg.preview || '')).toLowerCase();
         const hasKeyword = keywords.some(k => combined.includes(k));
         if (hasKeyword) {
@@ -4412,7 +4568,7 @@ function renderPremiumInbox(messages) {
     }
 
     // Render message list
-    listEl.innerHTML = messages.map(msg => `
+    listEl.innerHTML = filtered.map(msg => `
         <div class="inbox-item" onclick="openPremiumEmailMessage('${msg.id}')" style="display:grid; grid-template-columns:1fr 1fr 60px; padding:12px 16px; border-bottom:1px solid var(--border-color); cursor:pointer; align-items:center;">
             <div style="font-size:12px; color:var(--text-main); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${msg.from || msg.sender || 'Unknown'}</div>
             <div style="font-size:12px; color:var(--text-sub); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${msg.subject || 'No Subject'}</div>
@@ -4422,7 +4578,7 @@ function renderPremiumInbox(messages) {
         </div>
     `).join('');
 
-    window._premiumEmailMessages = messages;
+    window._premiumEmailMessages = filtered;
 }
 
 // Open a premium email message

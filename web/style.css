@@ -93,10 +93,10 @@ html {
     top: 0;
     left: 0;
     right: 0;
-    background: var(--bg-glass);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-bottom: 1px solid var(--border-color);
+    background: rgba(20, 20, 20, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     padding: 6px 16px;
     padding-top: env(safe-area-inset-top, 6px);
     padding-bottom: 4px;
@@ -423,23 +423,26 @@ html {
     left: 0 !important;
     width: 100% !important;
     height: 80px !important;
-    background: #141414 !important;
-    /* Solid dark background */
-    border-top: 1px solid var(--border-color);
+    background: rgba(20, 20, 20, 0.7) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     justify-content: space-around;
     align-items: center;
     z-index: 9999 !important;
-    /* Ensure it stays on top */
-    border-top-left-radius: 20px;
-    border-top-right-radius: 20px;
+    border-top-left-radius: 24px;
+    border-top-right-radius: 24px;
     padding-bottom: 10px;
-    /* Safe padding */
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.3);
 }
 
 [data-theme="light"] .bottom-nav {
-    background: #ffffff !important;
-    border-top: 1px solid var(--border-color) !important;
+    background: rgba(255, 255, 255, 0.8) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border-top: 1px solid rgba(0, 0, 0, 0.1) !important;
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.1);
 }
 
 [data-theme="light"] .nav-item {
@@ -2310,7 +2313,13 @@ html {
     align-items: center;
     justify-content: center;
     font-size: 20px;
-}@media (max-width: 480px) { .sell-cat-card { padding: 16px; } }
+}
+
+@media (max-width: 480px) {
+    .sell-cat-card {
+        padding: 16px;
+    }
+}
 
 .sell-cat-card {
     background: var(--bg-card);
@@ -2330,7 +2339,7 @@ html {
 .sell-cat-card:hover {
     transform: translateY(-4px);
     border-color: var(--accent-color);
-    box-shadow: 0 12px 24px rgba(0,0,0,0.3);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
 }
 
 .sell-cat-card:active {
@@ -2346,7 +2355,7 @@ html {
     justify-content: center;
     font-size: 24px;
     color: #fff;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
 }
 
 .scc-name {
@@ -2387,31 +2396,38 @@ html {
     position: absolute;
     content: " \;
  height: 18px;
- width: 18px;
- left: 3px;
- bottom: 2.5px;
- background-color: white;
- transition: .4s;
+    width: 18px;
+    left: 3px;
+    bottom: 2.5px;
+    background-color: white;
+    transition: .4s;
 }
 
-input:checked + .slider-modern {
- background-color: #10b981;
- border-color: #10b981;
+input:checked+.slider-modern {
+    background-color: #10b981;
+    border-color: #10b981;
 }
 
-input:checked + .slider-modern:before {
- transform: translateX(24px);
+input:checked+.slider-modern:before {
+    transform: translateX(24px);
 }
 
 .slider-modern.round {
- border-radius: 34px;
+    border-radius: 34px;
 }
 
 .slider-modern.round:before {
- border-radius: 50%;
+    border-radius: 50%;
 }
 
 @keyframes slideUp {
- from { opacity: 0; transform: translateY(20px); }
- to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }

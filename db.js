@@ -255,13 +255,37 @@ function decrypt(text) {
     if (!text) return null;
     try {
         let textParts = text.split(':');
-        let iv = Buffer.from(textParts.shift(), 'hex');
-        let encryptedText = Buffer.from(textParts.join(':'), 'hex');
+        // Validate format: must have at least 2 parts (IV and encrypted data)
+        if (textParts.length < 2) {
+            console.warn('[DECRYPT] Invalid format: missing IV or encrypted data');
+            return null;
+        }
+        let ivHex = textParts.shift();
+        let encryptedHex = textParts.join(':');
+
+        // Validate IV is proper hex and correct length (32 hex chars = 16 bytes for AES)
+        if (!/^[0-9a-fA-F]{32}$/.test(ivHex)) {
+            console.warn('[DECRYPT] Invalid IV format or length');
+            return null;
+        }
+
+        let iv = Buffer.from(ivHex, 'hex');
+        let encryptedText = Buffer.from(encryptedHex, 'hex');
+
+        // Validate encrypted data exists
+        if (encryptedText.length === 0) {
+            console.warn('[DECRYPT] Empty encrypted data');
+            return null;
+        }
+
         let decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(ENCRYPTION_KEY), iv);
         let decrypted = decipher.update(encryptedText);
         decrypted = Buffer.concat([decrypted, decipher.final()]);
         return decrypted.toString();
-    } catch (e) { console.error("Decrypt Error:", e); return null; }
+    } catch (e) {
+        console.error("[DECRYPT] Decryption failed:", e.message);
+        return null;
+    }
 }
 
 
@@ -595,7 +619,48 @@ class Database {
         this.save();
     }
 
-    // Referrals
+    // Referral Codes - Anonymous short codes mapping
+    generateReferralCode(userId) {
+        const existingCode = this.getReferralCodeByUserId(userId);
+        if (existingCode) return existingCode;
+
+        if (!this.data.referralCodes) this.data.referralCodes = {};
+
+        // Generate 6-character alphanumeric code
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let code = '';
+        for (let i = 0; i < 6; i++) {
+            code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+
+        // Ensure uniqueness
+        while (this.data.referralCodes[code]) {
+            code = '';
+            for (let i = 0; i < 6; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+        }
+
+        this.data.referralCodes[code] = {
+            userId: String(userId),
+            createdAt: Date.now()
+        };
+        this.save();
+        return code;
+    }
+
+    getReferralCodeByUserId(userId) {
+        if (!this.data.referralCodes) return null;
+        for (const [code, data] of Object.entries(this.data.referralCodes)) {
+            if (data.userId === String(userId)) return code;
+        }
+        return null;
+    }
+
+    getUserIdByReferralCode(code) {
+        if (!this.data.referralCodes || !this.data.referralCodes[code]) return null;
+        return this.data.referralCodes[code].userId;
+    }
     handleReferral(newUserId, referrerId) {
         const newUser = this.getUser(newUserId);
         // If already referred or self-referral, ignore
@@ -659,11 +724,11 @@ class Database {
     }
 
     getTopReferrers(limit = 10) {
-        const users = Object.values(this.data.users);
-        // Filter users with > 0 referrals and sort
+        const users = Object.values(this.data.users || {});
+        // Filter users with > 0 referrals and sort by referralCount
         const top = users
-            .filter(u => u.referralCount > 0)
-            .sort((a, b) => b.referralCount - a.referralCount)
+            .filter(u => (u.referralCount || 0) > 0)
+            .sort((a, b) => (b.referralCount || 0) - (a.referralCount || 0))
             .slice(0, limit);
         return top;
     }
@@ -2264,7 +2329,14 @@ class Database {
         if (!this.data.providers || !this.data.providers[providerId]) return null;
         const p = this.data.providers[providerId];
         // Decrypt logic relying on global 'decrypt' function we added earlier
-        const rawKey = p.apiKey ? decrypt(p.apiKey) : null;
+        let rawKey = null;
+        if (p.apiKey) {
+            rawKey = decrypt(p.apiKey);
+            // If decryption failed (returns null), log warning but don't crash
+            if (rawKey === null && p.apiKey !== null) {
+                console.warn(`[DB] Failed to decrypt API key for provider: ${providerId}. Provider may need reconfiguration.`);
+            }
+        }
         return { ...p, apiKey: rawKey };
     }
 
