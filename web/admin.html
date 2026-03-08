@@ -493,6 +493,14 @@
                                 </div>
                                 <input id="ff-home_premiumMail" type="checkbox" class="w-5 h-5 accent-orange-500" />
                             </div>
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="font-bold text-red-400">Join Required 🔒</div>
+                                    <div class="text-xs text-gray-400">MANDATORY: Force users to join Channel/Group
+                                    </div>
+                                </div>
+                                <input id="ff-joinRequired" type="checkbox" class="w-5 h-5 accent-red-500" />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1661,7 +1669,7 @@
                                     <label class="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" id="gf-welcome" class="sr-only peer" checked>
                                         <div
-                                            class="w-9 h-5 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500">
+                                            class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500">
                                         </div>
                                     </label>
                                 </div>
@@ -1670,7 +1678,7 @@
                                     <label class="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" id="gf-antispam" class="sr-only peer" checked>
                                         <div
-                                            class="w-9 h-5 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500">
+                                            class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500">
                                         </div>
                                     </label>
                                 </div>
@@ -1679,7 +1687,7 @@
                                     <label class="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" id="gf-verify" class="sr-only peer">
                                         <div
-                                            class="w-9 h-5 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500">
+                                            class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500">
                                         </div>
                                     </label>
                                 </div>
@@ -1688,7 +1696,7 @@
                                     <label class="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" id="gf-autodelete" class="sr-only peer" checked>
                                         <div
-                                            class="w-9 h-5 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500">
+                                            class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500">
                                         </div>
                                     </label>
                                 </div>
@@ -1811,8 +1819,7 @@
                             <h2 class="text-xl font-bold">Ad Network Integration</h2>
                             <p class="text-gray-400 text-sm">Add your Publisher ID / Ad Unit ID to enable
                                 ads in
-                                the
-                                mini app. Users will see ads when clicking WATCH in the Earn section.</p>
+                                the mini app. Users will see ads when clicking WATCH in the Earn section.</p>
                         </div>
                     </div>
                 </div>
@@ -1847,7 +1854,7 @@
                             </div>
                             <div>
                                 <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Ad Zone
-                                    ID /
+                                    /
                                     Unit
                                     ID</label>
                                 <input id="ad-moneytag-unit" type="text" placeholder="e.g. 123456"
@@ -3215,7 +3222,7 @@
                         return;
                     }
                     const f = data.features || {};
-                    const keys = ['tempMail', 'virtualNumber', 'premiumMail', 'accountsShop', 'cardsVcc', 'home_verify', 'home_mail', 'home_number', 'home_gemini', 'home_chatgpt', 'home_accounts', 'home_vcc', 'home_premiumMail'];
+                    const keys = ['tempMail', 'virtualNumber', 'premiumMail', 'accountsShop', 'cardsVcc', 'home_verify', 'home_mail', 'home_number', 'home_gemini', 'home_chatgpt', 'home_accounts', 'home_vcc', 'home_premiumMail', 'joinRequired'];
                     keys.forEach(k => {
                         const el = document.getElementById('ff-' + k);
                         if (el) el.checked = f[k] !== false;
@@ -3241,7 +3248,8 @@
                 home_chatgpt: document.getElementById('ff-home_chatgpt')?.checked === true,
                 home_accounts: document.getElementById('ff-home_accounts')?.checked === true,
                 home_vcc: document.getElementById('ff-home_vcc')?.checked === true,
-                home_premiumMail: document.getElementById('ff-home_premiumMail')?.checked === true
+                home_premiumMail: document.getElementById('ff-home_premiumMail')?.checked === true,
+                joinRequired: document.getElementById('ff-joinRequired')?.checked === true
             };
 
             fetch('/api/admin/features', {

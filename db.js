@@ -281,38 +281,65 @@ class Database {
 
 
     async init() {
-        // 1. Connect to Firebase
-        await firebaseManager.connect();
+        try {
+            // 1. Connect to Firebase (with timeout protection)
+            const firebaseTimeout = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Firebase connection timeout')), 10000)
+            );
+            const firebaseConnect = firebaseManager.connect();
+            await Promise.race([firebaseConnect, firebaseTimeout]).catch(err => {
+                console.warn('⚠️ Firebase connection failed or timed out:', err.message);
+                return false;
+            });
 
-        // 2. Check Remote Data
-        const remoteData = await firebaseManager.getData();
-        let localData = null;
-
-        // 3. Check Local Data (Migration Source)
-        if (fs.existsSync(DB_FILE)) {
-            try {
-                localData = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
-            } catch (e) {
-                console.error("Local DB Read Error:", e);
+            // 2. Check Remote Data (only if Firebase connected)
+            let remoteData = null;
+            if (firebaseManager.connected) {
+                try {
+                    remoteData = await firebaseManager.getData();
+                } catch (e) {
+                    console.warn('⚠️ Failed to fetch remote data:', e.message);
+                }
             }
-        }
 
-        if (remoteData) {
-            // Remote exists -> Use it (Primary)
-            this.data = { ...defaultData, ...remoteData, settings: { ...defaultData.settings, ...(remoteData.settings || {}) } };
-            console.log("✅ Database loaded from Firebase.");
-        } else if (localData) {
-            // Remote empty but Local exists -> MIGRATE
-            console.log("📤 Migrating Local Data to Firebase...");
-            this.data = { ...defaultData, ...localData };
-            // Upload immediately
-            await firebaseManager.setData(this.data);
-            console.log("✅ Migration Complete.");
-        } else {
-            console.warn("⚠️ No Data Found (Local or Remote). Starting Fresh.");
+            let localData = null;
+
+            // 3. Check Local Data (Migration Source)
+            if (fs.existsSync(DB_FILE)) {
+                try {
+                    localData = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+                } catch (e) {
+                    console.error("Local DB Read Error:", e);
+                }
+            }
+
+            if (remoteData) {
+                // Remote exists -> Use it (Primary)
+                this.data = { ...defaultData, ...remoteData, settings: { ...defaultData.settings, ...(remoteData.settings || {}) } };
+                console.log("✅ Database loaded from Firebase.");
+            } else if (localData) {
+                // Remote empty but Local exists -> Use local (Firebase failed or empty)
+                console.log("📤 Using Local Data (Firebase unavailable)...");
+                this.data = { ...defaultData, ...localData };
+                // Try to upload to Firebase if connected
+                if (firebaseManager.connected) {
+                    try {
+                        await firebaseManager.setData(this.data);
+                        console.log("✅ Local data synced to Firebase.");
+                    } catch (e) {
+                        console.warn("⚠️ Failed to sync to Firebase:", e.message);
+                    }
+                }
+            } else {
+                console.warn("⚠️ No Data Found (Local or Remote). Starting Fresh.");
+            }
+        } catch (error) {
+            console.error("❌ Database Initialization Error:", error.message);
+            console.log("🔄 Starting with default data...");
         }
 
         this.ready = true;
+        console.log("✅ Database is ready (Firebase or Local mode).");
 
         // 4. Safety Cleanup: Move Local File to Backups (NOT deleting, keeping as cache)
         if (fs.existsSync(DB_FILE)) {

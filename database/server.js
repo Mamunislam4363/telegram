@@ -3613,7 +3613,10 @@ function getDefaultFeatureFlags() {
         home_mail: true,
         home_number: true,
         home_gemini: true,
-        home_chatgpt: true
+        home_chatgpt: true,
+
+        // Join Required (MANDATORY channel/group join)
+        joinRequired: false // Default OFF - users can use app without joining
     };
 }
 

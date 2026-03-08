@@ -4728,7 +4728,19 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
     }
 
-    // Check if user joined required channel/group (MANDATORY)
+    // Load feature flags first to check if join required is enabled
+    await loadFeatureFlags();
+
+    // Check if Join Required feature is enabled (default OFF)
+    const joinRequiredEnabled = featureFlags && featureFlags.joinRequired === true;
+
+    if (!joinRequiredEnabled) {
+        // Join check is disabled - proceed normally
+        continueInitialization();
+        return;
+    }
+
+    // Check if user joined required channel/group (MANDATORY only if enabled)
     const joinCheck = await checkRequiredJoins();
 
     if (!joinCheck.canProceed) {
