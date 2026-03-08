@@ -84,6 +84,23 @@ if (!_tgUser || !_tgUser.id) {
 showDebugInfo(`User ID: ${_tgUser.id}`);
 showDebugInfo(`API_BASE: ${API_BASE}`);
 
+// Direct API test - this will show if API is reachable
+fetch(`${API_BASE}/api/user/balance/${_tgUser.id}`)
+    .then(r => {
+        showDebugInfo(`API Status: ${r.status}`);
+        return r.json();
+    })
+    .then(data => {
+        showDebugInfo(`Balance: ${data.tokens}`);
+        if (data.tokens > 0) {
+            userData.tokens = data.tokens;
+            renderBalances();
+        }
+    })
+    .catch(err => {
+        showDebugInfo(`API Error: ${err.message}`);
+    });
+
 var userData = {
     id: _tgUser.id,
     username: _tgUser.username || _tgUser.first_name || 'User',
