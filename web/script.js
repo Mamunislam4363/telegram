@@ -1301,16 +1301,37 @@ function checkAllTasksCompleted() {
 let adWatchTimer = null;
 let adRewardClaimed = false;
 let currentAdContext = 'watch_ad';
+let currentAdNonce = null;
 
 function showAdAndEarn(context = 'watch_ad') {
     currentAdContext = context;
     adRewardClaimed = false;
+    currentAdNonce = null;
 
     window.showToast("🎬 Loading Ad...");
 
-    fetch(API_BASE + '/api/ads/config')
+    // Create a one-time nonce on server to prevent direct /api/ad/claim abuse
+    fetch(API_BASE + '/api/ad/nonce', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: userData.id, context: currentAdContext })
+    })
         .then(r => r.json())
+        .then(n => {
+            if (!n || !n.success || !n.nonce) {
+                window.showToast('❌ Ad verification failed. Please try again.');
+                return;
+            }
+            currentAdNonce = n.nonce;
+            // Proceed to show ad after nonce is issued
+            return fetch(API_BASE + '/api/ads/config');
+        })
+        .then(r => {
+            if (!r) return;
+            return r.json();
+        })
         .then(data => {
+            if (!data) return;
             const ads = data.ads || {};
             let adInjected = false;
 
@@ -1320,10 +1341,8 @@ function showAdAndEarn(context = 'watch_ad') {
             const hasAdsterra = ads.adsterra && ads.adsterra.enabled && ads.adsterra.publisherId;
 
             if (!hasMoneytag && !hasAdSense && !hasAdsterra) {
-                console.log('Ad: No providers configured, skipping to reward');
-                // No ads configured - just give the reward directly
-                window.showToast("⏭️ Skipping ad (no provider configured)...");
-                setTimeout(claimAdReward, 500);
+                console.log('Ad: No providers configured');
+                window.showToast('❌ Ads are not configured right now. Please try again later.');
                 return;
             }
 
@@ -1332,9 +1351,25 @@ function showAdAndEarn(context = 'watch_ad') {
                 const cfg = ads.moneytag;
                 const zoneId = cfg.adUnitId || cfg.publisherId;
 
+                const runMonetag = () => {
+                    try {
+                        window[`show_${zoneId}`]().then((event) => {
+                            // Monetag frontend callback is backend-confirmed
+                            if (event && (event.reward_event_type === 'valued' || event.event_type === 'impression')) {
+                                claimAdReward();
+                            } else {
+                                window.showToast('❌ Ad was shown but not monetized. No reward.');
+                            }
+                        }).catch(() => {
+                            window.showToast('❌ Ad was not completed. No reward.');
+                        });
+                    } catch (e) {
+                        window.showToast('❌ Ad failed to start. Please try again.');
+                    }
+                };
+
                 if (window[`show_${zoneId}`]) {
-                    try { window[`show_${zoneId}`](); } catch (e) { }
-                    setTimeout(claimAdReward, 2000);
+                    runMonetag();
                 } else {
                     const script = document.createElement('script');
                     script.src = '//libtl.com/sdk.js';
@@ -1342,14 +1377,12 @@ function showAdAndEarn(context = 'watch_ad') {
                     script.setAttribute('data-sdk', `show_${zoneId}`);
 
                     script.onload = () => {
-                        if (window[`show_${zoneId}`]) {
-                            try { window[`show_${zoneId}`](); } catch (e) { }
-                        }
-                        setTimeout(claimAdReward, 2000);
+                        if (window[`show_${zoneId}`]) runMonetag();
+                        else window.showToast('❌ Ad failed to initialize. Please try again later.');
                     };
                     script.onerror = () => {
-                        console.log('Ad: Moneytag script failed, proceeding to reward');
-                        setTimeout(claimAdReward, 1000);
+                        console.log('Ad: Moneytag script failed');
+                        window.showToast('❌ Ad failed to load. Please try again later.');
                     };
                     document.body.appendChild(script);
                 }
@@ -1357,34 +1390,22 @@ function showAdAndEarn(context = 'watch_ad') {
 
             if (!adInjected && hasAdSense) {
                 adInjected = true;
-                setTimeout(claimAdReward, 1500);
+                window.showToast('❌ AdSense is not supported for verified rewards.');
             }
 
             if (!adInjected && hasAdsterra) {
                 adInjected = true;
-                const cfg = ads.adsterra;
-                const atScript = document.createElement('script');
-                atScript.async = true;
-                atScript.setAttribute('data-cfasync', 'false');
-                atScript.src = `//pl${cfg.adUnitId}.profitableratecpm.com/${cfg.publisherId}/invoke.js`;
-                atScript.onerror = () => {
-                    console.log('Ad: Adsterra script failed, proceeding to reward');
-                    setTimeout(claimAdReward, 1000);
-                };
-                document.body.appendChild(atScript);
-                setTimeout(claimAdReward, 2000);
+                window.showToast('❌ Adsterra is not supported for verified rewards.');
             }
 
             if (!adInjected) {
                 console.log('Ad: No provider ads injected, using fallback claim');
-                window.showToast("⏭️ No ad available, claiming reward...");
-                setTimeout(claimAdReward, 1000);
+                window.showToast('❌ No ad available right now. Please try again later.');
             }
         })
         .catch((err) => {
-            console.error('Ad Config Fetch Error:', err);
-            window.showToast("⚠️ Ad load failed, attempting to claim reward...");
-            setTimeout(claimAdReward, 1000);
+            console.error('Ad Nonce/Config Error:', err);
+            window.showToast('❌ Failed to load ads. Please check your internet and try again.');
         });
 }
 
@@ -1398,7 +1419,7 @@ async function claimAdReward() {
         const res = await fetch(API_BASE + '/api/ad/claim', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: userData.id, context: currentAdContext })
+            body: JSON.stringify({ userId: userData.id, context: currentAdContext, nonce: currentAdNonce })
         });
         const data = await res.json();
 

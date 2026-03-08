@@ -816,22 +816,69 @@ app.post('/api/quiz/submit', (req, res) => {
     res.json({ success: true, newBalance: db.getTokenBalance(user) });
 });
 
+// API: Create Ad Claim Nonce (prevents direct /api/ad/claim abuse)
+app.post('/api/ad/nonce', (req, res) => {
+    try {
+        const { userId, context } = req.body;
+        if (!userId) return res.json({ success: false, message: 'UserId required' });
+
+        const user = db.getUser(userId);
+        if (!user) return res.json({ success: false, message: 'User not found' });
+
+        const ctx = context || 'watch_ad';
+        if (!user.adNonces) user.adNonces = {};
+
+        const nonce = `${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
+        user.adNonces[ctx] = {
+            nonce,
+            issuedAt: Date.now(),
+            expiresAt: Date.now() + (2 * 60 * 1000), // 2 minutes
+            used: false
+        };
+
+        db.updateUser(user);
+        return res.json({ success: true, nonce, expiresInMs: 2 * 60 * 1000 });
+    } catch (e) {
+        return res.json({ success: false, message: 'Failed to create nonce' });
+    }
+});
+
 // API: Claim Ad Reward
 app.post('/api/ad/claim', (req, res) => {
-    const { userId, context } = req.body;
+    const { userId, context, nonce } = req.body;
     const user = db.getUser(userId);
     if (!user) return res.json({ success: false, message: 'User not found' });
+
+    // Require nonce for all ad-related reward/unlock contexts
+    const ctx = context || 'watch_ad';
+    if (!user.adNonces || !user.adNonces[ctx]) {
+        return res.json({ success: false, message: 'Ad verification required. Please watch the ad.' });
+    }
+    const n = user.adNonces[ctx];
+    if (!nonce || nonce !== n.nonce) {
+        return res.json({ success: false, message: 'Invalid ad verification. Please try again.' });
+    }
+    if (n.used) {
+        return res.json({ success: false, message: 'Ad verification already used. Please watch again.' });
+    }
+    if (Date.now() > (n.expiresAt || 0)) {
+        return res.json({ success: false, message: 'Ad verification expired. Please watch again.' });
+    }
+    // mark used immediately
+    n.used = true;
+    user.adNonces[ctx] = n;
 
     let amount = 0;
     let detail = 'Ad Reward';
 
-    if (context === 'watch_ad') {
+    if (ctx === 'watch_ad') {
         amount = 5;
         detail = 'Watched Ad';
-    } else if (context === 'quiz_direct' || context === 'scratch_ad' || context === 'scratch_retry') {
+    } else if (ctx === 'quiz_direct' || ctx === 'scratch_ad' || ctx === 'scratch_retry') {
         // Just unlocking, no tokens yet
+        db.updateUser(user);
         return res.json({ success: true });
-    } else if (context === 'daily_bonus') {
+    } else if (ctx === 'daily_bonus') {
         // Daily bonus claim via ad
         const settings = db.data.settings || {};
         const reward = parseInt(settings.dailyBonusReward) || 10;
