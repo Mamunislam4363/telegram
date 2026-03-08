@@ -80,26 +80,13 @@ if (!_tgUser || !_tgUser.id) {
     throw new Error('Telegram WebApp required');
 }
 
-// Show initial debug info
-showDebugInfo(`User ID: ${_tgUser.id}`);
-showDebugInfo(`API_BASE: ${API_BASE}`);
-
-// Direct API test - this will show if API is reachable
-fetch(`${API_BASE}/api/user/balance/${_tgUser.id}`)
-    .then(r => {
-        showDebugInfo(`API Status: ${r.status}`);
-        return r.json();
-    })
-    .then(data => {
-        showDebugInfo(`Balance: ${data.tokens}`);
-        if (data.tokens > 0) {
-            userData.tokens = data.tokens;
-            renderBalances();
-        }
-    })
-    .catch(err => {
-        showDebugInfo(`API Error: ${err.message}`);
-    });
+// Show initial debug info - wrap in try-catch since showDebugInfo might not be loaded yet
+try {
+    if (typeof showDebugInfo === 'function') {
+        showDebugInfo(`User ID: ${_tgUser.id}`);
+        showDebugInfo(`API_BASE: ${API_BASE}`);
+    }
+} catch (e) { console.log('Debug info skipped'); }
 
 var userData = {
     id: _tgUser.id,
@@ -2075,6 +2062,10 @@ function registerAndFetchUser() {
 
                 applyProfilePhoto(userData.photo_url);
                 renderBalances();
+
+                // DEBUG: Show what we received
+                showDebugInfo(`REG Response: tokens=${data.tokens}, invites=${data.invites}`);
+
                 loadRecentActivity(); // Load real activity data
 
                 // Also fetch fresh balance from dedicated endpoint as backup
@@ -2086,6 +2077,7 @@ function registerAndFetchUser() {
                 }
             } else {
                 console.warn('[DEBUG] Register API returned error:', data.message);
+                showDebugInfo(`REG ERROR: ${data.message}`);
                 // Server returned error - still show Telegram data
                 applyProfilePhoto(_tgUser.photo_url || '');
                 renderBalances();
@@ -2093,6 +2085,7 @@ function registerAndFetchUser() {
         })
         .catch(err => {
             console.error('[DEBUG] Register API error:', err);
+            showDebugInfo(`API CALL FAILED: ${err.message}`);
             applyProfilePhoto(_tgUser.photo_url || '');
             renderBalances();
         });
