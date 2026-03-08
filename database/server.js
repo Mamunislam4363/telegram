@@ -679,9 +679,6 @@ app.post('/api/register', (req, res) => {
     // Migration/Fix: Ensure history exists and has welcome bonus if empty
     if (!user.history || user.history.length === 0) {
         const welcome = (typeof db.getWelcomeCredits === 'function') ? db.getWelcomeCredits() : 100;
-        // ACTUALLY ADD WELCOME BONUS TO USER BALANCE
-        const currentBalance = db.getTokenBalance(user);
-        db.setTokenBalance(user, currentBalance + welcome);
         user.history = [{
             type: 'bonus',
             amount: welcome,
@@ -689,17 +686,6 @@ app.post('/api/register', (req, res) => {
             date: Date.now(),
             detail: 'Welcome Bonus'
         }];
-    }
-
-    // EXTRA FIX: Check if user has welcome bonus in history but balance is 0 (migration case)
-    const finalBalance = db.getTokenBalance(user);
-    if (finalBalance === 0 && user.history && user.history.length > 0) {
-        // Check if there's a welcome bonus entry in history
-        const welcomeEntry = user.history.find(h => h.type === 'bonus' && h.detail === 'Welcome Bonus');
-        if (welcomeEntry && welcomeEntry.amount > 0) {
-            console.log(`[WELCOME FIX] User ${userId} has welcome bonus ${welcomeEntry.amount} in history but balance is 0. Adding to balance.`);
-            db.setTokenBalance(user, welcomeEntry.amount);
-        }
     }
 
     db.updateUser(user);
@@ -723,30 +709,6 @@ app.post('/api/register', (req, res) => {
         completedTasks: user.completedTasks || [],
         verified: user.successfulVerifications > 0 || user.verified || false,
         banned: user.banned || user.blocked || false
-    });
-});
-
-// API: Get User Balance (dedicated endpoint for reliable balance fetching)
-app.get('/api/user/balance/:userId', (req, res) => {
-    const { userId } = req.params;
-    const user = db.getUser(userId);
-
-    if (!user) {
-        return res.json({ success: false, message: 'User not found' });
-    }
-
-    const tokens = db.getTokenBalance(user);
-
-    res.json({
-        success: true,
-        userId,
-        tokens,
-        balance_tokens: tokens,
-        Gems: user.balance_Gems || user.Gems || 0,
-        usd: user.usd || 0,
-        invites: user.referralCount || 0,
-        referralCount: user.referralCount || 0,
-        referredUsers: user.referredUsers || []
     });
 });
 
@@ -840,85 +802,21 @@ app.post('/api/quiz/submit', (req, res) => {
     res.json({ success: true, newBalance: db.getTokenBalance(user) });
 });
 
-// API: Create Ad Claim Nonce (prevents direct /api/ad/claim abuse)
-app.post('/api/ad/nonce', (req, res) => {
-    try {
-        const { userId, context } = req.body;
-        if (!userId) return res.json({ success: false, message: 'UserId required' });
-
-        const user = db.getUser(userId);
-        if (!user) return res.json({ success: false, message: 'User not found' });
-
-        const ctx = context || 'watch_ad';
-        if (!user.adNonces) user.adNonces = {};
-
-        const nonce = `${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
-        user.adNonces[ctx] = {
-            nonce,
-            issuedAt: Date.now(),
-            expiresAt: Date.now() + (2 * 60 * 1000), // 2 minutes
-            used: false
-        };
-
-        db.updateUser(user);
-        return res.json({ success: true, nonce, expiresInMs: 2 * 60 * 1000 });
-    } catch (e) {
-        return res.json({ success: false, message: 'Failed to create nonce' });
-    }
-});
-
 // API: Claim Ad Reward
 app.post('/api/ad/claim', (req, res) => {
-    const { userId, context, nonce } = req.body;
+    const { userId, context } = req.body;
     const user = db.getUser(userId);
     if (!user) return res.json({ success: false, message: 'User not found' });
-
-    // Require nonce for all ad-related reward/unlock contexts
-    const ctx = context || 'watch_ad';
-    if (!user.adNonces || !user.adNonces[ctx]) {
-        return res.json({ success: false, message: 'Ad verification required. Please watch the ad.' });
-    }
-    const n = user.adNonces[ctx];
-    if (!nonce || nonce !== n.nonce) {
-        return res.json({ success: false, message: 'Invalid ad verification. Please try again.' });
-    }
-    if (n.used) {
-        return res.json({ success: false, message: 'Ad verification already used. Please watch again.' });
-    }
-    if (Date.now() > (n.expiresAt || 0)) {
-        return res.json({ success: false, message: 'Ad verification expired. Please watch again.' });
-    }
-    // mark used immediately
-    n.used = true;
-    user.adNonces[ctx] = n;
 
     let amount = 0;
     let detail = 'Ad Reward';
 
-    if (ctx === 'watch_ad') {
+    if (context === 'watch_ad') {
         amount = 5;
         detail = 'Watched Ad';
-    } else if (ctx === 'quiz_direct' || ctx === 'scratch_ad' || ctx === 'scratch_retry') {
+    } else if (context === 'quiz_direct' || context === 'scratch_ad' || context === 'scratch_retry') {
         // Just unlocking, no tokens yet
-        db.updateUser(user);
         return res.json({ success: true });
-    } else if (ctx === 'daily_bonus') {
-        // Daily bonus claim via ad
-        const settings = db.data.settings || {};
-        const reward = parseInt(settings.dailyBonusReward) || 10;
-        db.setTokenBalance(user, db.getTokenBalance(user) + reward);
-        if (!user.history) user.history = [];
-        user.history.unshift({
-            type: 'daily_bonus',
-            amount: reward,
-            currency: 'tokens',
-            date: Date.now(),
-            detail: 'Daily Bonus'
-        });
-        user.lastDailyClaim = Date.now();
-        user.dailyStreak = (user.dailyStreak || 0) + 1;
-        db.updateUser(user);
-        return res.json({ success: true, newBalance: db.getTokenBalance(user), reward: reward });
     } else {
         amount = 2; // Default
     }
@@ -937,40 +835,6 @@ app.post('/api/ad/claim', (req, res) => {
     }
 
     res.json({ success: true, newBalance: db.getTokenBalance(user), reward: amount });
-});
-
-// API: Get Ad Configuration (used by frontend ad system)
-app.get('/api/ads/config', (req, res) => {
-    const settings = db.data.settings || {};
-    const adminSettings = db.data.adminSettings || {};
-
-    // Get ad provider settings from database or use defaults
-    res.json({
-        success: true,
-        ads: {
-            // MoneyTag (Monetag) - primary ad provider
-            moneytag: {
-                enabled: adminSettings.monetagEnabled || false,
-                publisherId: adminSettings.monetagPublisherId || '',
-                adUnitId: adminSettings.monetagZoneId || ''
-            },
-            // Google AdSense
-            adsense: {
-                enabled: adminSettings.adsenseEnabled || false,
-                publisherId: adminSettings.adsensePublisherId || ''
-            },
-            // Adsterra
-            adsterra: {
-                enabled: adminSettings.adsterraEnabled || false,
-                publisherId: adminSettings.adsterraPublisherId || '',
-                adUnitId: adminSettings.adsterraAdUnitId || ''
-            },
-            // Default fallback settings
-            defaultReward: parseInt(settings.adReward) || 5,
-            zeroBalanceReward: parseInt(settings.zeroBalanceAdReward) || 5,
-            cooldownMinutes: 5
-        }
-    });
 });
 
 // API: Quiz Leaderboard
@@ -2503,9 +2367,6 @@ app.post('/api/admin/db/wipe', async (req, res) => {
         db.data.numberSessions = {};
         db.data.gmails = [];
 
-        // Also clear marketplace/user-generated content
-        db.data.itemSales = {};
-
         db.save();
 
         const adminId = process.env.ADMIN_ID;
@@ -2520,45 +2381,23 @@ app.post('/api/admin/db/wipe', async (req, res) => {
     }
 });
 
-// Admin: Delete any item sale (approved/pending/etc.)
-app.delete('/api/admin/item-sales/:id', (req, res) => {
-    try {
-        const id = (req.params.id || '').trim();
-        if (!id) return res.json({ success: false, message: 'Missing id' });
+// Duplicate database routes removed to resolve conflicts and prevent server restart loops.
+// The primary implementations remain active at lines 252-288.
 
-        if (!db.data.itemSales || !db.data.itemSales[id]) {
-            return res.json({ success: false, message: 'Item not found' });
-        }
-
-        delete db.data.itemSales[id];
-        db.save();
-
-        return res.json({ success: true, message: 'Item deleted' });
-    } catch (e) {
-        console.error('Delete error:', e);
-        res.json({ success: false, message: e.message });
-    }
-});
-
-// Health check endpoint for Railway and monitoring
-app.get('/health', (req, res) => {
-    res.json({
-        status: 'ok',
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
-        firebase: db.data ? 'connected' : 'disconnected'
-    });
-});
-
-// API status endpoint
-app.get('/api/status', (req, res) => {
-    res.json({
-        success: true,
-        status: 'online',
-        timestamp: new Date().toISOString(),
-        version: '1.0.0',
-        users: Object.keys(db.data.users || {}).length
-    });
+// API: Admin - Provider Management
+app.get('/api/admin/providers', (req, res) => {
+    const providers = db.data.providers || {};
+    // Hide real API keys partially
+    const list = Object.entries(providers).map(([id, p]) => ({
+        id: p.id || id,
+        name: p.name || 'Unknown',
+        type: p.type || 'sms',
+        apiUrl: p.apiUrl || '',
+        apiKey: '***' + (p.apiKey ? p.apiKey.slice(-4) : ''),
+        status: p.status || 'active',
+        priority: p.priority || 0
+    }));
+    res.json({ success: true, providers: list });
 });
 
 app.post('/api/admin/providers', (req, res) => {
@@ -3651,38 +3490,15 @@ app.post('/api/check-required-joins', async (req, res) => {
             }
         }
 
-        // If bot not available, check from database user record
+        // If bot not available, allow access (fail-open for better UX)
         if (!bot) {
-            // Check user's membership status from database
-            const user = db.getUser(userId);
-            const lastChecked = user?.lastMembershipCheck || 0;
-            const isRecent = (Date.now() - lastChecked) < (5 * 60 * 1000); // 5 minutes
-
-            if (isRecent && user?.membership) {
-                // Use cached membership data
-                const cachedChannel = user.membership.channel || false;
-                const cachedGroup = user.membership.group || false;
-                return res.json({
-                    success: true,
-                    allJoined: cachedChannel && cachedGroup,
-                    canProceed: cachedChannel && cachedGroup,
-                    channelJoined: cachedChannel,
-                    groupJoined: cachedGroup,
-                    channelLink: `https://t.me/${(config.REQUIRED_CHANNEL_NAME || '').replace('@', '')}`,
-                    groupLink: `https://t.me/${(config.REQUIRED_GROUP_NAME || '').replace('@', '')}`
-                });
-            }
-
-            // No cached data - block access for security
             return res.json({
                 success: true,
-                allJoined: false,
-                canProceed: false,
-                channelJoined: false,
-                groupJoined: false,
-                message: 'Verification required',
-                channelLink: `https://t.me/${(config.REQUIRED_CHANNEL_NAME || '').replace('@', '')}`,
-                groupLink: `https://t.me/${(config.REQUIRED_GROUP_NAME || '').replace('@', '')}`
+                allJoined: true,
+                canProceed: true,
+                channelJoined: true,
+                groupJoined: true,
+                message: 'Bot not available - allowing access'
             });
         }
 
@@ -3697,16 +3513,14 @@ app.post('/api/check-required-joins', async (req, res) => {
         });
     } catch (error) {
         console.error('[JOIN CHECK] Error:', error);
-        // Fail-closed: block access on error for security
+        // Fail-open: allow access on error
         res.json({
             success: true,
-            allJoined: false,
-            canProceed: false,
-            channelJoined: false,
-            groupJoined: false,
-            message: 'Verification required - please try again',
-            channelLink: `https://t.me/${(config.REQUIRED_CHANNEL_NAME || '').replace('@', '')}`,
-            groupLink: `https://t.me/${(config.REQUIRED_GROUP_NAME || '').replace('@', '')}`
+            allJoined: true,
+            canProceed: true,
+            channelJoined: true,
+            groupJoined: true,
+            message: 'Error occurred - allowing access'
         });
     }
 });
@@ -4240,8 +4054,6 @@ async function startServer() {
 // If run directly
 if (require.main === module) {
     startServer();
-    // Bot runs separately to avoid circular dependency
-    console.log('[INFO] Server started. Bot should be started separately via node bot.js');
 }
 
 // --- AI SYSTEM MONITOR ----------------------------------------------------

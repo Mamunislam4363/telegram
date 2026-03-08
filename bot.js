@@ -14,9 +14,13 @@ const apiGateway = require('./services/api-gateway');
 // Validate Config
 const token = config.TELEGRAM_BOT_TOKEN;
 
-// NOTE: Web server is started separately via database/server.js
-// DO NOT start server from here to avoid circular dependency
-
+// 🟢 START WEB PANEL AUTOMATICALLY
+try {
+    const server = require('./database/server.js'); // Import Web Server
+    server.startServer();
+} catch (e) {
+    console.error('⚠️ Web Server Start Error:', e);
+}
 if (!token || token === 'YOUR_TELEGRAM_BOT_TOKEN_HERE') {
     console.error('❌ ERROR: Please set TELEGRAM_BOT_TOKEN in config.js');
     process.exit(1);
@@ -228,36 +232,9 @@ bot.on('message', (msg) => {
     console.log(`[DEBUG] RAW MESSAGE RECEIVED from ${msg.from?.id}: ${msg.text}`);
 });
 
-// Global Error Handlers - improved for stability
-process.on('unhandledRejection', (e) => {
-    console.error('[CRITICAL] unhandledRejection:', e);
-    // Keep bot alive even on errors
-});
-
-process.on('uncaughtException', (e) => {
-    console.error('[CRITICAL] uncaughtException:', e);
-    // Log but don't crash - try to recover
-    setTimeout(() => {
-        console.log('[RECOVERY] Attempting to restart polling after crash...');
-        try {
-            bot.startPolling();
-        } catch (err) {
-            console.error('[RECOVERY FAILED] Could not restart polling:', err.message);
-        }
-    }, 5000);
-});
-
-// Keep-alive heartbeat to prevent Railway from killing the process
-setInterval(() => {
-    console.log(`[HEARTBEAT] Bot alive at ${new Date().toISOString()}`);
-}, 60000);
-
-// Graceful shutdown handling
-process.on('SIGTERM', () => {
-    console.log('[SHUTDOWN] SIGTERM received, stopping gracefully...');
-    bot.stopPolling();
-    process.exit(0);
-});
+// Global Error Handlers - silent
+process.on('unhandledRejection', (e) => { console.error('unhandledRejection:', e); });
+process.on('uncaughtException', (e) => { console.error('uncaughtException:', e); });
 
 // Manage State 
 const userState = {};
@@ -521,7 +498,7 @@ bot.onText(/\/start/, async (msg) => {
         const user = db.getUser(userId);
 
         // Log user activity
-        console.log(`👤 User: ${userId} (${username}) | 🚀 Started bot | ⏰ ${new Date().toLocaleTimeString()}`);
+        originalConsoleLog(`👤 User: ${userId} (${username}) | 🚀 Started bot | ⏰ ${new Date().toLocaleTimeString()}`);
 
         // Referral Logic (Pending Verification)
         const refMatch = msg.text.split(' ')[1];
@@ -558,7 +535,7 @@ bot.onText(/\/start/, async (msg) => {
         await sendMainMenu(chatId, user, msg.from);
     } catch (e) {
         console.error('Error handling /start:', e);
-        bot.sendMessage(msg.chat.id, '❌ Bot error. Please try again in a moment.').catch(() => { });
+        bot.sendMessage(chatId, '❌ Bot error. Please try again in a moment.').catch(() => { });
     }
 });
 
@@ -602,7 +579,7 @@ bot.onText(/\/admin/, async (msg) => {
     }
 });
 async function sendMainMenu(chatId, user, msgFrom) {
-    const publicUrl = (process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`).trim();
+    const publicUrl = process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`;
 
     // Get fresh name from Telegram message context if available, else use stored
     const firstName = (msgFrom && msgFrom.first_name) ? msgFrom.first_name :
@@ -612,7 +589,7 @@ async function sendMainMenu(chatId, user, msgFrom) {
 
     // Welcome message matching screenshot style
     const welcomeText = `👋 *Hello, ${firstName}!*\n\n` +
-        `Welcome to Auto Verified! 🚀\n\n` +
+        `Welcome to Gemini Verified! 🚀\n\n` +
         `Launch our Mini App to start earning rewards, invite friends, and manage your assets.`;
 
     const appUrl = `${publicUrl}`;
@@ -978,7 +955,7 @@ bot.on('chat_member', async (update) => {
         if (newStatus === 'restricted' && update.new_chat_member.is_member) return; // Still member
 
         // User left or was kicked from a required chat - notify them
-        console.log(`🚨 User ${userId} left monitored chat: ${chatUsername}`);
+        originalConsoleLog(`🚨 User ${userId} left monitored chat: ${chatUsername}`);
 
         // Re-check full membership status
         const membership = await checkMembership(userId);
@@ -1018,7 +995,7 @@ bot.on('callback_query', async (query) => {
         const username = query.from.username || query.from.first_name || 'Unknown';
 
         // Log user activity
-        console.log(`👤 User: ${userId} (${username}) | 💬 Action: ${data} | ⏰ ${new Date().toLocaleTimeString()}`);
+        originalConsoleLog(`👤 User: ${userId} (${username}) | 💬 Action: ${data} | ⏰ ${new Date().toLocaleTimeString()}`);
 
         // Ensure User Exists
         const user = db.getUser(userId);

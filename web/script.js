@@ -1,7 +1,4 @@
 // Helper: Check if userId is valid before making API calls
-// API Base URL - for Netlify deployment, backend will be on different domain
-const API_BASE = (typeof window !== 'undefined' && window.API_BASE) || 'http://localhost:3000';
-
 function isValidUserId(userId) {
     if (!userId) return false;
     const numericId = typeof userId === 'number' ? userId : parseInt(userId);
@@ -65,36 +62,19 @@ var pageScrollPositions = {};
 var userStatus = 'active';
 
 // GLOBAL USER STATE - populated from Telegram + Server
-// REQUIRE REAL USER: No demo mode, only real Telegram users allowed
-if (!_tgUser || !_tgUser.id) {
-    console.error('❌ No Telegram user detected. App requires Telegram WebApp.');
-    // Show error or redirect
-    document.body.innerHTML = `
-        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#1a1a1a;color:#fff;text-align:center;padding:20px;">
-            <div style="font-size:48px;margin-bottom:20px;">🔒</div>
-            <h2 style="margin-bottom:10px;">Telegram Required</h2>
-            <p style="color:#888;margin-bottom:20px;">This app must be opened through Telegram WebApp.</p>
-            <a href="https://t.me/AutosVerify_bot" style="background:#f59e0b;color:#000;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;">Open in Telegram</a>
-        </div>
-    `;
-    throw new Error('Telegram WebApp required');
+// DEMO MODE: If no Telegram user, create demo user with 5000 credits
+const isDemoMode = !_tgUser.id;
+if (isDemoMode) {
+    console.log('🎮 DEMO MODE: Creating demo user with 5000 credits');
 }
 
-// Show initial debug info - wrap in try-catch since showDebugInfo might not be loaded yet
-try {
-    if (typeof showDebugInfo === 'function') {
-        showDebugInfo(`User ID: ${_tgUser.id}`);
-        showDebugInfo(`API_BASE: ${API_BASE}`);
-    }
-} catch (e) { console.log('Debug info skipped'); }
-
 var userData = {
-    id: _tgUser.id,
-    username: _tgUser.username || _tgUser.first_name || 'User',
-    firstName: _tgUser.first_name || 'User',
-    lastName: _tgUser.last_name || '',
+    id: _tgUser.id || 999999, // Numeric demo ID
+    username: _tgUser.first_name || _tgUser.username || 'Demo User',
+    firstName: _tgUser.first_name || 'Demo',
+    lastName: _tgUser.last_name || 'User',
     photo_url: _tgUser.photo_url || '',
-    tokens: 0,
+    tokens: isDemoMode ? 5000 : 0, // 5000 credits for demo
     Gems: 0,
     usd: 0.00,
     verified: true,
@@ -123,7 +103,7 @@ function applyFeatureFlagsToHome() {
 }
 
 function loadFeatureFlags() {
-    return fetch(API_BASE + '/api/features')
+    return fetch('/api/features')
         .then(r => r.json())
         .then(data => {
             if (data && data.success && data.features) {
@@ -184,7 +164,7 @@ async function uploadDepositScreenshot(input, targetId) {
     formData.append('file', file);
 
     try {
-        const res = await fetch(API_BASE + '/api/upload/screenshot', {
+        const res = await fetch('/api/upload/screenshot', {
             method: 'POST',
             body: formData
         });
@@ -640,15 +620,9 @@ function exchangeTokens() {
         return;
     }
 
-    // Smooth exchange execution without ugly popup
-    executeExchange(fromCur, toCur, amt, preview.toAmount);
-}
+    if (!confirm('Confirm exchange of ' + formatCurrencyAmount(amt, fromCur) + ' to ' + formatCurrencyAmount(preview.toAmount, toCur) + '?')) return;
 
-async function executeExchange(fromCur, toCur, amt, toAmount) {
-    // Show smooth loading toast
-    window.showToast('🔄 Processing exchange...', 'info');
-
-    fetch(API_BASE + '/api/exchange/convert', {
+    fetch('/api/exchange/convert', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: userData.id, from: fromCur, to: toCur, amount: amt })
@@ -940,7 +914,7 @@ let currentCryptoMethod = null;
 
 async function fetchCryptoConfig() {
     try {
-        const res = await fetch(API_BASE + '/api/deposit/config');
+        const res = await fetch('/api/deposit/config');
         const data = await res.json();
         if (data.success) {
             cryptoConfig = data.cryptoMethods;
@@ -1048,7 +1022,7 @@ async function submitCryptoDeposit() {
     if (!txnId || txnId.length < 5) return window.showToast('Please enter a valid Transaction ID / Hash.');
 
     try {
-        const res = await fetch(API_BASE + '/api/deposit/submit', {
+        const res = await fetch('/api/deposit/submit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1083,7 +1057,7 @@ async function submitFaucetDeposit() {
     if (!txnId) return window.showToast('Please enter your FaucetPay Transaction ID.');
 
     try {
-        const res = await fetch(API_BASE + '/api/deposit/submit', {
+        const res = await fetch('/api/deposit/submit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1186,7 +1160,7 @@ function verifyAndComplete(type, buttonElement, amount) {
 
     // For Telegram tasks, verify membership first
     if (type === 'tg' || type === 'tg_ch') {
-        fetch(API_BASE + '/api/verify-membership', {
+        fetch('/api/verify-membership', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1228,7 +1202,7 @@ function verifyAndComplete(type, buttonElement, amount) {
 function completeTaskReward(type, buttonElement, amount) {
     buttonElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> COMPLETING...';
 
-    fetch(API_BASE + '/api/earn', {
+    fetch('/api/earn', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: userData.id, taskType: type, amount: amount })
@@ -1309,94 +1283,27 @@ function checkAllTasksCompleted() {
 let adWatchTimer = null;
 let adRewardClaimed = false;
 let currentAdContext = 'watch_ad';
-let currentAdNonce = null;
 
 function showAdAndEarn(context = 'watch_ad') {
     currentAdContext = context;
     adRewardClaimed = false;
-    currentAdNonce = null;
 
     window.showToast("🎬 Loading Ad...");
 
-    // Create a one-time nonce on server to prevent direct /api/ad/claim abuse
-    fetch(API_BASE + '/api/ad/nonce', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: userData.id, context: currentAdContext })
-    })
+    fetch('/api/ads/config')
         .then(r => r.json())
-        .then(n => {
-            if (!n || !n.success || !n.nonce) {
-                window.showToast('❌ Ad verification failed. Please try again.');
-                return;
-            }
-            currentAdNonce = n.nonce;
-            // Proceed to show ad after nonce is issued
-            return fetch(API_BASE + '/api/ads/config');
-        })
-        .then(r => {
-            if (!r) return;
-            return r.json();
-        })
         .then(data => {
-            if (!data) return;
             const ads = data.ads || {};
             let adInjected = false;
 
-            // Check if any ad provider is properly configured
-            const hasMoneytag = ads.moneytag && ads.moneytag.enabled && ads.moneytag.publisherId;
-            const hasAdSense = ads.adsense && ads.adsense.enabled && ads.adsense.publisherId;
-            const hasAdsterra = ads.adsterra && ads.adsterra.enabled && ads.adsterra.publisherId;
-
-            if (!hasMoneytag && !hasAdSense && !hasAdsterra) {
-                console.log('Ad: No providers configured');
-                window.showToast('❌ Ads are not configured right now. Please try again later.');
-                return;
-            }
-
-            if (hasMoneytag) {
+            if (!adInjected && ads.moneytag && ads.moneytag.publisherId) {
                 adInjected = true;
                 const cfg = ads.moneytag;
                 const zoneId = cfg.adUnitId || cfg.publisherId;
 
-                const runMonetag = () => {
-                    try {
-                        // Wait for SDK to be ready
-                        const checkSDK = setInterval(() => {
-                            if (!window[`show_${zoneId}`]) {
-                                console.log('Waiting for Monetag SDK...');
-                                return;
-                            }
-                            clearInterval(checkSDK);
-
-                            window[`show_${zoneId}`]().then((event) => {
-                                // Monetag frontend callback is backend-confirmed
-                                if (event && (event.reward_event_type === 'valued' || event.event_type === 'impression')) {
-                                    claimAdReward();
-                                } else {
-                                    window.showToast('❌ Ad was shown but not monetized. No reward.');
-                                }
-                            }).catch((err) => {
-                                console.error('Monetag show error:', err);
-                                window.showToast('❌ Ad was not completed. No reward.');
-                            });
-                        }, 500);
-
-                        // Timeout after 10 seconds
-                        setTimeout(() => {
-                            clearInterval(checkSDK);
-                            if (!window[`show_${zoneId}`]) {
-                                window.showToast('❌ Ad failed to initialize. Please try again later.');
-                            }
-                        }, 10000);
-                    } catch (e) {
-                        console.error('Monetag runtime error:', e);
-                        window.showToast('❌ Ad failed to start. Please try again.');
-                    }
-                };
-
                 if (window[`show_${zoneId}`]) {
-                    runMonetag();
+                    try { window[`show_${zoneId}`](); } catch (e) { }
+                    setTimeout(claimAdReward, 2000);
                 } else {
                     const script = document.createElement('script');
                     script.src = '//libtl.com/sdk.js';
@@ -1404,41 +1311,40 @@ function showAdAndEarn(context = 'watch_ad') {
                     script.setAttribute('data-sdk', `show_${zoneId}`);
 
                     script.onload = () => {
-                        // Give SDK time to initialize after script loads
-                        setTimeout(() => {
-                            if (window[`show_${zoneId}`]) {
-                                runMonetag();
-                            } else {
-                                window.showToast('❌ Ad SDK failed to initialize. Please try again later.');
-                            }
-                        }, 1000);
-                    };
-                    script.onerror = () => {
-                        console.log('Ad: Moneytag script failed to load');
-                        window.showToast('❌ Ad network error. Please check your connection and try again.');
+                        if (window[`show_${zoneId}`]) {
+                            try { window[`show_${zoneId}`](); } catch (e) { }
+                        }
+                        setTimeout(claimAdReward, 2000);
                     };
                     document.body.appendChild(script);
                 }
             }
 
-            if (!adInjected && hasAdSense) {
+            if (!adInjected && ads.adsense && ads.adsense.publisherId) {
                 adInjected = true;
-                window.showToast('❌ AdSense is not supported for verified rewards.');
+                setTimeout(claimAdReward, 1500);
             }
 
-            if (!adInjected && hasAdsterra) {
+            if (!adInjected && ads.adsterra && ads.adsterra.publisherId) {
                 adInjected = true;
-                window.showToast('❌ Adsterra is not supported for verified rewards.');
+                const cfg = ads.adsterra;
+                const atScript = document.createElement('script');
+                atScript.async = true;
+                atScript.setAttribute('data-cfasync', 'false');
+                atScript.src = `//pl${cfg.adUnitId}.profitableratecpm.com/${cfg.publisherId}/invoke.js`;
+                document.body.appendChild(atScript);
+                setTimeout(claimAdReward, 2000);
             }
 
             if (!adInjected) {
                 console.log('Ad: No provider ads injected, using fallback claim');
-                window.showToast('❌ No ad available right now. Please try again later.');
+                setTimeout(claimAdReward, 1500);
             }
         })
         .catch((err) => {
-            console.error('Ad Nonce/Config Error:', err);
-            window.showToast('❌ Failed to load ads. Please check your internet and try again.');
+            console.error('Ad Config Fetch Error:', err);
+            window.showToast("Processing reward...");
+            setTimeout(claimAdReward, 2000);
         });
 }
 
@@ -1449,10 +1355,10 @@ async function claimAdReward() {
     adRewardClaimed = true;
 
     try {
-        const res = await fetch(API_BASE + '/api/ad/claim', {
+        const res = await fetch('/api/ad/claim', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: userData.id, context: currentAdContext, nonce: currentAdNonce })
+            body: JSON.stringify({ userId: userData.id, context: currentAdContext })
         });
         const data = await res.json();
 
@@ -1660,7 +1566,7 @@ async function redeemCode() {
     }
 
     try {
-        const res = await fetch(API_BASE + '/api/redeem', {
+        const res = await fetch('/api/redeem', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: userData.id, code: code })
@@ -1989,9 +1895,7 @@ function registerAndFetchUser() {
         }
     }
 
-    console.log(`[DEBUG] Registering user ${currentUserId}...`);
-
-    fetch(API_BASE + '/api/register', {
+    fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -2005,38 +1909,16 @@ function registerAndFetchUser() {
     })
         .then(res => res.json())
         .then(data => {
-            console.log(`[DEBUG] Register API response:`, JSON.stringify(data, null, 2));
             if (data.success) {
                 // Sync from server - check both tokens and balance_tokens fields
-                const serverTokens = data.tokens ?? data.balance_tokens;
-                const serverGems = data.Gems ?? data.gems;
-                const serverUsd = data.usd;
-                const serverInvites = data.invites ?? data.referralCount;
-
-                console.log(`[DEBUG] Server tokens: ${serverTokens}, Current: ${userData.tokens}`);
-                console.log(`[DEBUG] Server invites: ${serverInvites}, Current: ${userData.invites}`);
-
-                // Only update if server has valid data (not null/undefined)
-                if (serverTokens !== null && serverTokens !== undefined) {
-                    userData.tokens = serverTokens;
-                }
-                if (serverGems !== null && serverGems !== undefined) {
-                    userData.Gems = serverGems;
-                }
-                if (serverUsd !== null && serverUsd !== undefined) {
-                    userData.usd = serverUsd;
-                }
-                if (serverInvites !== null && serverInvites !== undefined) {
-                    userData.invites = serverInvites;
-                }
-
-                console.log(`[DEBUG] After sync - tokens: ${userData.tokens}, invites: ${userData.invites}`);
-
+                userData.tokens = data.tokens || data.balance_tokens || 0;
+                userData.Gems = data.Gems || data.gems || 0;
+                userData.usd = (data.usd !== undefined && data.usd !== null) ? data.usd : 0;
                 userData.verified = data.verified || false;
                 userData.dailyStreak = data.dailyStreak || 0;
                 userData.lastDailyClaim = data.lastClaim || 0;
                 userData.completedTasks = data.completedTasks || [];
-
+                userData.invites = data.invites || 0;
                 // Use Telegram name (always fresh from Telegram)
                 userData.username = _tgUser.first_name || data.firstName || data.username || 'User';
                 userData.firstName = _tgUser.first_name || data.firstName || '';
@@ -2062,139 +1944,23 @@ function registerAndFetchUser() {
 
                 applyProfilePhoto(userData.photo_url);
                 renderBalances();
-
-                // DEBUG: Show what we received
-                showDebugInfo(`REG Response: tokens=${data.tokens}, invites=${data.invites}`);
-
                 loadRecentActivity(); // Load real activity data
-
-                // Also fetch fresh balance from dedicated endpoint as backup
-                fetchFreshBalance(currentUserId);
 
                 if (currentPage === 'daily') {
                     renderDailyGrid();
                     startDailyCountdown();
                 }
             } else {
-                console.warn('[DEBUG] Register API returned error:', data.message);
-                showDebugInfo(`REG ERROR: ${data.message}`);
                 // Server returned error - still show Telegram data
                 applyProfilePhoto(_tgUser.photo_url || '');
                 renderBalances();
             }
         })
         .catch(err => {
-            console.error('[DEBUG] Register API error:', err);
-            showDebugInfo(`API CALL FAILED: ${err.message}`);
+            console.warn('Register API error (offline?):', err);
             applyProfilePhoto(_tgUser.photo_url || '');
             renderBalances();
         });
-}
-
-// Fetch fresh balance from dedicated endpoint
-function fetchFreshBalance(userId) {
-    console.log(`[DEBUG] Fetching fresh balance for ${userId}...`);
-
-    // Also show on-screen debug for mobile
-    showDebugInfo(`Fetching balance for ${userId}...`);
-
-    fetch(`${API_BASE}/api/user/balance/${userId}`)
-        .then(r => r.json())
-        .then(data => {
-            console.log(`[DEBUG] Balance API response:`, JSON.stringify(data, null, 2));
-
-            // Show on-screen debug
-            showDebugInfo(`API Response: ${JSON.stringify(data, null, 2).substring(0, 500)}`);
-
-            if (data.success) {
-                const serverTokens = data.tokens ?? data.balance_tokens;
-                const serverGems = data.Gems ?? data.gems;
-                const serverUsd = data.usd;
-                const serverInvites = data.invites ?? data.referralCount;
-
-                console.log(`[DEBUG] Fresh balance - tokens: ${serverTokens}, invites: ${serverInvites}`);
-
-                // Show on-screen debug
-                showDebugInfo(`Tokens: ${serverTokens}, Invites: ${serverInvites}`);
-
-                let updated = false;
-                if (serverTokens !== null && serverTokens !== undefined && serverTokens !== userData.tokens) {
-                    userData.tokens = serverTokens;
-                    updated = true;
-                    console.log(`[DEBUG] Updated tokens to ${serverTokens}`);
-                }
-                if (serverGems !== null && serverGems !== undefined && serverGems !== userData.Gems) {
-                    userData.Gems = serverGems;
-                    updated = true;
-                }
-                if (serverUsd !== null && serverUsd !== undefined && serverUsd !== userData.usd) {
-                    userData.usd = serverUsd;
-                    updated = true;
-                }
-                if (serverInvites !== null && serverInvites !== undefined && serverInvites !== userData.invites) {
-                    userData.invites = serverInvites;
-                    updated = true;
-                    console.log(`[DEBUG] Updated invites to ${serverInvites}`);
-                }
-
-                if (updated) {
-                    console.log(`[DEBUG] Balance updated, re-rendering...`);
-                    renderBalances();
-                    // Update invite UI if on invite page
-                    if (currentPage === 'invite') {
-                        loadInviteStats();
-                    }
-
-                    // Show final values on screen
-                    showDebugInfo(`FINAL - Tokens: ${userData.tokens}, Invites: ${userData.invites}`);
-                }
-            }
-        })
-        .catch(err => {
-            console.error('[DEBUG] Balance API error:', err);
-            showDebugInfo(`API ERROR: ${err.message}`);
-        });
-}
-
-// Debug overlay function - shows info on screen for mobile debugging
-function showDebugInfo(text) {
-    let debugEl = document.getElementById('debugOverlay');
-    if (!debugEl) {
-        debugEl = document.createElement('div');
-        debugEl.id = 'debugOverlay';
-        debugEl.style.cssText = `
-            position: fixed;
-            top: 100px;
-            left: 10px;
-            right: 10px;
-            background: rgba(0,0,0,0.9);
-            color: #0f0;
-            font-family: monospace;
-            font-size: 11px;
-            padding: 10px;
-            border-radius: 8px;
-            z-index: 99999;
-            max-height: 200px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-            word-break: break-word;
-            border: 2px solid #0f0;
-        `;
-        document.body.appendChild(debugEl);
-    }
-
-    const timestamp = new Date().toLocaleTimeString();
-    debugEl.textContent += `[${timestamp}] ${text}\n\n`;
-
-    // Auto-scroll to bottom
-    debugEl.scrollTop = debugEl.scrollHeight;
-
-    // Clear after 30 seconds
-    setTimeout(() => {
-        if (debugEl && debugEl.parentNode) {
-            debugEl.parentNode.removeChild(debugEl);
-        }
-    }, 30000);
 }
 
 // Legacy alias kept for compatibility
@@ -2202,7 +1968,6 @@ function fetchUserData() { registerAndFetchUser(); }
 
 // Load and render real recent activity from user history
 function loadRecentActivity() {
-    // ... rest of the code remains the same ...
     if (!userData.id || userData.id === 0) return;
 
     fetch(`/api/history/${userData.id}`)
@@ -2261,29 +2026,12 @@ function renderFullHistory() {
         const dateObj = item.date ? new Date(item.date) : new Date();
         const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         const timeStr = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        const reward = item.reward || '';
         const detail = item.detail || '';
-
-        // Handle both 'amount' and 'reward' fields from backend
-        let amt = 0;
-        if (item.amount !== undefined && item.amount !== null) {
-            amt = Number(item.amount);
-        } else if (item.reward !== undefined && item.reward !== null) {
-            // Extract number from reward string like "-10 Tokens" or "+5 TC"
-            const match = String(item.reward).match(/-?\d+/);
-            if (match) amt = Number(match[0]);
-        }
-
+        const amt = Number(item.amount || 0);
         const isNeg = NEG_TYPES.has(item.type) || (!POS_TYPES.has(item.type) && amt < 0);
         const isPos = POS_TYPES.has(item.type) || (!NEG_TYPES.has(item.type) && amt > 0);
         const asset = item.asset || item.currency || 'TC';
-
-        // Build reward display
-        let rewardDisplay = '';
-        if (item.reward !== undefined && item.reward !== null) {
-            rewardDisplay = item.reward;
-        } else if (item.amount !== undefined && item.amount !== null) {
-            rewardDisplay = (isNeg ? '-' : (isPos ? '+' : '')) + Math.abs(amt) + ' ' + asset.toUpperCase();
-        }
 
         return `
         <div class="activity-card" style="margin-bottom:12px;">
@@ -2300,7 +2048,7 @@ function renderFullHistory() {
             </div>
             <div class="activity-reward">
                 <div style="font-size:13px; font-weight:700; color:${isPos ? '#22c55e' : (isNeg ? '#ef4444' : '#fff')}">
-                    ${rewardDisplay}
+                    ${reward || ((item.amount !== undefined && item.amount !== null) ? ((isNeg ? '-' : (isPos ? '+' : '')) + Math.abs(amt) + ' ' + (item.asset || item.currency || 'TC').toUpperCase()) : '')}
                 </div>
             </div>
         </div>`;
@@ -2326,7 +2074,7 @@ function loadBroadcast() {
     ];
 
     // Try to get real user activity from API
-    fetch(API_BASE + '/api/user-activity')
+    fetch('/api/user-activity')
         .then(r => r.json())
         .then(data => {
             if (data.success && data.activities && data.activities.length > 0) {
@@ -2405,17 +2153,7 @@ function renderRecentActivity(history) {
         const time = item.date ? new Date(item.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '';
         const POS_TYPES = new Set(['transfer_in', 'redeem', 'daily_bonus', 'ad_reward', 'mission_reward', 'quiz_reward', 'bonus', 'deposit']);
         const NEG_TYPES = new Set(['transfer_out', 'account_purchase', 'mail', 'number']);
-
-        // Handle both 'amount' and 'reward' fields from backend
-        let amt = 0;
-        if (item.amount !== undefined && item.amount !== null) {
-            amt = Number(item.amount);
-        } else if (item.reward !== undefined && item.reward !== null) {
-            // Extract number from reward string like "-10 Tokens" or "+5 TC"
-            const match = String(item.reward).match(/-?\d+/);
-            if (match) amt = Number(match[0]);
-        }
-
+        const amt = Number(item.amount || 0);
         const isNeg = NEG_TYPES.has(item.type) || (!POS_TYPES.has(item.type) && amt < 0);
         const isPos = POS_TYPES.has(item.type) || (!NEG_TYPES.has(item.type) && amt > 0);
         const asset = item.asset || item.currency || 'TC';
@@ -2444,12 +2182,13 @@ function saveWallet() { renderBalances(); }
 
 function updateBalanceUI() { renderBalances(); }
 
-// Helper: Get short name (first word only)
+// Helper: Get short name (first 2 words max)
 function getShortName(fullName) {
     if (!fullName) return 'Guest';
     const parts = fullName.trim().split(/\s+/);
-    // Return only first name/word to prevent long names from breaking layout
-    return parts[0] || 'Guest';
+    if (parts.length <= 2) return fullName;
+    // Return first 2 parts for long names like "Riad Al Mamun" -> "Riad Al"
+    return parts.slice(0, 2).join(' ');
 }
 
 function renderBalances() {
@@ -2550,18 +2289,12 @@ async function transferTokens() {
         return;
     }
 
+    // Confirmation
     const assetNames = { tokens: 'Tokens', usd: 'USD', Gems: 'Gems' };
-
-    // Smooth transfer execution without ugly popup
-    executeTransfer(targetUserId, amount, assetType, assetNames[assetType]);
-}
-
-async function executeTransfer(targetUserId, amount, assetType, assetName) {
-    // Show smooth loading toast
-    window.showToast(`🔄 Processing transfer of ${amount} ${assetName}...`, 'info');
+    if (!confirm(`Are you sure you want to transfer ${amount} ${assetNames[assetType]} to User #${targetUserId}?`)) return;
 
     try {
-        const response = await fetch(API_BASE + '/api/user/transfer', {
+        const response = await fetch('/api/user/transfer', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -2635,7 +2368,7 @@ window.appCostConfig = window.appCostConfig || {
 
 async function loadAppCostConfig() {
     try {
-        const res = await fetch(API_BASE + '/api/admin/costs');
+        const res = await fetch('/api/admin/costs');
         const data = await res.json();
         if (!data?.success || !data.costs) return;
         const c = data.costs;
@@ -2681,7 +2414,7 @@ function getShopItems() {
 
 // Fetch from backend and update UI
 function syncAdminData() {
-    fetch(API_BASE + '/api/admin/services')
+    fetch('/api/admin/services')
         .then(r => r.json())
         .then(data => {
             if (data.success && data.services) {
@@ -2689,7 +2422,7 @@ function syncAdminData() {
                 renderServicesList();
             }
         });
-    fetch(API_BASE + '/api/admin/shop')
+    fetch('/api/admin/shop')
         .then(r => r.json())
         .then(data => {
             if (data.success && data.shopItems) {
@@ -2697,7 +2430,7 @@ function syncAdminData() {
             }
         });
     // Also fetch approved user-submitted items
-    fetch(API_BASE + '/api/user/item-sales/approved')
+    fetch('/api/user/item-sales/approved')
         .then(r => r.json())
         .then(data => {
             if (data.success) {
@@ -2706,13 +2439,13 @@ function syncAdminData() {
         })
         .catch(() => { })
         .finally(() => renderShopItems());
-    fetch(API_BASE + '/api/admin/cards').then(r => r.json()).then(data => {
+    fetch('/api/admin/cards').then(r => r.json()).then(data => {
         if (data.success) {
             localStorage.setItem('adminCards', JSON.stringify(data.cards));
             if (typeof currentPage !== 'undefined' && currentPage === 'vccCards') renderCards();
         }
     });
-    fetch(API_BASE + '/api/admin/vpn').then(r => r.json()).then(data => {
+    fetch('/api/admin/vpn').then(r => r.json()).then(data => {
         if (data.success) {
             localStorage.setItem('adminVPNs', JSON.stringify(data.vpns));
             if (typeof currentPage !== 'undefined' && currentPage === 'vpnServices') renderVPN();
@@ -2951,7 +2684,7 @@ function renderAccounts() {
     const container = document.getElementById('accountsStoreList');
     if (!container) return;
 
-    fetch(API_BASE + '/api/accounts')
+    fetch('/api/accounts')
         .then(r => r.json())
         .then(data => {
             if (!data.success || !data.accounts || data.accounts.length === 0) {
@@ -3011,7 +2744,7 @@ function buyPremiumAccount(accountId, type, price) {
     }
 
     // Purchase directly without confirmation
-    fetch(API_BASE + '/api/accounts/buy', {
+    fetch('/api/accounts/buy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: userData.id, accountId })
@@ -3200,7 +2933,7 @@ function buyAccountFromCategory(category) {
         btn.style.pointerEvents = 'none';
     }
 
-    fetch(API_BASE + '/api/accounts/buy-category', {
+    fetch('/api/accounts/buy-category', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: userData.id, category: category, price: cat.price })
@@ -3336,7 +3069,7 @@ function loadNumPlatforms() {
     const list = document.getElementById('numPlatformList');
     if (!list) return;
 
-    fetch(API_BASE + '/api/number/platforms')
+    fetch('/api/number/platforms')
         .then(r => r.json())
         .then(data => {
             if (data.success && data.platforms) {
@@ -3393,7 +3126,7 @@ function generateVirtualNumber() {
     const btn = document.getElementById('numGenerateBtn');
     if (btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...'; btn.disabled = true; }
 
-    fetch(API_BASE + '/api/number/generate', {
+    fetch('/api/number/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: userData.id, platform: selectedNumPlatform, cost })
@@ -4366,7 +4099,7 @@ async function loadPremiumEmailsFromAdmin() {
         }
 
         // No assigned email, fetch available emails
-        const res = await fetch(API_BASE + '/api/premium-emails');
+        const res = await fetch('/api/premium-emails');
         const data = await res.json();
 
         if (!data.success || !data.emails || data.emails.length === 0) {
@@ -4383,7 +4116,7 @@ async function loadPremiumEmailsFromAdmin() {
         const availableEmail = data.emails[0];
 
         // Try to assign this email to user
-        const assignRes = await fetch(API_BASE + '/api/premium-emails/assign', {
+        const assignRes = await fetch('/api/premium-emails/assign', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: userData.id, emailId: availableEmail.id })
@@ -4441,7 +4174,7 @@ function displayPremiumEmailList(emails) {
 // Select and assign a premium email
 async function selectPremiumEmail(emailId, emailAddress) {
     try {
-        const res = await fetch(API_BASE + '/api/premium-emails/assign', {
+        const res = await fetch('/api/premium-emails/assign', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: userData.id, emailId: emailId })
@@ -4697,7 +4430,7 @@ async function checkRequiredJoins() {
     }
 
     try {
-        const response = await fetch(API_BASE + '/api/check-required-joins', {
+        const response = await fetch('/api/check-required-joins', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -4875,7 +4608,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 window.verifyJoinsAndProceed = verifyJoinsAndProceed;
 
 function fetchEmailServiceConfig() {
-    fetch(API_BASE + '/api/admin/email-services')
+    fetch('/api/admin/email-services')
         .then(r => r.json())
         .then(data => {
             if (data.success) {
@@ -4972,7 +4705,7 @@ let sellingRewards = {};
 
 async function fetchSellingRewards() {
     try {
-        const res = await fetch(API_BASE + '/api/user/item-sales/rewards');
+        const res = await fetch('/api/user/item-sales/rewards');
         const data = await res.json();
         if (data.success) {
             sellingRewards = data.rewards;
@@ -5350,7 +5083,7 @@ async function submitItemForSale() {
     }
 
     try {
-        const res = await fetch(API_BASE + '/api/user/item-sales/submit', {
+        const res = await fetch('/api/user/item-sales/submit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -5475,7 +5208,7 @@ async function loadMySales() {
 
 async function respondToOffer(saleId, action) {
     try {
-        const res = await fetch(API_BASE + '/api/user/item-sales/offer-action', {
+        const res = await fetch('/api/user/item-sales/offer-action', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ saleId, action, userId: userData.id })
@@ -5589,7 +5322,7 @@ async function loadQuiz() {
     oEl.innerHTML = '';
 
     try {
-        const res = await fetch(API_BASE + '/api/quiz/generate');
+        const res = await fetch('/api/quiz/generate');
         const data = await res.json();
 
         if (data.success) {
@@ -5636,7 +5369,7 @@ async function submitQuizAnswer(idx) {
     setActionCooldown('quiz');
 
     try {
-        const res = await fetch(API_BASE + '/api/quiz/submit', {
+        const res = await fetch('/api/quiz/submit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: userData.id, correct: isCorrect, reward })
@@ -5666,7 +5399,7 @@ async function renderQuizLeaderboard() {
     list.innerHTML = '<div style="padding:40px; text-align:center; color:#888;">Loading...</div>';
 
     try {
-        const res = await fetch(API_BASE + '/api/quiz/leaderboard');
+        const res = await fetch('/api/quiz/leaderboard');
         const data = await res.json();
 
         if (data.success && data.leaderboard) {
@@ -5802,7 +5535,7 @@ async function claimScratchReward(reward) {
     if (window.confetti) confetti({ particleCount: 50, spread: 50 });
 
     try {
-        const res = await fetch(API_BASE + '/api/scratch/claim', {
+        const res = await fetch('/api/scratch/claim', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: userData.id, reward })
