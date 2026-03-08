@@ -35,7 +35,7 @@ function setBot(instance) {
     bot = instance;
 
     // The Public URL is the public-facing Mini App URL
-    const publicUrl = config.PUBLIC_URL || 'https://mamunislam.netlify.app';
+    const publicUrl = config.PUBLIC_URL || 'https://autosverifybot-production.up.railway.app';
 
     setTimeout(async () => {
         try {
@@ -74,7 +74,7 @@ app.use((req, res, next) => {
 
 // CORS middleware - allows Netlify frontend to call API directly
 app.use((req, res, next) => {
-    const allowedOrigins = ['https://mamunislam.netlify.app', 'http://localhost:3000'];
+    const allowedOrigins = ['https://autosverifybot-production.up.railway.app', 'http://localhost:3000'];
     const origin = req.headers.origin;
     if (allowedOrigins.includes(origin)) {
         res.setHeader('Access-Control-Allow-Origin', origin);
@@ -3261,7 +3261,7 @@ app.post('/api/admin/broadcast', async (req, res) => {
 
             // Fix: Replace localhost with PUBLIC_URL for Telegram buttons
             if (bUrl.includes('localhost:') || bUrl.includes('127.0.0.1:')) {
-                const publicUrl = config.PUBLIC_URL || 'https://mamunislam.netlify.app';
+                const publicUrl = config.PUBLIC_URL || 'https://autosverifybot-production.up.railway.app';
                 bUrl = bUrl.replace(/https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/, publicUrl);
             }
 

@@ -272,6 +272,14 @@ function verifyUserAuthToken(userId, token) {
     return hash === expectedHash;
 }
 
+function normalizeWebAppUrl(url) {
+    if (!url) return '';
+    return String(url)
+        .trim()
+        .replace(/[\r\n\t\s]+/g, '')
+        .replace(/\/+$/g, '');
+}
+
 // Helper: Check if feature is enabled - returns true if enabled, sends Coming Soon message if disabled
 function checkFeatureEnabled(bot, chatId, userId, featureKey, query) {
     const isEnabled = db.isFeatureEnabled(featureKey);
@@ -362,7 +370,8 @@ async function checkMembership(userId) {
     try {
         const results = {
             channel: false,
-            group: false
+            group: false,
+            checkFailed: false
         };
         const validStatuses = ['creator', 'administrator', 'member', 'restricted'];
 
@@ -372,6 +381,11 @@ async function checkMembership(userId) {
                 const channelMember = await bot.getChatMember(config.REQUIRED_CHANNEL, userId);
                 results.channel = validStatuses.includes(channelMember.status);
             } catch (error) {
+                // Check if it's a "chat not found" error - means channel is misconfigured
+                if (error.message && error.message.includes('chat not found')) {
+                    console.warn(`[MEMBERSHIP] Channel ${config.REQUIRED_CHANNEL} not found - bot may not be in the channel`);
+                    results.checkFailed = true;
+                }
                 console.error(`Check Channel Error (${userId}):`, error.message);
                 results.channel = false;
             }
@@ -385,6 +399,11 @@ async function checkMembership(userId) {
                 const groupMember = await bot.getChatMember(config.REQUIRED_GROUP, userId);
                 results.group = validStatuses.includes(groupMember.status);
             } catch (error) {
+                // Check if it's a "chat not found" error
+                if (error.message && error.message.includes('chat not found')) {
+                    console.warn(`[MEMBERSHIP] Group ${config.REQUIRED_GROUP} not found - bot may not be in the group`);
+                    results.checkFailed = true;
+                }
                 console.error(`Check Group Error (${userId}):`, error.message);
                 results.group = false;
             }
@@ -395,7 +414,7 @@ async function checkMembership(userId) {
         return results;
     } catch (error) {
         console.error('Membership check error:', error);
-        return { channel: false, group: false };
+        return { channel: false, group: false, checkFailed: true };
     }
 }
 
@@ -477,6 +496,8 @@ bot.onText(/\/start/, async (msg) => {
         const chatId = msg.chat.id;
         const userId = msg.from.id;
 
+        console.log(`[CMD] /start received from user=${userId} chat=${chatId} text=${JSON.stringify(msg.text || '')}`);
+
         // Anti-duplicate protection for start command
         const now = Date.now();
         const lastStart = startThrottle.get(userId) || 0;
@@ -513,11 +534,16 @@ bot.onText(/\/start/, async (msg) => {
             }
         }
 
-        // Check mandatory membership
+        // Check mandatory membership - if check fails, allow user to proceed (graceful degradation)
         const membership = await checkMembership(userId);
 
-        if (!membership.channel || !membership.group) {
-            // User not joined, show mandatory join screen
+        console.log(`[CMD] /start membership user=${userId} channel=${membership.channel} group=${membership.group}`);
+
+        // If membership check failed (both false due to errors), assume no requirement and let user through
+        const membershipCheckFailed = !membership.channel && !membership.group && config.REQUIRED_CHANNEL && config.REQUIRED_GROUP;
+
+        if ((!membership.channel || !membership.group) && !membershipCheckFailed) {
+            // User not joined and check worked, show mandatory join screen
 
             // Remove lingering keyboard if it exists
             const cleanupMsg = await bot.sendMessage(chatId, "⏳ Initializing...", { reply_markup: { remove_keyboard: true } });
@@ -525,6 +551,20 @@ bot.onText(/\/start/, async (msg) => {
 
             showMandatoryJoin(chatId, membership);
             return;
+        }
+
+        // If membership check failed entirely, log but proceed to show menu (don't block user)
+        if (membershipCheckFailed) {
+            console.log(`[WARN] Membership check failed for user ${userId}, proceeding with main menu`);
+        }
+
+        console.log(`[CMD] /start calling sendMainMenu for user ${userId}`);
+
+        // Send immediate acknowledgment first
+        try {
+            await bot.sendMessage(chatId, `👋 Hello ${msg.from.first_name || 'there'}! Loading your menu...`);
+        } catch (e) {
+            console.log(`[WARN] Could not send initial greeting: ${e.message}`);
         }
 
         // Cleanup old persistent keyboards before sending the menu
@@ -548,8 +588,11 @@ bot.onText(/\/admin/, async (msg) => {
     const userId = msg.from.id;
     const username = msg.from.username || msg.from.first_name || 'Unknown';
 
+    console.log(`[CMD] /admin received from user=${userId} chat=${chatId} text=${JSON.stringify(msg.text || '')}`);
+
     // Check if user is admin - silently ignore for non-admins
     if (!isAdmin(userId)) {
+        await bot.sendMessage(chatId, '⛔ Admin access only.').catch(() => { });
         return;
     }
 
@@ -557,7 +600,7 @@ bot.onText(/\/admin/, async (msg) => {
     const adminSettings = db.data?.adminSettings || {};
     const loginEnabled = adminSettings.adminLoginEnabled !== false; // Default true
 
-    const publicUrl = process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`;
+    const publicUrl = normalizeWebAppUrl(process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`);
 
     // If login is enabled, generate a secure token for this admin session
     let adminUrl = `${publicUrl}/admin`;
@@ -594,10 +637,11 @@ bot.onText(/\/admin/, async (msg) => {
         console.log(`[ADMIN] Admin ${username} (${userId}) accessed admin panel. Login required: ${loginEnabled}`);
     } catch (e) {
         console.error('Error sending admin panel:', e);
+        await bot.sendMessage(chatId, '❌ Failed to open Admin Panel. Please try again.').catch(() => { });
     }
 });
 async function sendMainMenu(chatId, user, msgFrom) {
-    const publicUrl = process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`;
+    const publicUrl = normalizeWebAppUrl(process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`);
 
     // Get fresh name from Telegram message context if available, else use stored
     const firstName = (msgFrom && msgFrom.first_name) ? msgFrom.first_name :
@@ -610,7 +654,7 @@ async function sendMainMenu(chatId, user, msgFrom) {
         `Welcome to Gemini Verified! 🚀\n\n` +
         `Launch our Mini App to start earning rewards, invite friends, and manage your assets.`;
 
-    const appUrl = `${publicUrl}`;
+    const appUrl = publicUrl;
 
     // Keyboard matching screenshot style - vertical layout, 1 button per row
     const keyboard = {
@@ -626,8 +670,25 @@ async function sendMainMenu(chatId, user, msgFrom) {
 
     try {
         await bot.sendMessage(chatId, welcomeText, { parse_mode: 'Markdown', ...keyboard });
+        console.log(`[MENU] Main menu sent successfully to user ${chatId}`);
     } catch (e) {
-        console.error('Error sending main menu:', e);
+        console.error('Error sending main menu:', e.message);
+        // Try sending without web_app button as fallback
+        try {
+            const fallbackKeyboard = {
+                reply_markup: {
+                    inline_keyboard: [
+                        [{ text: '📢 Join Channel', url: `https://t.me/${(config.REQUIRED_CHANNEL_NAME || '@AutosVerify').replace('@', '')}` }],
+                        [{ text: '👥 Join Group', url: `https://t.me/${(config.REQUIRED_GROUP_NAME || '@AutosVerifyCh').replace('@', '')}` }],
+                        [{ text: '📺 YouTube Channel', url: 'https://youtube.com/@MamunIslamyts' }]
+                    ]
+                }
+            };
+            await bot.sendMessage(chatId, welcomeText, { parse_mode: 'Markdown', ...fallbackKeyboard });
+            console.log(`[MENU] Fallback menu sent (without web_app button) to user ${chatId}`);
+        } catch (e2) {
+            console.error('Error sending fallback menu:', e2.message);
+        }
     }
 }
 
