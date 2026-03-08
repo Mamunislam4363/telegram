@@ -602,7 +602,7 @@ bot.onText(/\/admin/, async (msg) => {
     }
 });
 async function sendMainMenu(chatId, user, msgFrom) {
-    const publicUrl = process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`;
+    const publicUrl = (process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`).trim();
 
     // Get fresh name from Telegram message context if available, else use stored
     const firstName = (msgFrom && msgFrom.first_name) ? msgFrom.first_name :
