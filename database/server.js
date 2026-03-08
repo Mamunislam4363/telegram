@@ -2398,25 +2398,32 @@ app.delete('/api/admin/item-sales/:id', (req, res) => {
         db.save();
 
         return res.json({ success: true, message: 'Item deleted' });
-        // Duplicate database routes removed to resolve conflicts and prevent server restart loops.
-        // The primary implementations remain active at lines 252-288.
+    } catch (e) {
+        console.error('Delete error:', e);
+        res.json({ success: false, message: e.message });
+    }
+});
 
-        // Health check endpoint for Railway and monitoring
-        app.get('/health', (req, res) => {
-            res.json({
-                status: 'ok',
-                timestamp: new Date().toISOString(),
-                uptime: process.uptime(),
-                firebase: db.data ? 'connected' : 'disconnected'
-        name: p.name || 'Unknown',
-                type: p.type || 'sms',
-                apiUrl: p.apiUrl || '',
-                apiKey: '***' + (p.apiKey ? p.apiKey.slice(-4) : ''),
-                status: p.status || 'active',
-                priority: p.priority || 0
-            }));
-        res.json({ success: true, providers: list });
+// Health check endpoint for Railway and monitoring
+app.get('/health', (req, res) => {
+    res.json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        firebase: db.data ? 'connected' : 'disconnected'
     });
+});
+
+// API status endpoint
+app.get('/api/status', (req, res) => {
+    res.json({
+        success: true,
+        status: 'online',
+        timestamp: new Date().toISOString(),
+        version: '1.0.0',
+        users: Object.keys(db.data.users || {}).length
+    });
+});
 
 app.post('/api/admin/providers', (req, res) => {
     const provider = req.body;
