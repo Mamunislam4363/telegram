@@ -1314,7 +1314,20 @@ function showAdAndEarn(context = 'watch_ad') {
             const ads = data.ads || {};
             let adInjected = false;
 
-            if (!adInjected && ads.moneytag && ads.moneytag.publisherId) {
+            // Check if any ad provider is properly configured
+            const hasMoneytag = ads.moneytag && ads.moneytag.enabled && ads.moneytag.publisherId;
+            const hasAdSense = ads.adsense && ads.adsense.enabled && ads.adsense.publisherId;
+            const hasAdsterra = ads.adsterra && ads.adsterra.enabled && ads.adsterra.publisherId;
+
+            if (!hasMoneytag && !hasAdSense && !hasAdsterra) {
+                console.log('Ad: No providers configured, skipping to reward');
+                // No ads configured - just give the reward directly
+                window.showToast("⏭️ Skipping ad (no provider configured)...");
+                setTimeout(claimAdReward, 500);
+                return;
+            }
+
+            if (hasMoneytag) {
                 adInjected = true;
                 const cfg = ads.moneytag;
                 const zoneId = cfg.adUnitId || cfg.publisherId;
@@ -1334,35 +1347,44 @@ function showAdAndEarn(context = 'watch_ad') {
                         }
                         setTimeout(claimAdReward, 2000);
                     };
+                    script.onerror = () => {
+                        console.log('Ad: Moneytag script failed, proceeding to reward');
+                        setTimeout(claimAdReward, 1000);
+                    };
                     document.body.appendChild(script);
                 }
             }
 
-            if (!adInjected && ads.adsense && ads.adsense.publisherId) {
+            if (!adInjected && hasAdSense) {
                 adInjected = true;
                 setTimeout(claimAdReward, 1500);
             }
 
-            if (!adInjected && ads.adsterra && ads.adsterra.publisherId) {
+            if (!adInjected && hasAdsterra) {
                 adInjected = true;
                 const cfg = ads.adsterra;
                 const atScript = document.createElement('script');
                 atScript.async = true;
                 atScript.setAttribute('data-cfasync', 'false');
                 atScript.src = `//pl${cfg.adUnitId}.profitableratecpm.com/${cfg.publisherId}/invoke.js`;
+                atScript.onerror = () => {
+                    console.log('Ad: Adsterra script failed, proceeding to reward');
+                    setTimeout(claimAdReward, 1000);
+                };
                 document.body.appendChild(atScript);
                 setTimeout(claimAdReward, 2000);
             }
 
             if (!adInjected) {
                 console.log('Ad: No provider ads injected, using fallback claim');
-                setTimeout(claimAdReward, 1500);
+                window.showToast("⏭️ No ad available, claiming reward...");
+                setTimeout(claimAdReward, 1000);
             }
         })
         .catch((err) => {
             console.error('Ad Config Fetch Error:', err);
-            window.showToast("Processing reward...");
-            setTimeout(claimAdReward, 2000);
+            window.showToast("⚠️ Ad load failed, attempting to claim reward...");
+            setTimeout(claimAdReward, 1000);
         });
 }
 

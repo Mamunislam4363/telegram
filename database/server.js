@@ -691,6 +691,17 @@ app.post('/api/register', (req, res) => {
         }];
     }
 
+    // EXTRA FIX: Check if user has welcome bonus in history but balance is 0 (migration case)
+    const finalBalance = db.getTokenBalance(user);
+    if (finalBalance === 0 && user.history && user.history.length > 0) {
+        // Check if there's a welcome bonus entry in history
+        const welcomeEntry = user.history.find(h => h.type === 'bonus' && h.detail === 'Welcome Bonus');
+        if (welcomeEntry && welcomeEntry.amount > 0) {
+            console.log(`[WELCOME FIX] User ${userId} has welcome bonus ${welcomeEntry.amount} in history but balance is 0. Adding to balance.`);
+            db.setTokenBalance(user, welcomeEntry.amount);
+        }
+    }
+
     db.updateUser(user);
 
     // Always return the synced balance
