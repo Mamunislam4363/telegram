@@ -817,6 +817,23 @@ app.post('/api/ad/claim', (req, res) => {
     } else if (context === 'quiz_direct' || context === 'scratch_ad' || context === 'scratch_retry') {
         // Just unlocking, no tokens yet
         return res.json({ success: true });
+    } else if (context === 'daily_bonus') {
+        // Daily bonus claim via ad
+        const settings = db.data.settings || {};
+        const reward = parseInt(settings.dailyBonusReward) || 10;
+        db.setTokenBalance(user, db.getTokenBalance(user) + reward);
+        if (!user.history) user.history = [];
+        user.history.unshift({
+            type: 'daily_bonus',
+            amount: reward,
+            currency: 'tokens',
+            date: Date.now(),
+            detail: 'Daily Bonus'
+        });
+        user.lastDailyClaim = Date.now();
+        user.dailyStreak = (user.dailyStreak || 0) + 1;
+        db.updateUser(user);
+        return res.json({ success: true, newBalance: db.getTokenBalance(user), reward: reward });
     } else {
         amount = 2; // Default
     }
@@ -835,6 +852,40 @@ app.post('/api/ad/claim', (req, res) => {
     }
 
     res.json({ success: true, newBalance: db.getTokenBalance(user), reward: amount });
+});
+
+// API: Get Ad Configuration (used by frontend ad system)
+app.get('/api/ads/config', (req, res) => {
+    const settings = db.data.settings || {};
+    const adminSettings = db.data.adminSettings || {};
+
+    // Get ad provider settings from database or use defaults
+    res.json({
+        success: true,
+        ads: {
+            // MoneyTag (Monetag) - primary ad provider
+            moneytag: {
+                enabled: adminSettings.monetagEnabled || false,
+                publisherId: adminSettings.monetagPublisherId || '',
+                adUnitId: adminSettings.monetagZoneId || ''
+            },
+            // Google AdSense
+            adsense: {
+                enabled: adminSettings.adsenseEnabled || false,
+                publisherId: adminSettings.adsensePublisherId || ''
+            },
+            // Adsterra
+            adsterra: {
+                enabled: adminSettings.adsterraEnabled || false,
+                publisherId: adminSettings.adsterraPublisherId || '',
+                adUnitId: adminSettings.adsterraAdUnitId || ''
+            },
+            // Default fallback settings
+            defaultReward: parseInt(settings.adReward) || 5,
+            zeroBalanceReward: parseInt(settings.zeroBalanceAdReward) || 5,
+            cooldownMinutes: 5
+        }
+    });
 });
 
 // API: Quiz Leaderboard

@@ -623,7 +623,13 @@ function exchangeTokens() {
         return;
     }
 
-    if (!confirm('Confirm exchange of ' + formatCurrencyAmount(amt, fromCur) + ' to ' + formatCurrencyAmount(preview.toAmount, toCur) + '?')) return;
+    // Smooth exchange execution without ugly popup
+    executeExchange(fromCur, toCur, amt, preview.toAmount);
+}
+
+async function executeExchange(fromCur, toCur, amt, toAmount) {
+    // Show smooth loading toast
+    window.showToast('🔄 Processing exchange...', 'info');
 
     fetch(API_BASE + '/api/exchange/convert', {
         method: 'POST',
@@ -2029,12 +2035,29 @@ function renderFullHistory() {
         const dateObj = item.date ? new Date(item.date) : new Date();
         const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         const timeStr = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-        const reward = item.reward || '';
         const detail = item.detail || '';
-        const amt = Number(item.amount || 0);
+
+        // Handle both 'amount' and 'reward' fields from backend
+        let amt = 0;
+        if (item.amount !== undefined && item.amount !== null) {
+            amt = Number(item.amount);
+        } else if (item.reward !== undefined && item.reward !== null) {
+            // Extract number from reward string like "-10 Tokens" or "+5 TC"
+            const match = String(item.reward).match(/-?\d+/);
+            if (match) amt = Number(match[0]);
+        }
+
         const isNeg = NEG_TYPES.has(item.type) || (!POS_TYPES.has(item.type) && amt < 0);
         const isPos = POS_TYPES.has(item.type) || (!NEG_TYPES.has(item.type) && amt > 0);
         const asset = item.asset || item.currency || 'TC';
+
+        // Build reward display
+        let rewardDisplay = '';
+        if (item.reward !== undefined && item.reward !== null) {
+            rewardDisplay = item.reward;
+        } else if (item.amount !== undefined && item.amount !== null) {
+            rewardDisplay = (isNeg ? '-' : (isPos ? '+' : '')) + Math.abs(amt) + ' ' + asset.toUpperCase();
+        }
 
         return `
         <div class="activity-card" style="margin-bottom:12px;">
@@ -2051,7 +2074,7 @@ function renderFullHistory() {
             </div>
             <div class="activity-reward">
                 <div style="font-size:13px; font-weight:700; color:${isPos ? '#22c55e' : (isNeg ? '#ef4444' : '#fff')}">
-                    ${reward || ((item.amount !== undefined && item.amount !== null) ? ((isNeg ? '-' : (isPos ? '+' : '')) + Math.abs(amt) + ' ' + (item.asset || item.currency || 'TC').toUpperCase()) : '')}
+                    ${rewardDisplay}
                 </div>
             </div>
         </div>`;
@@ -2156,7 +2179,17 @@ function renderRecentActivity(history) {
         const time = item.date ? new Date(item.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '';
         const POS_TYPES = new Set(['transfer_in', 'redeem', 'daily_bonus', 'ad_reward', 'mission_reward', 'quiz_reward', 'bonus', 'deposit']);
         const NEG_TYPES = new Set(['transfer_out', 'account_purchase', 'mail', 'number']);
-        const amt = Number(item.amount || 0);
+
+        // Handle both 'amount' and 'reward' fields from backend
+        let amt = 0;
+        if (item.amount !== undefined && item.amount !== null) {
+            amt = Number(item.amount);
+        } else if (item.reward !== undefined && item.reward !== null) {
+            // Extract number from reward string like "-10 Tokens" or "+5 TC"
+            const match = String(item.reward).match(/-?\d+/);
+            if (match) amt = Number(match[0]);
+        }
+
         const isNeg = NEG_TYPES.has(item.type) || (!POS_TYPES.has(item.type) && amt < 0);
         const isPos = POS_TYPES.has(item.type) || (!NEG_TYPES.has(item.type) && amt > 0);
         const asset = item.asset || item.currency || 'TC';
@@ -2292,9 +2325,15 @@ async function transferTokens() {
         return;
     }
 
-    // Confirmation
     const assetNames = { tokens: 'Tokens', usd: 'USD', Gems: 'Gems' };
-    if (!confirm(`Are you sure you want to transfer ${amount} ${assetNames[assetType]} to User #${targetUserId}?`)) return;
+
+    // Smooth transfer execution without ugly popup
+    executeTransfer(targetUserId, amount, assetType, assetNames[assetType]);
+}
+
+async function executeTransfer(targetUserId, amount, assetType, assetName) {
+    // Show smooth loading toast
+    window.showToast(`🔄 Processing transfer of ${amount} ${assetName}...`, 'info');
 
     try {
         const response = await fetch(API_BASE + '/api/user/transfer', {
