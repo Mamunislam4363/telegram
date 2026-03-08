@@ -643,6 +643,9 @@ app.post('/api/admin/users/:userId', (req, res) => {
     const user = db.getUser(userId);
     if (!user) return res.json({ success: false, message: 'User not found' });
 
+    const adminActorId = req.body?.adminId || req.body?.actorId || null;
+    const prevTokens = db.getTokenBalance(user);
+
     if (balance !== undefined) {
         // sync all balance fields
         db.setTokenBalance(user, parseInt(balance));
@@ -654,6 +657,23 @@ app.post('/api/admin/users/:userId', (req, res) => {
     if (referralCount !== undefined) user.referralCount = parseInt(referralCount);
     if (verified !== undefined) user.verified = (verified === true || verified === 'true');
     if (req.body.adminVerified !== undefined) user.adminVerified = (req.body.adminVerified === true || req.body.adminVerified === 'true');
+
+    // History audit: Admin provided tokens
+    if (balance !== undefined) {
+        const nextTokens = db.getTokenBalance(user);
+        const delta = nextTokens - prevTokens;
+        if (delta !== 0) {
+            if (!user.history) user.history = [];
+            user.history.unshift({
+                type: 'admin_provided',
+                amount: delta,
+                asset: 'tokens',
+                by: adminActorId ? String(adminActorId) : 'admin',
+                date: Date.now(),
+                detail: 'Admin provided tokens'
+            });
+        }
+    }
 
     db.updateUser(user);
     res.json({ success: true });
@@ -1834,7 +1854,7 @@ app.post('/api/referral/verify', async (req, res) => {
                 amount: refBonus,
                 currency: 'tokens',
                 date: Date.now(),
-                details: `Verified referral from user #${userId}`
+                detail: `Verified referral from user #${userId}`
             });
 
             db.updateUser(referrer);
@@ -2543,10 +2563,61 @@ app.post('/api/admin/tasks', (req, res) => {
     res.json({ success: true, id });
 });
 
+app.put('/api/admin/tasks/:id', (req, res) => {
+    const id = req.params.id;
+    const { name, url, reward } = req.body || {};
+    if (!db.data.tasks || !db.data.tasks[id]) {
+        return res.json({ success: false, message: 'Task not found' });
+    }
+    if (typeof name === 'string') db.data.tasks[id].name = name;
+    if (typeof url === 'string') db.data.tasks[id].url = url;
+    if (reward !== undefined) db.data.tasks[id].reward = parseInt(reward) || 0;
+    db.save();
+    res.json({ success: true });
+});
+
+// Renew/reset: clears completion for all users for a specific task
+app.post('/api/admin/tasks/:id/renew', (req, res) => {
+    const id = req.params.id;
+    if (!db.data.tasks || !db.data.tasks[id]) {
+        return res.json({ success: false, message: 'Task not found' });
+    }
+    const users = db.data.users || {};
+    let cleared = 0;
+    Object.values(users).forEach(u => {
+        if (Array.isArray(u.tasksDone) && u.tasksDone.includes(id)) {
+            u.tasksDone = u.tasksDone.filter(t => t !== id);
+            cleared++;
+        }
+    });
+    db.save();
+    res.json({ success: true, cleared });
+});
+
 app.delete('/api/admin/tasks/:id', (req, res) => {
     const id = req.params.id;
     const success = db.deleteTask(id);
     res.json({ success });
+});
+
+// API: Admin - Clear history
+app.post('/api/admin/history/clear-user', (req, res) => {
+    const { userId } = req.body || {};
+    if (!userId) return res.json({ success: false, message: 'userId required' });
+    const user = db.getUser(userId);
+    if (!user) return res.json({ success: false, message: 'User not found' });
+    user.history = [];
+    db.updateUser(user);
+    res.json({ success: true });
+});
+
+app.post('/api/admin/history/clear-all', (req, res) => {
+    const users = db.data.users || {};
+    Object.values(users).forEach(u => {
+        u.history = [];
+    });
+    db.save();
+    res.json({ success: true });
 });
 
 app.post('/api/admin/groups/leave', async (req, res) => {
@@ -4131,7 +4202,7 @@ app.get('/api/referrals/:userId', (req, res) => {
             invited: totalInvited,
             earned: totalEarned
         },
-        referralLink: `https://t.me/${botUsername}?start=${userId}`
+        referralLink: `https://t.me/${botUsername}?start=ref_${userId}`
     });
 });
 

@@ -47,6 +47,8 @@
     box-sizing: border-box;
     font-family: 'Poppins', sans-serif;
     -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 body {
@@ -59,7 +61,18 @@ body {
     width: 100%;
     height: 100vh;
     overflow: hidden;
+    overflow-x: hidden;
+    overscroll-behavior: none;
+    -webkit-text-size-adjust: 100%;
+    scrollbar-gutter: stable both-edges;
     transition: background 0.3s, color 0.3s;
+}
+
+html {
+    width: 100%;
+    height: 100%;
+    overflow-x: hidden;
+    background: var(--bg-body);
 }
 
 #app-container {

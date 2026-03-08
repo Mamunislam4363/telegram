@@ -5611,6 +5611,14 @@ function initScratchCard() {
     // Reset state
     isScratchActive = true;
     newBtn.style.display = 'none';
+
+    // Reset result div - hide it and clear content
+    if (resultDiv) {
+        resultDiv.style.display = 'none';
+        resultDiv.innerHTML = '';
+        resultDiv.style.background = '';
+    }
+
     canvas.style.display = 'block'; // Ensure canvas is visible
     canvas.style.opacity = '1'; // Ensure canvas is opaque
 
@@ -5689,8 +5697,30 @@ async function claimScratchReward(reward) {
 
     const canvas = document.getElementById('scratchCanvas');
     const newBtn = document.getElementById('newScratchBtn');
+    const resultDiv = document.getElementById('scratchResult');
+
+    // Fade out canvas
     canvas.style.opacity = '0';
     setTimeout(() => { canvas.style.display = 'none'; }, 500);
+
+    // Show the reward result prominently
+    if (resultDiv) {
+        resultDiv.style.display = 'flex';
+        resultDiv.style.flexDirection = 'column';
+        resultDiv.style.alignItems = 'center';
+        resultDiv.style.justifyContent = 'center';
+        resultDiv.style.background = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+        resultDiv.style.borderRadius = '16px';
+        resultDiv.style.padding = '20px';
+        resultDiv.style.marginBottom = '16px';
+        resultDiv.innerHTML = `
+            <div style="font-size: 48px; margin-bottom: 8px;">🎁</div>
+            <div style="font-size: 24px; font-weight: bold; color: #fff;">+${reward} TOKENS</div>
+            <div style="font-size: 14px; color: rgba(255,255,255,0.9); margin-top: 4px;">You Won!</div>
+        `;
+    }
+
+    // Show the try again button
     newBtn.style.display = 'block';
 
     if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');

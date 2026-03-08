@@ -635,7 +635,7 @@ class Database {
             amount: refBonus,
             currency: 'tokens',
             date: Date.now(),
-            details: `Referred user #${newUserId}`,
+            detail: `Referred user #${newUserId}`,
             reward: `+${refBonus} Tokens`
         });
 
@@ -646,7 +646,7 @@ class Database {
             amount: refBonus,
             currency: 'tokens',
             date: Date.now(),
-            details: `Joined via referral from #${referrerId}`,
+            detail: `Joined via referral from #${referrerId}`,
             reward: `+${refBonus} Tokens`
         });
 

@@ -221,7 +221,7 @@ console.log('📊 Activity: Bot is running and waiting for users...');
 
 bot.getMe().then(me => {
     console.log(`📊 Activity: Bot connected as @${me.username}`);
-    
+
     // Set Menu Button (Mini App)
     bot.setChatMenuButton({
         menu_button: JSON.stringify({
@@ -571,6 +571,14 @@ bot.onText(/\/start/, async (msg) => {
         // If membership check failed entirely, log but proceed to show menu (don't block user)
         if (membershipCheckFailed) {
             console.log(`[WARN] Membership check failed for user ${userId}, proceeding with main menu`);
+        }
+
+        // Check if user is already verified - mark as verified if joined both
+        if (membership.channel && membership.group && !user.verified) {
+            user.verified = true;
+            user.verifiedAt = Date.now();
+            db.updateUser(user);
+            console.log(`[VERIFY] User ${userId} auto-marked as verified on /start (already joined channel + group)`);
         }
 
         console.log(`[CMD] /start calling sendMainMenu for user ${userId}`);
@@ -1111,14 +1119,23 @@ bot.on('callback_query', async (query) => {
                     show_alert: true
                 }).catch(() => { });
 
+                // MARK USER AS VERIFIED - they joined both channel and group
+                if (!user.verified) {
+                    user.verified = true;
+                    user.verifiedAt = Date.now();
+                    console.log(`[VERIFY] User ${userId} marked as verified (joined channel + group)`);
+                }
+
                 // PROCESS PENDING REFERRAL
                 if (user.pendingReferrer) {
                     if (db.handleReferral(userId, user.pendingReferrer)) {
                         bot.sendMessage(user.pendingReferrer, `🎉 *Referral Bonus!*\n\nUser ${user.first_name || userId} joined and verified!\n💰 +${db.getSettings().refBonus} Credits added!`, { parse_mode: 'Markdown' }).catch(() => { });
                     }
                     user.pendingReferrer = null;
-                    db.updateUser(user);
                 }
+
+                // Save user with updated verification status
+                db.updateUser(user);
 
                 bot.deleteMessage(chatId, msgId).catch(() => { });
                 sendMainMenu(chatId, user);
