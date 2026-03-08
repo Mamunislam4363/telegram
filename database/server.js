@@ -726,6 +726,30 @@ app.post('/api/register', (req, res) => {
     });
 });
 
+// API: Get User Balance (dedicated endpoint for reliable balance fetching)
+app.get('/api/user/balance/:userId', (req, res) => {
+    const { userId } = req.params;
+    const user = db.getUser(userId);
+
+    if (!user) {
+        return res.json({ success: false, message: 'User not found' });
+    }
+
+    const tokens = db.getTokenBalance(user);
+
+    res.json({
+        success: true,
+        userId,
+        tokens,
+        balance_tokens: tokens,
+        Gems: user.balance_Gems || user.Gems || 0,
+        usd: user.usd || 0,
+        invites: user.referralCount || 0,
+        referralCount: user.referralCount || 0,
+        referredUsers: user.referredUsers || []
+    });
+});
+
 // API: Get User History
 app.get('/api/history/:userId', (req, res) => {
     const userId = req.params.userId;

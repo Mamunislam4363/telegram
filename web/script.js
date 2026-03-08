@@ -1981,6 +1981,8 @@ function registerAndFetchUser() {
         }
     }
 
+    console.log(`[DEBUG] Registering user ${currentUserId}...`);
+
     fetch(API_BASE + '/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1995,16 +1997,38 @@ function registerAndFetchUser() {
     })
         .then(res => res.json())
         .then(data => {
+            console.log(`[DEBUG] Register API response:`, JSON.stringify(data, null, 2));
             if (data.success) {
                 // Sync from server - check both tokens and balance_tokens fields
-                userData.tokens = (data.tokens ?? data.balance_tokens ?? userData.tokens ?? 0);
-                userData.Gems = (data.Gems ?? data.gems ?? userData.Gems ?? 0);
-                userData.usd = (data.usd ?? userData.usd ?? 0);
+                const serverTokens = data.tokens ?? data.balance_tokens;
+                const serverGems = data.Gems ?? data.gems;
+                const serverUsd = data.usd;
+                const serverInvites = data.invites ?? data.referralCount;
+
+                console.log(`[DEBUG] Server tokens: ${serverTokens}, Current: ${userData.tokens}`);
+                console.log(`[DEBUG] Server invites: ${serverInvites}, Current: ${userData.invites}`);
+
+                // Only update if server has valid data (not null/undefined)
+                if (serverTokens !== null && serverTokens !== undefined) {
+                    userData.tokens = serverTokens;
+                }
+                if (serverGems !== null && serverGems !== undefined) {
+                    userData.Gems = serverGems;
+                }
+                if (serverUsd !== null && serverUsd !== undefined) {
+                    userData.usd = serverUsd;
+                }
+                if (serverInvites !== null && serverInvites !== undefined) {
+                    userData.invites = serverInvites;
+                }
+
+                console.log(`[DEBUG] After sync - tokens: ${userData.tokens}, invites: ${userData.invites}`);
+
                 userData.verified = data.verified || false;
                 userData.dailyStreak = data.dailyStreak || 0;
                 userData.lastDailyClaim = data.lastClaim || 0;
                 userData.completedTasks = data.completedTasks || [];
-                userData.invites = (data.invites ?? userData.invites ?? 0);
+
                 // Use Telegram name (always fresh from Telegram)
                 userData.username = _tgUser.first_name || data.firstName || data.username || 'User';
                 userData.firstName = _tgUser.first_name || data.firstName || '';
@@ -2032,20 +2056,74 @@ function registerAndFetchUser() {
                 renderBalances();
                 loadRecentActivity(); // Load real activity data
 
+                // Also fetch fresh balance from dedicated endpoint as backup
+                fetchFreshBalance(currentUserId);
+
                 if (currentPage === 'daily') {
                     renderDailyGrid();
                     startDailyCountdown();
                 }
             } else {
+                console.warn('[DEBUG] Register API returned error:', data.message);
                 // Server returned error - still show Telegram data
                 applyProfilePhoto(_tgUser.photo_url || '');
                 renderBalances();
             }
         })
         .catch(err => {
-            console.warn('Register API error (offline?):', err);
+            console.error('[DEBUG] Register API error:', err);
             applyProfilePhoto(_tgUser.photo_url || '');
             renderBalances();
+        });
+}
+
+// Fetch fresh balance from dedicated endpoint
+function fetchFreshBalance(userId) {
+    console.log(`[DEBUG] Fetching fresh balance for ${userId}...`);
+    fetch(`${API_BASE}/api/user/balance/${userId}`)
+        .then(r => r.json())
+        .then(data => {
+            console.log(`[DEBUG] Balance API response:`, JSON.stringify(data, null, 2));
+            if (data.success) {
+                const serverTokens = data.tokens ?? data.balance_tokens;
+                const serverGems = data.Gems ?? data.gems;
+                const serverUsd = data.usd;
+                const serverInvites = data.invites ?? data.referralCount;
+
+                console.log(`[DEBUG] Fresh balance - tokens: ${serverTokens}, invites: ${serverInvites}`);
+
+                let updated = false;
+                if (serverTokens !== null && serverTokens !== undefined && serverTokens !== userData.tokens) {
+                    userData.tokens = serverTokens;
+                    updated = true;
+                    console.log(`[DEBUG] Updated tokens to ${serverTokens}`);
+                }
+                if (serverGems !== null && serverGems !== undefined && serverGems !== userData.Gems) {
+                    userData.Gems = serverGems;
+                    updated = true;
+                }
+                if (serverUsd !== null && serverUsd !== undefined && serverUsd !== userData.usd) {
+                    userData.usd = serverUsd;
+                    updated = true;
+                }
+                if (serverInvites !== null && serverInvites !== undefined && serverInvites !== userData.invites) {
+                    userData.invites = serverInvites;
+                    updated = true;
+                    console.log(`[DEBUG] Updated invites to ${serverInvites}`);
+                }
+
+                if (updated) {
+                    console.log(`[DEBUG] Balance updated, re-rendering...`);
+                    renderBalances();
+                    // Update invite UI if on invite page
+                    if (currentPage === 'invite') {
+                        loadInviteStats();
+                    }
+                }
+            }
+        })
+        .catch(err => {
+            console.error('[DEBUG] Balance API error:', err);
         });
 }
 
@@ -2054,6 +2132,7 @@ function fetchUserData() { registerAndFetchUser(); }
 
 // Load and render real recent activity from user history
 function loadRecentActivity() {
+    // ... rest of the code remains the same ...
     if (!userData.id || userData.id === 0) return;
 
     fetch(`/api/history/${userData.id}`)
