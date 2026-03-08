@@ -1,11 +1,8 @@
 // API Configuration for Railway + Netlify deployment
 // This file centralizes API base URL configuration
 
-// For Railway deployment, use the Railway backend URL
-// For local development, use http://localhost:3000
-
-const API_BASE = (typeof window !== 'undefined' && window.__API_BASE__) ||
-    (typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://autosverifybot-production.up.railway.app');
+// Always use Railway production URL (localhost check fails in Telegram WebApp)
+const API_BASE = 'https://autosverifybot-production.up.railway.app';
 
 // Export for both module and global usage
 if (typeof module !== 'undefined' && module.exports) {
