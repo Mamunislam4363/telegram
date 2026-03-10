@@ -114,7 +114,7 @@
             display: none;
             align-items: center;
             justify-content: center;
-            z-index: 50;
+            z-index: 1000;
         }
 
         .modal-body {
@@ -142,140 +142,49 @@
                 position: fixed;
                 left: -100%;
                 top: 0;
-                height: 100vh;
-                width: 280px;
+                bottom: 0;
                 transition: left 0.3s ease;
-                z-index: 40;
+                width: 280px !important;
+                z-index: 50;
             }
 
             aside.mobile-open {
                 left: 0;
             }
 
-            main {
-                padding: 16px;
-                padding-top: 70px;
-            }
-
-            .mobile-header {
-                display: flex !important;
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                z-index: 30;
-                background: rgba(30, 27, 75, 0.95);
-                backdrop-filter: blur(20px);
-                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            }
-
-            .mobile-overlay {
+            /* Overlay when sidebar is open */
+            .sidebar-overlay {
                 display: none;
                 position: fixed;
                 inset: 0;
-                background: rgba(0, 0, 0, 0.7);
-                z-index: 35;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 40;
             }
 
-            .mobile-overlay.active {
+            .sidebar-overlay.active {
                 display: block;
             }
 
-            /* Table horizontal scroll for mobile */
-            .overflow-x-auto {
-                -webkit-overflow-scrolling: touch;
-            }
-
-            /* Smaller cards on mobile */
-            .glass-card {
-                padding: 16px;
-            }
-
-            /* Responsive tables */
-            table {
-                font-size: 12px;
-            }
-
-            th,
-            td {
-                padding: 8px;
-                white-space: nowrap;
-            }
-
-            /* Stack grid items on mobile */
-            .grid-cols-2,
-            .grid-cols-3,
-            .grid-cols-4,
-            .grid-cols-5 {
-                grid-template-columns: 1fr !important;
-            }
-
-            .md\\:grid-cols-2,
-            .lg\\:grid-cols-2,
-            .lg\\:grid-cols-4,
-            .xl\\:grid-cols-5 {
-                grid-template-columns: 1fr !important;
+            main {
+                padding: 1rem !important;
             }
         }
 
-        @media (max-width: 640px) {
-            h2 {
-                font-size: 1.25rem;
+        @media (min-width: 1025px) {
+            .sidebar-overlay {
+                display: none !important;
             }
-
-            .mobile-header h1 {
-                font-size: 1rem;
-            }
-
-            .nav-item {
-                padding: 10px 12px;
-                font-size: 14px;
-            }
-
-            .nav-item i {
-                font-size: 16px;
-            }
-        }
-
-        /* Desktop - hide mobile elements */
-        .mobile-header {
-            display: none;
-        }
-
-        .mobile-overlay {
-            display: none;
         }
     </style>
 </head>
 
 <body class="text-white">
 
-    <!-- Mobile Header -->
-    <div class="mobile-header p-4 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-            <button onclick="toggleMobileMenu()"
-                class="p-2 rounded-lg bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 transition-colors">
-                <i class="fas fa-bars text-xl"></i>
-            </button>
-            <div>
-                <h1 class="font-bold text-lg">SMS BOT</h1>
-                <p class="text-xs text-orange-400">Admin Panel</p>
-            </div>
-        </div>
-        <div class="flex items-center gap-2">
-            <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <span class="text-xs text-green-400 font-bold">ONLINE</span>
-        </div>
-    </div>
-
-    <!-- Mobile Overlay -->
-    <div class="mobile-overlay" onclick="closeMobileMenu()"></div>
-
     <!-- MAIN APP CONTAINER -->
     <div id="app-container" class="flex h-screen">
 
         <!-- SIDEBAR -->
-        <aside id="sidebar" class="w-72 glass-card border-y-0 border-l-0 flex flex-col p-6 z-10 bg-[#0f172a]/90">
+        <aside class="w-72 glass-card border-y-0 border-l-0 flex flex-col p-6 z-10 bg-[#0f172a]/90">
             <div class="flex items-center gap-3 mb-10 px-2">
                 <div class="w-10 h-10 gold-gradient rounded-lg flex items-center justify-center"><i
                         class="fas fa-robot text-white"></i></div>
@@ -316,12 +225,22 @@
                     class="fas fa-sign-out-alt"></i> Logout</button>
         </aside>
 
+        <!-- Mobile Sidebar Overlay -->
+        <div id="sidebarOverlay" class="sidebar-overlay" onclick="closeMobileMenu()"></div>
+
         <!-- MAIN CONTENT -->
         <main class="flex-1 p-8 overflow-y-auto relative">
             <header class="flex justify-between items-center mb-8">
-                <div>
-                    <h2 id="page-title" class="text-2xl font-bold">Dashboard</h2>
-                    <p class="text-sm text-gray-400">System Overview</p>
+                <div class="flex items-center gap-4">
+                    <!-- Mobile Hamburger Menu Button -->
+                    <button id="mobileMenuBtn" onclick="toggleMobileMenu()"
+                        class="lg:hidden p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                    <div>
+                        <h2 id="page-title" class="text-2xl font-bold">Dashboard</h2>
+                        <p class="text-sm text-gray-400">System Overview</p>
+                    </div>
                 </div>
                 <div class="flex items-center gap-4">
                     <div
@@ -561,6 +480,13 @@
                                 </div>
                                 <input id="ff-cardsVcc" type="checkbox" class="w-5 h-5 accent-orange-500" />
                             </div>
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="font-bold">Join Required System</div>
+                                    <div class="text-xs text-gray-400">Require users to join channel/group</div>
+                                </div>
+                                <input id="ff-joinRequired" type="checkbox" class="w-5 h-5 accent-orange-500" />
+                            </div>
                         </div>
                     </div>
 
@@ -624,14 +550,6 @@
                                 </div>
                                 <input id="ff-home_premiumMail" type="checkbox" class="w-5 h-5 accent-orange-500" />
                             </div>
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <div class="font-bold text-red-400">Join Required 🔒</div>
-                                    <div class="text-xs text-gray-400">MANDATORY: Force users to join Channel/Group
-                                    </div>
-                                </div>
-                                <input id="ff-joinRequired" type="checkbox" class="w-5 h-5 accent-red-500" />
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -684,15 +602,6 @@
                         <button onclick="loadUserHistory()"
                             class="bg-purple-600 hover:bg-purple-500 text-white px-5 py-2 rounded-lg font-bold text-sm transition-all">
                             <i class="fas fa-search mr-1"></i> Search
-                        </button>
-                        <button onclick="clearUserHistory()"
-                            class="bg-red-600/80 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-sm transition-all">
-                            <i class="fas fa-eraser mr-1"></i> Clear
-                        </button>
-                    </div>
-                    <div class="flex justify-end mb-4">
-                        <button onclick="clearAllHistory()" class="text-xs text-red-400 hover:text-red-300 font-bold">
-                            <i class="fas fa-trash mr-1"></i> Clear ALL Users History
                         </button>
                     </div>
                     <div id="userHistoryResult" class="hidden">
@@ -890,158 +799,142 @@
                                 <button onclick="switchLeaderboard('earners')" id="btn-lb-earners"
                                     class="px-3 py-1.5 rounded-lg text-xs font-bold bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10">Top
                                     Earners</button>
-                                <button onclick="switchLeaderboard('spenders')" id="btn-lb-spenders"
-                                    class="px-3 py-1.5 rounded-lg text-xs font-bold bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10">Top
-                                    Spenders</button>
-                                <button onclick="switchLeaderboard('depositors')" id="btn-lb-depositors"
-                                    class="px-3 py-1.5 rounded-lg text-xs font-bold bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10">Top
-                                    Depositors</button>
-                                <button onclick="switchLeaderboard('services')" id="btn-lb-services"
-                                    class="px-3 py-1.5 rounded-lg text-xs font-bold bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10">Top
-                                    Services</button>
-                            </div>
-                        </div>
+                                <button onclick="switchLeaderboard('spenders')" id="btn-lb-spenders" <!-- Leaderboard
+                                    Section -->
+                                    <div class="mb-6">
+                                        <div class="flex items-center justify-between mb-4">
+                                            <h4 class="font-bold text-sm flex items-center gap-2">
+                                                <i class="fas fa-trophy text-yellow-400"></i> Leaderboards
+                                            </h4>
+                                            <div class="flex gap-2">
+                                                <button onclick="switchLeaderboard('active')" id="btn-lb-active"
+                                                    class="px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">Most
+                                                    Active</button>
+                                                <button onclick="switchLeaderboard('earners')" id="btn-lb-earners"
+                                                    class="px-3 py-1.5 rounded-lg text-xs font-bold bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10">Top
+                                                    Earners</button>
+                                                <button onclick="switchLeaderboard('spenders')" id="btn-lb-spenders"
+                                                    class="px-3 py-1.5 rounded-lg text-xs font-bold bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10">Top
+                                                    Spenders</button>
+                                                <button onclick="switchLeaderboard('depositors')" id="btn-lb-depositors"
+                                                    class="px-3 py-1.5 rounded-lg text-xs font-bold bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10">Top
+                                                    Depositors</button>
+                                                <button onclick="switchLeaderboard('services')" id="btn-lb-services"
+                                                    class="px-3 py-1.5 rounded-lg text-xs font-bold bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10">Top
+                                                    Services</button>
+                                                <button onclick="switchLeaderboard('referrers')" id="btn-lb-referrers"
+                                                    class="px-3 py-1.5 rounded-lg text-xs font-bold bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10">Top
+                                                    Referrers</button>
+                                            </div>
+                                        </div>
+                                        <div class="bg-black/20 rounded-xl border border-white/5 overflow-hidden">
+                                            <table class="w-full text-left">
+                                                <thead>
+                                                    <tr
+                                                        class="text-gray-500 text-[10px] uppercase border-b border-white/5 bg-white/5">
+                                                        <th class="py-2 px-3 font-bold">#</th>
+                                                        <th class="py-2 px-3 font-bold">User</th>
+                                                        <th class="py-2 px-3 font-bold text-right">Transactions</th>
+                                                        <th class="py-2 px-3 font-bold text-right">Activity Score</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="lbActiveBody" class="text-sm">
+                                                    <tr>
+                                                        <td colspan="4" class="text-center py-4 text-gray-500 text-xs">
+                                                            Loading...
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
 
-                        <!-- Most Active Users Leaderboard -->
-                        <div id="lb-active" class="leaderboard-panel">
-                            <div class="bg-black/20 rounded-xl border border-white/5 overflow-hidden">
-                                <table class="w-full text-left">
-                                    <thead>
-                                        <tr
-                                            class="text-gray-500 text-[10px] uppercase border-b border-white/5 bg-white/5">
-                                            <th class="py-2 px-3 font-bold">#</th>
-                                            <th class="py-2 px-3 font-bold">User</th>
-                                            <th class="py-2 px-3 font-bold text-right">Transactions</th>
-                                            <th class="py-2 px-3 font-bold text-right">Activity Score</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="lbActiveBody" class="text-sm">
-                                        <tr>
-                                            <td colspan="4" class="text-center py-4 text-gray-500 text-xs">
-                                                Loading...
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+                                    <!-- Top Earners Leaderboard -->
+                                    <div id="lb-earners" class="leaderboard-panel hidden">
+                                        <div class="bg-black/20 rounded-xl border border-white/5 overflow-hidden">
+                                            <table class="w-full text-left">
+                                                <thead>
+                                                    <tr
+                                                        class="text-gray-500 text-[10px] uppercase border-b border-white/5 bg-white/5">
+                                                        <th class="py-2 px-3 font-bold">#</th>
+                                                        <th class="py-2 px-3 font-bold">User</th>
+                                                        <th class="py-2 px-3 font-bold text-right">Total Earned</th>
+                                                        <th class="py-2 px-3 font-bold text-right">Rewards</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="lbEarnersBody" class="text-sm">
+                                                    <tr>
+                                                        <td colspan="4" class="text-center py-4 text-gray-500 text-xs">
+                                                            Loading...
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
 
-                        <!-- Top Earners Leaderboard -->
-                        <div id="lb-earners" class="leaderboard-panel hidden">
-                            <div class="bg-black/20 rounded-xl border border-white/5 overflow-hidden">
-                                <table class="w-full text-left">
-                                    <thead>
-                                        <tr
-                                            class="text-gray-500 text-[10px] uppercase border-b border-white/5 bg-white/5">
-                                            <th class="py-2 px-3 font-bold">#</th>
-                                            <th class="py-2 px-3 font-bold">User</th>
-                                            <th class="py-2 px-3 font-bold text-right">Total Earned</th>
-                                            <th class="py-2 px-3 font-bold text-right">Rewards</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="lbEarnersBody" class="text-sm">
-                                        <tr>
-                                            <td colspan="4" class="text-center py-4 text-gray-500 text-xs">
-                                                Loading...
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+                                    <!-- Top Spenders Leaderboard -->
+                                    <div id="lb-spenders" class="leaderboard-panel hidden">
+                                        <div class="bg-black/20 rounded-xl border border-white/5 overflow-hidden">
+                                            <table class="w-full text-left">
+                                                <thead>
+                                                    <tr
+                                                        class="text-gray-500 text-[10px] uppercase border-b border-white/5 bg-white/5">
+                                                        <th class="py-2 px-3 font-bold">#</th>
+                                                        <th class="py-2 px-3 font-bold">User</th>
+                                                        <th class="py-2 px-3 font-bold text-right">Total Spent</th>
+                                                        <th class="py-2 px-3 font-bold text-right">Purchases</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="lbSpendersBody" class="text-sm">
+                                                    <tr>
+                                                        <td colspan="4" class="text-center py-4 text-gray-500 text-xs">
+                                                            Loading...
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
 
-                        <!-- Top Spenders Leaderboard -->
-                        <div id="lb-spenders" class="leaderboard-panel hidden">
-                            <div class="bg-black/20 rounded-xl border border-white/5 overflow-hidden">
-                                <table class="w-full text-left">
-                                    <thead>
-                                        <tr
-                                            class="text-gray-500 text-[10px] uppercase border-b border-white/5 bg-white/5">
-                                            <th class="py-2 px-3 font-bold">#</th>
-                                            <th class="py-2 px-3 font-bold">User</th>
-                                            <th class="py-2 px-3 font-bold text-right">Total Spent</th>
-                                            <th class="py-2 px-3 font-bold text-right">Purchases</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="lbSpendersBody" class="text-sm">
-                                        <tr>
-                                            <td colspan="4" class="text-center py-4 text-gray-500 text-xs">
-                                                Loading...
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                                    <!-- Top Depositors Leaderboard -->
+                                    <div id="lb-depositors" class="leaderboard-panel hidden">
+                                        <div class="bg-black/20 rounded-xl border border-white/5 overflow-hidden">
+                                            <table class="w-full text-left">
+                                                <thead>
+                                                    <tr
+                                                        class="text-gray-500 text-[10px] uppercase border-b border-white/5 bg-white/5">
+                                                        <th class="py-2 px-3 font-bold">#</th>
+                                                        <th class="py-2 px-3 font-bold">User</th>
+                                                        <th class="py-2 px-3 font-bold text-right">Total Deposited</th>
+                                                        <th class="py-2 px-3 font-bold text-right">Deposits</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="lbDepositorsBody" class="text-sm">
+                                                    <tr>
+                                                        <td colspan="4" class="text-center py-4 text-gray-500 text-xs">
+                                                            Loading...
+                                                        </td>
+                                                    </tr>
+                                        </div>
+                                        <table class="w-full text-left">
+                                            <thead>
+                                                <tr class="text-gray-500 text-[10px] uppercase border-b border-white/5">
+                                                    <th class="pb-3 font-bold">USER</th>
+                                                    <th class="pb-3 font-bold">TYPE</th>
+                                                    <th class="pb-3 font-bold">REWARD / COST</th>
+                                                    <th class="pb-3 font-bold">DATE</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="globalHistoryBody" class="text-sm">
+                                                <tr>
+                                                    <td colspan="4" class="text-center py-8 text-gray-500">Loading
+                                                        history...</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
                             </div>
-                        </div>
-
-                        <!-- Top Depositors Leaderboard -->
-                        <div id="lb-depositors" class="leaderboard-panel hidden">
-                            <div class="bg-black/20 rounded-xl border border-white/5 overflow-hidden">
-                                <table class="w-full text-left">
-                                    <thead>
-                                        <tr
-                                            class="text-gray-500 text-[10px] uppercase border-b border-white/5 bg-white/5">
-                                            <th class="py-2 px-3 font-bold">#</th>
-                                            <th class="py-2 px-3 font-bold">User</th>
-                                            <th class="py-2 px-3 font-bold text-right">Total Deposited</th>
-                                            <th class="py-2 px-3 font-bold text-right">Deposits</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="lbDepositorsBody" class="text-sm">
-                                        <tr>
-                                            <td colspan="4" class="text-center py-4 text-gray-500 text-xs">
-                                                Loading...
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <!-- Top Services Leaderboard -->
-                        <div id="lb-services" class="leaderboard-panel hidden">
-                            <div class="bg-black/20 rounded-xl border border-white/5 overflow-hidden">
-                                <table class="w-full text-left">
-                                    <thead>
-                                        <tr
-                                            class="text-gray-500 text-[10px] uppercase border-b border-white/5 bg-white/5">
-                                            <th class="py-2 px-3 font-bold">#</th>
-                                            <th class="py-2 px-3 font-bold">Service</th>
-                                            <th class="py-2 px-3 font-bold text-right">Total Uses</th>
-                                            <th class="py-2 px-3 font-bold text-right">Revenue</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="lbServicesBody" class="text-sm">
-                                        <tr>
-                                            <td colspan="4" class="text-center py-4 text-gray-500 text-xs">
-                                                Loading...
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left">
-                            <thead>
-                                <tr class="text-gray-500 text-[10px] uppercase border-b border-white/5">
-                                    <th class="pb-3 font-bold">USER</th>
-                                    <th class="pb-3 font-bold">TYPE</th>
-                                    <th class="pb-3 font-bold">REWARD / COST</th>
-                                    <th class="pb-3 font-bold">DATE</th>
-                                </tr>
-                            </thead>
-                            <tbody id="globalHistoryBody" class="text-sm">
-                                <tr>
-                                    <td colspan="4" class="text-center py-8 text-gray-500">Loading
-                                        history...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
             </section>
 
             <!-- 3. CODES -->
@@ -1071,82 +964,31 @@
             <div id="page-tasks" class="page">
                 <div class="glass-card p-6 rounded-2xl">
                     <div class="flex justify-between mb-6">
-                        <h3 class="font-bold">Tasks</h3>
-                        <button onclick="showModal('createTask')"
-                            class="bg-orange-500 text-black px-4 py-2 rounded-lg font-bold text-sm">Create
-                            Task</button>
+                        <h3 class="font-bold">Tasks Management</h3>
+                        <div class="flex gap-2">
+                            <button onclick="seedDefaultTasks()"
+                                class="bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-sm">
+                                <i class="fas fa-sync-alt mr-1"></i> Reset Default Tasks
+                            </button>
+                            <button onclick="showModal('createTask')"
+                                class="bg-orange-500 text-black px-4 py-2 rounded-lg font-bold text-sm">Create
+                                Task</button>
+                        </div>
                     </div>
+                    <p class="text-sm text-gray-400 mb-4">Manage user tasks, rewards, and reset status. Edit tokens and
+                        gems rewards for each task.</p>
                     <table>
                         <thead>
                             <tr>
                                 <th>Name</th>
-                                <th>Reward</th>
+                                <th>Tokens</th>
+                                <th>Gems</th>
                                 <th>URL</th>
-                                <th>Action</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="tasksTable"></tbody>
                     </table>
-                </div>
-            </div>
-
-            <!-- TASK MODALS -->
-            <div id="modal-createTask" class="modal-overlay" style="display:none">
-                <div class="modal-body glass-card rounded-2xl p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="font-bold text-lg">Create Task</h3>
-                        <button onclick="closeModal()" class="text-gray-400 hover:text-white"><i
-                                class="fas fa-times"></i></button>
-                    </div>
-                    <div class="space-y-3">
-                        <div>
-                            <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Name</label>
-                            <input id="task-name" type="text"
-                                class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-3 transition-colors">
-                        </div>
-                        <div>
-                            <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Reward</label>
-                            <input id="task-reward" type="number"
-                                class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-3 transition-colors">
-                        </div>
-                        <div>
-                            <label class="text-xs text-gray-400 uppercase font-bold block mb-1">URL (Optional)</label>
-                            <input id="task-url" type="text"
-                                class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-3 transition-colors">
-                        </div>
-                        <button onclick="addTask()"
-                            class="w-full py-3 gold-gradient rounded-xl font-bold">Create</button>
-                    </div>
-                </div>
-            </div>
-
-            <div id="modal-editTask" class="modal-overlay" style="display:none">
-                <div class="modal-body glass-card rounded-2xl p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="font-bold text-lg">Edit Task</h3>
-                        <button onclick="closeModal()" class="text-gray-400 hover:text-white"><i
-                                class="fas fa-times"></i></button>
-                    </div>
-                    <input id="task-edit-id" type="hidden" />
-                    <div class="space-y-3">
-                        <div>
-                            <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Name</label>
-                            <input id="task-edit-name" type="text"
-                                class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-3 transition-colors">
-                        </div>
-                        <div>
-                            <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Reward</label>
-                            <input id="task-edit-reward" type="number"
-                                class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-3 transition-colors">
-                        </div>
-                        <div>
-                            <label class="text-xs text-gray-400 uppercase font-bold block mb-1">URL (Optional)</label>
-                            <input id="task-edit-url" type="text"
-                                class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-3 transition-colors">
-                        </div>
-                        <button onclick="updateTask()"
-                            class="w-full py-3 gold-gradient rounded-xl font-bold">Save</button>
-                    </div>
                 </div>
             </div>
 
@@ -1285,43 +1127,6 @@
                                 <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Task
                                         Reward</label><input type="number" id="conf-taskreward"
                                         class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
-                                </div>
-                            </div>
-
-                            <!-- Activity Limits -->
-                            <div
-                                class="space-y-3 col-span-1 md:col-span-2 lg:col-span-1 border border-white/10 rounded-xl p-4 bg-black/20">
-                                <h4 class="text-sm font-semibold text-yellow-400 border-b border-white/10 pb-2 mb-3">
-                                    Activity Limits (Earn Section)</h4>
-                                <div class="grid grid-cols-1 gap-3">
-                                    <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Quiz Daily
-                                            Limit</label><input type="number" id="conf-quiz-limit"
-                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
-                                    </div>
-                                    <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Quiz
-                                            Recovery (hours)</label><input type="number" id="conf-quiz-recovery"
-                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
-                                    </div>
-                                    <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Scratch
-                                            Daily Limit</label><input type="number" id="conf-scratch-limit"
-                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
-                                    </div>
-                                    <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Scratch
-                                            Recovery (hours)</label><input type="number" id="conf-scratch-recovery"
-                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
-                                    </div>
-                                    <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Watch Ad
-                                            Daily Limit</label><input type="number" id="conf-ad-limit"
-                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
-                                    </div>
-                                    <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Watch Ad
-                                            Recovery (hours)</label><input type="number" id="conf-ad-recovery"
-                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
-                                    </div>
-                                    <div><label class="text-xs text-gray-400 uppercase font-bold block mb-1">Ad
-                                            Cooldown (seconds)</label><input type="number" id="conf-ad-cooldown"
-                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 transition-colors">
-                                    </div>
                                 </div>
                             </div>
 
@@ -1568,67 +1373,6 @@
                                         and deep
                                         links.</p>
                                 </div>
-
-                                <!-- Mother Email Configuration (Gmail IMAP) -->
-                                <div class="mt-6 pt-6 border-t border-white/10">
-                                    <h4 class="text-sm font-bold text-yellow-400 mb-4 flex items-center">
-                                        <i class="fas fa-inbox mr-2"></i> Mother Email (Premium Inbox)
-                                    </h4>
-                                    
-                                    <!-- Enable Toggle -->
-                                    <div class="flex items-center justify-between mb-4">
-                                        <span class="text-sm text-gray-300">Enable Mother Email</span>
-                                        <label class="relative inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" id="mother-email-enabled" class="sr-only peer">
-                                            <div
-                                                class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500">
-                                            </div>
-                                        </label>
-                                    </div>
-
-                                    <!-- Gmail Address -->
-                                    <div class="mb-3">
-                                        <label class="text-xs text-gray-400 uppercase font-bold block mb-1 flex items-center">
-                                            <i class="fab fa-google text-red-400 mr-2"></i> Gmail Address
-                                        </label>
-                                        <input type="email" id="mother-email-address" placeholder="yourmother@gmail.com"
-                                            class="w-full bg-black/40 border border-white/10 focus:border-green-500 rounded-lg p-3 transition-colors">
-                                    </div>
-
-                                    <!-- App Password -->
-                                    <div class="mb-3">
-                                        <label class="text-xs text-gray-400 uppercase font-bold block mb-1 flex items-center">
-                                            <i class="fas fa-lock text-yellow-400 mr-2"></i> App Password (16-char)
-                                        </label>
-                                        <div class="relative">
-                                            <input type="password" id="mother-email-password" placeholder="xxxx xxxx xxxx xxxx"
-                                                class="w-full bg-black/40 border border-white/10 focus:border-green-500 rounded-lg p-3 transition-colors pr-10">
-                                            <button onclick="togglePasswordVisibility('mother-email-password')"
-                                                class="absolute right-3 top-3.5 text-gray-400 hover:text-white transition-colors">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                        </div>
-                                        <p class="text-xs text-gray-500 mt-1">Generate from Google Account → Security → App Passwords</p>
-                                    </div>
-
-                                    <!-- IMAP Host -->
-                                    <div class="mb-3">
-                                        <label class="text-xs text-gray-400 uppercase font-bold block mb-1 flex items-center">
-                                            <i class="fas fa-server text-blue-400 mr-2"></i> IMAP Host
-                                        </label>
-                                        <input type="text" id="mother-email-host" value="imap.gmail.com"
-                                            class="w-full bg-black/40 border border-white/10 focus:border-green-500 rounded-lg p-3 transition-colors">
-                                    </div>
-
-                                    <!-- IMAP Port -->
-                                    <div class="mb-3">
-                                        <label class="text-xs text-gray-400 uppercase font-bold block mb-1 flex items-center">
-                                            <i class="fas fa-plug text-purple-400 mr-2"></i> IMAP Port
-                                        </label>
-                                        <input type="number" id="mother-email-port" value="993"
-                                            class="w-full bg-black/40 border border-white/10 focus:border-green-500 rounded-lg p-3 transition-colors">
-                                    </div>
-                                </div>
                             </div>
                         </div>
 
@@ -1641,80 +1385,1496 @@
                     </div>
                 </div>
 
-                <!-- API Keys Management -->
-                <script>
-                    // Load API keys
-                    async function loadApiKeys() {
-                        try {
-                            const res = await fetch('/api/admin/settings');
-                            const data = await res.json();
-                            if (!data?.success) return;
+            </div>
 
-                            const api = data.apiKeys || {};
-                            const elBackup = document.getElementById('api-backup-token');
-                            const elSmtp = document.getElementById('api-smtp-key');
-                            const elGmailClient = document.getElementById('api-gmail-client');
-                            const elGmailSecret = document.getElementById('api-gmail-secret');
-                            const elMini = document.getElementById('api-miniapp-url');
+            <!-- SHOP MANAGEMENT -->
+            <div id="page-shopmanage" class="page">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Add Shop Item Form -->
+                    <div class="glass-card p-6 rounded-2xl">
+                        <h3 class="font-bold mb-4 flex items-center gap-2"><i
+                                class="fas fa-plus-circle text-yellow-400"></i>
+                            Add / Edit Shop Item</h3>
+                        <div class="space-y-3">
+                            <input type="hidden" id="shop-edit-id">
+                            <div>
+                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Item ID
+                                    (unique)</label>
+                                <input id="shop-id" placeholder="e.g. gemini1y"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Name</label>
+                                <input id="shop-name" placeholder="GEMINI 1 YEAR"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Price</label>
+                                <input id="shop-price" placeholder="$3.00"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                            </div>
+                            <div>
+                                <div>
+                                    <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Item
+                                        Image</label>
+                                    <div class="flex gap-2">
+                                        <input type="text" id="shop-img" placeholder="https://..."
+                                            class="flex-1 bg-black/30 border border-white/10 p-3 rounded-lg text-white text-sm">
+                                        <label
+                                            class="bg-white/10 border border-white/10 rounded-lg px-3 flex items-center justify-center cursor-pointer hover:bg-white/20 transition-all w-12"
+                                            title="Upload Image">
+                                            <i class="fas fa-upload text-gray-400"></i>
+                                            <input type="file" id="shop-img-upload" accept="image/*" class="hidden"
+                                                onchange="uploadAdminImage(this, 'shop-img')">
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Background
+                                            Color</label>
+                                        <input id="shop-bg" placeholder="#0d0d0d"
+                                            class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Button
+                                            Color</label>
+                                        <input id="shop-btn" placeholder="#f59e0b"
+                                            class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                                    </div>
+                                </div>
+                                <button onclick="saveShopItem()"
+                                    class="w-full gold-gradient py-3 rounded-xl font-bold text-black">SAVE
+                                    ITEM</button>
+                                <button onclick="clearShopForm()"
+                                    class="w-full bg-white/5 border border-white/10 py-2 rounded-xl text-sm text-gray-400">Clear
+                                    Form</button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Shop Items List -->
+                    <div class="glass-card p-6 rounded-2xl">
+                        <h3 class="font-bold mb-4 flex items-center gap-2"><i class="fas fa-store text-green-400"></i>
+                            Current Shop Items</h3>
+                        <div id="admin-shop-list" class="space-y-3 max-h-96 overflow-y-auto"></div>
+                    </div>
+                </div>
+            </div>
 
-                            if (elBackup) elBackup.value = api.backupBotToken || '';
-                            if (elSmtp) elSmtp.value = api.smtpLabsKey || '';
-                            if (elGmailClient) elGmailClient.value = api.gmailClientId || '';
-                            if (elGmailSecret) elGmailSecret.value = api.gmailClientSecret || '';
-                            if (elMini) elMini.value = api.miniAppUrl || '';
+            <!-- TRADING CONTROL -->
+            <div id="page-trading" class="page">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <!-- Mode Card -->
+                    <div class="glass-card p-6 rounded-2xl col-span-2">
+                        <h3 class="text-lg font-bold mb-2 flex items-center gap-2">
+                            <i class="fas fa-chart-line text-green-400"></i> Trade Outcome Control
+                        </h3>
+                        <p class="text-gray-400 text-sm mb-6">Control whether users win or lose their binary
+                            trades.
+                            This affects all active users in real-time.</p>
 
-                            // Load Mother Email settings
-                            const motherEmail = data.motherEmail || {};
-                            const meEnabled = document.getElementById('mother-email-enabled');
-                            const meAddress = document.getElementById('mother-email-address');
-                            const mePassword = document.getElementById('mother-email-password');
-                            const meHost = document.getElementById('mother-email-host');
-                            const mePort = document.getElementById('mother-email-port');
+                        <div class="grid grid-cols-3 gap-4 mb-6">
+                            <!-- Random -->
+                            <div id="mode-random" onclick="setTradeMode('random')"
+                                class="cursor-pointer rounded-xl p-4 border-2 border-yellow-500 bg-yellow-500/10 text-center transition-all">
+                                <i class="fas fa-random text-yellow-400 text-2xl mb-2 block"></i>
+                                <div class="font-bold text-yellow-400">RANDOM</div>
+                                <div class="text-xs text-gray-400 mt-1">50/50 fair market</div>
+                            </div>
+                            <!-- Always Win -->
+                            <div id="mode-win" onclick="setTradeMode('win')"
+                                class="cursor-pointer rounded-xl p-4 border-2 border-gray-600 bg-gray-800/50 text-center transition-all hover:border-green-500">
+                                <i class="fas fa-trophy text-green-400 text-2xl mb-2 block"></i>
+                                <div class="font-bold text-green-400">ALWAYS WIN</div>
+                                <div class="text-xs text-gray-400 mt-1">All users win trades</div>
+                            </div>
+                            <!-- Always Lose -->
+                            <div id="mode-lose" onclick="setTradeMode('lose')"
+                                class="cursor-pointer rounded-xl p-4 border-2 border-gray-600 bg-gray-800/50 text-center transition-all hover:border-red-500">
+                                <i class="fas fa-skull text-red-400 text-2xl mb-2 block"></i>
+                                <div class="font-bold text-red-400">ALWAYS LOSE</div>
+                                <div class="text-xs text-gray-400 mt-1">All users lose trades</div>
+                            </div>
+                        </div>
 
-                            if (meEnabled) meEnabled.checked = motherEmail.enabled === true;
-                            if (meAddress) meAddress.value = motherEmail.email || '';
-                            if (mePassword) mePassword.value = motherEmail.password || '';
-                            if (meHost) meHost.value = motherEmail.host || 'imap.gmail.com';
-                            if (mePort) mePort.value = motherEmail.port || '993';
-                        } catch (e) {
-                            // silent
-                        }
-                    }
+                        <div class="bg-black/30 rounded-xl p-4 border border-white/10">
+                            <div class="text-xs text-gray-400 font-bold uppercase mb-2">Current Mode</div>
+                            <div id="currentModeDisplay" class="text-xl font-bold text-yellow-400">🎲 RANDOM
+                            </div>
+                        </div>
+                    </div>
 
-                    // Save API keys
-                    async function saveApiKeys() {
-                        const payload = {
-                            backupBotToken: document.getElementById('api-backup-token')?.value || '',
-                            smtpLabsKey: document.getElementById('api-smtp-key')?.value || '',
-                            gmailClientId: document.getElementById('api-gmail-client')?.value || '',
-                            gmailClientSecret: document.getElementById('api-gmail-secret')?.value || '',
-                            miniAppUrl: document.getElementById('api-miniapp-url')?.value || '',
-                            // Mother Email settings
-                            motherEmail: {
-                                enabled: document.getElementById('mother-email-enabled')?.checked === true,
-                                email: document.getElementById('mother-email-address')?.value || '',
-                                password: document.getElementById('mother-email-password')?.value || '',
-                                host: document.getElementById('mother-email-host')?.value || 'imap.gmail.com',
-                                port: parseInt(document.getElementById('mother-email-port')?.value) || 993
-                            }
-                        };
-                        try {
-                            const res = await fetch('/api/admin/apikeys', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify(payload)
-                            });
-                            const data = await res.json();
-                            if (data?.success) {
-                                alert('✅ API Keys saved successfully!');
-                            } else {
-                                alert('❌ Error: ' + data.message);
-                            }
-                        } catch (e) {
-                            alert('❌ Network error saving API Keys');
-                        }
-                    }
-                </script>
+                    <!-- Stats Card -->
+                    <div class="glass-card p-6 rounded-2xl">
+                        <h3 class="text-sm font-bold uppercase text-gray-400 mb-4">Trading Stats</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="text-xs text-gray-400">Payout Rate</div>
+                                <div class="text-2xl font-bold text-green-400">80%</div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-gray-400">Trade Duration</div>
+                                <div class="text-2xl font-bold">60s</div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-gray-400">Min Trade</div>
+                                <div class="text-2xl font-bold text-yellow-400">1 TC</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Verification Requirements Settings -->
+                <div class="glass-card p-6 rounded-2xl max-w-2xl mb-6">
+                    <h3 class="font-bold mb-4 flex items-center gap-2 text-green-400">
+                        <i class="fas fa-user-check"></i> User Verification Requirements
+                    </h3>
+                    <p class="text-sm text-gray-400 mb-4">Configure what users need to do to get verified automatically.
+                        Admin-verified users bypass all requirements.</p>
+
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between p-3 rounded-lg bg-black/20">
+                            <div>
+                                <div class="text-sm font-bold">Enable Verification System</div>
+                                <div class="text-xs text-gray-400">Require verification for full access</div>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="verify-enabled" class="sr-only peer">
+                                <div
+                                    class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500">
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="text-xs text-gray-400 uppercase font-bold block mb-2">Min Invites</label>
+                                <input type="number" id="verify-min-invites"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-xl text-white outline-none">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400 uppercase font-bold block mb-2">Min Tokens</label>
+                                <input type="number" id="verify-min-tokens"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-xl text-white outline-none">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="text-xs text-gray-400 uppercase font-bold block mb-2">Min Days Active</label>
+                            <input type="number" id="verify-min-days"
+                                class="w-full bg-black/30 border border-white/10 p-3 rounded-xl text-white outline-none">
+                        </div>
+
+                        <div class="flex items-center justify-between p-3 rounded-lg bg-black/20">
+                            <div>
+                                <div class="text-sm font-bold">Require Channel Join</div>
+                                <div class="text-xs text-gray-400">User must join channel</div>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="verify-channel" class="sr-only peer">
+                                <div
+                                    class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500">
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="flex items-center justify-between p-3 rounded-lg bg-black/20">
+                            <div>
+                                <div class="text-sm font-bold">Require Group Join</div>
+                                <div class="text-xs text-gray-400">User must join group</div>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="verify-group" class="sr-only peer">
+                                <div
+                                    class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500">
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="flex justify-end mt-4">
+                            <button onclick="saveVerificationSettings()"
+                                class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-xl transition-colors">
+                                <i class="fas fa-save mr-2"></i> Save Verification Settings
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payout Settings -->
+                <div class="glass-card p-6 rounded-2xl max-w-2xl">
+                    <h3 class="font-bold mb-4">Payout Settings</h3>
+                    <div class="flex gap-4 items-end">
+                        <div class="flex-1">
+                            <label class="text-xs text-gray-400 font-bold uppercase block mb-2">Win Payout
+                                Rate
+                                (%)</label>
+                            <input type="number" id="payoutInput" value="80" min="1" max="200"
+                                class="w-full bg-black/30 border border-white/10 rounded-lg p-4 text-white font-bold text-lg">
+                        </div>
+                        <button onclick="savePayout()"
+                            class="gold-gradient px-6 py-3 rounded-xl font-bold text-black">SAVE</button>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">Example: 80% means user wins 80 TC for every 100
+                        TC
+                        traded.
+                    </p>
+                </div>
+            </div>
+
+            <!-- 10. GROUPS (Group Management) -->
+            <div id="page-groups" class="page">
+                <div class="glass-card p-6 rounded-2xl mb-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="font-bold text-lg flex items-center gap-2">
+                                <i class="fas fa-users text-blue-400"></i> Group & Channel Management
+                            </h3>
+                            <p class="text-sm text-gray-400">Manage your connected Telegram groups and channels. View
+                                stats, control settings, and monitor activity.</p>
+                        </div>
+                        <button onclick="loadGroups()"
+                            class="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg">
+                            <i class="fas fa-sync-alt mr-1"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div class="glass-card p-4 rounded-xl text-center">
+                        <div class="text-2xl font-bold text-blue-400" id="group-total">0</div>
+                        <div class="text-xs text-gray-400">Total Groups</div>
+                    </div>
+                    <div class="glass-card p-4 rounded-xl text-center">
+                        <div class="text-2xl font-bold text-green-400" id="channel-total">0</div>
+                        <div class="text-xs text-gray-400">Channels</div>
+                    </div>
+                    <div class="glass-card p-4 rounded-xl text-center">
+                        <div class="text-2xl font-bold text-yellow-400" id="group-members">0</div>
+                        <div class="text-xs text-gray-400">Total Members</div>
+                    </div>
+                    <div class="glass-card p-4 rounded-xl text-center">
+                        <div class="text-2xl font-bold text-purple-400" id="group-active">0</div>
+                        <div class="text-xs text-gray-400">Active Today</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Connected Groups/Channels List -->
+                    <div class="lg:col-span-2 space-y-6">
+                        <div class="glass-card p-6 rounded-2xl">
+                            <div class="flex items-center justify-between mb-4">
+                                <h4 class="font-bold flex items-center gap-2">
+                                    <i class="fas fa-list text-blue-400"></i> Connected Groups & Channels
+                                </h4>
+                                <div class="flex gap-2">
+                                    <button onclick="filterGroups('all')"
+                                        class="text-xs bg-white/10 hover:bg-white/20 px-2 py-1 rounded">All</button>
+                                    <button onclick="filterGroups('group')"
+                                        class="text-xs bg-white/10 hover:bg-white/20 px-2 py-1 rounded">Groups</button>
+                                    <button onclick="filterGroups('channel')"
+                                        class="text-xs bg-white/10 hover:bg-white/20 px-2 py-1 rounded">Channels</button>
+                                </div>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table id="groupsTable" class="w-full">
+                                    <thead>
+                                        <tr class="text-gray-500 text-xs uppercase border-b border-white/10">
+                                            <th class="pb-3 font-bold text-left">Type</th>
+                                            <th class="pb-3 font-bold text-left">Name</th>
+                                            <th class="pb-3 font-bold text-left">ID</th>
+                                            <th class="pb-3 font-bold text-left">Members</th>
+                                            <th class="pb-3 font-bold text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="groupsTableBody">
+                                        <tr>
+                                            <td colspan="5" class="text-center text-gray-500 py-8">Loading groups...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Bot Commands Section -->
+                        <div class="glass-card p-6 rounded-2xl">
+                            <h4 class="font-bold mb-4 flex items-center gap-2">
+                                <i class="fas fa-robot text-green-400"></i> Bot Commands in Groups
+                            </h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="bg-black/20 p-4 rounded-xl">
+                                    <div class="text-sm font-bold text-white mb-1">/start</div>
+                                    <div class="text-xs text-gray-400">Welcome message with menu</div>
+                                </div>
+                                <div class="bg-black/20 p-4 rounded-xl">
+                                    <div class="text-sm font-bold text-white mb-1">/verify</div>
+                                    <div class="text-xs text-gray-400">Check verification status</div>
+                                </div>
+                                <div class="bg-black/20 p-4 rounded-xl">
+                                    <div class="text-sm font-bold text-white mb-1">/stats</div>
+                                    <div class="text-xs text-gray-400">Group statistics</div>
+                                </div>
+                                <div class="bg-black/20 p-4 rounded-xl">
+                                    <div class="text-sm font-bold text-white mb-1">/settings</div>
+                                    <div class="text-xs text-gray-400">Group settings panel</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Sidebar - Settings -->
+                    <div class="space-y-6">
+                        <!-- Moderation Settings -->
+                        <div class="glass-card p-6 rounded-2xl">
+                            <h4 class="font-bold mb-4 flex items-center gap-2 text-blue-400">
+                                <i class="fas fa-shield-alt"></i> Auto Moderation
+                            </h4>
+                            <div class="space-y-4" id="group-moderation-rules">
+                                <!-- Populated via JS -->
+                            </div>
+                            <button onclick="saveGroupSettings()"
+                                class="w-full mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 rounded-xl">
+                                <i class="fas fa-save mr-2"></i> Save Settings
+                            </button>
+                        </div>
+
+                        <!-- Group Features -->
+                        <div class="glass-card p-6 rounded-2xl">
+                            <h4 class="font-bold mb-4 flex items-center gap-2 text-green-400">
+                                <i class="fas fa-cogs"></i> Features
+                            </h4>
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between p-2 rounded-lg hover:bg-white/5">
+                                    <span class="text-sm">Welcome Messages</span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="gf-welcome" class="sr-only peer" checked>
+                                        <div
+                                            class="w-9 h-5 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500">
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between p-2 rounded-lg hover:bg-white/5">
+                                    <span class="text-sm">Anti-Spam</span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="gf-antispam" class="sr-only peer" checked>
+                                        <div
+                                            class="w-9 h-5 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500">
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between p-2 rounded-lg hover:bg-white/5">
+                                    <span class="text-sm">Verification System</span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="gf-verify" class="sr-only peer">
+                                        <div
+                                            class="w-9 h-5 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500">
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between p-2 rounded-lg hover:bg-white/5">
+                                    <span class="text-sm">Auto-Delete Commands</span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="gf-autodelete" class="sr-only peer" checked>
+                                        <div
+                                            class="w-9 h-5 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500">
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quick Actions -->
+                        <div class="glass-card p-6 rounded-2xl">
+                            <h4 class="font-bold mb-4 flex items-center gap-2 text-yellow-400">
+                                <i class="fas fa-bolt"></i> Quick Actions
+                            </h4>
+                            <div class="space-y-2">
+                                <button onclick="broadcastToGroups()"
+                                    class="w-full bg-white/10 hover:bg-white/20 text-white py-2 rounded-lg text-sm font-medium transition-all">
+                                    <i class="fas fa-bullhorn mr-2"></i> Broadcast to All
+                                </button>
+                                <button onclick="exportGroupList()"
+                                    class="w-full bg-white/10 hover:bg-white/20 text-white py-2 rounded-lg text-sm font-medium transition-all">
+                                    <i class="fas fa-download mr-2"></i> Export List
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BROADCAST PAGE -->
+            <div id="page-broadcast" class="page">
+                <div class="glass-card p-8 rounded-2xl max-w-3xl mx-auto">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="w-12 h-12 bg-pink-500/20 rounded-xl flex items-center justify-center text-pink-400">
+                            <i class="fas fa-bullhorn text-2xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-bold">Advanced Broadcast</h2>
+                            <p class="text-gray-400 text-sm">Send messages to Users, Groups, or Both</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-6">
+                        <!-- TARGET -->
+                        <div>
+                            <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Target
+                                Audience</label>
+                            <select id="bc-target"
+                                class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-pink-500 outline-none">
+                                <option value="users">👤 Private Users (Bot)</option>
+                                <option value="groups">📢 Telegram Groups & Channels</option>
+                                <option value="all">🌐 All (Users + Groups)</option>
+                            </select>
+                        </div>
+
+                        <!-- MESSAGE -->
+                        <div>
+                            <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Message
+                                Text</label>
+                            <textarea id="bc-message" rows="4" placeholder="Enter your broadcast message..."
+                                class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-pink-500 outline-none"></textarea>
+                        </div>
+
+                        <!-- MEDIA -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Media
+                                    Type</label>
+                                <select id="bc-media-type" onchange="toggleMediaInput()"
+                                    class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-pink-500 outline-none">
+                                    <option value="none">None (Text Only)</option>
+                                    <option value="photo">📸 Photo</option>
+                                    <option value="video">🎥 Video</option>
+                                </select>
+                            </div>
+                            <div id="bc-media-input" style="display:none;">
+                                <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Media</label>
+                                <div class="flex gap-2">
+                                    <input id="bc-media-url" type="text" placeholder="https://..."
+                                        class="flex-1 bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-pink-500 outline-none">
+                                    <label
+                                        class="bg-white/10 border border-white/10 rounded-xl px-4 flex items-center justify-center cursor-pointer hover:bg-white/20 transition-all"
+                                        title="Upload Media">
+                                        <i class="fas fa-camera text-gray-400"></i>
+                                        <input type="file" id="bc-media-upload" accept="image/*,video/*" class="hidden"
+                                            onchange="uploadAdminImage(this, 'bc-media-url')">
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- BUTTONS -->
+                        <div>
+                            <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Buttons
+                                (Optional)</label>
+                            <textarea id="bc-buttons" rows="3"
+                                placeholder="Button Label | https://link.com&#10;Another Button | https://link2.com"
+                                class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:border-pink-500 outline-none font-mono text-sm"></textarea>
+                            <p class="text-xs text-gray-500 mt-1">Format: Label | URL (One per line)</p>
+                        </div>
+
+                        <!-- ACTIONS -->
+                        <div class="pt-4 border-t border-white/5">
+                            <button id="btn-send-broadcast" onclick="sendBroadcast()"
+                                class="w-full bg-pink-600 hover:bg-pink-500 text-white py-4 rounded-xl font-bold text-lg shadow-lg shadow-pink-500/20 transition-all flex items-center justify-center gap-2">
+                                <i class="fas fa-paper-plane"></i> SEND BROADCAST
+                            </button>
+                            <div id="broadcast-status" class="mt-4 text-center text-sm font-medium"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AD NETWORKS PAGE -->
+            <div id="page-adnetworks" class="page">
+                <div class="glass-card p-6 rounded-2xl mb-6">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div
+                            class="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center text-yellow-400">
+                            <i class="fas fa-ad text-xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold">Ad Network Integration</h2>
+                            <p class="text-gray-400 text-sm">Add your Publisher ID / Ad Unit ID to enable
+                                ads in
+                                the
+                                mini app. Users will see ads when clicking WATCH in the Earn section.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                    <!-- MoneyTag -->
+                    <div class="glass-card p-6 rounded-2xl border border-white/10">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center">
+                                <i class="fas fa-tag text-green-400 text-lg"></i>
+                            </div>
+                            <div>
+                                <div class="font-bold">MoneyTag</div>
+                                <div class="text-xs text-gray-400">monetag.com</div>
+                            </div>
+                            <div class="ml-auto">
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="ad-moneytag-enabled" class="sr-only peer" checked>
+                                    <div
+                                        class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500">
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Publisher
+                                    ID</label>
+                                <input id="ad-moneytag-publisher" type="text" placeholder="e.g. 9429271"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white focus:border-green-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Ad Zone
+                                    ID /
+                                    Unit
+                                    ID</label>
+                                <input id="ad-moneytag-unit" type="text" placeholder="e.g. 123456"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white focus:border-green-500 outline-none">
+                            </div>
+                            <p class="text-xs text-gray-500">Interstitial / OnClick ad will show when user
+                                taps
+                                WATCH.
+                            </p>
+                            <button onclick="saveAdNetwork('moneytag')"
+                                class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2.5 rounded-xl transition-all">
+                                <i class="fas fa-save mr-2"></i> Save MoneyTag
+                            </button>
+                        </div>
+                        <div id="ad-moneytag-status" class="mt-3 text-xs text-center text-gray-500"></div>
+                    </div>
+
+                    <!-- Google AdSense -->
+                    <div class="glass-card p-6 rounded-2xl border border-white/10">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                                <i class="fab fa-google text-blue-400 text-lg"></i>
+                            </div>
+                            <div>
+                                <div class="font-bold">Google AdSense</div>
+                                <div class="text-xs text-gray-400">adsense.google.com</div>
+                            </div>
+                            <div class="ml-auto">
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="ad-adsense-enabled" class="sr-only peer" checked>
+                                    <div
+                                        class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500">
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Publisher
+                                    ID
+                                    (ca-pub-...)</label>
+                                <input id="ad-adsense-publisher" type="text" placeholder="ca-pub-XXXXXXXXXXXXXXXXX"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white focus:border-blue-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Ad Slot
+                                    /
+                                    Unit
+                                    ID</label>
+                                <input id="ad-adsense-unit" type="text" placeholder="e.g. 1234567890"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white focus:border-blue-500 outline-none">
+                            </div>
+                            <p class="text-xs text-gray-500">Display ad will render inside the WATCH
+                                section.
+                            </p>
+                            <button onclick="saveAdNetwork('adsense')"
+                                class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2.5 rounded-xl transition-all">
+                                <i class="fas fa-save mr-2"></i> Save AdSense
+                            </button>
+                        </div>
+                        <div id="ad-adsense-status" class="mt-3 text-xs text-center text-gray-500"></div>
+                    </div>
+
+                    <!-- Adsterra -->
+                    <div class="glass-card p-6 rounded-2xl border border-white/10">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                                <i class="fas fa-chart-bar text-purple-400 text-lg"></i>
+                            </div>
+                            <div>
+                                <div class="font-bold">Adsterra</div>
+                                <div class="text-xs text-gray-400">adsterra.com</div>
+                            </div>
+                            <div class="ml-auto">
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="ad-adsterra-enabled" class="sr-only peer" checked>
+                                    <div
+                                        class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500">
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Publisher
+                                    ID</label>
+                                <input id="ad-adsterra-publisher" type="text" placeholder="e.g. 12345678"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white focus:border-purple-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Banner /
+                                    Zone
+                                    ID</label>
+                                <input id="ad-adsterra-unit" type="text" placeholder="e.g. abcdef1234567890"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white focus:border-purple-500 outline-none">
+                            </div>
+                            <p class="text-xs text-gray-500">Social Bar / Banner will display in the WATCH
+                                section.</p>
+                            <button onclick="saveAdNetwork('adsterra')"
+                                class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-2.5 rounded-xl transition-all">
+                                <i class="fas fa-save mr-2"></i> Save Adsterra
+                            </button>
+                        </div>
+                        <div id="ad-adsterra-status" class="mt-3 text-xs text-center text-gray-500"></div>
+                    </div>
+
+                    <!-- Direct Link -->
+                    <div class="glass-card p-6 rounded-2xl border border-white/10">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center">
+                                <i class="fas fa-external-link-alt text-orange-400 text-lg"></i>
+                            </div>
+                            <div>
+                                <div class="font-bold">Direct Link</div>
+                                <div class="text-xs text-gray-400">Direct URL Popunder</div>
+                            </div>
+                            <div class="ml-auto">
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="ad-directlink-enabled" class="sr-only peer" checked>
+                                    <div
+                                        class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500">
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="text-xs text-gray-400 font-bold uppercase block mb-1">Direct Ad
+                                    URL</label>
+                                <input id="ad-directlink-url" type="text" placeholder="https://example.com/ad?id=123"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white focus:border-orange-500 outline-none">
+                            </div>
+                            <p class="text-xs text-gray-500">When user taps WATCH, this direct link will open in new tab
+                                for instant monetization.</p>
+                            <button onclick="saveAdNetwork('directlink')"
+                                class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-2.5 rounded-xl transition-all">
+                                <i class="fas fa-save mr-2"></i> Save Direct Link
+                            </button>
+                        </div>
+                        <div id="ad-directlink-status" class="mt-3 text-xs text-center text-gray-500"></div>
+                    </div>
+
+                </div>
+
+                <!-- Active Ad Preview -->
+                <div class="glass-card p-6 rounded-2xl mt-6">
+                    <h3 class="font-bold mb-4 flex items-center gap-2">
+                        <i class="fas fa-eye text-yellow-400"></i> Current Active Ad Config
+                    </h3>
+                    <div id="ad-config-preview" class="text-gray-400 text-sm">Loading...</div>
+                    <button onclick="loadAdNetworks()"
+                        class="mt-4 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-sm font-bold transition-all">
+                        <i class="fas fa-sync-alt mr-2"></i> Refresh
+                    </button>
+                </div>
+            </div>
+
+            <!-- PROVIDERS MANAGEMENT PAGE -->
+            <div id="page-providers" class="page">
+                <div class="glass-card p-6 rounded-2xl mb-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="font-bold text-lg flex items-center gap-2">
+                                <i class="fas fa-server text-purple-400"></i> Provider Management
+                            </h3>
+                            <p class="text-sm text-gray-400">Manage email and SMS providers. Add your own API providers
+                                for temp mail and virtual numbers.</p>
+                        </div>
+                        <button onclick="showProviderModal()"
+                            class="gold-gradient px-4 py-2 rounded-xl font-bold text-sm">Add New Provider</button>
+                    </div>
+                    <div id="providerStatus" class="text-xs text-gray-400 mt-3"></div>
+                </div>
+
+                <div class="glass-card p-6 rounded-2xl">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="font-bold">Active Providers</h4>
+                        <button onclick="loadProviders()"
+                            class="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg">
+                            <i class="fas fa-sync-alt mr-1"></i> Refresh
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table id="providersTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>NAME</th>
+                                    <th>TYPE</th>
+                                    <th>API URL</th>
+                                    <th>API KEY</th>
+                                    <th>STATUS</th>
+                                    <th>ACTIONS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="providersTableBody">
+                                <tr>
+                                    <td colspan="7" class="text-center text-gray-500 py-8">Loading providers...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Premium Email Management Section -->
+                <div class="glass-card p-6 rounded-2xl mt-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h4 class="font-bold text-lg flex items-center gap-2">
+                                <i class="fas fa-envelope text-pink-400"></i> Premium Email Management
+                            </h4>
+                            <p class="text-sm text-gray-400">Import and manage premium email accounts. Users can select
+                                from these emails and receive messages.</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="loadPremiumEmails()"
+                                class="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg">
+                                <i class="fas fa-sync-alt mr-1"></i> Refresh
+                            </button>
+                            <button onclick="showPremiumEmailModal()"
+                                class="gold-gradient px-4 py-2 rounded-xl font-bold text-sm">Add Email</button>
+                        </div>
+                    </div>
+
+                    <!-- Import Box -->
+                    <div class="bg-black/20 rounded-xl p-4 border border-white/10 mb-4">
+                        <label class="text-xs text-gray-400 uppercase font-bold block mb-2">Quick Import (Email:Password
+                            format)</label>
+                        <div class="flex gap-2">
+                            <textarea id="premiumEmailImport" rows="3"
+                                placeholder="email1@domain.com:password1&#10;email2@domain.com:password2&#10;email3@domain.com:password3"
+                                class="flex-1 bg-black/40 border border-white/10 rounded-lg p-3 text-white text-sm font-mono"></textarea>
+                            <button onclick="importPremiumEmails()"
+                                class="bg-pink-500 hover:bg-pink-600 text-white px-4 py-2 rounded-xl font-bold text-sm flex flex-col items-center justify-center gap-1">
+                                <i class="fas fa-file-import"></i>
+                                <span>Import</span>
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">One email per line in format: email@domain.com:password
+                        </p>
+                    </div>
+
+                    <!-- Premium Emails Table -->
+                    <div class="overflow-x-auto">
+                        <table id="premiumEmailsTable" class="w-full">
+                            <thead>
+                                <tr class="text-gray-500 text-xs uppercase border-b border-white/10">
+                                    <th class="pb-3 font-bold text-left">Email</th>
+                                    <th class="pb-3 font-bold text-left">Password</th>
+                                    <th class="pb-3 font-bold text-left">Status</th>
+                                    <th class="pb-3 font-bold text-left">Messages</th>
+                                    <th class="pb-3 font-bold text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="premiumEmailsTableBody">
+                                <tr>
+                                    <td colspan="5" class="text-center text-gray-500 py-8">Loading premium emails...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Provider Modal -->
+                <div id="providerModal" class="modal-overlay">
+                    <div class="glass-card p-6 rounded-2xl w-full max-w-md mx-4">
+                        <h3 class="text-xl font-bold mb-6 flex items-center gap-2">
+                            <i class="fas fa-plus-circle text-green-400"></i> <span id="providerModalTitle">Add
+                                Provider</span>
+                        </h3>
+                        <input type="hidden" id="providerEditId">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Provider ID
+                                    (unique)</label>
+                                <input id="providerId" type="text" placeholder="e.g. smtp_1 or mail1"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Name</label>
+                                <input id="providerName" type="text" placeholder="e.g. SmtpLabs Primary"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Type</label>
+                                <select id="providerType" onchange="onProviderTypeChange(this.value)"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                                    <option value="email">Email Provider</option>
+                                    <option value="sms">SMS/Number Provider</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400 uppercase font-bold block mb-1">API URL</label>
+                                <input id="providerApiUrl" type="text" placeholder="https://api.provider.com"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400 uppercase font-bold block mb-1">API Key</label>
+                                <input id="providerApiKey" type="password" placeholder="Enter API key"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                                <p class="text-xs text-gray-500 mt-1">Leave blank when editing to keep existing key</p>
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Priority (higher =
+                                    first)</label>
+                                <input id="providerPriority" type="number" placeholder="0" value="0"
+                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <input id="providerActive" type="checkbox" class="w-4 h-4 accent-orange-500" checked>
+                                <label class="text-sm text-gray-300">Active</label>
+                            </div>
+                            <!-- Platform Country Codes Section (for SMS providers) -->
+                            <div id="platformCountryCodesSection" style="display:none;">
+                                <label class="text-xs text-gray-400 uppercase font-bold block mb-2 mt-4">Platform
+                                    Country Codes</label>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="text-[10px] text-gray-500 block mb-1">Telegram</label>
+                                        <input id="cc_telegram" type="text" placeholder="e.g. 1, 880"
+                                            class="w-full bg-black/30 border border-white/10 p-2 rounded-lg text-white text-sm">
+                                    </div>
+                                    <div>
+                                        <label class="text-[10px] text-gray-500 block mb-1">WhatsApp</label>
+                                        <input id="cc_whatsapp" type="text" placeholder="e.g. 91, 1"
+                                            class="w-full bg-black/30 border border-white/10 p-2 rounded-lg text-white text-sm">
+                                    </div>
+                                    <div>
+                                        <label class="text-[10px] text-gray-500 block mb-1">Instagram</label>
+                                        <input id="cc_instagram" type="text" placeholder="e.g. 1, 44"
+                                            class="w-full bg-black/30 border border-white/10 p-2 rounded-lg text-white text-sm">
+                                    </div>
+                                    <div>
+                                        <label class="text-[10px] text-gray-500 block mb-1">Twitter</label>
+                                        <input id="cc_twitter" type="text" placeholder="e.g. 1, 91"
+                                            class="w-full bg-black/30 border border-white/10 p-2 rounded-lg text-white text-sm">
+                                    </div>
+                                    <div>
+                                        <label class="text-[10px] text-gray-500 block mb-1">TikTok</label>
+                                        <input id="cc_tiktok" type="text" placeholder="e.g. 86, 1"
+                                            class="w-full bg-black/30 border border-white/10 p-2 rounded-lg text-white text-sm">
+                                    </div>
+                                    <div>
+                                        <label class="text-[10px] text-gray-500 block mb-1">Facebook</label>
+                                        <input id="cc_facebook" type="text" placeholder="e.g. 1, 91"
+                                            class="w-full bg-black/30 border border-white/10 p-2 rounded-lg text-white text-sm">
+                                    </div>
+                                    <div>
+                                        <label class="text-[10px] text-gray-500 block mb-1">Other</label>
+                                        <input id="cc_other" type="text" placeholder="e.g. 1, 44"
+                                            class="w-full bg-black/30 border border-white/10 p-2 rounded-lg text-white text-sm">
+                                    </div>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-2">Enter country codes (comma-separated) for each
+                                    platform. First code = default.</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-3 mt-6">
+                            <button onclick="saveProvider()"
+                                class="flex-1 gold-gradient py-3 rounded-xl font-bold text-black shadow-lg">SAVE</button>
+                            <button onclick="document.getElementById('providerModal').style.display='none'"
+                                class="flex-1 bg-white/5 border border-white/10 py-3 rounded-xl text-gray-400">CANCEL</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- GROUP MANAGEMENT PAGE -->
+                <div id="page-groups" class="page">
+                    <div class="glass-card p-6 rounded-2xl mb-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="font-bold text-lg flex items-center gap-2">
+                                    <i class="fas fa-users-cog text-green-400"></i> Group Management
+                                </h3>
+                                <p class="text-sm text-gray-400">Configure auto-delete settings for group system
+                                    messages
+                                </p>
+                            </div>
+                            <button onclick="saveGroupManagementSettings()"
+                                class="gold-gradient px-4 py-2 rounded-xl font-bold text-sm">Save Settings</button>
+                        </div>
+                        <div id="groupManagementStatus" class="text-xs text-gray-400 mt-3"></div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Main Toggle -->
+                        <div class="glass-card p-6 rounded-2xl">
+                            <h4 class="font-bold mb-4 flex items-center gap-2">
+                                <i class="fas fa-power-off text-blue-400"></i> Main Control
+                            </h4>
+                            <div class="flex items-center justify-between p-4 bg-black/20 rounded-xl mb-4">
+                                <div>
+                                    <div class="font-bold">Auto-Delete System Messages</div>
+                                    <div class="text-xs text-gray-400">Master switch for all auto-delete features</div>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="gm_autoDeleteSystemMessages" class="sr-only peer"
+                                        checked>
+                                    <div
+                                        class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500">
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Join/Leave -->
+                        <div class="glass-card p-6 rounded-2xl">
+                            <h4 class="font-bold mb-4 flex items-center gap-2">
+                                <i class="fas fa-user-plus text-green-400"></i> Join/Leave Messages
+                            </h4>
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                                    <div class="text-sm">Delete Join Messages</div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="gm_deleteJoinMessages" class="sr-only peer" checked>
+                                        <div
+                                            class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500">
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                                    <div class="text-sm">Delete Leave Messages</div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="gm_deleteLeaveMessages" class="sr-only peer" checked>
+                                        <div
+                                            class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500">
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Group Changes -->
+                        <div class="glass-card p-6 rounded-2xl">
+                            <h4 class="font-bold mb-4 flex items-center gap-2">
+                                <i class="fas fa-edit text-yellow-400"></i> Group Changes
+                            </h4>
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                                    <div class="text-sm">Delete Title Changes</div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="gm_deleteTitleChanged" class="sr-only peer">
+                                        <div
+                                            class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-yellow-500">
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                                    <div class="text-sm">Delete Photo Changes</div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="gm_deleteGroupPhotoChanged" class="sr-only peer">
+                                        <div
+                                            class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-yellow-500">
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                                    <div class="text-sm">Delete Pinned Messages</div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="gm_deletePinMessages" class="sr-only peer">
+                                        <div
+                                            class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-yellow-500">
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Video Chat -->
+                        <div class="glass-card p-6 rounded-2xl">
+                            <h4 class="font-bold mb-4 flex items-center gap-2">
+                                <i class="fas fa-video text-purple-400"></i> Video/Voice Chat
+                            </h4>
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                                    <div class="text-sm">Delete Video Chat Started</div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="gm_deleteVideoChatStarted" class="sr-only peer">
+                                        <div
+                                            class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500">
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                                    <div class="text-sm">Delete Video Chat Ended</div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="gm_deleteVideoChatEnded" class="sr-only peer">
+                                        <div
+                                            class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500">
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Info Box -->
+                    <div class="glass-card p-6 rounded-2xl mt-6">
+                        <div class="flex items-start gap-3">
+                            <i class="fas fa-info-circle text-blue-400 mt-1"></i>
+                            <div>
+                                <h4 class="font-bold mb-2">How It Works</h4>
+                                <p class="text-sm text-gray-400">When enabled, the bot will automatically delete system
+                                    messages in groups where it has <b>Delete Messages</b> admin permission.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DATABASE MANAGEMENT PAGE -->
+                <div id="page-database" class="page">
+                    <div class="glass-card p-6 rounded-2xl mb-8">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div
+                                class="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center text-orange-400">
+                                <i class="fas fa-database text-2xl"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-2xl font-bold">Database Management</h2>
+                                <p class="text-gray-400 text-sm">Export/Import backups and control database
+                                    operations.</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <!-- Export -->
+                            <div
+                                class="p-6 rounded-xl bg-white/5 border border-white/10 flex flex-col items-center text-center">
+                                <i class="fas fa-file-export text-3xl text-blue-400 mb-4"></i>
+                                <h3 class="font-bold mb-2">Generate Data</h3>
+                                <p class="text-xs text-gray-400 mb-6">Generate a full backup of the current
+                                    database and
+                                    send it to your Telegram.</p>
+                                <button onclick="exportDatabase()"
+                                    class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-xl transition-all">
+                                    <i class="fas fa-download mr-2"></i> EXPORT TO TG
+                                </button>
+                            </div>
+
+                            <!-- Import -->
+                            <div
+                                class="p-6 rounded-xl bg-white/5 border border-white/10 flex flex-col items-center text-center">
+                                <i class="fas fa-file-import text-3xl text-green-400 mb-4"></i>
+                                <h3 class="font-bold mb-2">Upload Data</h3>
+                                <p class="text-xs text-gray-400 mb-6">Upload a local JSON backup file to merge
+                                    with the
+                                    existing database.</p>
+                                <button onclick="document.getElementById('db-import-file').click()"
+                                    class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl transition-all">
+                                    <i class="fas fa-upload mr-2"></i> UPLOAD JSON
+                                </button>
+                                <input type="file" id="db-import-file" class="hidden" accept=".json"
+                                    onchange="importDatabase(this)">
+                            </div>
+
+                            <!-- Wipe -->
+                            <div
+                                class="p-6 rounded-xl bg-white/5 border border-white/10 flex flex-col items-center text-center">
+                                <i class="fas fa-trash-alt text-3xl text-red-500 mb-4"></i>
+                                <h3 class="font-bold mb-2">Restore / Wipe</h3>
+                                <p class="text-xs text-gray-400 mb-6">Permenently delete all user and
+                                    transaction data. Use
+                                    with extreme caution!</p>
+                                <button onclick="wipeDatabase()"
+                                    class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl transition-all">
+                                    <i class="fas fa-skull mr-2"></i> WIPE DATABASE
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Backup History List -->
+
+                    </div>
+
+                    <!-- AUTO BACKUP CONTROLS -->
+                    <div class="glass-card p-8 rounded-2xl">
+                        <div class="flex items-center justify-between mb-8">
+                            <div>
+                                <h3 class="text-xl font-bold flex items-center gap-2">
+                                    <i class="fas fa-clock text-yellow-400"></i> Auto Backup Schedule
+                                </h3>
+                                <p class="text-gray-400 text-sm">Configure automated telegram backups.</p>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-sm font-bold text-gray-400">Enabled</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="db-auto-enabled" class="sr-only peer">
+                                    <div
+                                        class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500">
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+                            <div>
+                                <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Backup Every
+                                    (Days)</label>
+                                <input type="number" id="db-auto-days" value="1" min="1"
+                                    class="w-full bg-black/30 border border-white/10 rounded-xl p-4 text-white focus:border-yellow-500 outline-none">
+                                <p class="text-[10px] text-gray-500 mt-1">E.g. 1 = Every day, 2 = Every 2 days</p>
+                            </div>
+                            <div>
+                                <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Backup Time</label>
+                                <input type="text" id="db-auto-time" placeholder="HH:MM (e.g. 06:00)"
+                                    class="w-full bg-black/30 border border-white/10 rounded-xl p-4 text-white focus:border-yellow-500 outline-none">
+                                <p class="text-[10px] text-gray-500 mt-1">Time to take backup (24-hour format)</p>
+                            </div>
+                            <div>
+                                <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Retention
+                                    (Files)</label>
+                                <input type="number" id="db-auto-keep" value="30" min="1"
+                                    class="w-full bg-black/30 border border-white/10 rounded-xl p-4 text-white focus:border-yellow-500 outline-none">
+                                <p class="text-[10px] text-gray-500 mt-1">Number of local backups to keep</p>
+                            </div>
+                            <div class="flex flex-col justify-end">
+                                <button onclick="saveDbSchedule()"
+                                    class="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-4 rounded-xl transition-all">
+                                    <i class="fas fa-save mr-2"></i> SAVE SCHEDULE
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="pt-8 border-t border-white/5 grid grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div class="bg-black/20 p-4 rounded-xl">
+                                <div class="text-[10px] text-gray-500 font-bold uppercase mb-1">Current DB Size
+                                </div>
+                                <div id="db-current-size" class="text-sm font-mono text-green-400">0 KB</div>
+                            </div>
+                            <div class="bg-black/20 p-4 rounded-xl">
+                                <div class="text-[10px] text-gray-500 font-bold uppercase mb-1">Last Backup
+                                </div>
+                                <div id="db-last-backup" class="text-sm font-mono text-gray-300">Loading...
+                                </div>
+                            </div>
+                            <div class="bg-black/20 p-4 rounded-xl">
+                                <div class="text-[10px] text-gray-500 font-bold uppercase mb-1">Next Backup
+                                </div>
+                                <div id="db-next-backup" class="text-sm font-mono text-yellow-400">Loading...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold">Database Management</h2>
+                        <p class="text-gray-400 text-sm">Export/Import backups and control database
+                            operations.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Export -->
+                    <div
+                        class="p-6 rounded-xl bg-white/5 border border-white/10 flex flex-col items-center text-center">
+                        <i class="fas fa-file-export text-3xl text-blue-400 mb-4"></i>
+                        <h3 class="font-bold mb-2">Generate Data</h3>
+                        <p class="text-xs text-gray-400 mb-6">Generate a full backup of the current
+                            database and
+                            send it to your Telegram.</p>
+                        <button onclick="exportDatabase()"
+                            class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-xl transition-all">
+                            <i class="fas fa-download mr-2"></i> EXPORT TO TG
+                        </button>
+                    </div>
+
+                    <!-- Import -->
+                    <div
+                        class="p-6 rounded-xl bg-white/5 border border-white/10 flex flex-col items-center text-center">
+                        <i class="fas fa-file-import text-3xl text-green-400 mb-4"></i>
+                        <h3 class="font-bold mb-2">Upload Data</h3>
+                        <p class="text-xs text-gray-400 mb-6">Upload a local JSON backup file to merge
+                            with the
+                            existing database.</p>
+                        <button onclick="document.getElementById('db-import-file').click()"
+                            class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl transition-all">
+                            <i class="fas fa-upload mr-2"></i> UPLOAD JSON
+                        </button>
+                        <input type="file" id="db-import-file" class="hidden" accept=".json"
+                            onchange="importDatabase(this)">
+                    </div>
+
+                    <!-- Wipe -->
+                    <div
+                        class="p-6 rounded-xl bg-white/5 border border-white/10 flex flex-col items-center text-center">
+                        <i class="fas fa-trash-alt text-3xl text-red-500 mb-4"></i>
+                        <h3 class="font-bold mb-2">Restore / Wipe</h3>
+                        <p class="text-xs text-gray-400 mb-6">Permenently delete all user and
+                            transaction data. Use
+                            with extreme caution!</p>
+                        <button onclick="wipeDatabase()"
+                            class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl transition-all">
+                            <i class="fas fa-skull mr-2"></i> WIPE DATABASE
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Backup History List -->
+                <div class="mt-8 glass-card p-8 rounded-2xl">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-bold flex items-center gap-2">
+                            <i class="fas fa-history text-blue-400"></i> Backup History
+                        </h3>
+                        <button onclick="loadBackupHistory()"
+                            class="text-xs bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg transition-all">
+                            <i class="fas fa-sync-alt mr-1"></i> REFRESH
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="text-gray-500 text-xs uppercase border-b border-white/5">
+                                    <th class="pb-4 font-bold">File Name</th>
+                                    <th class="pb-4 font-bold">Size</th>
+                                    <th class="pb-4 font-bold">Date</th>
+                                    <th class="pb-4 font-bold text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="backupHistoryTable" class="text-sm">
+                                <tr>
+                                    <td colspan="4" class="text-center text-gray-500 py-8">Loading
+                                        history...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AUTO BACKUP CONTROLS -->
+            <div class="glass-card p-8 rounded-2xl">
+                <div class="flex items-center justify-between mb-8">
+                    <div>
+                        <h3 class="text-xl font-bold flex items-center gap-2">
+                            <i class="fas fa-clock text-yellow-400"></i> Auto Backup Schedule
+                        </h3>
+                        <p class="text-gray-400 text-sm">Configure automated telegram backups.</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-sm font-bold text-gray-400">Enabled</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="db-auto-enabled" class="sr-only peer">
+                            <div
+                                class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500">
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+                    <div>
+                        <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Backup Every
+                            (Days)</label>
+                        <input type="number" id="db-auto-days" value="1" min="1"
+                            class="w-full bg-black/30 border border-white/10 rounded-xl p-4 text-white focus:border-yellow-500 outline-none">
+                        <p class="text-[10px] text-gray-500 mt-1">E.g. 1 = Every day, 2 = Every 2 days</p>
+                    </div>
+                    <div>
+                        <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Backup Time</label>
+                        <input type="text" id="db-auto-time" placeholder="HH:MM (e.g. 06:00)"
+                            class="w-full bg-black/30 border border-white/10 rounded-xl p-4 text-white focus:border-yellow-500 outline-none">
+                        <p class="text-[10px] text-gray-500 mt-1">Time to take backup (24-hour format)</p>
+                    </div>
+                    <div>
+                        <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Retention
+                            (Files)</label>
+                        <input type="number" id="db-auto-keep" value="30" min="1"
+                            class="w-full bg-black/30 border border-white/10 rounded-xl p-4 text-white focus:border-yellow-500 outline-none">
+                        <p class="text-[10px] text-gray-500 mt-1">Number of local backups to keep</p>
+                    </div>
+                    <div class="flex flex-col justify-end">
+                        <button onclick="saveDbSchedule()"
+                            class="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-4 rounded-xl transition-all">
+                            <i class="fas fa-save mr-2"></i> SAVE SCHEDULE
+                        </button>
+                    </div>
+                </div>
+
+                <div class="pt-8 border-t border-white/5 grid grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="bg-black/20 p-4 rounded-xl">
+                        <div class="text-[10px] text-gray-500 font-bold uppercase mb-1">Current DB Size
+                        </div>
+                        <div id="db-current-size" class="text-sm font-mono text-green-400">0 KB</div>
+                    </div>
+                    <div class="bg-black/20 p-4 rounded-xl">
+                        <div class="text-[10px] text-gray-500 font-bold uppercase mb-1">Last Backup
+                        </div>
+                        <div id="db-last-backup" class="text-sm font-mono text-gray-300">Loading...
+                        </div>
+                    </div>
+                    <div class="bg-black/20 p-4 rounded-xl">
+                        <div class="text-[10px] text-gray-500 font-bold uppercase mb-1">Next Backup
+                        </div>
+                        <div id="db-next-backup" class="text-sm font-mono text-yellow-400">Loading...
+                        </div>
+                    </div>
+                </div>
+            </div>
+    </div>
+
+    </main>
+    </div>
+
+    <script>
+        const originalFetch = window.fetch;
+        window.fetch = function () {
+            let args = Array.prototype.slice.call(arguments);
+            if (!args[1]) args[1] = {};
+            if (!args[1].headers) args[1].headers = {};
+            args[1].headers['Bypass-Tunnel-Reminder'] = 'true';
+            return originalFetch.apply(this, args);
+        };
+
+        // AUTO INITIALIZE (No Login)
+        document.addEventListener('DOMContentLoaded', () => {
+            init();
+        });
+
+        // Admin token (optional). Panel runs in no-login mode, so keep a safe fallback.
+        // If you later add login, set this value from /api/admin/login.
+        const ADMIN_TOKEN = '';
+
+        function logout() { location.reload(); }
+
+        // Toggle collapsible sections (Cost Management, API Keys, etc.)
+        function toggleSection(sectionId) {
+            const content = document.getElementById(sectionId);
+            const icon = document.getElementById('icon-' + sectionId);
+            if (content) {
+                if (content.classList.contains('hidden')) {
+                    content.classList.remove('hidden');
+                    if (icon) icon.style.transform = 'rotate(180deg)';
+                } else {
+                    content.classList.add('hidden');
+                    if (icon) icon.style.transform = 'rotate(0deg)';
+                }
+            }
+        }
+
+        // Toggle password visibility
+        function togglePasswordVisibility(inputId) {
+            const el = document.getElementById(inputId);
+            if (!el) return;
+            el.type = el.type === 'password' ? 'text' : 'password';
+        }
+
+        // Format uptime
+        function _fmtUptime(seconds) {
+            const s = Math.max(0, Math.floor(seconds || 0));
+            const h = Math.floor(s / 3600);
+            const m = Math.floor((s % 3600) / 60);
+            const ss = s % 60;
+            if (h > 0) return `${h}h ${m}m`;
+            if (m > 0) return `${m}m ${ss}s`;
+            return `${ss}s`;
+        }
+
+        // Load admin metrics
+        async function loadAdminMetrics() {
+            try {
+                const [metricsRes, statsRes] = await Promise.all([
+                    fetch('/api/admin/metrics'),
+                    fetch('/api/admin/stats')
+                ]);
+                const metricsData = await metricsRes.json();
+                const statsData = await statsRes.json();
+
+                if (metricsData?.success && metricsData.metrics) {
+                    const m = metricsData.metrics;
+                    const cpuEl = document.getElementById('metric-cpu');
+                    const memEl = document.getElementById('metric-memory');
+                    const dbEl = document.getElementById('metric-db');
+                    const upEl = document.getElementById('metric-uptime');
+                    const cbEl = document.getElementById('metric-callbacks');
+
+                    if (cpuEl) cpuEl.textContent = `${m.cpu ?? 0}%`;
+                    if (memEl) memEl.textContent = `${m.memory ?? 0}%`;
+                    if (dbEl) dbEl.textContent = m.dbSize || '0 KB';
+                    if (upEl) upEl.textContent = _fmtUptime(m.uptime);
+                    if (cbEl) cbEl.textContent = (m.callbacks ?? 0).toLocaleString();
+                }
+
+                if (statsData?.success) {
+                    const activeEl = document.getElementById('metric-active');
+                    if (activeEl) activeEl.textContent = (statsData.activeToday ?? 0).toLocaleString();
+                }
+            } catch (e) {
+                // silent
+            }
+        }
+
+        // Start admin metrics polling
+        let _metricsTimer = null;
+        function startAdminMetricsPolling() {
+            if (_metricsTimer) return;
+            loadAdminMetrics();
+            _metricsTimer = setInterval(loadAdminMetrics, 5000);
+        }
+
+        // Load API keys
+        async function loadApiKeys() {
+            try {
+                const res = await fetch('/api/admin/settings');
+                const data = await res.json();
+                if (!data?.success) return;
+
+                const api = data.apiKeys || {};
+                const elBackup = document.getElementById('api-backup-token');
+                const elSmtp = document.getElementById('api-smtp-key');
+                const elGmailClient = document.getElementById('api-gmail-client');
+                const elGmailSecret = document.getElementById('api-gmail-secret');
+                const elMini = document.getElementById('api-miniapp-url');
+
+                if (elBackup) elBackup.value = api.backupBotToken || '';
+                if (elSmtp) elSmtp.value = api.smtpLabsKey || '';
+                if (elGmailClient) elGmailClient.value = api.gmailClientId || '';
+                if (elGmailSecret) elGmailSecret.value = api.gmailClientSecret || '';
+                if (elMini) elMini.value = api.miniAppUrl || '';
+            } catch (e) {
+                // silent
+            }
+        }
+
+        // Save API keys
+        async function saveApiKeys() {
+            const payload = {
+                backupBotToken: document.getElementById('api-backup-token')?.value || '',
+                smtpLabsKey: document.getElementById('api-smtp-key')?.value || '',
+                gmailClientId: document.getElementById('api-gmail-client')?.value || '',
+                gmailClientSecret: document.getElementById('api-gmail-secret')?.value || '',
+                miniAppUrl: document.getElementById('api-miniapp-url')?.value || ''
+            };
+            try {
+                const res = await fetch('/api/admin/apikeys', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
                 const data = await res.json();
                 if (data?.success) {
                     alert('✅ API Keys saved successfully!');
@@ -1741,14 +2901,6 @@
                     document.getElementById('conf-adreward').value = c.adReward || 0;
                     if (document.getElementById('conf-zerobalance-adreward')) document.getElementById('conf-zerobalance-adreward').value = c.zeroBalanceAdReward || 5;
                     document.getElementById('conf-taskreward').value = c.taskReward || 0;
-                    // Activity Limits
-                    if (document.getElementById('conf-quiz-limit')) document.getElementById('conf-quiz-limit').value = c.quizLimit || 5;
-                    if (document.getElementById('conf-quiz-recovery')) document.getElementById('conf-quiz-recovery').value = c.quizRecoveryHours || 1;
-                    if (document.getElementById('conf-scratch-limit')) document.getElementById('conf-scratch-limit').value = c.scratchLimit || 5;
-                    if (document.getElementById('conf-scratch-recovery')) document.getElementById('conf-scratch-recovery').value = c.scratchRecoveryHours || 1;
-                    if (document.getElementById('conf-ad-limit')) document.getElementById('conf-ad-limit').value = c.adLimit || 50;
-                    if (document.getElementById('conf-ad-recovery')) document.getElementById('conf-ad-recovery').value = c.adRecoveryHours || 24;
-                    if (document.getElementById('conf-ad-cooldown')) document.getElementById('conf-ad-cooldown').value = c.adCooldownSeconds || 5;
                     // System Costs
                     if (document.getElementById('conf-premium-email-cost')) document.getElementById('conf-premium-email-cost').value = c.premiumEmailCost || 0;
                     // Fees
@@ -1810,7 +2962,7 @@
                     document.getElementById('reward-telegram').value = sr.telegram || 0;
                     document.getElementById('reward-discord').value = sr.discord || 0;
                     document.getElementById('reward-other').value = sr.other || 0;
-                    document.getElementById('reward-2fa-mult').value = sr['2faMultiplier'] || 1.1;
+                    document.getElementById('reward-2fa-mult').value = sr['2faMultiplier'] || 1.5;
                 }
             } catch (e) {
                 console.error('Failed to load costs:', e);
@@ -1826,14 +2978,6 @@
                 adReward: parseInt(document.getElementById('conf-adreward').value) || 0,
                 zeroBalanceAdReward: document.getElementById('conf-zerobalance-adreward') ? (parseInt(document.getElementById('conf-zerobalance-adreward').value) || 0) : undefined,
                 taskReward: parseInt(document.getElementById('conf-taskreward').value) || 0,
-                // Activity Limits
-                quizLimit: parseInt(document.getElementById('conf-quiz-limit').value) || 5,
-                quizRecoveryHours: parseInt(document.getElementById('conf-quiz-recovery').value) || 1,
-                scratchLimit: parseInt(document.getElementById('conf-scratch-limit').value) || 5,
-                scratchRecoveryHours: parseInt(document.getElementById('conf-scratch-recovery').value) || 1,
-                adLimit: parseInt(document.getElementById('conf-ad-limit').value) || 50,
-                adRecoveryHours: parseInt(document.getElementById('conf-ad-recovery').value) || 24,
-                adCooldownSeconds: parseInt(document.getElementById('conf-ad-cooldown').value) || 5,
                 // System Costs
                 premiumEmailCost: document.getElementById('conf-premium-email-cost') ? parseInt(document.getElementById('conf-premium-email-cost').value) || 0 : undefined,
                 transferFee: parseInt(document.getElementById('conf-transfer').value) || 0,
@@ -1907,24 +3051,8 @@
             }
         }
 
-        // Mobile Menu Functions
-        function toggleMobileMenu() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.querySelector('.mobile-overlay');
-            sidebar.classList.toggle('mobile-open');
-            overlay.classList.toggle('active');
-        }
-
-        function closeMobileMenu() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.querySelector('.mobile-overlay');
-            sidebar.classList.remove('mobile-open');
-            overlay.classList.remove('active');
-        }
-
-        // Close mobile menu when clicking a nav item on mobile
+        // NAV
         function nav(p) {
-            closeMobileMenu();
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             if (event && event.currentTarget) event.currentTarget.classList.add('active');
             document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
@@ -1955,6 +3083,7 @@
             if (p === 'accounts') loadAccounts();
             if (p === 'groups') loadGroups();
             if (p === 'storage') loadStorageStatus();
+            if (p === 'tasks') loadTasks();
             if (p === 'premiumemail') loadPremiumEmails();
             if (p === 'adnetworks') loadAdNetworks();
             if (p === 'buttons') loadFeatureFlags();
@@ -2126,53 +3255,66 @@
                 .then(data => {
                     if (!data.success) return;
                     const ads = data.ads || {};
-                    const networks = ['moneytag', 'adsense', 'adsterra'];
+                    const networks = ['moneytag', 'adsense', 'adsterra', 'directlink'];
                     networks.forEach(net => {
                         const cfg = ads[net] || {};
                         const pubEl = document.getElementById('ad-' + net + '-publisher');
                         const unitEl = document.getElementById('ad-' + net + '-unit');
-                        const directEl = document.getElementById('ad-' + net + '-direct');
-                        const enEl = document.getElementById('ad-' + net + '-enabled');
+                        const urlEl = document.getElementById('ad-' + net + '-url');
+                        const enabledEl = document.getElementById('ad-' + net + '-enabled');
                         if (pubEl) pubEl.value = cfg.publisherId || '';
                         if (unitEl) unitEl.value = cfg.adUnitId || '';
-                        if (directEl) directEl.value = cfg.directLink || '';
-                        if (enEl) enEl.checked = cfg.enabled !== false;
+                        if (urlEl) urlEl.value = cfg.url || '';
+                        if (enabledEl) enabledEl.checked = cfg.enabled !== false;
                     });
-                    // Preview
-                    const preview = document.getElementById('ad-config-preview');
-                    if (preview) {
-                        const entries = Object.entries(ads);
-                        if (!entries.length) {
-                            preview.innerHTML = '<span class="text-gray-500">No ad networks configured yet.</span>';
+
+                    // Update preview
+                    const previewEl = document.getElementById('ad-config-preview');
+                    if (previewEl) {
+                        const activeAds = Object.entries(ads).filter(([k, v]) => v.enabled);
+                        if (activeAds.length === 0) {
+                            previewEl.innerHTML = 'No active ad networks';
                         } else {
-                            preview.innerHTML = entries.map(([net, cfg]) =>
-                                `<div class="flex items-center gap-3 py-2 border-b border-white/5">
-                                        <span class="font-bold text-white capitalize">${net}</span>
-                                        <span class="text-gray-400">Publisher: <code class="text-yellow-400">${cfg.publisherId || '-'}</code></span>
-                                        <span class="text-gray-400">Unit: <code class="text-blue-400">${cfg.adUnitId || '-'}</code></span>
-                                        <span class="text-gray-400">Direct Link: <code class="text-green-400">${cfg.directLink || '-'}</code></span>
-                                        <span class="ml-auto px-2 py-0.5 rounded text-xs font-bold ${cfg.enabled ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">${cfg.enabled ? 'ENABLED' : 'DISABLED'}</span>
-                                    </div>`
-                            ).join('');
+                            previewEl.innerHTML = activeAds.map(([k, v]) => {
+                                let displayText = '';
+                                if (k === 'directlink' && v.url) {
+                                    displayText = `Direct Link: ${v.url.substring(0, 30)}...`;
+                                } else {
+                                    displayText = `${k}: ${v.publisherId ? '✅' : '❌'}`;
+                                }
+                                return `
+                                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; padding:8px; background:rgba(255,255,255,0.05); border-radius:8px;">
+                                        <span>${displayText}</span>
+                                        <button onclick="deleteAdNetwork('${k}')" style="background:#ef4444; color:#fff; border:none; padding:4px 12px; border-radius:6px; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:4px;">
+                                            <i class="fas fa-trash"></i> Delete
+                                        </button>
+                                    </div>
+                                `;
+                            }).join('');
                         }
                     }
                 }).catch(() => { });
         }
 
         function saveAdNetwork(network) {
-            const publisherId = document.getElementById('ad-' + network + '-publisher').value.trim();
-            const adUnitId = document.getElementById('ad-' + network + '-unit').value.trim();
-            const directLinkEl = document.getElementById('ad-' + network + '-direct');
-            const directLink = directLinkEl ? directLinkEl.value.trim() : '';
+            let payload = { network };
             const enabled = document.getElementById('ad-' + network + '-enabled').checked;
-            const statusEl = document.getElementById('ad-' + network + '-status');
-            statusEl.textContent = 'Saving...';
-            statusEl.style.color = '#888';
+
+            if (network === 'directlink') {
+                const url = document.getElementById('ad-' + network + '-url').value.trim();
+                payload = { network, url, enabled };
+            } else {
+                const publisherId = document.getElementById('ad-' + network + '-publisher').value.trim();
+                const adUnitId = document.getElementById('ad-' + network + '-unit').value.trim();
+                payload = { network, publisherId, adUnitId, enabled };
+            }
+
             fetch('/api/admin/ads', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ network, publisherId, adUnitId, directLink, enabled })
+                body: JSON.stringify(payload)
             }).then(r => r.json()).then(data => {
+                const statusEl = document.getElementById('ad-' + network + '-status');
                 if (data.success) {
                     statusEl.textContent = '✅ Saved successfully!';
                     statusEl.style.color = '#4ade80';
@@ -2181,9 +3323,30 @@
                     statusEl.textContent = '❌ Error saving';
                     statusEl.style.color = '#f87171';
                 }
+                setTimeout(() => { statusEl.textContent = ''; }, 3000);
             }).catch(() => {
+                const statusEl = document.getElementById('ad-' + network + '-status');
                 statusEl.textContent = '❌ Network error';
                 statusEl.style.color = '#f87171';
+            });
+        }
+
+        // Delete ad network
+        function deleteAdNetwork(network) {
+            if (!confirm(`Are you sure you want to delete the ${network} ad configuration?`)) return;
+
+            fetch(`/api/admin/ads/${network}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' }
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    alert(`✅ ${network} deleted successfully!`);
+                    loadAdNetworks();
+                } else {
+                    alert('❌ Error deleting: ' + (data.message || 'Unknown error'));
+                }
+            }).catch(() => {
+                alert('❌ Network error while deleting');
             });
         }
 
@@ -2296,6 +3459,7 @@
             loadFeatureFlags();
             loadAllCosts();
             loadApiKeys();
+            loadVerificationSettings();
             startAdminMetricsPolling();
         }
 
@@ -2317,7 +3481,7 @@
                         return;
                     }
                     const f = data.features || {};
-                    const keys = ['tempMail', 'virtualNumber', 'premiumMail', 'accountsShop', 'cardsVcc', 'home_verify', 'home_mail', 'home_number', 'home_gemini', 'home_chatgpt', 'home_accounts', 'home_vcc', 'home_premiumMail', 'joinRequired'];
+                    const keys = ['tempMail', 'virtualNumber', 'premiumMail', 'accountsShop', 'cardsVcc', 'joinRequired', 'home_verify', 'home_mail', 'home_number', 'home_gemini', 'home_chatgpt', 'home_accounts', 'home_vcc', 'home_premiumMail'];
                     keys.forEach(k => {
                         const el = document.getElementById('ff-' + k);
                         if (el) el.checked = f[k] !== false;
@@ -2336,6 +3500,7 @@
                 premiumMail: document.getElementById('ff-premiumMail')?.checked === true,
                 accountsShop: document.getElementById('ff-accountsShop')?.checked === true,
                 cardsVcc: document.getElementById('ff-cardsVcc')?.checked === true,
+                joinRequired: document.getElementById('ff-joinRequired')?.checked === true,
                 home_verify: document.getElementById('ff-home_verify')?.checked === true,
                 home_mail: document.getElementById('ff-home_mail')?.checked === true,
                 home_number: document.getElementById('ff-home_number')?.checked === true,
@@ -2343,8 +3508,7 @@
                 home_chatgpt: document.getElementById('ff-home_chatgpt')?.checked === true,
                 home_accounts: document.getElementById('ff-home_accounts')?.checked === true,
                 home_vcc: document.getElementById('ff-home_vcc')?.checked === true,
-                home_premiumMail: document.getElementById('ff-home_premiumMail')?.checked === true,
-                joinRequired: document.getElementById('ff-joinRequired')?.checked === true
+                home_premiumMail: document.getElementById('ff-home_premiumMail')?.checked === true
             };
 
             fetch('/api/admin/features', {
@@ -2434,18 +3598,210 @@
                 });
         }
 
+        function renderUsersTable(users) {
+            const tbody = document.getElementById('usersTable');
+            if (!tbody) return;
+            if (!users.length) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-gray-500 py-8">No users found</td></tr>';
+                return;
+            }
+            tbody.innerHTML = users.map(u => `
+            <tr>
+                <td>
+                    <div class="font-bold">${u.firstName || u.username || 'Unknown'}</div>
+                    <div class="text-xs text-gray-400">@${u.username || 'N/A'} · ID: ${u.id}</div>
+                </td>
+                <td class="text-yellow-400 font-bold">${(u.tokens || 0).toLocaleString()}</td>
+                <td>${u.invites || 0}</td>
+                <td>
+                    ${u.adminVerified ? '<span class="bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded text-[10px] font-bold block mb-1">ADMIN VERIFIED</span>' : ''}
+                    ${u.banned ? '<span class="bg-red-500/20 text-red-400 px-2 py-0.5 rounded text-xs">Banned</span>' : '<span class="bg-green-500/20 text-green-400 px-2 py-0.5 rounded text-xs">Active</span>'}
+                    ${(!u.adminVerified && u.verified) ? '<span class="bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded text-[10px] ml-1">Verified</span>' : ''}
+                    ${(!u.adminVerified && !u.verified) ? '<span class="bg-gray-500/20 text-gray-400 px-2 py-0.5 rounded text-[10px] ml-1">Not Verified</span>' : ''}
+                </td>
+                <td>
+                    <div class="flex gap-1">
+                        <button onclick="openEditUser('${u.id}')" class="bg-blue-500/20 text-blue-400 px-2 py-1 rounded text-xs font-bold" title="Edit"><i class="fas fa-user-edit"></i></button>
+                        <button onclick="toggleVerifyUser('${u.id}', ${!u.adminVerified}, 'admin')" class="bg-${u.adminVerified ? 'gray' : 'yellow'}-500/20 text-${u.adminVerified ? 'gray' : 'yellow'}-400 px-2 py-1 rounded text-xs" title="${u.adminVerified ? 'Remove Admin Verify' : 'Admin Verify'}"><i class="fas fa-${u.adminVerified ? 'times' : 'check-double'}"></i></button>
+                        <button onclick="toggleVerifyUser('${u.id}', ${!u.verified}, 'user')" class="bg-${u.verified ? 'gray' : 'blue'}-500/20 text-${u.verified ? 'gray' : 'blue'}-400 px-2 py-1 rounded text-xs" title="${u.verified ? 'Unverify' : 'Verify'}"><i class="fas fa-${u.verified ? 'times' : 'check'}"></i></button>
+                        <button onclick="toggleBanUser('${u.id}',${!u.banned})" class="bg-${u.banned ? 'green' : 'red'}-500/20 text-${u.banned ? 'green' : 'red'}-400 px-2 py-1 rounded text-xs" title="${u.banned ? 'Unban' : 'Ban'}"><i class="fas fa-${u.banned ? 'check' : 'ban'}"></i></button>
+                        <button onclick="deleteUser('${u.id}')" class="bg-gray-500/20 text-gray-400 px-2 py-1 rounded text-xs" title="Delete"><i class="fas fa-trash"></i></button>
+                    </div>
+                </td>
+            </tr>`).join('');
+        }
+
+        function filterUsers() {
+            const q = document.getElementById('userSearch')?.value?.toLowerCase() || '';
+            const filtered = allUsersData.filter(u =>
+                (u.username || '').toLowerCase().includes(q) ||
+                (u.firstName || '').toLowerCase().includes(q) ||
+                String(u.id).includes(q)
+            );
+            renderUsersTable(filtered);
+        }
+
+        async function loadUserHistory() {
+            const uid = document.getElementById('historySearchId')?.value?.trim();
+            if (!uid) { alert('Please enter a User ID.'); return; }
+
+            const resultEl = document.getElementById('userHistoryResult');
+            const emptyEl = document.getElementById('userHistoryEmpty');
+            const profileCard = document.getElementById('uhProfileCard');
+            const historyList = document.getElementById('uhHistoryList');
+
+            emptyEl.textContent = 'Loading...';
+            resultEl.classList.add('hidden');
+
+            try {
+                const res = await fetch('/api/admin/user-detail/' + uid, { headers: { 'Authorization': ADMIN_TOKEN } });
+                const data = await res.json();
+
+                if (!data.success || !data.user) {
+                    emptyEl.textContent = 'User not found with ID: ' + uid;
+                    return;
+                }
+
+                const u = data.user;
+                const history = data.history || [];
+
+                // Profile card
+                profileCard.innerHTML = `
+                        <div>
+                            <div class="text-xs text-gray-400 mb-1">Name</div>
+                            <div class="font-bold text-white">${u.firstName || u.first_name || 'N/A'}</div>
+                            <div class="text-xs text-gray-400">@${u.username || 'N/A'}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-400 mb-1">Telegram ID</div>
+                            <div class="font-bold text-yellow-400 font-mono">${uid}</div>
+                            <div class="text-xs ${u.banned ? 'text-red-400' : 'text-green-400'}">${u.banned ? '🚫 Banned' : '✅ Active'}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-400 mb-1">Balances</div>
+                            <div class="text-sm">🪙 <b>${(u.tokens || u.balance_tokens || 0).toLocaleString()}</b> Tokens</div>
+                            <div class="text-sm">👥 <b>${u.referralCount || u.invites || 0}</b> Referrals</div>
+                            <div class="text-sm">📅 Joined: ${u.joinDate ? new Date(u.joinDate).toLocaleDateString() : 'N/A'}</div>
+                        </div>
+                    `;
+
+                // History timeline
+                if (!history.length) {
+                    historyList.innerHTML = '<div class="text-center text-gray-500 py-6 text-sm">No activity history found.</div>';
+                } else {
+                    const typeIcon = {
+                        'verification': '🔐', 'daily': '🎁', 'redeem': '🎫', 'tasks': '✅',
+                        'referral': '👥', 'number': '📞', 'mail': '📧', 'email': '📧',
+                        'gmail': '📨', 'deposit': '💰', 'transfer': '💸', 'support': '🆘',
+                        'service': '⚡', 'purchase': '🛒', 'bonus': '🎉'
+                    };
+                    historyList.innerHTML = history.slice(0, 50).map(h => {
+                        const icon = typeIcon[h.type] || '📌';
+                        const date = h.date ? new Date(h.date).toLocaleString() : '';
+                        const reward = h.reward || h.amount || '';
+                        const detail = h.detail || h.service || h.code || '';
+                        return `<div class="flex items-start gap-3 p-3 bg-white/5 rounded-lg border border-white/5">
+                                <span class="text-xl">${icon}</span>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex justify-between items-center">
+                                        <span class="font-bold text-white capitalize text-sm">${h.type || 'activity'}</span>
+                                        <span class="text-xs text-gray-500">${date}</span>
+                                    </div>
+                                    <div class="text-xs text-gray-400 mt-0.5">
+                                        ${reward ? '<span class="text-yellow-400 font-bold mr-2">' + reward + '</span>' : ''}
+                                        ${detail ? '<span>' + detail + '</span>' : ''}
+                                    </div>
+                                </div>
+                            </div>`;
+                    }).join('');
+                }
+
+                resultEl.classList.remove('hidden');
+                emptyEl.textContent = '';
+            } catch (e) {
+                emptyEl.textContent = 'Error loading user data: ' + e.message;
+            }
+        }
+
+        function openEditUser(userId) {
+            const u = allUsersData.find(user => user.id == userId);
+            if (!u) return;
+            document.getElementById('editUserId').value = userId;
+            document.getElementById('editUserName').textContent = (u.firstName || u.username || 'User') + ' (@' + (u.username || 'N/A') + ')';
+            document.getElementById('editUserBalance').value = u.tokens || 0;
+            document.getElementById('editUserRefs').value = u.referralCount || 0;
+
+            let status = 'not';
+            if (u.adminVerified) status = 'admin';
+            else if (u.verified) status = 'verified';
+            document.getElementById('editUserVerified').value = status;
+
+            document.getElementById('editUserModal').style.display = 'flex';
+        }
+
+        function saveUserChanges() {
+            const userId = document.getElementById('editUserId').value;
+            const balance = document.getElementById('editUserBalance').value;
+            const refs = document.getElementById('editUserRefs').value;
+            const status = document.getElementById('editUserVerified').value;
+
+            const payload = {
+                balance: parseInt(balance),
+                referralCount: parseInt(refs),
+                verified: (status === 'verified' || status === 'admin'),
+                adminVerified: (status === 'admin')
+            };
+
+            fetch(`/api/admin/users/${userId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('editUserModal').style.display = 'none';
+                        loadUsers();
+                        alert('User updated!');
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                });
+        }
+
         function toggleBanUser(userId, ban) {
             if (!confirm(`${ban ? 'Ban' : 'Unban'} this user?`)) return;
             fetch(`/api/admin/users/${userId}/ban`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ banned: ban })
+                body: JSON.stringify({ ban })
             }).then(() => loadUsers());
         }
 
         function deleteUser(userId) {
             if (!confirm('⚠️ Permanently delete this user?')) return;
             fetch(`/api/admin/users/${userId}`, { method: 'DELETE' }).then(() => loadUsers());
+        }
+
+        function toggleVerifyUser(userId, verify, type) {
+            const action = verify ? (type === 'admin' ? 'Admin verify' : 'Verify') : (type === 'admin' ? 'Remove admin verify' : 'Unverify');
+            if (!confirm(`${action} this user?`)) return;
+
+            const payload = type === 'admin'
+                ? { adminVerified: verify, verified: verify }
+                : { verified: verify };
+
+            fetch(`/api/admin/users/${userId}/verify`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    loadUsers();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            }).catch(() => alert('Network error'));
         }
 
         // CODES
@@ -2497,41 +3853,101 @@
                 if (!tbody) return;
                 tbody.innerHTML = (data.tasks || []).map(t => `
                 <tr>
-                    <td>${t.name}</td>
-                    <td>${t.reward}</td>
-                    <td class="text-xs text-gray-400 break-all">${t.url || ''}</td>
-                    <td class="space-x-2">
-                        <button onclick="openEditTask('${t.id}')" class="text-blue-400 hover:text-blue-300" title="Edit"><i class="fas fa-edit"></i></button>
-                        <button onclick="renewTask('${t.id}')" class="text-yellow-400 hover:text-yellow-300" title="Renew"><i class="fas fa-redo"></i></button>
-                        <button onclick="deleteTask('${t.id}')" class="text-red-400 hover:text-red-300" title="Delete"><i class="fas fa-trash"></i></button>
+                    <td><strong>${t.name}</strong><br><span style="font-size:10px; color:#666;">${t.id}</span></td>
+                    <td><input type="number" id="tokens-${t.id}" value="${t.reward || 0}" style="width:70px; background:#1a1a2e; border:1px solid #333; color:#fff; padding:4px 8px; border-radius:6px; text-align:center;" onchange="updateTaskReward('${t.id}')"></td>
+                    <td><input type="number" id="gems-${t.id}" value="${t.gems || 0}" style="width:70px; background:#1a1a2e; border:1px solid #333; color:#38bdf8; padding:4px 8px; border-radius:6px; text-align:center;" onchange="updateTaskReward('${t.id}')"></td>
+                    <td><a href="${t.url || '#'}" target="_blank" style="color:var(--accent-color); font-size:12px; word-break:break-all;">${t.url || 'N/A'}</a></td>
+                    <td>
+                        <div style="display:flex; gap:6px;">
+                            <button onclick="saveTaskChanges('${t.id}')" class="text-green-400 hover:text-green-300" title="Save Changes"><i class="fas fa-save"></i></button>
+                            <button onclick="resetTaskForAll('${t.id}')" class="text-orange-400 hover:text-orange-300" title="Reset for All Users"><i class="fas fa-redo"></i></button>
+                            <button onclick="deleteTask('${t.id}')" class="text-red-400 hover:text-red-300" title="Delete Task"><i class="fas fa-trash"></i></button>
+                        </div>
                     </td>
-                </tr>`).join('') || '<tr><td colspan="3" class="text-center text-gray-500 py-4">No tasks</td></tr>';
+                </tr>`).join('') || '<tr><td colspan="5" class="text-center text-gray-500 py-4">No tasks found. Create a task to get started.</td></tr>';
             });
         }
 
-        function openEditTask(id) {
-            fetch('/api/admin/tasks').then(r => r.json()).then(data => {
-                const task = (data.tasks || []).find(x => String(x.id) === String(id));
-                if (!task) return alert('Task not found');
-                document.getElementById('task-edit-id').value = task.id;
-                document.getElementById('task-edit-name').value = task.name || '';
-                document.getElementById('task-edit-reward').value = task.reward || 0;
-                document.getElementById('task-edit-url').value = task.url || '';
-                showModal('editTask');
-            });
+        // Seed/Reset default tasks
+        async function seedDefaultTasks() {
+            if (!confirm('Are you sure? This will add the 3 default tasks (Youtube Channel, Telegram Group, Telegram Channel) if they are missing.')) return;
+
+            try {
+                const res = await fetch('/api/admin/tasks/seed-defaults', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert(`✅ ${data.message}\nTotal tasks: ${data.totalTasks}`);
+                    loadTasks();
+                } else {
+                    alert('❌ Error: ' + (data.message || 'Failed to seed tasks'));
+                }
+            } catch (e) {
+                alert('❌ Network error');
+            }
         }
 
-        function updateTask() {
-            const id = document.getElementById('task-edit-id').value;
-            const name = document.getElementById('task-edit-name').value.trim();
-            const reward = parseInt(document.getElementById('task-edit-reward').value) || 0;
-            const url = document.getElementById('task-edit-url').value.trim();
-            if (!id) return;
+        // Update task reward (tokens and gems)
+        function updateTaskReward(taskId) {
+            // This function is called on input change, actual save happens when clicking save button
+        }
+
+        // Save task changes
+        async function saveTaskChanges(taskId) {
+            const tokens = parseInt(document.getElementById(`tokens-${taskId}`).value) || 0;
+            const gems = parseInt(document.getElementById(`gems-${taskId}`).value) || 0;
+
+            try {
+                const res = await fetch(`/api/admin/tasks/${taskId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reward: tokens, gems: gems })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Task updated successfully!');
+                    loadTasks();
+                } else {
+                    alert(data.message || 'Failed to update task');
+                }
+            } catch (e) {
+                alert('Network error updating task');
+            }
+        }
+
+        // Reset task for all users
+        async function resetTaskForAll(taskId) {
+            if (!confirm('Are you sure? This will reset the task for ALL users, allowing them to complete it again and earn rewards.')) return;
+
+            try {
+                const res = await fetch(`/api/admin/tasks/${taskId}/reset`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(`Task reset for ${data.affectedUsers || 0} users!`);
+                } else {
+                    alert(data.message || 'Failed to reset task');
+                }
+            } catch (e) {
+                alert('Network error resetting task');
+            }
+        }
+
+        function addTask() {
+            const name = document.getElementById('task-name').value.trim();
+            const reward = parseInt(document.getElementById('task-reward').value) || 0;
+            const gems = parseInt(document.getElementById('task-gems').value) || 0;
+            const url = document.getElementById('task-url').value.trim();
             if (!name || !reward) return alert('Name and reward required');
-            fetch('/api/admin/tasks/' + encodeURIComponent(id), {
-                method: 'PUT',
+
+            fetch('/api/admin/tasks', {
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, reward, url })
+                body: JSON.stringify({ name, reward, gems, url })
             })
                 .then(r => r.json())
                 .then(data => {
@@ -2539,35 +3955,27 @@
                         closeModal();
                         loadTasks();
                     } else {
-                        alert(data.message || 'Failed to update task');
-                    }
-                });
-        }
-
-        function renewTask(id) {
-            if (!confirm('Renew task for everyone? (This will allow users to do it again)')) return;
-            fetch('/api/admin/tasks/' + encodeURIComponent(id) + '/renew', {
-                method: 'POST'
-            })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('Renewed ✅ Cleared for users: ' + (data.cleared || 0));
-                        loadTasks();
-                    } else {
-                        alert(data.message || 'Failed to renew task');
+                        alert(data.message || 'Failed to create task');
                     }
                 });
         }
 
         function deleteTask(id) {
-            if (!confirm('Delete task?')) return;
+            if (!confirm('Delete this task? Users will no longer see it.')) return;
             fetch('/api/admin/tasks/' + id, { method: 'DELETE' }).then(() => loadTasks());
         }
 
         // MODAL
         function showModal(type) {
-            document.getElementById('modal-' + type).style.display = 'flex';
+            closeModal();
+            const el = document.getElementById('modal-' + type);
+            if (!el) {
+                alert('Modal not found: modal-' + type);
+                return;
+            }
+            el.style.display = 'flex';
+            el.style.alignItems = 'center';
+            el.style.justifyContent = 'center';
         }
 
         function closeModal() {
@@ -2896,6 +4304,53 @@
         function initTradingAdmin() { console.log('Trading admin initialized'); }
         function setTradeMode(mode) { console.log('Trade mode set to:', mode); }
         function savePayout() { alert('Payout settings saved (stub)'); }
+
+        // VERIFICATION SETTINGS
+        async function loadVerificationSettings() {
+            try {
+                const res = await fetch('/api/admin/verification/requirements');
+                const data = await res.json();
+                if (data.success) {
+                    const reqs = data.requirements;
+                    document.getElementById('verify-enabled').checked = reqs.enabled !== false;
+                    document.getElementById('verify-min-invites').value = reqs.minInvites || 3;
+                    document.getElementById('verify-min-tokens').value = reqs.minTokens || 100;
+                    document.getElementById('verify-min-days').value = reqs.minDaysActive || 7;
+                    document.getElementById('verify-channel').checked = reqs.requireChannelJoin !== false;
+                    document.getElementById('verify-group').checked = reqs.requireGroupJoin !== false;
+                }
+            } catch (e) {
+                console.error('Failed to load verification settings:', e);
+            }
+        }
+
+        async function saveVerificationSettings() {
+            try {
+                const payload = {
+                    enabled: document.getElementById('verify-enabled').checked,
+                    minInvites: parseInt(document.getElementById('verify-min-invites').value) || 3,
+                    minTokens: parseInt(document.getElementById('verify-min-tokens').value) || 100,
+                    minDaysActive: parseInt(document.getElementById('verify-min-days').value) || 7,
+                    requireChannelJoin: document.getElementById('verify-channel').checked,
+                    requireGroupJoin: document.getElementById('verify-group').checked
+                };
+
+                const res = await fetch('/api/admin/verification/requirements', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    alert('✅ Verification settings saved successfully!');
+                } else {
+                    alert('❌ Failed to save settings: ' + (data.message || 'Unknown error'));
+                }
+            } catch (e) {
+                alert('❌ Error saving verification settings');
+            }
+        }
 
         async function deleteAccount(id) {
             // Direct delete
@@ -3405,7 +4860,7 @@ Admins can use /settings command in the group to manage settings.`);
             document.getElementById('lb-' + type).classList.remove('hidden');
 
             // Update button styles
-            const buttons = ['active', 'earners', 'spenders', 'depositors', 'services'];
+            const buttons = ['active', 'earners', 'spenders', 'depositors', 'services', 'referrers'];
             buttons.forEach(btn => {
                 const btnEl = document.getElementById('btn-lb-' + btn);
                 if (btn === type) {
@@ -3552,10 +5007,31 @@ Admins can use /settings command in the group to manage settings.`);
                 <tr class="border-b border-white/5 hover:bg-white/5">
                     <td class="py-2 px-3 font-bold ${i < 3 ? 'text-purple-400' : 'text-gray-400'}">${i + 1}</td>
                     <td class="py-2 px-3 capitalize">${s.name}</td>
-                    <td class="py-2 px-3 text-right font-medium">${s.count}</td>
-                    <td class="py-2 px-3 text-right text-xs ${serviceTotals[s.type] >= 0 ? 'text-green-400' : 'text-red-400'}">${s.revenue.toLocaleString()} TC</td>
+                    <td class="py-2 px-3 text-right font-mono text-gray-300">${s.count}</td>
+                    <td class="py-2 px-3 text-right font-mono text-orange-400">${s.revenue.toFixed(2)} TC</td>
                 </tr>
-            `).join('') || '<tr><td colspan="4" class="text-center py-4 text-gray-500 text-xs">No data</td></tr>';
+            `).join('');
+
+            // Calculate top referrers from user data
+            const allUsers = Object.values(userData);
+            const referrers = allUsers
+                .filter(u => (u.referralCount || 0) > 0)
+                .map(u => ({
+                    name: u.firstName || u.username || `User ${String(u.id).slice(-4)}`,
+                    refs: u.referralCount || 0,
+                    tokens: u.tokens || 0
+                }))
+                .sort((a, b) => b.refs - a.refs)
+                .slice(0, 10);
+
+            document.getElementById('lbReferrersBody').innerHTML = referrers.map((u, i) => `
+                <tr class="border-b border-white/5 hover:bg-white/5">
+                    <td class="py-2 px-3 font-bold ${i < 3 ? 'text-yellow-400' : 'text-gray-400'}">${i + 1}</td>
+                    <td class="py-2 px-3">${u.name}</td>
+                    <td class="py-2 px-3 text-right font-mono text-yellow-400 font-bold">${u.refs}</td>
+                    <td class="py-2 px-3 text-right font-mono text-white">${u.tokens.toLocaleString()} TC</td>
+                </tr>
+            `).join('') || '<tr><td colspan="4" class="text-center py-4 text-gray-500 text-xs">No referrers yet</td></tr>';
         }
 
         // PROVIDERS MANAGEMENT
@@ -4042,7 +5518,109 @@ Admins can use /settings command in the group to manage settings.`);
                 list.innerHTML = '<p class="text-red-400 text-center py-8">Network error loading messages</p>';
             }
         }
+
+        // Mobile Menu Toggle Functions
+        function toggleMobileMenu() {
+            const sidebar = document.querySelector('aside');
+            const overlay = document.getElementById('sidebarOverlay');
+
+            if (sidebar.classList.contains('mobile-open')) {
+                closeMobileMenu();
+            } else {
+                sidebar.classList.add('mobile-open');
+                overlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function closeMobileMenu() {
+            const sidebar = document.querySelector('aside');
+            const overlay = document.getElementById('sidebarOverlay');
+
+            sidebar.classList.remove('mobile-open');
+            overlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Update nav function to close mobile menu
+        const originalNav = nav;
+        nav = function (p) {
+            originalNav(p);
+            // Close mobile menu after navigation on mobile
+            if (window.innerWidth <= 1024) {
+                closeMobileMenu();
+            }
+        };
     </script>
+
+    <!-- Create Code Modal -->
+    <div id="modal-createCode" class="modal-overlay" style="display:none;">
+        <div class="glass-card p-6 rounded-2xl w-full max-w-md mx-4">
+            <h3 class="text-xl font-bold mb-6 flex items-center gap-2">
+                <i class="fas fa-plus-circle text-orange-400"></i> Create Promo Code
+            </h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Code</label>
+                    <input type="text" id="code-code" placeholder="Enter code (e.g., WELCOME2024)"
+                        class="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white focus:border-orange-500 outline-none">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Token Amount</label>
+                    <input type="number" id="code-amount" placeholder="e.g., 100"
+                        class="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white focus:border-orange-500 outline-none">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Max Uses (0 = unlimited)</label>
+                    <input type="number" id="code-uses" placeholder="e.g., 100" value="100"
+                        class="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white focus:border-orange-500 outline-none">
+                </div>
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button onclick="addCode()"
+                    class="flex-1 gold-gradient py-3 rounded-xl font-bold text-black shadow-lg">CREATE</button>
+                <button onclick="closeModal()"
+                    class="flex-1 bg-white/5 border border-white/10 py-3 rounded-xl text-gray-400">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Task Modal -->
+    <div id="modal-createTask" class="modal-overlay" style="display:none;">
+        <div class="glass-card p-6 rounded-2xl w-full max-w-md mx-4">
+            <h3 class="text-xl font-bold mb-6 flex items-center gap-2">
+                <i class="fas fa-plus-circle text-orange-400"></i> Create Task
+            </h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Task Name</label>
+                    <input type="text" id="task-name" placeholder="e.g., Join Telegram Channel"
+                        class="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white focus:border-orange-500 outline-none">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Token Reward</label>
+                    <input type="number" id="task-reward" placeholder="e.g., 10"
+                        class="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white focus:border-orange-500 outline-none">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Gems Reward</label>
+                    <input type="number" id="task-gems" placeholder="e.g., 1" value="0"
+                        class="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white focus:border-orange-500 outline-none">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-400 uppercase font-bold block mb-1">URL (optional)</label>
+                    <input type="text" id="task-url" placeholder="https://t.me/channelname"
+                        class="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white focus:border-orange-500 outline-none">
+                </div>
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button onclick="addTask()"
+                    class="flex-1 gold-gradient py-3 rounded-xl font-bold text-black shadow-lg">CREATE</button>
+                <button onclick="closeModal()"
+                    class="flex-1 bg-white/5 border border-white/10 py-3 rounded-xl text-gray-400">CANCEL</button>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>

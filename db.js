@@ -24,7 +24,24 @@ const defaultData = {
         transferCost: 5 // Default transfer fee
     },
     tasks: {
-        "channel": { name: "Join Official Channel", url: "https://t.me/AutosVerifyCh", reward: 20 }
+        "task_youtube": {
+            name: "Youtube Channel",
+            url: "https://youtube.com/@AutosVerify",
+            reward: 10,
+            gems: 1
+        },
+        "task_telegram_group": {
+            name: "Telegram Group",
+            url: "https://t.me/AutosVerifyGroup",
+            reward: 10,
+            gems: 1
+        },
+        "task_telegram_channel": {
+            name: "Telegram Channel",
+            url: "https://t.me/AutosVerifyCh",
+            reward: 10,
+            gems: 1
+        }
     },
     cards: {
         "gemini": [],
@@ -255,37 +272,13 @@ function decrypt(text) {
     if (!text) return null;
     try {
         let textParts = text.split(':');
-        // Validate format: must have at least 2 parts (IV and encrypted data)
-        if (textParts.length < 2) {
-            console.warn('[DECRYPT] Invalid format: missing IV or encrypted data');
-            return null;
-        }
-        let ivHex = textParts.shift();
-        let encryptedHex = textParts.join(':');
-
-        // Validate IV is proper hex and correct length (32 hex chars = 16 bytes for AES)
-        if (!/^[0-9a-fA-F]{32}$/.test(ivHex)) {
-            console.warn('[DECRYPT] Invalid IV format or length');
-            return null;
-        }
-
-        let iv = Buffer.from(ivHex, 'hex');
-        let encryptedText = Buffer.from(encryptedHex, 'hex');
-
-        // Validate encrypted data exists
-        if (encryptedText.length === 0) {
-            console.warn('[DECRYPT] Empty encrypted data');
-            return null;
-        }
-
+        let iv = Buffer.from(textParts.shift(), 'hex');
+        let encryptedText = Buffer.from(textParts.join(':'), 'hex');
         let decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(ENCRYPTION_KEY), iv);
         let decrypted = decipher.update(encryptedText);
         decrypted = Buffer.concat([decrypted, decipher.final()]);
         return decrypted.toString();
-    } catch (e) {
-        console.error("[DECRYPT] Decryption failed:", e.message);
-        return null;
-    }
+    } catch (e) { console.error("Decrypt Error:", e); return null; }
 }
 
 
@@ -305,65 +298,43 @@ class Database {
 
 
     async init() {
-        try {
-            // 1. Connect to Firebase (with timeout protection)
-            const firebaseTimeout = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Firebase connection timeout')), 10000)
-            );
-            const firebaseConnect = firebaseManager.connect();
-            await Promise.race([firebaseConnect, firebaseTimeout]).catch(err => {
-                console.warn('⚠️ Firebase connection failed or timed out:', err.message);
-                return false;
-            });
+        // 1. Connect to Firebase
+        await firebaseManager.connect();
 
-            // 2. Check Remote Data (only if Firebase connected)
-            let remoteData = null;
-            if (firebaseManager.connected) {
-                try {
-                    remoteData = await firebaseManager.getData();
-                } catch (e) {
-                    console.warn('⚠️ Failed to fetch remote data:', e.message);
-                }
+        // 2. Check Remote Data
+        const remoteData = await firebaseManager.getData();
+        let localData = null;
+
+        // 3. Check Local Data (Migration Source)
+        if (fs.existsSync(DB_FILE)) {
+            try {
+                localData = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+            } catch (e) {
+                console.error("Local DB Read Error:", e);
             }
+        }
 
-            let localData = null;
-
-            // 3. Check Local Data (Migration Source)
-            if (fs.existsSync(DB_FILE)) {
-                try {
-                    localData = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
-                } catch (e) {
-                    console.error("Local DB Read Error:", e);
-                }
+        if (remoteData) {
+            // Remote exists -> Use it (Primary)
+            this.data = { ...defaultData, ...remoteData, settings: { ...defaultData.settings, ...(remoteData.settings || {}) } };
+            // Ensure default tasks exist if not already in database
+            if (!this.data.tasks || Object.keys(this.data.tasks).length === 0) {
+                this.data.tasks = defaultData.tasks;
+                console.log("📋 Initialized default tasks from defaultData.");
             }
-
-            if (remoteData) {
-                // Remote exists -> Use it (Primary)
-                this.data = { ...defaultData, ...remoteData, settings: { ...defaultData.settings, ...(remoteData.settings || {}) } };
-                console.log("✅ Database loaded from Firebase.");
-            } else if (localData) {
-                // Remote empty but Local exists -> Use local (Firebase failed or empty)
-                console.log("📤 Using Local Data (Firebase unavailable)...");
-                this.data = { ...defaultData, ...localData };
-                // Try to upload to Firebase if connected
-                if (firebaseManager.connected) {
-                    try {
-                        await firebaseManager.setData(this.data);
-                        console.log("✅ Local data synced to Firebase.");
-                    } catch (e) {
-                        console.warn("⚠️ Failed to sync to Firebase:", e.message);
-                    }
-                }
-            } else {
-                console.warn("⚠️ No Data Found (Local or Remote). Starting Fresh.");
-            }
-        } catch (error) {
-            console.error("❌ Database Initialization Error:", error.message);
-            console.log("🔄 Starting with default data...");
+            console.log("✅ Database loaded from Firebase.");
+        } else if (localData) {
+            // Remote empty but Local exists -> MIGRATE
+            console.log("📤 Migrating Local Data to Firebase...");
+            this.data = { ...defaultData, ...localData };
+            // Upload immediately
+            await firebaseManager.setData(this.data);
+            console.log("✅ Migration Complete.");
+        } else {
+            console.warn("⚠️ No Data Found (Local or Remote). Starting Fresh.");
         }
 
         this.ready = true;
-        console.log("✅ Database is ready (Firebase or Local mode).");
 
         // 4. Safety Cleanup: Move Local File to Backups (NOT deleting, keeping as cache)
         if (fs.existsSync(DB_FILE)) {
@@ -619,58 +590,81 @@ class Database {
         this.save();
     }
 
-    // Referral Codes - Anonymous short codes mapping
-    generateReferralCode(userId) {
-        const existingCode = this.getReferralCodeByUserId(userId);
-        if (existingCode) return existingCode;
-
-        if (!this.data.referralCodes) this.data.referralCodes = {};
-
-        // Generate 6-character alphanumeric code
+    // ==================== REFERRAL CODE SYSTEM ====================
+    // Generate a random referral code like ref_QMD2UE
+    generateReferralCode() {
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         let code = '';
         for (let i = 0; i < 6; i++) {
             code += chars.charAt(Math.floor(Math.random() * chars.length));
         }
+        return 'ref_' + code;
+    }
 
-        // Ensure uniqueness
-        while (this.data.referralCodes[code]) {
-            code = '';
-            for (let i = 0; i < 6; i++) {
-                code += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-        }
+    // Get or create referral code for a user
+    getReferralCode(userId) {
+        const user = this.getUser(userId);
+        if (!user) return null;
 
-        this.data.referralCodes[code] = {
-            userId: String(userId),
-            createdAt: Date.now()
-        };
+        // If user already has a code, return it
+        if (user.referralCode) return user.referralCode;
+
+        // Generate a new unique code
+        let code;
+        let attempts = 0;
+        do {
+            code = this.generateReferralCode();
+            attempts++;
+            // Check if code is already used by another user
+            const existingUser = Object.values(this.data.users || {}).find(u => u.referralCode === code);
+            if (!existingUser) break;
+        } while (attempts < 10);
+
+        // Save code to user
+        user.referralCode = code;
         this.save();
         return code;
     }
 
-    getReferralCodeByUserId(userId) {
-        if (!this.data.referralCodes) return null;
-        for (const [code, data] of Object.entries(this.data.referralCodes)) {
-            if (data.userId === String(userId)) return code;
+    // Get userId from referral code
+    getUserIdFromReferralCode(code) {
+        if (!code) return null;
+        const cleanCode = String(code).trim();
+
+        // Find user with this referral code
+        const users = Object.values(this.data.users || {});
+        const user = users.find(u => u.referralCode === cleanCode);
+        if (user) return user.id;
+
+        // Fallback: try to parse old format (ref_userId or just userId)
+        if (cleanCode.startsWith('ref_')) {
+            const possibleId = cleanCode.replace('ref_', '');
+            // Check if it's a numeric ID
+            if (/^\d+$/.test(possibleId)) {
+                const numericId = parseInt(possibleId);
+                if (this.data.users[String(numericId)]) return numericId;
+            }
         }
+
         return null;
     }
 
-    getUserIdByReferralCode(code) {
-        if (!this.data.referralCodes || !this.data.referralCodes[code]) return null;
-        return this.data.referralCodes[code].userId;
-    }
-    handleReferral(newUserId, referrerId) {
+    // Referrals - Updated to work with codes
+    handleReferral(newUserId, referrerCode) {
         const newUser = this.getUser(newUserId);
         // If already referred or self-referral, ignore
-        if (newUser.referredBy || String(newUserId) === String(referrerId)) return false;
+        if (newUser.referredBy || String(newUserId) === String(referrerCode)) return false;
+
+        // Get referrer userId from code
+        const referrerId = this.getUserIdFromReferralCode(referrerCode);
+        if (!referrerId || String(referrerId) === String(newUserId)) return false;
 
         const referrer = this.getUser(referrerId);
         if (!referrer) return false;
 
         // Set referral relationship
         newUser.referredBy = String(referrerId);
+        newUser.referredByCode = referrer.referralCode || referrerCode;
 
         // Track in referrer's list
         if (!referrer.referredUsers) referrer.referredUsers = [];
@@ -700,7 +694,7 @@ class Database {
             amount: refBonus,
             currency: 'tokens',
             date: Date.now(),
-            detail: `Referred user #${newUserId}`,
+            details: `Referred user #${newUserId}`,
             reward: `+${refBonus} Tokens`
         });
 
@@ -711,7 +705,7 @@ class Database {
             amount: refBonus,
             currency: 'tokens',
             date: Date.now(),
-            detail: `Joined via referral from #${referrerId}`,
+            details: `Joined via referral from #${referrerId}`,
             reward: `+${refBonus} Tokens`
         });
 
@@ -724,11 +718,11 @@ class Database {
     }
 
     getTopReferrers(limit = 10) {
-        const users = Object.values(this.data.users || {});
-        // Filter users with > 0 referrals and sort by referralCount
+        const users = Object.values(this.data.users);
+        // Filter users with > 0 referrals and sort
         const top = users
-            .filter(u => (u.referralCount || 0) > 0)
-            .sort((a, b) => (b.referralCount || 0) - (a.referralCount || 0))
+            .filter(u => u.referralCount > 0)
+            .sort((a, b) => b.referralCount - a.referralCount)
             .slice(0, limit);
         return top;
     }
@@ -866,10 +860,15 @@ class Database {
         return this.data.tasks || {};
     }
 
-    createTask(name, url, reward) {
+    createTask(name, url, reward, gems = 0) {
         if (!this.data.tasks) this.data.tasks = {};
         const id = 'task_' + Date.now();
-        this.data.tasks[id] = { name, url, reward: parseInt(reward) };
+        this.data.tasks[id] = {
+            name,
+            url,
+            reward: parseInt(reward),
+            gems: parseInt(gems) || 0
+        };
         this.save();
         return id;
     }
@@ -2329,14 +2328,7 @@ class Database {
         if (!this.data.providers || !this.data.providers[providerId]) return null;
         const p = this.data.providers[providerId];
         // Decrypt logic relying on global 'decrypt' function we added earlier
-        let rawKey = null;
-        if (p.apiKey) {
-            rawKey = decrypt(p.apiKey);
-            // If decryption failed (returns null), log warning but don't crash
-            if (rawKey === null && p.apiKey !== null) {
-                console.warn(`[DB] Failed to decrypt API key for provider: ${providerId}. Provider may need reconfiguration.`);
-            }
-        }
+        const rawKey = p.apiKey ? decrypt(p.apiKey) : null;
         return { ...p, apiKey: rawKey };
     }
 

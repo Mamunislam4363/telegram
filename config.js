@@ -14,10 +14,10 @@ module.exports = {
     ADMIN_ID: process.env.ADMIN_ID || '8125978050',
 
     // Admin Panel Password
-    ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'Mamunislam4363@',
+    ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'admin123',
 
     // Public URL for web panel (your domain or IP)
-    PUBLIC_URL: process.env.PUBLIC_URL || 'https://autosverifybot-production.up.railway.app',
+    PUBLIC_URL: process.env.PUBLIC_URL || 'https://mamunislam.netlify.app', 
 
     // OAUTH CONFIGURATION (FOR GMAIL SERVICE SYSTEM)
     GMAIL_CLIENT_ID: process.env.GMAIL_CLIENT_ID,
@@ -27,7 +27,7 @@ module.exports = {
     },
 
     // Mini App URL
-    MINI_APP_URL: process.env.MINI_APP_URL || 'https://autosverifybot-production.up.railway.app',
+    MINI_APP_URL: process.env.MINI_APP_URL || 'https://mamunislam.netlify.app',
 
     // Mandatory Channel & Group (IDs are preferred for stability)
     REQUIRED_CHANNEL: process.env.REQUIRED_CHANNEL_ID || '@AutosVerify',

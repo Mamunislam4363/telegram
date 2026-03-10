@@ -5,6 +5,47 @@ function isValidUserId(userId) {
     return !isNaN(numericId) && numericId > 0;
 }
 
+// Fallback showToast in case it's not defined yet (prevents blank screen errors)
+if (typeof window.showToast !== 'function') {
+    window.showToast = function (message, duration = 3000) {
+        // Create toast element if it doesn't exist
+        let toast = document.getElementById('global-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'global-toast';
+            toast.style.cssText = `
+                position: fixed;
+                bottom: 100px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(0,0,0,0.85);
+                color: #fff;
+                padding: 12px 24px;
+                border-radius: 24px;
+                font-size: 14px;
+                z-index: 9999;
+                text-align: center;
+                max-width: 80%;
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255,255,255,0.1);
+                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                transition: opacity 0.3s, transform 0.3s;
+                opacity: 0;
+                pointer-events: none;
+            `;
+            document.body.appendChild(toast);
+        }
+        toast.textContent = message;
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateX(-50%) translateY(0)';
+
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(-50%) translateY(10px)';
+        }, duration);
+    };
+}
+
 // Wrapper for fetch that blocks invalid userId calls
 function apiFetch(url, options = {}) {
     const body = options.body ? JSON.parse(options.body) : {};
@@ -226,170 +267,65 @@ function updateThemeIcon(theme) {
 let adminClickCount = 0;
 let adminClickTimer;
 
-// Direct Ad (MoneyTag direct link) system
-let _directAdConfigCache = null;
-let _directAdConfigCacheAt = 0;
-let _directAdCooldownUntil = 0;
-const DIRECT_AD_INACTIVITY_MS = 2 * 60 * 60 * 1000; // 2 hours
-const DIRECT_AD_CACHE_MS = 60 * 1000; // 1 minute
-const DIRECT_AD_CLICK_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
-const DIRECT_AD_LAST_INTERACTION_KEY = 'directAd_lastInteractionAt';
-const DIRECT_AD_LAST_SHOWN_KEY = 'directAd_lastShownAt';
-const DIRECT_AD_PENDING_KEY = 'directAd_pendingSecondClick';
-
-function _directAdNow() { return Date.now(); }
-
-function _getLastInteractionAt() {
-    const v = parseInt(localStorage.getItem(DIRECT_AD_LAST_INTERACTION_KEY) || '0');
-    return Number.isFinite(v) ? v : 0;
-}
-
-function _touchLastInteraction() {
-    localStorage.setItem(DIRECT_AD_LAST_INTERACTION_KEY, String(_directAdNow()));
-}
-
-function _getLastShownAt() {
-    const v = parseInt(localStorage.getItem(DIRECT_AD_LAST_SHOWN_KEY) || '0');
-    return Number.isFinite(v) ? v : 0;
-}
-
-function _touchLastShown() {
-    localStorage.setItem(DIRECT_AD_LAST_SHOWN_KEY, String(_directAdNow()));
-}
-
-function _isDirectAdPendingSecondClick() {
-    return localStorage.getItem(DIRECT_AD_PENDING_KEY) === '1';
-}
-
-function _setDirectAdPendingSecondClick(pending) {
-    if (pending) localStorage.setItem(DIRECT_AD_PENDING_KEY, '1');
-    else localStorage.removeItem(DIRECT_AD_PENDING_KEY);
-}
-
-async function _getActiveAdConfig() {
-    const now = _directAdNow();
-    if (_directAdConfigCache && (now - _directAdConfigCacheAt) < DIRECT_AD_CACHE_MS) {
-        return _directAdConfigCache;
-    }
-    try {
-        const res = await fetch('/api/ads/config');
-        const data = await res.json();
-        _directAdConfigCache = data && data.ads ? data.ads : {};
-        _directAdConfigCacheAt = now;
-    } catch (e) {
-        _directAdConfigCache = {};
-        _directAdConfigCacheAt = now;
-    }
-    return _directAdConfigCache;
-}
-
-async function _maybeRunDirectAd() {
-    const now = _directAdNow();
-    if (now < _directAdCooldownUntil) return false;
-    const ads = await _getActiveAdConfig();
-    const cfg = ads && ads.moneytag ? ads.moneytag : null;
-    const directLink = cfg && typeof cfg.directLink === 'string' ? cfg.directLink.trim() : '';
-    if (!directLink) return false;
-
-    // Run once on first click after app open, and then at most once per 2 hours.
-    const lastShown = _getLastShownAt();
-    if (lastShown && (now - lastShown) < DIRECT_AD_INACTIVITY_MS) return false;
-
-    try { window.open(directLink, '_blank'); } catch (e) { }
-    _directAdCooldownUntil = now + DIRECT_AD_CLICK_COOLDOWN_MS;
-    _touchLastShown();
-    _setDirectAdPendingSecondClick(true);
-    return true;
-}
-
-// Wrapper: when direct ad is enabled and 2h condition met, first click shows ad, second click proceeds
-async function withDirectAdGate(action) {
-    if (typeof action !== 'function') return;
-
-    // If we are waiting for the second click, allow action now.
-    if (_isDirectAdPendingSecondClick()) {
-        _setDirectAdPendingSecondClick(false);
-        _touchLastInteraction();
-        return action();
-    }
-
-    const didRun = await _maybeRunDirectAd();
-    if (didRun) {
-        window.showToast('🎬 Ad opened. Tap again to continue.');
-        return;
-    }
-
-    _touchLastInteraction();
-    return action();
-}
-
 function handleHeaderClick() {
     // Admin Access Simulation (Tap 5 times on Header)
     adminClickCount++;
     clearTimeout(adminClickTimer);
 
-    // Direct Ad (MoneyTag direct link) system
-    withDirectAdGate(() => {
-        if (adminClickCount >= 5) {
-            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-            window.showToast('Entering Admin Panel...');
-            // Directly show admin page
-            showPage('admin');
-            adminClickCount = 0;
-            return;
-        }
+    if (adminClickCount >= 5) {
+        if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+        window.showToast('Entering Admin Panel...');
+        // Directly show admin page
+        showPage('admin');
+        adminClickCount = 0;
+        return;
+    }
 
-        adminClickTimer = setTimeout(() => {
-            adminClickCount = 0;
-        }, 1000);
+    adminClickTimer = setTimeout(() => {
+        adminClickCount = 0;
+    }, 1000);
 
-        // Normal Navigation
-        const isHome = document.getElementById('homePage').style.display !== 'none';
+    // Normal Navigation
+    const isHome = document.getElementById('homePage').style.display !== 'none';
 
-        if (isHome) {
-            nav('profile');
-        } else {
-            goBack();
-        }
-    });
+    if (isHome) {
+        nav('profile');
+    } else {
+        goBack();
+    }
 }
 
 // NAVIGATION
 function nav(p) {
     if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
 
-    // Auto-run Direct Ad after 2h inactivity when enabled
-    // This is non-blocking: if ad runs, user needs to tap again to proceed.
-    withDirectAdGate(() => {
+    // Feature gating (pre-check)
+    // Note: if flags aren't loaded yet, we allow navigation and will re-check inside showPage.
+    if (p === 'mailService' && !checkFeatureOrComingSoon('tempMail', 'Temp Mail')) return;
+    if (p === 'numberService' && !checkFeatureOrComingSoon('virtualNumber', 'Virtual Number')) return;
+    if (p === 'premiumMail' && !checkFeatureOrComingSoon('premiumMail', 'Premium Mail')) return;
+    if (p === 'accountsStore' && !checkFeatureOrComingSoon('accountsShop', 'Accounts Shop')) return;
+    if (p === 'vccCards' && !checkFeatureOrComingSoon('cardsVcc', 'Cards / VCC')) return;
 
-        // Feature gating (pre-check)
-        // Note: if flags aren't loaded yet, we allow navigation and will re-check inside showPage.
-        if (p === 'mailService' && !checkFeatureOrComingSoon('tempMail', 'Temp Mail')) return;
-        if (p === 'numberService' && !checkFeatureOrComingSoon('virtualNumber', 'Virtual Number')) return;
-        if (p === 'premiumMail' && !checkFeatureOrComingSoon('premiumMail', 'Premium Mail')) return;
-        if (p === 'accountsStore' && !checkFeatureOrComingSoon('accountsShop', 'Accounts Shop')) return;
-        if (p === 'vccCards' && !checkFeatureOrComingSoon('cardsVcc', 'Cards / VCC')) return;
-
-        // Save current scroll position before navigating away
-        try {
-            const mainScroll = document.getElementById('mainScroll');
-            if (mainScroll && currentPage) {
-                pageScrollPositions[currentPage] = mainScroll.scrollTop;
-            }
-        } catch (e) { }
-
-        // BAN CHECK (Moved to showPage for better centralization)
-        if (userStatus === 'banned') {
-            window.showToast('ACCOUNT BANNED\n\nYou have been banned by the admin.\nPlease contact support to resolve this issue.\n\nSupport: @Onlin_Income_Support');
-            return;
+    // Save current scroll position before navigating away
+    try {
+        const mainScroll = document.getElementById('mainScroll');
+        if (mainScroll && currentPage) {
+            pageScrollPositions[currentPage] = mainScroll.scrollTop;
         }
+    } catch (e) { }
 
-        // Always push to history stack
-        historyStack.push(p);
+    // BAN CHECK (Moved to showPage for better centralization)
+    if (userStatus === 'banned') {
+        window.showToast('ACCOUNT BANNED\n\nYou have been banned by the admin.\nPlease contact support to resolve this issue.\n\nSupport: @Onlin_Income_Support');
+        return;
+    }
 
-        // All navigation now goes through showPage
-        showPage(p);
-    });
+    // Always push to history stack
+    historyStack.push(p);
+
+    // All navigation now goes through showPage
+    showPage(p);
 }
 
 const PAGE_TITLES = {
@@ -443,9 +379,6 @@ function showPage(targetId) {
         // If user is already on a disabled page, bounce them to home
         if (currentPage === 'mailService' && featureFlags && featureFlags.tempMail === false) nav('home');
         if (currentPage === 'numberService' && featureFlags && featureFlags.virtualNumber === false) nav('home');
-        if (currentPage === 'premiumMail' && featureFlags && featureFlags.premiumMail === false) nav('home');
-        if (currentPage === 'accountsStore' && featureFlags && featureFlags.accountsShop === false) nav('home');
-        if (currentPage === 'vccCards' && featureFlags && featureFlags.cardsVcc === false) nav('home');
     });
 
     // Normalize calls that pass DOM page ids (e.g. 'mailServicePage') into logical ids
@@ -567,26 +500,14 @@ function showPage(targetId) {
     if (targetId === 'accountsStore') {
         renderAccounts();
     }
-    if (targetId === 'vccCards') {
-        try { renderCards(); } catch (e) { }
-        refreshVccCardsData();
-    }
-    if (targetId === 'vpnServices') {
-        try { renderVPN(); } catch (e) { }
-        refreshVpnData();
-    }
     // Update virtual number balance when entering the number service page
     if (targetId === 'numberService') {
         updateNumBalance();
     }
     // Update balances when entering service pages with balance displays
     if (targetId === 'mailService' || targetId === 'premiumMail' || targetId === 'accountsStore' ||
-        targetId === 'vpnServices' || targetId === 'vccCards' || targetId === 'transfer') {
+        targetId === 'vpnServices' || targetId === 'vccCards') {
         renderBalances();
-        // Update transfer page specific balance display
-        if (targetId === 'transfer') {
-            updateTransferBalanceDisplay();
-        }
     }
     // Refresh History when entering history page
     if (targetId === 'history') {
@@ -892,15 +813,6 @@ function updateExchangeBalances() {
     if (t) t.textContent = (userData.tokens || 0).toString();
     if (j) j.textContent = (userData.Gems || 0).toString();
     if (u) u.textContent = (Math.round((userData.usd || 0) * 100) / 100).toFixed(2);
-}
-
-function updateTransferBalanceDisplay() {
-    const tokenEl = document.getElementById('transferTokenBalance');
-    const gemsEl = document.getElementById('transferGemsBalance');
-    const usdEl = document.getElementById('transferUsdBalance');
-    if (tokenEl) tokenEl.textContent = (userData.tokens || 0).toString();
-    if (gemsEl) gemsEl.textContent = (userData.Gems || 0).toString();
-    if (usdEl) usdEl.textContent = (Math.round((userData.usd || 0) * 100) / 100).toFixed(2);
 }
 
 function updateExchangePreview() {
@@ -1287,49 +1199,44 @@ function earn(buttonElement, type, amount) {
 function verifyAndComplete(type, buttonElement, amount) {
     console.log(`[DEBUG] Verifying and completing ${type}`);
 
-    // Direct Ad on task START as well
-    withDirectAdGate(() => {
-
-        // For Telegram tasks, verify membership first
-        if (type === 'tg' || type === 'tg_ch') {
-            fetch('/api/verify-membership', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userId: userData.id,
-                    taskType: type
-                })
+    // For Telegram tasks, verify membership first
+    if (type === 'tg' || type === 'tg_ch') {
+        fetch('/api/verify-membership', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: userData.id,
+                taskType: type
             })
-                .then(res => res.json())
-                .then(data => {
-                    console.log(`[DEBUG] Membership check:`, data);
+        })
+            .then(res => res.json())
+            .then(data => {
+                console.log(`[DEBUG] Membership check:`, data);
 
-                    if (data.success && data.isMember) {
-                        // User joined - complete task
-                        completeTaskReward(type, buttonElement, amount);
-                    } else {
-                        // Not joined - reset to START
-                        IN_PROGRESS_TASKS[type] = null;
-                        buttonElement.innerHTML = 'START';
-                        buttonElement.style.pointerEvents = 'auto';
-                        buttonElement.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
-                        window.showToast('Please join the channel/group first, then click START again.');
-                    }
-                })
-                .catch(err => {
-                    console.error('Verify error:', err);
+                if (data.success && data.isMember) {
+                    // User joined - complete task
+                    completeTaskReward(type, buttonElement, amount);
+                } else {
+                    // Not joined - reset to START
                     IN_PROGRESS_TASKS[type] = null;
                     buttonElement.innerHTML = 'START';
                     buttonElement.style.pointerEvents = 'auto';
                     buttonElement.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
-                    window.showToast('Error verifying. Please try again.');
-                });
-        } else {
-            // YouTube - direct complete
-            completeTaskReward(type, buttonElement, amount);
-        }
-
-    });
+                    window.showToast('Please join the channel/group first, then click START again.');
+                }
+            })
+            .catch(err => {
+                console.error('Verify error:', err);
+                IN_PROGRESS_TASKS[type] = null;
+                buttonElement.innerHTML = 'START';
+                buttonElement.style.pointerEvents = 'auto';
+                buttonElement.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+                window.showToast('Error verifying. Please try again.');
+            });
+    } else {
+        // YouTube - direct complete
+        completeTaskReward(type, buttonElement, amount);
+    }
 }
 
 // Give reward and mark complete
@@ -1419,22 +1326,6 @@ let adRewardClaimed = false;
 let currentAdContext = 'watch_ad';
 
 function showAdAndEarn(context = 'watch_ad') {
-    // Check ad cooldown first (for all contexts except zero_balance_trigger which handles it differently)
-    if (context !== 'zero_balance_trigger' && typeof checkAdCooldown !== 'undefined') {
-        if (!checkAdCooldown()) {
-            return;
-        }
-    }
-
-    // Check ad limit for watch_ad context
-    if (context === 'watch_ad') {
-        const adLimit = window.appCostConfig?.adLimit || 50;
-        const adRecovery = window.appCostConfig?.adRecoveryHours || 24;
-        if (typeof checkActivityLimit !== 'undefined' && !checkActivityLimit('ad', adLimit, adRecovery, 'Watch Ad')) {
-            return;
-        }
-    }
-
     currentAdContext = context;
     adRewardClaimed = false;
 
@@ -1446,19 +1337,20 @@ function showAdAndEarn(context = 'watch_ad') {
             const ads = data.ads || {};
             let adInjected = false;
 
+            // Check for Direct Link first (priority over other ad types)
+            if (!adInjected && ads.directlink && ads.directlink.url && ads.directlink.enabled !== false) {
+                adInjected = true;
+                // Open direct link in new tab
+                window.open(ads.directlink.url, '_blank');
+                // Proceed with reward after short delay
+                setTimeout(claimAdReward, 2000);
+                return;
+            }
+
             if (!adInjected && ads.moneytag && ads.moneytag.publisherId) {
                 adInjected = true;
                 const cfg = ads.moneytag;
                 const zoneId = cfg.adUnitId || cfg.publisherId;
-
-                // MoneyTag Direct Link (optional): open link to monetize via direct link
-                if (cfg.directLink && typeof cfg.directLink === 'string' && cfg.directLink.trim() !== '') {
-                    try {
-                        window.open(cfg.directLink.trim(), '_blank');
-                    } catch (e) { }
-                    setTimeout(claimAdReward, 2000);
-                    return;
-                }
 
                 if (window[`show_${zoneId}`]) {
                     try { window[`show_${zoneId}`](); } catch (e) { }
@@ -1527,15 +1419,9 @@ async function claimAdReward() {
             }
 
             let msg = `🎉 Reward claimed!`;
-            if (currentAdContext === 'watch_ad') msg = `📺 +${data.reward || 5} Tokens rewarded for Watching Ad!`;
+            if (currentAdContext === 'watch_ad') msg = `📺 +5 Tokens rewarded for Watching Ad!`;
             else if (currentAdContext === 'quiz_direct') msg = `🧠 Quiz unlocked! Good luck.`;
             else if (currentAdContext === 'scratch_ad' || currentAdContext === 'scratch_retry') msg = `✨ Scratch card unlocked!`;
-            else if (currentAdContext === 'zero_balance_trigger') {
-                const perAd = (window.appCostConfig && Number.isFinite(parseInt(window.appCostConfig.zeroBalanceAdReward)))
-                    ? parseInt(window.appCostConfig.zeroBalanceAdReward)
-                    : 5;
-                msg = `📺 +${perAd} Tokens earned! Watching more ads...`;
-            }
 
             window.showToast(msg);
 
@@ -1543,51 +1429,6 @@ async function claimAdReward() {
                 userData.tokens = data.newBalance;
                 updateBalanceUI();
                 loadRecentActivity(); // Refresh history after ad reward
-            }
-
-            // Increment ad activity counter for watch_ad context
-            if (currentAdContext === 'watch_ad' && typeof userActivityTracker !== 'undefined') {
-                userActivityTracker.increment('ad');
-            }
-
-            // Set last ad time for cooldown tracking
-            if (typeof adCooldownTracker !== 'undefined') {
-                adCooldownTracker.setLastAdTime();
-            }
-
-            // Handle zero balance ad system - continue showing ads until enough tokens
-            if (currentAdContext === 'zero_balance_trigger' && pendingServiceCost > 0) {
-                const currentTokens = userData.tokens || 0;
-                const perAd = (window.appCostConfig && Number.isFinite(parseInt(window.appCostConfig.zeroBalanceAdReward)))
-                    ? parseInt(window.appCostConfig.zeroBalanceAdReward)
-                    : 5;
-
-                if (currentTokens < pendingServiceCost) {
-                    // Still need more tokens - show another ad after short delay
-                    const stillNeeded = pendingServiceCost - currentTokens;
-                    const adsStillNeeded = Math.ceil(stillNeeded / perAd);
-
-                    window.showToast(`⏳ ${stillNeeded} more tokens needed. Watching ad ${adsStillNeeded > 1 ? '(' + adsStillNeeded + ' more)' : '(last one)'}...`);
-
-                    setTimeout(() => {
-                        adRewardClaimed = false; // Reset to allow claiming again
-                        showAdAndEarn('zero_balance_trigger');
-                    }, 2000);
-                    return; // Don't clear pending service yet
-                } else {
-                    // Now have enough tokens - execute the pending service
-                    window.showToast(`✅ You now have ${currentTokens} tokens! Proceeding with ${pendingServiceType}...`);
-
-                    setTimeout(() => {
-                        if (pendingServiceCallback && typeof pendingServiceCallback === 'function') {
-                            pendingServiceCallback();
-                        }
-                        // Clear pending service
-                        pendingServiceCost = 0;
-                        pendingServiceCallback = null;
-                        pendingServiceType = null;
-                    }, 1500);
-                }
             }
 
             // Navigation
@@ -1608,12 +1449,7 @@ async function claimAdReward() {
     }
 }
 
-// Global variables for zero balance ad system
-let pendingServiceCost = 0;
-let pendingServiceCallback = null;
-let pendingServiceType = null;
-
-function checkZeroBalanceAdTrigger(requiredAmount = 1, serviceCallback = null, serviceType = 'service') {
+function checkZeroBalanceAdTrigger(requiredAmount = 1) {
     const currentTokens = userData.tokens || 0;
     if (currentTokens < requiredAmount) {
         if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('warning');
@@ -1624,15 +1460,10 @@ function checkZeroBalanceAdTrigger(requiredAmount = 1, serviceCallback = null, s
             : 5;
         const adsNeeded = Math.ceil(needed / perAd);
 
-        // Store pending service info for after ads
-        pendingServiceCost = requiredAmount;
-        pendingServiceCallback = serviceCallback;
-        pendingServiceType = serviceType;
-
         if (adsNeeded > 1) {
-            window.showToast(`⚠️ Insufficient balance! You need ${requiredAmount} tokens. Watch ${adsNeeded} ads to earn ${adsNeeded * perAd} tokens.`);
+            window.showToast(`Insufficient balance! You need ${requiredAmount} tokens. Watch ${adsNeeded} ads to earn tokens.`);
         } else {
-            window.showToast(`⚠️ Insufficient balance! Watch a short ad to get ${perAd} tokens.`);
+            window.showToast(`Insufficient balance! Watch a short ad to get ${perAd} tokens.`);
         }
 
         setTimeout(() => {
@@ -2004,18 +1835,146 @@ function copyLink() {
     if (!linkEl) return;
 
     const text = linkEl.textContent || linkEl.innerText;
+
     navigator.clipboard.writeText(text).then(() => {
-        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
-        window.showToast('✅ Referral link copied!');
-    }).catch(() => {
-        // Fallback for older browsers
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        document.body.appendChild(ta);
-        ta.select();
+        if (window.showToast) {
+            window.showToast('Referral link copied!');
+        }
+
+        if (window.Telegram && Telegram.WebApp && Telegram.WebApp.HapticFeedback) {
+            Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+        }
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        // Fallback
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
         document.execCommand('copy');
-        document.body.removeChild(ta);
-        window.showToast('✅ Referral link copied!');
+        document.body.removeChild(textArea);
+        if (window.showToast) {
+            window.showToast('Referral link copied!');
+        }
+    });
+}
+
+// Share referral link via WhatsApp
+function shareViaWhatsApp() {
+    const linkEl = document.getElementById('referralLink');
+    if (!linkEl) return;
+
+    const referralLink = linkEl.textContent || linkEl.innerText;
+    const shareText = `🎁 Join me and earn rewards!\n\nGet free tokens when you sign up using my referral link:\n${referralLink}\n\n🚀 Join now and start earning!`;
+
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+    window.open(whatsappUrl, '_blank');
+}
+
+// Share referral link via Telegram
+function shareViaTelegram() {
+    const linkEl = document.getElementById('referralLink');
+    if (!linkEl) return;
+
+    const referralLink = linkEl.textContent || linkEl.innerText;
+    const shareText = `🎁 Join me and earn rewards! Get free tokens when you sign up using my referral link: ${referralLink}`;
+
+    const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent('🎁 Join me and earn free tokens!')}`;
+    window.open(telegramUrl, '_blank');
+}
+
+// NEW: Open share invite modal with bot data
+function openShareInviteModal() {
+    const modal = document.getElementById('shareInviteModal');
+    if (!modal) return;
+
+    // Populate bot data
+    const botAvatar = document.getElementById('shareBotAvatar');
+    const botName = document.getElementById('shareBotName');
+    const referralLink = document.getElementById('shareReferralLink');
+    const userNameSpan = document.getElementById('shareUserName');
+
+    // Set bot info (you can customize these)
+    if (botAvatar) botAvatar.src = 'https://telegram.org/img/t_logo.png'; // Default Telegram logo, can be replaced with actual bot avatar
+    if (botName) botName.textContent = 'AutosVerify Bot';
+
+    // Set referral link
+    const linkEl = document.getElementById('referralLink');
+    if (linkEl && referralLink) {
+        referralLink.textContent = linkEl.textContent || linkEl.innerText;
+    }
+
+    // Set user name
+    const userName = userData.firstName || userData.username || 'my';
+    if (userNameSpan) {
+        userNameSpan.textContent = userName === 'my' ? 'my' : `${userName}'s`;
+    }
+
+    // Show modal
+    modal.style.display = 'flex';
+}
+
+// NEW: Close share invite modal
+function closeShareInviteModal() {
+    const modal = document.getElementById('shareInviteModal');
+    if (modal) modal.style.display = 'none';
+}
+
+// NEW: Share from modal - Telegram
+function shareInviteViaTelegram() {
+    const linkEl = document.getElementById('shareReferralLink');
+    if (!linkEl) return;
+
+    const referralLink = linkEl.textContent || linkEl.innerText;
+    const userName = userData.firstName || userData.username || 'I';
+    const shareText = `🎁 Join ${userName === 'I' ? 'me' : userName}'s bot and earn rewards!\n\nGet free tokens when you sign up using this link:\n${referralLink}\n\n🚀 Join AutosVerify Bot now!`;
+
+    const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent(shareText)}`;
+    window.open(telegramUrl, '_blank');
+    closeShareInviteModal();
+}
+
+// NEW: Share from modal - WhatsApp
+function shareInviteViaWhatsApp() {
+    const linkEl = document.getElementById('shareReferralLink');
+    if (!linkEl) return;
+
+    const referralLink = linkEl.textContent || linkEl.innerText;
+    const userName = userData.firstName || userData.username || 'I';
+    const shareText = `🎁 Join ${userName === 'I' ? 'me' : userName}'s bot and earn rewards!\n\nGet free tokens when you sign up using this link:\n${referralLink}\n\n🚀 Join AutosVerify Bot now!`;
+
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+    window.open(whatsappUrl, '_blank');
+    closeShareInviteModal();
+}
+
+// NEW: Copy invite link from modal
+function copyInviteLink() {
+    const linkEl = document.getElementById('shareReferralLink');
+    if (!linkEl) return;
+
+    const text = linkEl.textContent || linkEl.innerText;
+
+    navigator.clipboard.writeText(text).then(() => {
+        if (window.showToast) {
+            window.showToast('Referral link copied!');
+        }
+
+        if (window.Telegram && Telegram.WebApp && Telegram.WebApp.HapticFeedback) {
+            Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+        }
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        // Fallback
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        if (window.showToast) {
+            window.showToast('Referral link copied!');
+        }
     });
 }
 
@@ -2062,6 +2021,13 @@ window.submitPayment = submitPayment;
 window.payWithBalance = payWithBalance;
 window.selectPM = selectPM;
 window.copyLink = copyLink;
+window.shareViaWhatsApp = shareViaWhatsApp;
+window.shareViaTelegram = shareViaTelegram;
+window.openShareInviteModal = openShareInviteModal;
+window.closeShareInviteModal = closeShareInviteModal;
+window.shareInviteViaTelegram = shareInviteViaTelegram;
+window.shareInviteViaWhatsApp = shareInviteViaWhatsApp;
+window.copyInviteLink = copyInviteLink;
 
 // Services Page Toggle View
 function toggleServicesView() {
@@ -2102,15 +2068,17 @@ function registerAndFetchUser() {
     }
 
     // Parse referrer from start_param
-    // Bot sends: ?start=USERID (raw userId, no prefix)
-    // Web SDK also might send: ?start=ref_USERID
+    // Bot sends: ?start=ref_XXXXXX (referral code format)
+    // Support both new format (ref_XXXXXX) and old format (numeric userId)
     let referrer = null;
     if (_startParam) {
         const raw = String(_startParam).trim();
+        // Pass the full referral code to the API
+        // The API will handle both ref_XXXXXX codes and numeric userIds
         if (raw.startsWith('ref_')) {
-            referrer = raw.replace('ref_', '');
+            referrer = raw; // Keep full code like ref_QMD2UE
         } else if (/^\d+$/.test(raw) && raw !== String(currentUserId)) {
-            // Pure numeric userId as start_param (from bot's ?start=userId)
+            // Pure numeric userId as start_param (legacy support)
             referrer = raw;
         }
     }
@@ -2135,6 +2103,7 @@ function registerAndFetchUser() {
                 userData.Gems = data.Gems || data.gems || 0;
                 userData.usd = (data.usd !== undefined && data.usd !== null) ? data.usd : 0;
                 userData.verified = data.verified || false;
+                userData.adminVerified = data.adminVerified || false; // Store admin verified status
                 userData.dailyStreak = data.dailyStreak || 0;
                 userData.lastDailyClaim = data.lastClaim || 0;
                 userData.completedTasks = data.completedTasks || [];
@@ -2373,7 +2342,12 @@ function renderRecentActivity(history) {
         const time = item.date ? new Date(item.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '';
         const POS_TYPES = new Set(['transfer_in', 'redeem', 'daily_bonus', 'ad_reward', 'mission_reward', 'quiz_reward', 'bonus', 'deposit']);
         const NEG_TYPES = new Set(['transfer_out', 'account_purchase', 'mail', 'number']);
-        const amt = Number(item.amount || 0);
+        // Fix: For mail type, if amount is 0 or missing, use mailCost from config
+        let rawAmount = item.amount;
+        if ((item.type === 'mail' || item.type === 'email' || config.name?.includes('Mail')) && (!rawAmount || rawAmount === 0)) {
+            rawAmount = window.appCostConfig?.mailCost || 10;
+        }
+        const amt = Number(rawAmount || 0);
         const isNeg = NEG_TYPES.has(item.type) || (!POS_TYPES.has(item.type) && amt < 0);
         const isPos = POS_TYPES.has(item.type) || (!NEG_TYPES.has(item.type) && amt > 0);
         const asset = item.asset || item.currency || 'TC';
@@ -2534,7 +2508,6 @@ async function transferTokens() {
                 userData.Gems = res.newBalances.Gems;
                 userData.usd = res.newBalances.usd;
                 renderBalances();
-                updateTransferBalanceDisplay(); // Update transfer page balance display
                 loadRecentActivity(); // Refresh history after transfer
             }
             // Clear inputs
@@ -2867,22 +2840,6 @@ function renderCards() {
     container.innerHTML = html || '<div style="text-align:center; padding:40px 0; color:var(--text-sub); opacity:0.5;">No cards available</div>';
 }
 
-function refreshVccCardsData() {
-    const container = document.getElementById('cardsList');
-    if (container && (!localStorage.getItem('adminCards') || localStorage.getItem('adminCards') === '[]')) {
-        container.innerHTML = '<div style="text-align:center; padding:40px 0; color:var(--text-sub); opacity:0.6;"><i class="fas fa-spinner fa-spin"></i><div style="margin-top:10px; font-size:12px;">Loading cards...</div></div>';
-    }
-    fetch('/api/admin/cards')
-        .then(r => r.json())
-        .then(data => {
-            if (data && data.success) {
-                localStorage.setItem('adminCards', JSON.stringify(data.cards || []));
-                if (typeof currentPage !== 'undefined' && currentPage === 'vccCards') renderCards();
-            }
-        })
-        .catch(() => { });
-}
-
 function renderVPN() {
     const container = document.getElementById('vpnList');
     if (!container) return;
@@ -3156,8 +3113,7 @@ function buyAccountFromCategory(category) {
     const cat = ACCOUNT_CATEGORIES[category];
     if (!cat) return;
 
-    // Check zero balance and show ads if needed
-    if (checkZeroBalanceAdTrigger(cat.price, () => buyAccountFromCategory(category), cat.name)) return;
+    if (checkZeroBalanceAdTrigger()) return;
 
     if (userTokens < cat.price) {
         nav('earn');
@@ -3284,9 +3240,6 @@ function generateService(type) {
     const cost = s ? (s.cost || 10) : (type === 'number' ? 15 : 10);
     const name = s ? s.name : (type === 'number' ? 'Number Service' : 'Mail Service');
 
-    // Check zero balance and show ads if needed
-    if (checkZeroBalanceAdTrigger(cost, () => generateService(type), name)) return;
-
     if (Math.max(0, userData.tokens || 0) < cost) {
         nav('earn');
         return;
@@ -3360,11 +3313,8 @@ function updateNumBalance() {
 }
 
 function generateVirtualNumber() {
+    if (checkZeroBalanceAdTrigger()) return;
     const cost = 15;
-
-    // Check zero balance and show ads if needed
-    if (checkZeroBalanceAdTrigger(cost, () => generateVirtualNumber(), 'Virtual Number')) return;
-
     if (Math.max(0, userData.tokens || 0) < cost) { nav('earn'); return; }
     // Get number directly without confirmation
     const btn = document.getElementById('numGenerateBtn');
@@ -3651,6 +3601,7 @@ function updateMailBalance(type) {
 }
 
 function generateTempMail(type) {
+    if (checkZeroBalanceAdTrigger()) return;
     if (!type) type = 'temp';
     const cost = type === "temp"
         ? (parseInt(window.appCostConfig?.mailCost) || 10)
@@ -3662,9 +3613,6 @@ function generateTempMail(type) {
         nav('home');
         return;
     }
-
-    // Check zero balance and show ads if needed
-    if (checkZeroBalanceAdTrigger(cost, () => generateTempMail(type), type === 'temp' ? 'Gmail' : 'Premium Mail')) return;
 
     if (Math.max(0, userData.tokens || 0) < cost) { nav('earn'); return; }
 
@@ -4040,7 +3988,7 @@ function copyToClipboard(id) {
 // Initial Render & Auto Login
 renderBalances();
 applyProfilePhoto(_tgUser.photo_url || ''); // Immediately show photo from Telegram
-registerAndFetchUser(); // Sync with server
+// NOTE: registerAndFetchUser is now called inside DOMContentLoaded to prevent race conditions
 
 // Poll for balance updates (every 30s)
 setInterval(registerAndFetchUser, 30000);
@@ -4316,39 +4264,6 @@ function openPremiumMailDirect() {
 // Store assigned premium email
 let assignedPremiumEmail = null;
 
-// Premium Mail: user target email filter (only show messages related to that email)
-const PREMIUM_TARGET_EMAIL_KEY = 'premium_target_email';
-function getPremiumTargetEmail() {
-    try {
-        const v = (localStorage.getItem(PREMIUM_TARGET_EMAIL_KEY) || '').trim();
-        return v;
-    } catch (e) {
-        return '';
-    }
-}
-
-function setPremiumTargetEmail(email) {
-    try {
-        const val = (email || '').trim();
-        if (val) localStorage.setItem(PREMIUM_TARGET_EMAIL_KEY, val);
-        else localStorage.removeItem(PREMIUM_TARGET_EMAIL_KEY);
-    } catch (e) { }
-}
-
-function _messageMatchesPremiumTarget(msg, targetEmail) {
-    if (!targetEmail) return true;
-    const t = String(targetEmail).toLowerCase();
-    const hay = (
-        (msg?.to || '') + ' ' +
-        (msg?.toEmail || '') + ' ' +
-        (msg?.recipient || '') + ' ' +
-        (msg?.headers?.to || '') + ' ' +
-        (msg?.subject || '') + ' ' +
-        (msg?.body || msg?.preview || '')
-    ).toLowerCase();
-    return hay.includes(t);
-}
-
 // Load premium emails from admin panel
 async function loadPremiumEmailsFromAdmin() {
     const addrEl = document.getElementById('premiumMailAddr');
@@ -4482,16 +4397,7 @@ async function loadPremiumEmailMessages(emailId) {
     if (!emailId) return;
 
     try {
-        // Get user's target email for filtering
-        const targetEmail = getPremiumTargetEmail();
-
-        // Build URL with target email filter if set
-        let url = `/api/premium-emails/${emailId}/messages`;
-        if (targetEmail) {
-            url += `?targetEmail=${encodeURIComponent(targetEmail)}`;
-        }
-
-        const res = await fetch(url);
+        const res = await fetch(`/api/premium-emails/${emailId}/messages`);
         const data = await res.json();
 
         if (data.success && data.messages) {
@@ -4524,16 +4430,12 @@ function renderPremiumInbox(messages) {
         return;
     }
 
-    // Filter by user target email (if set)
-    const targetEmail = getPremiumTargetEmail();
-    const filtered = targetEmail ? (messages.filter(m => _messageMatchesPremiumTarget(m, targetEmail))) : messages;
-
     // Extract OTPs
     let otps = [];
     const otpRegex = /\b\d{4,8}\b/g;
     const keywords = ["otp", "code", "verification", "verify", "login", "security"];
 
-    filtered.forEach(msg => {
+    messages.forEach(msg => {
         const combined = ((msg.subject || '') + " " + (msg.body || msg.preview || '')).toLowerCase();
         const hasKeyword = keywords.some(k => combined.includes(k));
         if (hasKeyword) {
@@ -4568,7 +4470,7 @@ function renderPremiumInbox(messages) {
     }
 
     // Render message list
-    listEl.innerHTML = filtered.map(msg => `
+    listEl.innerHTML = messages.map(msg => `
         <div class="inbox-item" onclick="openPremiumEmailMessage('${msg.id}')" style="display:grid; grid-template-columns:1fr 1fr 60px; padding:12px 16px; border-bottom:1px solid var(--border-color); cursor:pointer; align-items:center;">
             <div style="font-size:12px; color:var(--text-main); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${msg.from || msg.sender || 'Unknown'}</div>
             <div style="font-size:12px; color:var(--text-sub); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${msg.subject || 'No Subject'}</div>
@@ -4578,7 +4480,7 @@ function renderPremiumInbox(messages) {
         </div>
     `).join('');
 
-    window._premiumEmailMessages = filtered;
+    window._premiumEmailMessages = messages;
 }
 
 // Open a premium email message
@@ -4839,6 +4741,10 @@ async function verifyJoinsAndProceed() {
 
     if (result.canProceed) {
         document.getElementById('joinRequiredModal').style.display = 'none';
+        // Show verification toast if user was just verified
+        if (result.verified && !result.adminVerified) {
+            showToast('✅ You are now verified! Full access granted.');
+        }
         // Continue with normal initialization
         continueInitialization();
     } else {
@@ -4853,60 +4759,103 @@ async function verifyJoinsAndProceed() {
 }
 
 // Continue with normal initialization after join check
-function continueInitialization() {
+async function continueInitialization() {
     showPage('home');
     applyProfilePhoto(userData.photo_url || _tgUser.photo_url || '');
     renderBalances();
-    registerAndFetchUser();
+    // NOTE: registerAndFetchUser is already called in DOMContentLoaded before join check
+    // Do NOT call it again here to prevent race conditions
     loadBroadcast();
     fetchEmailServiceConfig();
     const savedTheme = localStorage.getItem('theme') || 'dark';
     document.body.setAttribute('data-theme', savedTheme);
     updateThemeIcon(savedTheme);
+
+    // Check user verification status and show appropriate welcome
+    try {
+        const joinCheck = await checkRequiredJoins();
+        if (joinCheck.adminVerified) {
+            showToast('👑 Welcome Admin! You have full verified access.');
+        } else if (joinCheck.verified) {
+            showToast('✅ Welcome! You are verified and have full access.');
+        }
+    } catch (e) {
+        // Silently ignore errors
+    }
 }
 
 document.addEventListener('DOMContentLoaded', async function () {
-    // Re-initialize Telegram WebApp data in case SDK loaded after initial parse
-    if (window.Telegram && window.Telegram.WebApp) {
-        tg = window.Telegram.WebApp;
-        tg.ready();
-        tg.expand();
-        const freshUser = tg.initDataUnsafe?.user || {};
-        if (freshUser.id) {
-            // Update global user data with fresh Telegram data
-            userData.id = freshUser.id;
-            userData.username = freshUser.first_name || freshUser.username || 'User';
-            userData.firstName = freshUser.first_name || '';
-            userData.lastName = freshUser.last_name || '';
-            userData.photo_url = freshUser.photo_url || '';
-            // Also update the module-level references
-            Object.assign(_tgUser, freshUser);
+    try {
+        // Re-initialize Telegram WebApp data in case SDK loaded after initial parse
+        if (window.Telegram && window.Telegram.WebApp) {
+            tg = window.Telegram.WebApp;
+            tg.ready();
+            tg.expand();
+            const freshUser = tg.initDataUnsafe?.user || {};
+            if (freshUser.id) {
+                // Update global user data with fresh Telegram data
+                userData.id = freshUser.id;
+                userData.username = freshUser.first_name || freshUser.username || 'User';
+                userData.firstName = freshUser.first_name || '';
+                userData.lastName = freshUser.last_name || '';
+                userData.photo_url = freshUser.photo_url || '';
+                // Also update the module-level references
+                Object.assign(_tgUser, freshUser);
+            }
         }
-    }
 
-    // Load feature flags first to check if join required is enabled
-    await loadFeatureFlags();
+        // Fetch user data
+        if (userData.id && userData.id !== 0) {
+            try {
+                console.log('[INIT] Fetching user data...');
+                await registerAndFetchUser();
+                console.log('[INIT] User data fetched, adminVerified:', userData.adminVerified);
+            } catch (e) {
+                console.error('[INIT] Failed to fetch user data:', e);
+            }
+        }
 
-    // Check if Join Required feature is enabled (default OFF)
-    const joinRequiredEnabled = featureFlags && featureFlags.joinRequired === true;
-
-    if (!joinRequiredEnabled) {
-        // Join check is disabled - proceed normally
+        // JOIN CHECK DISABLED - Always allow access
+        console.log('[INIT] Join check disabled - proceeding to app');
         continueInitialization();
-        return;
+    } catch (error) {
+        console.error('[INIT] Critical initialization error:', error);
+        // Show error message instead of blank screen
+        document.body.innerHTML = `
+            <div style="
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: linear-gradient(135deg, #1a1a2e, #16213e);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+                text-align: center;
+                color: #fff;
+                font-family: system-ui, -apple-system, sans-serif;
+            ">
+                <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
+                <h2 style="color: #f97316; margin-bottom: 10px;">Something went wrong</h2>
+                <p style="color: #aaa; margin-bottom: 20px; max-width: 300px;">
+                    The app failed to load. Please try refreshing or check your connection.
+                </p>
+                <button onclick="location.reload()" style="
+                    background: linear-gradient(135deg, #f59e0b, #d97706);
+                    color: #000;
+                    border: none;
+                    padding: 14px 30px;
+                    border-radius: 12px;
+                    font-weight: 600;
+                    font-size: 16px;
+                    cursor: pointer;
+                ">🔄 Reload App</button>
+                <p style="color: #666; margin-top: 15px; font-size: 12px;">
+                    Error: ${error.message || 'Unknown error'}
+                </p>
+            </div>
+        `;
     }
-
-    // Check if user joined required channel/group (MANDATORY only if enabled)
-    const joinCheck = await checkRequiredJoins();
-
-    if (!joinCheck.canProceed) {
-        // Show join required modal - block access until joined
-        showJoinRequiredModal(joinCheck);
-        return; // Stop initialization until user joins
-    }
-
-    // User has joined - continue with normal initialization
-    continueInitialization();
 });
 
 window.verifyJoinsAndProceed = verifyJoinsAndProceed;
@@ -5613,14 +5562,6 @@ function startQuizFlow() {
     // Set immediate cooldown to prevent double clicks
     localStorage.setItem('cooldown_quiz', Date.now());
 
-    // Check quiz limit before starting
-    const quizLimit = window.appCostConfig?.quizLimit || 5;
-    const quizRecovery = window.appCostConfig?.quizRecoveryHours || 1;
-    if (!checkActivityLimit('quiz', quizLimit, quizRecovery, 'Quiz')) {
-        nav('earn');
-        return;
-    }
-
     window.showToast("🎬 Preparing Quiz...");
     showAdAndEarn('quiz_direct');
 }
@@ -5694,12 +5635,6 @@ async function submitQuizAnswer(idx) {
             window.showToast(isCorrect ? `✅ CORRECT! +10 Tokens` : `❌ WRONG! +5 Tokens for trying.`);
             userData.tokens = data.newBalance;
             renderBalances();
-
-            // Increment quiz activity counter
-            if (typeof userActivityTracker !== 'undefined') {
-                userActivityTracker.increment('quiz');
-            }
-
             loadRecentActivity(); // Refresh history after quiz
             nav('home');
         } else {
@@ -5767,14 +5702,6 @@ function initScratchCard() {
     // Reset state
     isScratchActive = true;
     newBtn.style.display = 'none';
-
-    // Reset result div - hide it and clear content
-    if (resultDiv) {
-        resultDiv.style.display = 'none';
-        resultDiv.innerHTML = '';
-        resultDiv.style.background = '';
-    }
-
     canvas.style.display = 'block'; // Ensure canvas is visible
     canvas.style.opacity = '1'; // Ensure canvas is opaque
 
@@ -5853,30 +5780,8 @@ async function claimScratchReward(reward) {
 
     const canvas = document.getElementById('scratchCanvas');
     const newBtn = document.getElementById('newScratchBtn');
-    const resultDiv = document.getElementById('scratchResult');
-
-    // Fade out canvas
     canvas.style.opacity = '0';
     setTimeout(() => { canvas.style.display = 'none'; }, 500);
-
-    // Show the reward result prominently
-    if (resultDiv) {
-        resultDiv.style.display = 'flex';
-        resultDiv.style.flexDirection = 'column';
-        resultDiv.style.alignItems = 'center';
-        resultDiv.style.justifyContent = 'center';
-        resultDiv.style.background = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
-        resultDiv.style.borderRadius = '16px';
-        resultDiv.style.padding = '20px';
-        resultDiv.style.marginBottom = '16px';
-        resultDiv.innerHTML = `
-            <div style="font-size: 48px; margin-bottom: 8px;">🎁</div>
-            <div style="font-size: 24px; font-weight: bold; color: #fff;">+${reward} TOKENS</div>
-            <div style="font-size: 14px; color: rgba(255,255,255,0.9); margin-top: 4px;">You Won!</div>
-        `;
-    }
-
-    // Show the try again button
     newBtn.style.display = 'block';
 
     if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
@@ -5893,11 +5798,6 @@ async function claimScratchReward(reward) {
             window.showToast(`🎁 You won ${reward} tokens!`);
             userData.tokens = data.newBalance;
             renderBalances();
-
-            // Increment scratch activity counter
-            if (typeof userActivityTracker !== 'undefined') {
-                userActivityTracker.increment('scratch');
-            }
         } else {
             window.showToast(data.message || 'Error claiming scratch reward.');
         }
@@ -5909,13 +5809,6 @@ async function claimScratchReward(reward) {
 // Export new functions
 window.startQuizFlow = startQuizFlow;
 function startScratchFlow() {
-    // Check scratch limit before starting
-    const scratchLimit = window.appCostConfig?.scratchLimit || 5;
-    const scratchRecovery = window.appCostConfig?.scratchRecoveryHours || 1;
-    if (typeof checkActivityLimit !== 'undefined' && !checkActivityLimit('scratch', scratchLimit, scratchRecovery, 'Scratch Card')) {
-        return;
-    }
-
     if (isActionOnCooldown('scratch', 5)) return; // Check cooldown before showing ad
     showAdAndEarn('scratch_ad');
 }

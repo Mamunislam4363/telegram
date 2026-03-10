@@ -221,21 +221,6 @@ console.log('📊 Activity: Bot is running and waiting for users...');
 
 bot.getMe().then(me => {
     console.log(`📊 Activity: Bot connected as @${me.username}`);
-
-    // Set Menu Button (Mini App)
-    bot.setChatMenuButton({
-        menu_button: JSON.stringify({
-            type: 'web_app',
-            text: 'Verify Now',
-            web_app: {
-                url: config.MINI_APP_URL || 'https://autosverifybot-production.up.railway.app'
-            }
-        })
-    }).catch(err => {
-        // Silently log or handle menu button errors
-        // console.log(`[INFO] Menu button set error: ${err.message}`);
-    });
-
     if (!db.data.settings) db.data.settings = {};
     db.data.settings.botUsername = me.username;
     db.save();
@@ -285,14 +270,6 @@ function verifyUserAuthToken(userId, token) {
     const expectedHash = crypto.createHmac('sha256', secret).update(data).digest('hex');
 
     return hash === expectedHash;
-}
-
-function normalizeWebAppUrl(url) {
-    if (!url) return '';
-    return String(url)
-        .trim()
-        .replace(/[\r\n\t\s]+/g, '')
-        .replace(/\/+$/g, '');
 }
 
 // Helper: Check if feature is enabled - returns true if enabled, sends Coming Soon message if disabled
@@ -385,8 +362,7 @@ async function checkMembership(userId) {
     try {
         const results = {
             channel: false,
-            group: false,
-            checkFailed: false
+            group: false
         };
         const validStatuses = ['creator', 'administrator', 'member', 'restricted'];
 
@@ -396,11 +372,6 @@ async function checkMembership(userId) {
                 const channelMember = await bot.getChatMember(config.REQUIRED_CHANNEL, userId);
                 results.channel = validStatuses.includes(channelMember.status);
             } catch (error) {
-                // Check if it's a "chat not found" error - means channel is misconfigured
-                if (error.message && error.message.includes('chat not found')) {
-                    console.warn(`[MEMBERSHIP] Channel ${config.REQUIRED_CHANNEL} not found - bot may not be in the channel`);
-                    results.checkFailed = true;
-                }
                 console.error(`Check Channel Error (${userId}):`, error.message);
                 results.channel = false;
             }
@@ -414,11 +385,6 @@ async function checkMembership(userId) {
                 const groupMember = await bot.getChatMember(config.REQUIRED_GROUP, userId);
                 results.group = validStatuses.includes(groupMember.status);
             } catch (error) {
-                // Check if it's a "chat not found" error
-                if (error.message && error.message.includes('chat not found')) {
-                    console.warn(`[MEMBERSHIP] Group ${config.REQUIRED_GROUP} not found - bot may not be in the group`);
-                    results.checkFailed = true;
-                }
                 console.error(`Check Group Error (${userId}):`, error.message);
                 results.group = false;
             }
@@ -429,7 +395,7 @@ async function checkMembership(userId) {
         return results;
     } catch (error) {
         console.error('Membership check error:', error);
-        return { channel: false, group: false, checkFailed: true };
+        return { channel: false, group: false };
     }
 }
 
@@ -511,8 +477,6 @@ bot.onText(/\/start/, async (msg) => {
         const chatId = msg.chat.id;
         const userId = msg.from.id;
 
-        console.log(`[CMD] /start received from user=${userId} chat=${chatId} text=${JSON.stringify(msg.text || '')}`);
-
         // Anti-duplicate protection for start command
         const now = Date.now();
         const lastStart = startThrottle.get(userId) || 0;
@@ -534,41 +498,27 @@ bot.onText(/\/start/, async (msg) => {
         const user = db.getUser(userId);
 
         // Log user activity
-        console.log(`👤 User: ${userId} (${username}) | 🚀 Started bot | ⏰ ${new Date().toLocaleTimeString()}`);
+        originalConsoleLog(`👤 User: ${userId} (${username}) | 🚀 Started bot | ⏰ ${new Date().toLocaleTimeString()}`);
 
         // Referral Logic (Pending Verification)
         const refMatch = msg.text.split(' ')[1];
         if (refMatch) {
-            const cleanRef = String(refMatch).replace(/^ref_/, '');
-            if (cleanRef !== String(userId)) {
-                // Check if it's a referral code (6 chars, alphanumeric) or userId (numeric)
-                let referrerId = cleanRef;
-                if (cleanRef.length === 6 && /^[A-Z0-9]{6}$/.test(cleanRef)) {
-                    // It's a referral code - look up the userId
-                    const codeUserId = db.getUserIdByReferralCode(cleanRef);
-                    if (codeUserId) {
-                        referrerId = codeUserId;
-                    }
-                }
-
+            const refCode = String(refMatch).trim();
+            // Check if it's a valid referral code format (ref_XXXXXX or numeric userId)
+            if (refCode !== String(userId)) {
                 // Store pending referrer if not already referred
                 if (!user.referredBy && !user.pendingReferrer) {
-                    user.pendingReferrer = referrerId;
+                    user.pendingReferrer = refCode; // Store the full code
                     db.updateUser(user);
                 }
             }
         }
 
-        // Check mandatory membership - if check fails, allow user to proceed (graceful degradation)
+        // Check mandatory membership
         const membership = await checkMembership(userId);
 
-        console.log(`[CMD] /start membership user=${userId} channel=${membership.channel} group=${membership.group}`);
-
-        // If membership check failed (both false due to errors), assume no requirement and let user through
-        const membershipCheckFailed = !membership.channel && !membership.group && config.REQUIRED_CHANNEL && config.REQUIRED_GROUP;
-
-        if ((!membership.channel || !membership.group) && !membershipCheckFailed) {
-            // User not joined and check worked, show mandatory join screen
+        if (!membership.channel || !membership.group) {
+            // User not joined, show mandatory join screen
 
             // Remove lingering keyboard if it exists
             const cleanupMsg = await bot.sendMessage(chatId, "⏳ Initializing...", { reply_markup: { remove_keyboard: true } });
@@ -578,21 +528,6 @@ bot.onText(/\/start/, async (msg) => {
             return;
         }
 
-        // If membership check failed entirely, log but proceed to show menu (don't block user)
-        if (membershipCheckFailed) {
-            console.log(`[WARN] Membership check failed for user ${userId}, proceeding with main menu`);
-        }
-
-        // Check if user is already verified - mark as verified if joined both
-        if (membership.channel && membership.group && !user.verified) {
-            user.verified = true;
-            user.verifiedAt = Date.now();
-            db.updateUser(user);
-            console.log(`[VERIFY] User ${userId} auto-marked as verified on /start (already joined channel + group)`);
-        }
-
-        console.log(`[CMD] /start calling sendMainMenu for user ${userId}`);
-
         // Cleanup old persistent keyboards before sending the menu
         const cleanupMsg2 = await bot.sendMessage(chatId, "⏳ Initializing...", { reply_markup: { remove_keyboard: true } });
         bot.deleteMessage(chatId, cleanupMsg2.message_id).catch(() => { });
@@ -601,10 +536,7 @@ bot.onText(/\/start/, async (msg) => {
         await sendMainMenu(chatId, user, msg.from);
     } catch (e) {
         console.error('Error handling /start:', e);
-        const errorChatId = msg?.chat?.id;
-        if (errorChatId) {
-            bot.sendMessage(errorChatId, '❌ Bot error. Please try again in a moment.').catch(() => { });
-        }
+        bot.sendMessage(chatId, '❌ Bot error. Please try again in a moment.').catch(() => { });
     }
 });
 
@@ -614,30 +546,13 @@ bot.onText(/\/admin/, async (msg) => {
     const userId = msg.from.id;
     const username = msg.from.username || msg.from.first_name || 'Unknown';
 
-    console.log(`[CMD] /admin received from user=${userId} chat=${chatId} text=${JSON.stringify(msg.text || '')}`);
-
     // Check if user is admin - silently ignore for non-admins
     if (!isAdmin(userId)) {
-        await bot.sendMessage(chatId, '⛔ Admin access only.').catch(() => { });
         return;
     }
 
-    // Check if admin login is enabled
-    const adminSettings = db.data?.adminSettings || {};
-    const loginEnabled = adminSettings.adminLoginEnabled !== false; // Default true
-
-    const publicUrl = normalizeWebAppUrl(process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`);
-
-    // If login is enabled, generate a secure token for this admin session
-    let adminUrl = `${publicUrl}/admin`;
-    if (loginEnabled) {
-        // Generate token via server module
-        const server = require('./database/server.js');
-        const token = server.generateAdminToken ? server.generateAdminToken() : null;
-        if (token) {
-            adminUrl = `${publicUrl}/admin?token=${token}&userId=${userId}`;
-        }
-    }
+    const publicUrl = process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`;
+    const adminUrl = `${publicUrl}/admin`;
 
     const adminText = `👑 *Admin Panel Access*\n\n` +
         `Hello Admin *${username}*!\n\n` +
@@ -647,8 +562,7 @@ bot.onText(/\/admin/, async (msg) => {
         `• View analytics & stats\n` +
         `• Broadcast messages\n` +
         `• Configure settings\n\n` +
-        `*Admin ID:* \`${userId}\`\n` +
-        `*Login Required:* ${loginEnabled ? '✅ Yes' : '❌ No'}`;
+        `*Admin ID:* \`${userId}\``;
 
     const adminKeyboard = {
         reply_markup: {
@@ -660,14 +574,13 @@ bot.onText(/\/admin/, async (msg) => {
 
     try {
         await bot.sendMessage(chatId, adminText, { parse_mode: 'Markdown', ...adminKeyboard });
-        console.log(`[ADMIN] Admin ${username} (${userId}) accessed admin panel. Login required: ${loginEnabled}`);
+        console.log(`[ADMIN] Admin ${username} (${userId}) accessed admin panel`);
     } catch (e) {
         console.error('Error sending admin panel:', e);
-        await bot.sendMessage(chatId, '❌ Failed to open Admin Panel. Please try again.').catch(() => { });
     }
 });
 async function sendMainMenu(chatId, user, msgFrom) {
-    const publicUrl = normalizeWebAppUrl(process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`);
+    const publicUrl = process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`;
 
     // Get fresh name from Telegram message context if available, else use stored
     const firstName = (msgFrom && msgFrom.first_name) ? msgFrom.first_name :
@@ -680,7 +593,7 @@ async function sendMainMenu(chatId, user, msgFrom) {
         `Welcome to Gemini Verified! 🚀\n\n` +
         `Launch our Mini App to start earning rewards, invite friends, and manage your assets.`;
 
-    const appUrl = publicUrl;
+    const appUrl = `${publicUrl}`;
 
     // Keyboard matching screenshot style - vertical layout, 1 button per row
     const keyboard = {
@@ -696,25 +609,8 @@ async function sendMainMenu(chatId, user, msgFrom) {
 
     try {
         await bot.sendMessage(chatId, welcomeText, { parse_mode: 'Markdown', ...keyboard });
-        console.log(`[MENU] Main menu sent successfully to user ${chatId}`);
     } catch (e) {
-        console.error('Error sending main menu:', e.message);
-        // Try sending without web_app button as fallback
-        try {
-            const fallbackKeyboard = {
-                reply_markup: {
-                    inline_keyboard: [
-                        [{ text: '📢 Join Channel', url: `https://t.me/${(config.REQUIRED_CHANNEL_NAME || '@AutosVerify').replace('@', '')}` }],
-                        [{ text: '👥 Join Group', url: `https://t.me/${(config.REQUIRED_GROUP_NAME || '@AutosVerifyCh').replace('@', '')}` }],
-                        [{ text: '📺 YouTube Channel', url: 'https://youtube.com/@MamunIslamyts' }]
-                    ]
-                }
-            };
-            await bot.sendMessage(chatId, welcomeText, { parse_mode: 'Markdown', ...fallbackKeyboard });
-            console.log(`[MENU] Fallback menu sent (without web_app button) to user ${chatId}`);
-        } catch (e2) {
-            console.error('Error sending fallback menu:', e2.message);
-        }
+        console.error('Error sending main menu:', e);
     }
 }
 
@@ -1060,7 +956,7 @@ bot.on('chat_member', async (update) => {
         if (newStatus === 'restricted' && update.new_chat_member.is_member) return; // Still member
 
         // User left or was kicked from a required chat - notify them
-        console.log(`🚨 User ${userId} left monitored chat: ${chatUsername}`);
+        originalConsoleLog(`🚨 User ${userId} left monitored chat: ${chatUsername}`);
 
         // Re-check full membership status
         const membership = await checkMembership(userId);
@@ -1100,7 +996,7 @@ bot.on('callback_query', async (query) => {
         const username = query.from.username || query.from.first_name || 'Unknown';
 
         // Log user activity
-        console.log(`👤 User: ${userId} (${username}) | 💬 Action: ${data} | ⏰ ${new Date().toLocaleTimeString()}`);
+        originalConsoleLog(`👤 User: ${userId} (${username}) | 💬 Action: ${data} | ⏰ ${new Date().toLocaleTimeString()}`);
 
         // Ensure User Exists
         const user = db.getUser(userId);
@@ -1122,23 +1018,14 @@ bot.on('callback_query', async (query) => {
                     show_alert: true
                 }).catch(() => { });
 
-                // MARK USER AS VERIFIED - they joined both channel and group
-                if (!user.verified) {
-                    user.verified = true;
-                    user.verifiedAt = Date.now();
-                    console.log(`[VERIFY] User ${userId} marked as verified (joined channel + group)`);
-                }
-
                 // PROCESS PENDING REFERRAL
                 if (user.pendingReferrer) {
                     if (db.handleReferral(userId, user.pendingReferrer)) {
                         bot.sendMessage(user.pendingReferrer, `🎉 *Referral Bonus!*\n\nUser ${user.first_name || userId} joined and verified!\n💰 +${db.getSettings().refBonus} Credits added!`, { parse_mode: 'Markdown' }).catch(() => { });
                     }
                     user.pendingReferrer = null;
+                    db.updateUser(user);
                 }
-
-                // Save user with updated verification status
-                db.updateUser(user);
 
                 bot.deleteMessage(chatId, msgId).catch(() => { });
                 sendMainMenu(chatId, user);

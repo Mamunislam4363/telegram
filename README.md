@@ -27,7 +27,7 @@ Create a `.env` file in the root directory:
 TELEGRAM_BOT_TOKEN=your_bot_token
 ADMIN_ID=your_telegram_id
 ALLOWED_USER_IDS=id1,id2
-PUBLIC_URL=https://autosverifybot-production.up.railway.app
+PUBLIC_URL=https://mamunislam.netlify.app
 FIREBASE_SERVICE_ACCOUNT={"type": "service_account", ...} # Paste full JSON here
 GMAIL_CLIENT_ID=your_client_id
 GMAIL_CLIENT_SECRET=your_client_secret
@@ -65,7 +65,7 @@ npm start
 2. Configure **OAuth Consent Screen**.
 3. Create **OAuth 2.0 Client ID** (Web application).
 4. Add **Authorized Redirect URI**:
-   `https://autosverifybot-production.up.railway.app/auth/google/callback`
+   `https://mamunislam.netlify.app/auth/google/callback`
 
 ## 📄 License
 MIT License. Created by Mamun Islam.
