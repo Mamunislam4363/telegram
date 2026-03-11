@@ -73,7 +73,6 @@
             overflow-x: hidden !important;
             overflow-y: auto !important;
             -webkit-overflow-scrolling: touch !important;
-            padding-bottom: 110px !important;
             scrollbar-width: none !important;
             -ms-overflow-style: none !important;
         }
@@ -100,54 +99,98 @@
         /* FLOATING ISLAND NAV DESIGN - MOBILE SIZE LOCKED */
         .bottom-nav {
             position: fixed !important;
-            bottom: 24px !important;
+            bottom: 16px !important;
             left: 50% !important;
             transform: translateX(-50%) !important;
-            width: 90% !important;
-            max-width: 380px !important;
-            /* Mobile constraint */
-            height: 72px !important;
-            background: rgba(43, 20, 11, 0.95) !important;
-            backdrop-filter: blur(20px) !important;
-            -webkit-backdrop-filter: blur(20px) !important;
+            width: 92% !important;
+            max-width: 400px !important;
+            height: 76px !important;
+            /* Glass effect - transparent */
+            background: rgba(30, 14, 7, 0.45) !important;
+            backdrop-filter: blur(35px) !important;
+            -webkit-backdrop-filter: blur(35px) !important;
             border-radius: 40px !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
             display: flex !important;
-            justify-content: space-between !important;
+            justify-content: space-around !important;
             align-items: center !important;
             z-index: 2147483647 !important;
-            padding: 0 16px !important;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6) !important;
+            padding: 0 8px !important;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
         }
 
-        /* Unified Item Styles */
-        .nav-center,
+        /* Nav Items with label */
         .nav-item {
             display: flex !important;
+            flex-direction: column !important;
             justify-content: center !important;
             align-items: center !important;
-            width: 50px !important;
-            height: 50px !important;
-            border-radius: 50% !important;
+            gap: 3px !important;
+            width: 56px !important;
+            height: 60px !important;
+            border-radius: 20px !important;
             cursor: pointer !important;
-            color: #888 !important;
+            color: #666 !important;
             transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
-            margin: 0 !important;
             background: transparent !important;
             border: none !important;
             box-shadow: none !important;
             position: relative !important;
-            top: 0 !important;
         }
 
-        /* Active State - Yellow Circle */
-        .nav-item.active,
-        .nav-center.active {
-            background: #fbbf24 !important;
-            /* Bright Yellow/Orange */
+        .nav-item i {
+            font-size: 20px !important;
+            line-height: 1 !important;
+        }
+
+        .nav-label {
+            font-size: 9px !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.5px !important;
+            text-transform: uppercase !important;
+            color: #666 !important;
+            transition: color 0.3s !important;
+        }
+
+        /* Center Nav Button */
+        .nav-center {
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            width: 58px !important;
+            height: 58px !important;
+            border-radius: 50% !important;
+            cursor: pointer !important;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b) !important;
             color: #000 !important;
-            transform: translateY(-5px) !important;
-            box-shadow: 0 8px 20px rgba(251, 191, 36, 0.4) !important;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+            box-shadow: 0 4px 15px rgba(251, 191, 36, 0.3) !important;
+            margin-top: -16px !important;
+            border: 6px solid #1e0e07 !important;
+        }
+
+        .nav-center i {
+            font-size: 20px !important;
+        }
+
+        /* Active State - Subtle dark brown tint with yellow text */
+        .nav-item.active {
+            background: rgba(251, 191, 36, 0.12) !important;
+            color: #fbbf24 !important;
+            transform: translateY(0) !important;
+            box-shadow: none !important;
+            border-radius: 20px !important;
+        }
+
+        .nav-item.active i,
+        .nav-item.active .nav-label {
+            color: #fbbf24 !important;
+        }
+
+        .nav-center.active {
+            transform: scale(1.05) !important;
+            box-shadow: 0 6px 20px rgba(251, 191, 36, 0.5) !important;
+            border-color: #1e0e07 !important;
         }
 
         .toast-notify {
@@ -1326,8 +1369,10 @@
         <div class="sticky-header-container">
             <!-- Main Banner -->
             <div id="mainHeader" class="custom-banner"
-                style="width:100%; display:flex; justify-content:space-between; align-items:center;">
-                <div class="cb-left" id="headerLeft" onclick="handleHeaderClick()">
+                style="width:100%; display:flex; justify-content:space-between; align-items:center; position:relative;">
+
+                <div class="cb-left" id="headerLeft" onclick="handleHeaderClick()"
+                    style="position:relative; z-index:2; cursor:pointer;">
                     <!-- Avatar Logic (Home Only) -->
                     <div class="cb-avatar" id="headerAvatar">
                         <img id="home-avatar" class="wc-avatar"
@@ -1336,21 +1381,27 @@
                     </div>
                     <!-- Back Button Logic (Other Pages) -->
                     <div class="cb-back" id="headerBack"
-                        style="display:none; margin-right:8px; font-size:20px; color:#fbbf24;">
+                        style="display:none; font-size:20px; color:#fbbf24; padding:5px;">
                         <i class="fas fa-arrow-left"></i>
                     </div>
-                    <div class="cb-text" id="headerTitle" data-i18n="appName">Auto Verify</div>
+                </div>
+
+                <!-- Centered Title -->
+                <div class="cb-text" id="headerTitle" data-i18n="appName"
+                    style="position:absolute; left:50%; transform:translateX(-50%); text-align:center; width:60%; z-index:1; pointer-events:none; font-size:14px; font-weight:700; letter-spacing:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                    Auto Verify
                 </div>
 
                 <!-- Right Side Actions -->
-                <div style="display:flex; align-items:center; gap:12px;">
+                <div style="display:flex; align-items:center; gap:12px; position:relative; z-index:2;">
                     <!-- Lighting/Status Icon -->
                     <div id="headerStatus"
                         style="color:#fbbf24; filter:drop-shadow(0 0 8px rgba(251, 191, 36, 0.8)); animation: pulseGlow 2s infinite;">
                         <i class="fas fa-bolt"></i>
                     </div>
                     <!-- Sun Icon -->
-                    <div class="cb-icon" onclick="toggleTheme()"><i class="fas fa-cog"></i></div>
+                    <div class="cb-icon" onclick="toggleTheme()" style="cursor:pointer;"><i class="fas fa-cog"></i>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1385,8 +1436,11 @@
                 <div class="welcome-card-home">
                     <div class="wc-header" data-i18n="welcomeBack">WELCOME BACK,</div>
                     <div class="wc-greeting">
-                        Hello, <span id="home-name">User</span>! <i class="fas fa-check-circle"
-                            style="color:#22c55e; font-size:20px"></i>
+                        Hello, <span id="home-name">User</span>!
+                        <i id="home-verified-icon" class="fas fa-check-circle"
+                            style="color:#22c55e; font-size:20px; display:none;"></i>
+                        <i id="home-banned-icon" class="fas fa-times-circle"
+                            style="color:#ef4444; font-size:20px; display:none;"></i>
                     </div>
                     <div class="wc-balance-row">
                         <div class="wc-balance-item">
@@ -1531,24 +1585,58 @@
                         </div>
                     </div>
 
-                    <!-- Info Banner -->
-                    <div
-                        style="background:rgba(147,51,234,0.08); border:1px solid rgba(147,51,234,0.25); border-radius:14px; padding:14px 16px; margin-bottom:20px; display:flex; align-items:flex-start; gap:12px;">
-                        <i class="fas fa-info-circle"
-                            style="color:#9333ea; font-size:16px; margin-top:1px; flex-shrink:0;"></i>
-                        <div style="font-size:12px; color:var(--text-sub); line-height:1.6;">
-                            Get a real virtual phone number for receiving OTPs and SMS verifications. Numbers are valid
-                            for <strong style="color:var(--text-main);">20 minutes</strong>.
-                        </div>
-                    </div>
-
-                    <!-- Platform Selector -->
+                    <!-- COUNTRY SELECTOR (C) -->
                     <div style="margin-bottom:20px;">
                         <div
                             style="font-size:11px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">
-                            Select Platform</div>
-                        <div id="numPlatformList" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
-                            <!-- Platforms will be loaded dynamically from API -->
+                            <i class="fas fa-globe" style="margin-right:6px;"></i>Select Country
+                        </div>
+                        <div id="numCountrySelector" style="position:relative;">
+                            <select id="numCountrySelect" onchange="selectNumCountry(this.value)"
+                                style="width:100%; height:48px; background:var(--bg-card); border:2px solid var(--border-color); border-radius:14px; color:var(--text-main); font-size:14px; font-weight:600; padding:0 16px; cursor:pointer; appearance:none; -webkit-appearance:none;">
+                                <option value="us">🇺🇸 United States (+1)</option>
+                                <option value="uk">🇬🇧 United Kingdom (+44)</option>
+                                <option value="ca">🇨🇦 Canada (+1)</option>
+                                <option value="au">🇦🇺 Australia (+61)</option>
+                                <option value="de">🇩🇪 Germany (+49)</option>
+                                <option value="fr">🇫🇷 France (+33)</option>
+                                <option value="nl">🇳🇱 Netherlands (+31)</option>
+                                <option value="se">🇸🇪 Sweden (+46)</option>
+                            </select>
+                            <i class="fas fa-chevron-down"
+                                style="position:absolute; right:16px; top:50%; transform:translateY(-50%); color:var(--text-sub); pointer-events:none;"></i>
+                        </div>
+                    </div>
+
+                    <!-- SERVICE SELECTOR (S) - SIMPLE ROW STYLE -->
+                    <div style="margin-bottom:20px;">
+                        <div
+                            style="font-size:11px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">
+                            <i class="fas fa-briefcase" style="margin-right:6px;"></i>Select Service
+                        </div>
+
+                        <!-- Simple Service Box -->
+                        <div id="numServiceBox" onclick="toggleServiceDropdown()"
+                            style="background:var(--bg-card); border:1px solid rgba(147,51,234,0.35); border-radius:16px; height:56px; display:flex; align-items:center; justify-content:space-between; padding:0 16px; cursor:pointer;">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <div id="selectedServiceIcon"
+                                    style="width:36px; height:36px; background:rgba(147,51,234,0.15); border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                    <i class="fab fa-telegram" style="color:#9333ea; font-size:18px;"></i>
+                                </div>
+                                <div id="selectedServiceName"
+                                    style="font-size:16px; font-weight:700; color:var(--text-main);">Telegram</div>
+                            </div>
+                            <i class="fas fa-chevron-down" id="serviceDropdownIcon"
+                                style="color:#9333ea; font-size:14px; transition:transform 0.3s;"></i>
+                        </div>
+
+                        <!-- Service Options (Dropdown) -->
+                        <div id="serviceOptions"
+                            style="display:none; background:var(--bg-card); border:1px solid rgba(147,51,234,0.25); border-radius:12px; margin-top:8px; padding:12px;">
+                            <div id="numPlatformList"
+                                style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+                                <!-- Platforms will be loaded dynamically -->
+                            </div>
                         </div>
                     </div>
 
@@ -1588,47 +1676,46 @@
                         <i class="fas fa-phone-alt"></i> GET VIRTUAL NUMBER
                     </button>
 
-                    <!-- Result Box (hidden until number generated) -->
-                    <div id="numResultBox"
-                        style="display:none; background:var(--bg-card); border:1px solid rgba(147,51,234,0.35); border-radius:16px; padding:20px; margin-bottom:20px;">
+                    <!-- NUMBER + OTP - SINGLE LINE COMPACT -->
+                    <div id="numResultBox" style="display:none; margin-bottom:20px;">
+                        <!-- Single Line: OTP + Number + Copy + Cancel -->
                         <div
-                            style="font-size:11px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">
-                            Your Virtual Number</div>
-
-                        <!-- Phone Number Display -->
-                        <div
-                            style="display:flex; align-items:center; justify-content:space-between; background:rgba(147,51,234,0.08); border:1px solid rgba(147,51,234,0.2); border-radius:12px; padding:14px 16px; margin-bottom:16px;">
-                            <div id="numResultValue"
-                                style="font-size:20px; font-weight:900; color:#9333ea; font-family:monospace; letter-spacing:2px;">
-                                ---</div>
-                            <div style="display:flex; gap:8px;">
-                                <button onclick="copyText('numResultValue')"
-                                    style="width:36px; height:36px; border-radius:50%; background:#9333ea; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer;">
-                                    <i class="fas fa-copy" style="color:#fff; font-size:13px;"></i>
-                                </button>
-                                <button onclick="refreshOTP()"
-                                    style="width:36px; height:36px; border-radius:50%; background:rgba(147,51,234,0.15); border:1px solid rgba(147,51,234,0.3); display:flex; align-items:center; justify-content:center; cursor:pointer;">
-                                    <i class="fas fa-sync-alt" style="color:#9333ea; font-size:13px;"></i>
-                                </button>
+                            style="display:flex; align-items:center; gap:8px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:12px; padding:10px 12px;">
+                            <!-- OTP / Countdown (Left Corner) -->
+                            <div id="numOtpDisplay"
+                                style="min-width:60px; text-align:center; font-size:13px; font-weight:800; color:#22c55e; font-family:monospace; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); border-radius:8px; padding:6px 8px;">
+                                --
                             </div>
+
+                            <!-- Number -->
+                            <div style="flex:1; display:flex; align-items:center; gap:8px; overflow:hidden;">
+                                <div
+                                    style="width:28px; height:28px; background:#9333ea; border-radius:6px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                    <i class="fas fa-phone" style="color:#fff; font-size:10px;"></i>
+                                </div>
+                                <div id="numResultValue"
+                                    style="font-size:14px; font-weight:700; color:var(--text-main); font-family:monospace; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                    ---</div>
+                            </div>
+
+                            <!-- Copy Button -->
+                            <button onclick="copyNumResult()" id="numCopyBtn"
+                                style="width:32px; height:32px; border-radius:8px; background:rgba(147,51,234,0.1); border:1px solid rgba(147,51,234,0.3); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;">
+                                <i class="fas fa-copy" id="numCopyIcon" style="color:#9333ea; font-size:12px;"></i>
+                            </button>
+
+                            <!-- Cancel Button -->
+                            <button onclick="cancelNumber()" id="numCancelBtn"
+                                style="width:32px; height:32px; border-radius:8px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;">
+                                <i class="fas fa-times" style="color:#ef4444; font-size:12px;"></i>
+                            </button>
                         </div>
 
-                        <!-- OTP Box -->
-                        <div
-                            style="font-size:11px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px;">
-                            SMS / OTP</div>
-                        <div id="numOtpBox"
-                            style="text-align:center; padding:20px; background:rgba(255,255,255,0.03); border-radius:12px; color:var(--text-sub); font-size:13px;">
-                            <i class="fas fa-satellite-dish"
-                                style="font-size:20px; margin-bottom:8px; display:block; opacity:0.5;"></i>
-                            Waiting for incoming SMS...
+                        <!-- Status Row -->
+                        <div id="numStatusRow"
+                            style="display:none; margin-top:6px; text-align:center; font-size:11px; font-weight:700;">
+                            <span id="numStatusText" style="color:var(--text-sub);">Waiting for OTP...</span>
                         </div>
-
-                        <!-- Cancel Button -->
-                        <button onclick="cancelNumber()"
-                            style="width:100%; margin-top:14px; height:40px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:12px; color:#ef4444; font-size:12px; font-weight:700; cursor:pointer;">
-                            <i class="fas fa-times"></i> CANCEL &amp; RELEASE NUMBER
-                        </button>
                     </div>
 
                     <!-- History -->
@@ -1759,7 +1846,7 @@
                         </div>
 
                         <!-- OTP Quick View -->
-                        <div id="tempOtpList" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:16px;"></div>
+                        <div id="tempOtpList" style="display:flex; justify-content:flex-start; padding:10px 0;"></div>
 
                         <!-- Inbox Table -->
                         <div
@@ -1858,7 +1945,8 @@
                         </div>
 
                         <!-- OTP Quick View -->
-                        <div id="premiumOtpList" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:16px;">
+                        <div id="premiumOtpList"
+                            style="display:flex; justify-content:flex-start; padding:10px 0; margin-bottom:16px;">
                         </div>
 
                         <!-- Inbox Table -->
@@ -1979,8 +2067,11 @@
                         <!-- Name (Increased Size) -->
                         <div class="pui-name"
                             style="color: #ffffff; font-size: 20px; font-weight: 800; margin-bottom: 2px; line-height: 1.2;">
-                            <span id="prof-name">User</span> <i class="fas fa-check-circle"
-                                style="color:#22c55e; font-size:16px; vertical-align:middle; margin-left:2px"></i>
+                            <span id="prof-name">User</span>
+                            <i id="prof-verified-icon" class="fas fa-check-circle"
+                                style="color:#22c55e; font-size:16px; vertical-align:middle; margin-left:2px; display:none;"></i>
+                            <i id="prof-banned-icon" class="fas fa-times-circle"
+                                style="color:#ef4444; font-size:16px; vertical-align:middle; margin-left:2px; display:none;"></i>
                         </div>
 
                         <!-- ID (Increased Size) -->
@@ -3432,10 +3523,10 @@
         </div>
 
         <!-- PREMIUM ITEMS PAGE (formerly Accounts Store) -->
-        <div id="accountsStorePage" class="page" style="padding-bottom: 115px; padding-top: 0; margin-top: -110px;">
+        <div id="accountsStorePage" class="page">
             <!-- Balance Display -->
             <div
-                style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:14px 18px; margin-top:20px;">
+                style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; margin-top:-130px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:12px 16px;">
                 <div style="display:flex; align-items:center; gap:10px;">
                     <div
                         style="width:38px; height:38px; background:rgba(34,197,94,0.15); border-radius:10px; display:flex; align-items:center; justify-content:center;">
@@ -4601,79 +4692,34 @@
                 box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05) !important;
             }
 
-            /* 2. Bottom Nav Pill */
-            .bottom-nav {
-                position: fixed;
-                bottom: 15px;
-                left: 10px;
-                right: 10px;
-                height: 75px;
-                background: rgba(43, 20, 11, 0.65) !important;
-                backdrop-filter: blur(25px) !important;
-                -webkit-backdrop-filter: blur(25px) !important;
-                border-radius: 40px;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                padding: 0 20px;
-                z-index: 1000;
-                width: auto;
-            }
-
-            [data-theme="light"] .bottom-nav {
-                background: rgba(255, 255, 255, 0.9);
-                border: 1px solid rgba(0, 0, 0, 0.1);
-                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-            }
-
-            /* Nav Items */
-            .nav-item,
-            .nav-center {
-                width: 58px;
-                height: 58px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border-radius: 50%;
-                color: #888;
-                transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-                cursor: pointer;
-            }
-
-            /* Enhanced Active State */
-            .nav-item.active,
-            .nav-center.active {
-                background: #fbbf24 !important;
-                /* Premium Golden Yellow */
-                color: #000 !important;
-                transform: translateY(-8px) scale(1.1);
-                box-shadow: 0 10px 25px rgba(251, 191, 36, 0.6) !important;
-            }
-
-            .nav-item.active i,
-            .nav-center.active i {
-                color: #000 !important;
-                font-size: 26px;
-            }
-
+            /* 2. Bottom Nav Pill - overridden by inline CSS above */
             .main-scroll {
                 padding-top: 75px !important;
-                padding-bottom: 120px !important;
+                padding-bottom: 130px !important;
                 overflow-y: auto !important;
                 -webkit-overflow-scrolling: touch !important;
             }
         </style>
-        <!-- Navigation Restored -->
+        <!-- Bottom Navigation - 5 Items with Labels -->
         <div class="bottom-nav">
-            <div class="nav-item active" data-page="home" onclick="nav('home')"><i class="fas fa-home"></i>
+            <div class="nav-item active" data-page="home" onclick="nav('home')">
+                <i class="fas fa-house"></i>
+                <span class="nav-label">HOME</span>
             </div>
-            <div class="nav-item" data-page="tasks" onclick="nav('tasks')"><i class="fas fa-tasks"></i>
+            <div class="nav-item" data-page="tasks" onclick="nav('tasks')">
+                <i class="fas fa-list-check"></i>
+                <span class="nav-label">TASKS</span>
             </div>
-            <div class="nav-center" data-page="shop" onclick="nav('shop')"><i class="fas fa-shopping-bag"></i>
+            <div class="nav-center" data-page="shop" onclick="nav('shop')">
+                <i class="fas fa-shopping-bag"></i>
             </div>
-            <div class="nav-item" data-page="profile" onclick="nav('profile')"><i class="fas fa-user"></i>
+            <div class="nav-item" data-page="invite" onclick="nav('invite')">
+                <i class="fas fa-user-plus"></i>
+                <span class="nav-label">INVITE</span>
+            </div>
+            <div class="nav-item" data-page="profile" onclick="nav('profile')">
+                <i class="fas fa-user"></i>
+                <span class="nav-label">PROFILE</span>
             </div>
         </div>
 
@@ -4850,71 +4896,72 @@
                     itemSell: 'Item Sell',
                 },
                 bn: {
-                    appName: '??? ???????', welcomeBack: '?????? ????,', tokensLabel: '?????', gemsLabel: '???',
-                    daily: '?????', verify: '???????', service: '???????', tasks: '?????', invite: '????????',
-                    history: '??????', deposit: '???????', earn: '???????', accounts: '???????',
-                    number: '?????', email: '?????', redeemTokens: '????? ????? ????',
-                    redeemSub: '????? ???? ??? ???', recentActivity: '?????????? ?????????', seeAll: '?? ?????',
-                    language: '????', selectLang: '???? ???????? ????', chooseLang: '????? ??????? ???? ???? ???',
-                    home: '???', shop: '??', profile: '????????', verification: '??????????', services: '???????',
-                    leaderboard: '??????????', exchange: '?????????', redeemCode: '????? ???',
-                    virtualNumber: '?????????? ?????', inviteEarn: '???????? ? ???????', supportTeam: '??????? ???',
-                    support: '??????? ???', appearance: '???', themeDark: '???: ????? ???',
-                    accountStatus: '?????????? ?????????', displaySecurity: '??????? ? ?????????',
-                    totalAssets: '??? ?????', estimatedValue: '???????? ?????',
-                    applyVerify: '???????????? ???? ????? ????', earnFreeTokens: '?????????? ????? ???????',
-                    yourReferral: '????? ??????? ????', invited: '?????????', earned: '????????',
-                    topRefs: '????? ?? ???????', globalRanking: '??????? ?????????', needHelp: '??????? ??????',
-                    msgSupport: '?????? ???????? ?????? ???', availableItems: '?????? ??????',
-                    claimReward: '???????? ???', dailyBonus: '????? ?????', nextClaim: '??????? ????:',
-                    missionCenter: '???? ???????', howToEarn: '?????? ??????? ?????',
-                    yourInboxEmpty: '?????? ????', waitingEmails: '??????? ?????????',
-                    close: '???? ????', copyAll: '?? ??? ????',
+                    appName: 'অটো ভেরিফাই', welcomeBack: 'স্বাগত ফিরে,', tokensLabel: 'টোকেন', gemsLabel: 'জেম',
+                    daily: 'ডেইলি', verify: 'ভেরিফাই', service: 'সার্ভিস', tasks: 'টাস্ক', invite: 'আমন্ত্রণ',
+                    history: 'ইতিহাস', deposit: 'ডিপোজিট', earn: 'উপার্জন', accounts: 'একাউন্ট',
+                    number: 'নম্বর', email: 'ইমেইল', redeemTokens: 'টোকেন রিডিম করুন',
+                    redeemSub: 'টোকেন পেতে কোড দিন', recentActivity: 'সাম্প্রতিক কার্যক্রম', seeAll: 'সব দেখুন',
+                    language: 'ভাষা', selectLang: 'ভাষা নির্বাচন করুন', chooseLang: 'আপনার পছন্দের ভাষা বেছে নিন',
+                    home: 'হোম', shop: 'শপ', profile: 'প্রোফাইল', verification: 'ভেরিফিকেশন', services: 'সার্ভিস',
+                    leaderboard: 'লিডারবোর্ড', exchange: 'এক্সচেঞ্জ', redeemCode: 'রিডিম কোড',
+                    virtualNumber: 'ভার্চুয়াল নম্বর', inviteEarn: 'আমন্ত্রণ ও উপার্জন', supportTeam: 'সাপোর্ট টিম',
+                    support: 'সাপোর্ট টিম', appearance: 'থিম', themeDark: 'থিম: ডার্ক মোড',
+                    accountStatus: 'অ্যাকাউন্ট স্ট্যাটাস', displaySecurity: 'ডিসপ্লে ও সিকিউরিটি',
+                    totalAssets: 'মোট সম্পদ', estimatedValue: 'আনুমানিক মূল্য',
+                    applyVerify: 'ভেরিফিকেশনের জন্য আবেদন করুন', earnFreeTokens: 'বিনামূল্যে টোকেন উপার্জন',
+                    yourReferral: 'আপনার রেফারেল লিংক', invited: 'আমন্ত্রিত', earned: 'উপার্জিত',
+                    topRefs: 'শীর্ষ ১০ রেফারার', globalRanking: 'গ্লোবাল র‍্যাংকিং', needHelp: 'সাহায্য দরকার?',
+                    msgSupport: 'সরাসরি সাপোর্টে বার্তা দিন', availableItems: 'পাওয়া যাচ্ছে',
+                    claimReward: 'পুরস্কার নিন', dailyBonus: 'ডেইলি বোনাস', nextClaim: 'পরবর্তী দাবি:',
+                    missionCenter: 'মিশন সেন্টার', howToEarn: 'কীভাবে উপার্জন করবেন',
+                    yourInboxEmpty: 'ইনবক্স খালি', waitingEmails: 'ইমেইলের অপেক্ষায়',
+                    close: 'বন্ধ করুন', copyAll: 'সব কপি করুন',
                     itemSell: 'আইটেম সেল',
                 },
                 ar: {
-                    appName: '?????? ????????', welcomeBack: '?????? ???????', tokensLabel: '????', gemsLabel: '?????',
-                    daily: '????', verify: '????', service: '????', tasks: '??????', invite: '????',
-                    history: '?????', deposit: '?????', earn: '???', accounts: '????????',
-                    number: '???', email: '????', redeemTokens: '??????? ??????',
-                    redeemSub: '???? ????? ?????? ??? ????', recentActivity: '?????? ??????', seeAll: '??? ????',
-                    language: '?????', selectLang: '???? ?????', chooseLang: '???? ???? ???????',
-                    home: '????????', shop: '??????', profile: '?????', verification: '??????', services: '???????',
-                    leaderboard: '???? ?????????', exchange: '?????', redeemCode: '??????? ?????',
-                    virtualNumber: '??? ???????', inviteEarn: '???? ?????', supportTeam: '???? ?????',
-                    support: '???? ?????', appearance: '??????', themeDark: '?????: ????? ??????',
-                    accountStatus: '???? ??????', displaySecurity: '????? ???????',
-                    totalAssets: '?????? ??????', estimatedValue: '?????? ?????????',
-                    applyVerify: '????? ??????', earnFreeTokens: '???? ?????? ??????',
-                    yourReferral: '???? ???????', invited: '????', earned: '?????',
-                    topRefs: '???? 10 ??????', globalRanking: '??????? ???????', needHelp: '????? ???????',
-                    msgSupport: '???? ????? ??????', availableItems: '??????? ???????',
-                    claimReward: '???? ??? ????????', dailyBonus: '?????? ?????', nextClaim: '????? ??????:',
-                    missionCenter: '???? ??????', howToEarn: '????? ?????',
-                    yourInboxEmpty: '?????? ????', waitingEmails: '?? ?????? ?????',
-                    close: '?????', copyAll: '??? ????',
+                    appName: 'التحقق التلقائي', welcomeBack: 'مرحبًا بعودتك،', tokensLabel: 'رموز', gemsLabel: 'جواهر',
+                    daily: 'يومي', verify: 'تحقق', service: 'خدمة', tasks: 'المهام', invite: 'دعوة',
+                    history: 'السجل', deposit: 'إيداع', earn: 'كسب', accounts: 'الحسابات',
+                    number: 'رقم', email: 'بريد', redeemTokens: 'استرداد الرموز',
+                    redeemSub: 'أدخل الكود للحصول على رموز', recentActivity: 'النشاط الأخير', seeAll: 'عرض الكل',
+                    language: 'اللغة', selectLang: 'اختر اللغة', chooseLang: 'اختر لغتك المفضلة',
+                    home: 'الرئيسية', shop: 'المتجر', profile: 'الملف', verification: 'التحقق', services: 'الخدمات',
+                    leaderboard: 'لوحة المتصدرين', exchange: 'تبادل', redeemCode: 'استرداد الكود',
+                    virtualNumber: 'رقم افتراضي', inviteEarn: 'دعوة واكسب', supportTeam: 'فريق الدعم',
+                    support: 'فريق الدعم', appearance: 'المظهر', themeDark: 'السمة: الوضع الداكن',
+                    accountStatus: 'حالة الحساب', displaySecurity: 'العرض والأمان',
+                    totalAssets: 'إجمالي الأصول', estimatedValue: 'القيمة التقديرية',
+                    applyVerify: 'تقديم للتحقق', earnFreeTokens: 'اكسب رموزاً مجاناً',
+                    yourReferral: 'رابط الإحالة', invited: 'مدعو', earned: 'مكتسب',
+                    topRefs: 'أعلى 10 محيلين', globalRanking: 'الترتيب العالمي', needHelp: 'تحتاج مساعدة؟',
+                    msgSupport: 'راسل الدعم مباشرة', availableItems: 'العناصر المتاحة',
+                    claimReward: 'احصل على المكافأة', dailyBonus: 'مكافأة يومية', nextClaim: 'الطلب التالي:',
+                    missionCenter: 'مركز المهام', howToEarn: 'كيفية الكسب',
+                    yourInboxEmpty: 'صندوقك فارغ', waitingEmails: 'في انتظار رسائل',
+                    close: 'إغلاق', copyAll: 'نسخ الكل',
+                    itemSell: 'بيع العناصر',
                 },
                 hi: {
-                    appName: '??? ???????', welcomeBack: '????? ?? ??????,', tokensLabel: '????', gemsLabel: '????',
-                    daily: '?????', verify: '????????', service: '????', tasks: '?????', invite: '???????',
-                    history: '??????', deposit: '???', earn: '?????', accounts: '????',
-                    number: '????', email: '????', redeemTokens: '???? ????? ????',
-                    redeemSub: '???? ???? ?? ??? ??? ???? ????', recentActivity: '??? ?? ???????', seeAll: '?? ?????',
-                    language: '????', selectLang: '???? ?????', chooseLang: '???? ??????? ???? ?????',
-                    home: '???', shop: '?????', profile: '?????????', verification: '???????', services: '??????',
-                    leaderboard: '?????????', exchange: '????????', redeemCode: '??? ?????',
-                    virtualNumber: '??????? ????', inviteEarn: '???????? ???? ?? ?????', supportTeam: '?????? ???',
-                    support: '?????? ???', appearance: '??????', themeDark: '???: ????? ???',
-                    accountStatus: '???? ??????', displaySecurity: '???????? ?? ???????',
-                    totalAssets: '??? ???????', estimatedValue: '???????? ?????',
-                    applyVerify: '??????? ?? ??? ????? ????', earnFreeTokens: '????? ???? ?????',
-                    yourReferral: '???? ????? ????', invited: '????????', earned: '??????',
-                    topRefs: '????? 10 ?????', globalRanking: '??????? ???????', needHelp: '??? ??????',
-                    msgSupport: '???? ?????? ?? ????? ?????', availableItems: '?????? ????',
-                    claimReward: '???????? ???', dailyBonus: '????? ????', nextClaim: '???? ????:',
-                    missionCenter: '???? ?????', howToEarn: '???? ?????',
-                    yourInboxEmpty: '??????? ???? ??', waitingEmails: '???? ?? ??????',
-                    close: '??? ????', copyAll: '?? ???? ????',
+                    appName: 'ऑटो वेरीफाई', welcomeBack: 'वापसी पर स्वागत,', tokensLabel: 'टोकन', gemsLabel: 'रत्न',
+                    daily: 'दैनिक', verify: 'सत्यापित', service: 'सेवा', tasks: 'कार्य', invite: 'आमंत्रण',
+                    history: 'इतिहास', deposit: 'जमा', earn: 'कमाएं', accounts: 'खाते',
+                    number: 'नंबर', email: 'ईमेल', redeemTokens: 'टोकन रिडीम करें',
+                    redeemSub: 'टोकन पाने के लिए कोड दर्ज करें', recentActivity: 'हाल की गतिविधि', seeAll: 'सब देखें',
+                    language: 'भाषा', selectLang: 'भाषा चुनें', chooseLang: 'अपनी पसंदीदा भाषा चुनें',
+                    home: 'होम', shop: 'दुकान', profile: 'प्रोफ़ाइल', verification: 'सत्यापन', services: 'सेवाएं',
+                    leaderboard: 'लीडरबोर्ड', exchange: 'एक्सचेंज', redeemCode: 'कोड रिडीम',
+                    virtualNumber: 'वर्चुअल नंबर', inviteEarn: 'आमंत्रित करें और कमाएं', supportTeam: 'सहायता टीम',
+                    support: 'सहायता टीम', appearance: 'दिखावट', themeDark: 'थीम: डार्क मोड',
+                    accountStatus: 'खाता स्थिति', displaySecurity: 'प्रदर्शन और सुरक्षा',
+                    totalAssets: 'कुल संपत्ति', estimatedValue: 'अनुमानित मूल्य',
+                    applyVerify: 'सत्यापन के लिए आवेदन करें', earnFreeTokens: 'मुफ्त टोकन कमाएं',
+                    yourReferral: 'आपका रेफरल लिंक', invited: 'आमंत्रित', earned: 'अर्जित',
+                    topRefs: 'शीर्ष 10 रेफरर', globalRanking: 'वैश्विक रैंकिंग', needHelp: 'मदद चाहिए?',
+                    msgSupport: 'सीधे सहायता को संदेश भेजें', availableItems: 'उपलब्ध आइटम',
+                    claimReward: 'पुरस्कार लें', dailyBonus: 'दैनिक बोनस', nextClaim: 'अगला दावा:',
+                    missionCenter: 'मिशन सेंटर', howToEarn: 'कैसे कमाएं',
+                    yourInboxEmpty: 'इनबॉक्स खाली है', waitingEmails: 'ईमेल का इंतजार',
+                    close: 'बंद करें', copyAll: 'सब कॉपी करें',
                 },
                 fr: {
                     appName: 'Vrification Auto', welcomeBack: 'BON RETOUR,', tokensLabel: 'Jetons', gemsLabel: 'Gemmes',
@@ -4983,48 +5030,48 @@
                     close: 'SCHLIESSEN', copyAll: 'ALLES KOPIEREN',
                 },
                 ru: {
-                    appName: '???? ???????????', welcomeBack: '? ????????????,', tokensLabel: '??????', gemsLabel: '?????????',
-                    daily: '?????????', verify: '??????????????', service: '??????', tasks: '??????', invite: '??????????',
-                    history: '???????', deposit: '???????', earn: '????????????', accounts: '????????',
-                    number: '?????', email: '?????', redeemTokens: '???????? ??????',
-                    redeemSub: '??????? ??? ??? ????????? ???????', recentActivity: '????????? ??????????', seeAll: '???',
-                    language: '????', selectLang: '??????? ????', chooseLang: '???????? ???????????????? ????',
-                    home: '???????', shop: '???????', profile: '???????', verification: '???????????', services: '???????',
-                    leaderboard: '???????', exchange: '?????', redeemCode: '????????',
-                    virtualNumber: '??????????? ?????', inviteEarn: '????????? ? ???????????', supportTeam: '?????? ?????????',
-                    support: '?????? ?????????', appearance: '??????? ???', themeDark: '????: ?????? ?????',
-                    accountStatus: '?????? ????????', displaySecurity: '??????? ? ????????????',
-                    totalAssets: '????? ???????', estimatedValue: '????????? ?????????',
-                    applyVerify: '?????? ?? ???????????', earnFreeTokens: '????????????? ?????? ?????????',
-                    yourReferral: '???? ??????????? ??????', invited: '??????????', earned: '??????????',
-                    topRefs: '??? 10 ?????????', globalRanking: '?????????? ???????', needHelp: '????? ???????',
-                    msgSupport: '???????? ? ?????????', availableItems: '????????? ??????',
-                    claimReward: '??????? ???????', dailyBonus: '?????????? ?????', nextClaim: '?????????:',
-                    missionCenter: '????? ??????', howToEarn: '??? ????????????',
-                    yourInboxEmpty: '??? ???? ????', waitingEmails: '???????? ?????',
-                    close: '???????', copyAll: '?????????? ???',
+                    appName: 'Авто Верификация', welcomeBack: 'С ВОЗВРАЩЕНИЕМ,', tokensLabel: 'Токены', gemsLabel: 'Самоцветы',
+                    daily: 'Ежедневно', verify: 'Верифицировать', service: 'Сервис', tasks: 'Задачи', invite: 'Пригласить',
+                    history: 'История', deposit: 'Депозит', earn: 'Зарабатывать', accounts: 'Аккаунты',
+                    number: 'Номер', email: 'Почта', redeemTokens: 'Получить Токены',
+                    redeemSub: 'Введите код для получения токенов', recentActivity: 'Последняя активность', seeAll: 'ВСЕ',
+                    language: 'Язык', selectLang: 'Выбрать язык', chooseLang: 'Выберите предпочтительный язык',
+                    home: 'Главная', shop: 'Магазин', profile: 'Профиль', verification: 'Верификация', services: 'Сервисы',
+                    leaderboard: 'Рейтинг', exchange: 'Обмен', redeemCode: 'Промокод',
+                    virtualNumber: 'Виртуальный номер', inviteEarn: 'Приглашай и зарабатывай', supportTeam: 'Служба поддержки',
+                    support: 'Служба поддержки', appearance: 'Внешний вид', themeDark: 'ТЕМА: ТЁМНЫЙ РЕЖИМ',
+                    accountStatus: 'Статус аккаунта', displaySecurity: 'ДИСПЛЕЙ И БЕЗОПАСНОСТЬ',
+                    totalAssets: 'Всего активов', estimatedValue: 'РАСЧЁТНАЯ СТОИМОСТЬ',
+                    applyVerify: 'ПОДАТЬ НА ВЕРИФИКАЦИЮ', earnFreeTokens: 'Зарабатывайте токены бесплатно',
+                    yourReferral: 'Ваша реферальная ссылка', invited: 'ПРИГЛАШЕНО', earned: 'ЗАРАБОТАНО',
+                    topRefs: 'ТОП 10 РЕФЕРЕРОВ', globalRanking: 'Глобальный рейтинг', needHelp: 'Нужна помощь?',
+                    msgSupport: 'НАПИСАТЬ В ПОДДЕРЖКУ', availableItems: 'ДОСТУПНЫЕ ТОВАРЫ',
+                    claimReward: 'ЗАБРАТЬ НАГРАДУ', dailyBonus: 'Ежедневный бонус', nextClaim: 'СЛЕДУЮЩИЙ:',
+                    missionCenter: 'ЦЕНТР МИССИЙ', howToEarn: 'КАК ЗАРАБАТЫВАТЬ',
+                    yourInboxEmpty: 'Ваш ящик пуст', waitingEmails: 'Ожидание писем',
+                    close: 'ЗАКРЫТЬ', copyAll: 'КОПИРОВАТЬ ВСЁ',
                 },
                 zh: {
-                    appName: '????', welcomeBack: '????,', tokensLabel: '??', gemsLabel: '??',
-                    daily: '??', verify: '??', service: '??', tasks: '??', invite: '??',
-                    history: '??', deposit: '??', earn: '??', accounts: '??',
-                    number: '??', email: '??', redeemTokens: '????',
-                    redeemSub: '????????', recentActivity: '????', seeAll: '??',
-                    language: '??', selectLang: '????', chooseLang: '????????',
-                    home: '??', shop: '??', profile: '????', verification: '??', services: '??',
-                    leaderboard: '???', exchange: '??', redeemCode: '???',
-                    virtualNumber: '????', inviteEarn: '??&??', supportTeam: '????',
-                    support: '????', appearance: '??', themeDark: '??: ????',
-                    accountStatus: '????', displaySecurity: '?????',
-                    totalAssets: '???', estimatedValue: '????',
-                    applyVerify: '????', earnFreeTokens: '??????',
-                    yourReferral: '??????', invited: '???', earned: '???',
-                    topRefs: '?10????', globalRanking: '????', needHelp: '?????',
-                    msgSupport: '??????', availableItems: '????',
-                    claimReward: '????', dailyBonus: '????', nextClaim: '????:',
-                    missionCenter: '????', howToEarn: '????',
-                    yourInboxEmpty: '???????', waitingEmails: '????',
-                    close: '??', copyAll: '????',
+                    appName: '自动验证', welcomeBack: '欢迎回来，', tokensLabel: '代币', gemsLabel: '宝石',
+                    daily: '每日', verify: '验证', service: '服务', tasks: '任务', invite: '邀请',
+                    history: '历史', deposit: '存款', earn: '赚取', accounts: '账户',
+                    number: '号码', email: '邮件', redeemTokens: '兑换代币',
+                    redeemSub: '输入代码获取代币', recentActivity: '最近活动', seeAll: '全部',
+                    language: '语言', selectLang: '选择语言', chooseLang: '选择您首选的语言',
+                    home: '主页', shop: '商店', profile: '个人资料', verification: '验证', services: '服务',
+                    leaderboard: '排行榜', exchange: '兑换', redeemCode: '兑换码',
+                    virtualNumber: '虚拟号码', inviteEarn: '邀请&赚取', supportTeam: '支持团队',
+                    support: '支持团队', appearance: '外观', themeDark: '主题: 深色模式',
+                    accountStatus: '账户状态', displaySecurity: '显示与安全',
+                    totalAssets: '总资产', estimatedValue: '估计价值',
+                    applyVerify: '申请验证', earnFreeTokens: '免费赚取代币',
+                    yourReferral: '您的推荐链接', invited: '已邀请', earned: '已赚取',
+                    topRefs: '前10名推荐人', globalRanking: '全球排名', needHelp: '需要帮助?',
+                    msgSupport: '直接联系支持', availableItems: '可用商品',
+                    claimReward: '领取奖励', dailyBonus: '每日奖励', nextClaim: '下次领取:',
+                    missionCenter: '任务中心', howToEarn: '如何赚取',
+                    yourInboxEmpty: '您的邮箱是空的', waitingEmails: '等待收件',
+                    close: '关闭', copyAll: '全部复制',
                 },
                 tr: {
                     appName: 'Otomatik Dogrulama', welcomeBack: 'HOS GELDINIZ,', tokensLabel: 'Token', gemsLabel: 'Mcevher',

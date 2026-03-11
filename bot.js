@@ -473,8 +473,8 @@ global.emitLog = (message, type = 'info') => {
 const startThrottle = new Map();
 const startChatSendLock = new Map();
 bot.onText(/\/start/, async (msg) => {
+    const chatId = msg.chat.id;
     try {
-        const chatId = msg.chat.id;
         const userId = msg.from.id;
 
         // Anti-duplicate protection for start command
@@ -521,7 +521,7 @@ bot.onText(/\/start/, async (msg) => {
             // User not joined, show mandatory join screen
 
             // Remove lingering keyboard if it exists
-            const cleanupMsg = await bot.sendMessage(chatId, "⏳ Initializing...", { reply_markup: { remove_keyboard: true } });
+            const cleanupMsg = await bot.sendMessage(chatId, "⏳ Initializing...", { reply_markup: { Remove_keyboard: true } });
             bot.deleteMessage(chatId, cleanupMsg.message_id).catch(() => { });
 
             showMandatoryJoin(chatId, membership);
@@ -529,7 +529,7 @@ bot.onText(/\/start/, async (msg) => {
         }
 
         // Cleanup old persistent keyboards before sending the menu
-        const cleanupMsg2 = await bot.sendMessage(chatId, "⏳ Initializing...", { reply_markup: { remove_keyboard: true } });
+        const cleanupMsg2 = await bot.sendMessage(chatId, "⏳ Initializing...", { reply_markup: { Remove_keyboard: true } });
         bot.deleteMessage(chatId, cleanupMsg2.message_id).catch(() => { });
 
         // User is member, show main menu
@@ -696,6 +696,27 @@ bot.on('message', async (msg) => {
 
     // Check for new chat members (join messages)
     if (msg.new_chat_members && msg.new_chat_members.length > 0) {
+        // Welcome new members before deleting the system message
+        for (const newMember of msg.new_chat_members) {
+            // Don't welcome bots
+            if (newMember.is_bot) continue;
+
+            const welcomeText = `👋 Welcome ${newMember.first_name || 'New Member'} to ${msg.chat.title || 'our group'}!\n\n🎉 We're glad to have you here. Feel free to introduce yourself and enjoy the community!`;
+
+            try {
+                await bot.sendMessage(chatId, welcomeText, {
+                    reply_markup: {
+                        inline_keyboard: [
+                            [{ text: '🚀 Start Bot', url: `https://t.me/${db.data.settings?.botUsername || 'YourBot'}?start=welcome` }]
+                        ]
+                    }
+                });
+                console.log(`[WELCOME] Sent welcome to ${newMember.first_name} (${newMember.id})`);
+            } catch (e) {
+                console.log(`[WELCOME] Failed to send welcome: ${e.message}`);
+            }
+        }
+
         if (settings.deleteJoinMessages !== false) {
             shouldDelete = true;
             deleteReason = 'join';

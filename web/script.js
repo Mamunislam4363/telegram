@@ -119,6 +119,7 @@ var userData = {
     Gems: 0,
     usd: 0.00,
     verified: true,
+    banned: false, // Track banned status
     dailyStreak: 0,
     lastDailyClaim: 0,
     completedTasks: [],
@@ -315,9 +316,8 @@ function nav(p) {
         }
     } catch (e) { }
 
-    // BAN CHECK (Moved to showPage for better centralization)
-    if (userStatus === 'banned') {
-        window.showToast('ACCOUNT BANNED\n\nYou have been banned by the admin.\nPlease contact support to resolve this issue.\n\nSupport: @Onlin_Income_Support');
+    // BAN CHECK - Show ban modal if user is banned
+    if (checkBanStatus()) {
         return;
     }
 
@@ -465,10 +465,66 @@ function showPage(targetId) {
     if (targetId === 'quiz') loadQuiz();
     if (targetId === 'quizLeaderboard') renderQuizLeaderboard();
     if (targetId === 'scratch') {
+        // Cleanup any previous scratch handlers before reinitializing
+        if (window._scratchCleanup) window._scratchCleanup();
+        // Setup scroll blocker (only for scratch page)
+        if (!window._scratchScrollBlocker) {
+            window._scratchScrollBlocker = function (e) {
+                try {
+                    if (currentPage === 'scratch') {
+                        if (e && typeof e.preventDefault === 'function') e.preventDefault();
+                        if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+                        return false;
+                    }
+                } catch (_) { }
+            };
+        }
+
         const canvas = document.getElementById('scratchCanvas');
         if (canvas) canvas.style.display = 'block';
         if (canvas) canvas.style.opacity = '1';
         initScratchCard();
+        // Disable scrolling on scratch page to prevent accidental scroll/pull-to-refresh
+        const mainScroll = document.getElementById('mainScroll');
+        if (mainScroll) {
+            mainScroll.style.overflow = 'hidden';
+            mainScroll.style.touchAction = 'none';
+            // Force scroll position to top on scratch page
+            mainScroll.scrollTop = 0;
+        }
+        document.body.style.overflow = 'hidden';
+        document.body.style.touchAction = 'none';
+
+        // Block wheel/touchmove scrolling (some devices still scroll even with overflow hidden)
+        try {
+            document.addEventListener('wheel', window._scratchScrollBlocker, { passive: false });
+            document.addEventListener('touchmove', window._scratchScrollBlocker, { passive: false });
+        } catch (e) {
+            // Fallback for older browsers
+            document.addEventListener('wheel', window._scratchScrollBlocker);
+            document.addEventListener('touchmove', window._scratchScrollBlocker);
+        }
+    } else {
+        // Re-enable scrolling when leaving scratch page
+        const mainScroll = document.getElementById('mainScroll');
+        if (mainScroll) {
+            mainScroll.style.overflow = '';
+            mainScroll.style.touchAction = '';
+        }
+        document.body.style.overflow = '';
+        document.body.style.touchAction = '';
+        // Cleanup scratch handlers when leaving scratch page
+        if (window._scratchCleanup) window._scratchCleanup();
+        // Remove scroll blockers when leaving scratch page
+        if (window._scratchScrollBlocker) {
+            try {
+                document.removeEventListener('wheel', window._scratchScrollBlocker, { passive: false });
+                document.removeEventListener('touchmove', window._scratchScrollBlocker, { passive: false });
+            } catch (e) {
+                document.removeEventListener('wheel', window._scratchScrollBlocker);
+                document.removeEventListener('touchmove', window._scratchScrollBlocker);
+            }
+        }
     }
 
     // Update current page tracker
@@ -1337,54 +1393,71 @@ function showAdAndEarn(context = 'watch_ad') {
             const ads = data.ads || {};
             let adInjected = false;
 
-            // Check for Direct Link first (priority over other ad types)
-            if (!adInjected && ads.directlink && ads.directlink.url && ads.directlink.enabled !== false) {
-                adInjected = true;
-                // Open direct link in new tab
-                window.open(ads.directlink.url, '_blank');
-                // Proceed with reward after short delay
-                setTimeout(claimAdReward, 2000);
-                return;
-            }
-
-            if (!adInjected && ads.moneytag && ads.moneytag.publisherId) {
-                adInjected = true;
-                const cfg = ads.moneytag;
-                const zoneId = cfg.adUnitId || cfg.publisherId;
-
-                if (window[`show_${zoneId}`]) {
-                    try { window[`show_${zoneId}`](); } catch (e) { }
+            // Check MoneyTag with Direct Link priority
+            if (!adInjected && ads.moneytag && ads.moneytag.enabled !== false) {
+                if (ads.moneytag.directUrl) {
+                    adInjected = true;
+                    window.open(ads.moneytag.directUrl, '_blank');
                     setTimeout(claimAdReward, 2000);
-                } else {
-                    const script = document.createElement('script');
-                    script.src = '//libtl.com/sdk.js';
-                    script.setAttribute('data-zone', zoneId);
-                    script.setAttribute('data-sdk', `show_${zoneId}`);
+                    return;
+                } else if (ads.moneytag.publisherId) {
+                    adInjected = true;
+                    const cfg = ads.moneytag;
+                    const zoneId = cfg.adUnitId || cfg.publisherId;
 
-                    script.onload = () => {
-                        if (window[`show_${zoneId}`]) {
-                            try { window[`show_${zoneId}`](); } catch (e) { }
-                        }
+                    if (window[`show_${zoneId}`]) {
+                        try { window[`show_${zoneId}`](); } catch (e) { }
                         setTimeout(claimAdReward, 2000);
-                    };
-                    document.body.appendChild(script);
+                    } else {
+                        const script = document.createElement('script');
+                        script.src = '//libtl.com/sdk.js';
+                        script.setAttribute('data-zone', zoneId);
+                        script.setAttribute('data-sdk', `show_${zoneId}`);
+
+                        script.onload = () => {
+                            if (window[`show_${zoneId}`]) {
+                                try { window[`show_${zoneId}`](); } catch (e) { }
+                            }
+                            setTimeout(claimAdReward, 2000);
+                        };
+                        document.body.appendChild(script);
+                    }
+                    return;
                 }
             }
 
-            if (!adInjected && ads.adsense && ads.adsense.publisherId) {
-                adInjected = true;
-                setTimeout(claimAdReward, 1500);
+            // Check AdSense with Direct Link priority
+            if (!adInjected && ads.adsense && ads.adsense.enabled !== false) {
+                if (ads.adsense.directUrl) {
+                    adInjected = true;
+                    window.open(ads.adsense.directUrl, '_blank');
+                    setTimeout(claimAdReward, 2000);
+                    return;
+                } else if (ads.adsense.publisherId) {
+                    adInjected = true;
+                    setTimeout(claimAdReward, 1500);
+                    return;
+                }
             }
 
-            if (!adInjected && ads.adsterra && ads.adsterra.publisherId) {
-                adInjected = true;
-                const cfg = ads.adsterra;
-                const atScript = document.createElement('script');
-                atScript.async = true;
-                atScript.setAttribute('data-cfasync', 'false');
-                atScript.src = `//pl${cfg.adUnitId}.profitableratecpm.com/${cfg.publisherId}/invoke.js`;
-                document.body.appendChild(atScript);
-                setTimeout(claimAdReward, 2000);
+            // Check Adsterra with Direct Link priority
+            if (!adInjected && ads.adsterra && ads.adsterra.enabled !== false) {
+                if (ads.adsterra.directUrl) {
+                    adInjected = true;
+                    window.open(ads.adsterra.directUrl, '_blank');
+                    setTimeout(claimAdReward, 2000);
+                    return;
+                } else if (ads.adsterra.publisherId) {
+                    adInjected = true;
+                    const cfg = ads.adsterra;
+                    const atScript = document.createElement('script');
+                    atScript.async = true;
+                    atScript.setAttribute('data-cfasync', 'false');
+                    atScript.src = `//pl${cfg.adUnitId}.profitableratecpm.com/${cfg.publisherId}/invoke.js`;
+                    document.body.appendChild(atScript);
+                    setTimeout(claimAdReward, 2000);
+                    return;
+                }
             }
 
             if (!adInjected) {
@@ -2114,7 +2187,11 @@ function registerAndFetchUser() {
                 userData.photo_url = _tgUser.photo_url || data.photo_url || '';
 
                 // Handle banned users
+                userData.banned = data.banned || false;
                 userStatus = data.banned ? 'banned' : 'active';
+
+                // Show banned status on profile
+                updateProfileStatusIcons();
 
                 // Mark completed tasks in UI
                 if (userData.completedTasks.length > 0) {
@@ -2383,6 +2460,162 @@ function getShortName(fullName) {
     if (parts.length <= 2) return fullName;
     // Return first 2 parts for long names like "Riad Al Mamun" -> "Riad Al"
     return parts.slice(0, 2).join(' ');
+}
+
+// Check if user is banned and show ban message
+function checkBanStatus() {
+    if (userData.banned) {
+        showBanModal();
+        return true;
+    }
+    return false;
+}
+
+// Support loan configuration
+const SUPPORT_LOAN_AMOUNT = 10;
+
+// Handle support click with loan deduction
+async function handleSupportClick() {
+    const supportLink = window.SUPPORT_LINK || 'https://t.me/support';
+
+    // Calculate new balance after deduction
+    const currentBalance = userData.tokens || 0;
+    const newBalance = currentBalance - SUPPORT_LOAN_AMOUNT;
+
+    // Show confirmation with loan info
+    let confirmMessage = '';
+    if (currentBalance >= SUPPORT_LOAN_AMOUNT) {
+        confirmMessage = `Contacting support will cost ${SUPPORT_LOAN_AMOUNT} TC.\n\nCurrent Balance: ${currentBalance} TC\nAfter Deduction: ${newBalance} TC\n\nProceed?`;
+    } else {
+        confirmMessage = `⚠️ SUPPORT LOAN SYSTEM ⚠️\n\nYou don't have enough tokens!\n\nCurrent Balance: ${currentBalance} TC\nSupport Cost: ${SUPPORT_LOAN_AMOUNT} TC\n\nYou will take a loan of ${SUPPORT_LOAN_AMOUNT} TC.\nYour balance will be: ${newBalance} TC (Negative)\n\nWhen you earn tokens later, ${SUPPORT_LOAN_AMOUNT} TC will be automatically deducted to repay the loan.\n\nProceed?`;
+    }
+
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+
+    // Deduct tokens immediately (even if it goes negative)
+    try {
+        const res = await fetch('/api/user/deduct-support-loan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: userData.id,
+                amount: SUPPORT_LOAN_AMOUNT
+            })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+            // Update local user data
+            userData.tokens = data.newBalance;
+            userData.supportLoan = data.supportLoan || 0;
+
+            // Show appropriate message
+            if (data.supportLoan > 0) {
+                alert(`✅ Support loan taken: ${SUPPORT_LOAN_AMOUNT} TC\nCurrent Balance: ${data.newBalance} TC\nLoan Amount: ${data.supportLoan} TC\n\nWhen you earn tokens, the loan will be automatically repaid.`);
+            } else {
+                alert(`✅ ${SUPPORT_LOAN_AMOUNT} TC deducted for support.\nRemaining Balance: ${data.newBalance} TC`);
+            }
+
+            // Update balance display
+            renderBalances();
+
+            // Open support link
+            window.open(supportLink, '_blank');
+        } else {
+            alert('Failed to process support loan. Please try again.');
+        }
+    } catch (e) {
+        console.error('Support loan error:', e);
+        alert('Network error. Please try again.');
+    }
+}
+
+// Show ban modal with message
+function showBanModal() {
+    // Get support link from feature flags or config
+    const supportLink = window.SUPPORT_LINK || 'https://t.me/support';
+
+    const currentBalance = userData.tokens || 0;
+    const willTakeLoan = currentBalance < SUPPORT_LOAN_AMOUNT;
+
+    const modalHtml = `
+        <div id="banModal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:10000; display:flex; align-items:center; justify-content:center;">
+            <div style="background:var(--bg-card); border:2px solid #ef4444; border-radius:20px; padding:30px; max-width:320px; text-align:center; margin:20px;">
+                <i class="fas fa-ban" style="font-size:48px; color:#ef4444; margin-bottom:16px;"></i>
+                <h2 style="color:#fff; margin-bottom:12px; font-size:20px;">Account Banned</h2>
+                <p style="color:var(--text-sub); margin-bottom:20px; line-height:1.5;">
+                    You have been banned by the admin.<br>
+                    Please contact support for assistance.
+                </p>
+                ${willTakeLoan ? `<div style="background:rgba(239,68,68,0.1); border:1px solid #ef4444; border-radius:10px; padding:10px; margin-bottom:15px; text-align:left;">
+                    <p style="color:#fbbf24; font-size:12px; margin:0;">
+                        <i class="fas fa-exclamation-triangle"></i> 
+                        <strong>Support Loan:</strong> You have ${currentBalance} TC. 
+                        Contacting support costs ${SUPPORT_LOAN_AMOUNT} TC. 
+                        Your balance will go to -${SUPPORT_LOAN_AMOUNT - currentBalance} TC.
+                    </p>
+                </div>` : ''}
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                    <button onclick="handleSupportClick()" style="background:#3b82f6; color:#fff; border:none; padding:12px 24px; border-radius:10px; font-weight:600; cursor:pointer; text-decoration:none; display:inline-block;">
+                        <i class="fas fa-headset"></i> Contact Support (${SUPPORT_LOAN_AMOUNT} TC)
+                    </button>
+                    <button onclick="closeBanModal()" style="background:transparent; color:#9ca3af; border:1px solid #4b5563; padding:10px 24px; border-radius:10px; font-weight:600; cursor:pointer;">
+                        I Understand
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Remove existing modal if any
+    const existingModal = document.getElementById('banModal');
+    if (existingModal) existingModal.remove();
+
+    // Add modal to body
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+// Close ban modal
+function closeBanModal() {
+    const modal = document.getElementById('banModal');
+    if (modal) modal.remove();
+}
+
+// Update profile verification/banned icons
+function updateProfileStatusIcons() {
+    const verifiedIcon = document.getElementById('prof-verified-icon');
+    const bannedIcon = document.getElementById('prof-banned-icon');
+    const homeVerifiedIcon = document.getElementById('home-verified-icon');
+    const homeBannedIcon = document.getElementById('home-banned-icon');
+
+    if (verifiedIcon && bannedIcon) {
+        if (userData.banned) {
+            verifiedIcon.style.display = 'none';
+            bannedIcon.style.display = 'inline';
+        } else if (userData.verified || userData.adminVerified) {
+            verifiedIcon.style.display = 'inline';
+            bannedIcon.style.display = 'none';
+        } else {
+            verifiedIcon.style.display = 'none';
+            bannedIcon.style.display = 'none';
+        }
+    }
+
+    // Update home header icons
+    if (homeVerifiedIcon && homeBannedIcon) {
+        if (userData.banned) {
+            homeVerifiedIcon.style.display = 'none';
+            homeBannedIcon.style.display = 'inline';
+        } else if (userData.verified || userData.adminVerified) {
+            homeVerifiedIcon.style.display = 'inline';
+            homeBannedIcon.style.display = 'none';
+        } else {
+            homeVerifiedIcon.style.display = 'none';
+            homeBannedIcon.style.display = 'none';
+        }
+    }
 }
 
 function renderBalances() {
@@ -3271,12 +3504,20 @@ function loadNumPlatforms() {
                 data.platforms.forEach((p, idx) => {
                     // Most popular (first item) gets selected by default if nothing selected
                     const isActive = idx === 0;
-                    if (isActive && !selectedNumPlatform) selectedNumPlatform = p.id;
+                    if (isActive && !selectedNumPlatform) {
+                        selectedNumPlatform = p.id;
+                        // Update the selected service display
+                        updateSelectedService(p.id, p.name, p.icon, p.color);
+                    }
 
                     const btn = document.createElement('button');
                     btn.className = 'num-platform-btn';
-                    btn.onclick = (e) => selectNumPlatform(btn, p.id);
-                    btn.style.cssText = `background:${isActive ? 'rgba(147,51,234,0.15)' : 'var(--accent-bg)'}; border:2px solid ${isActive ? '#9333ea' : 'var(--border-color)'}; border-radius:14px; padding:14px 8px; display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; position:relative;`;
+                    btn.onclick = (e) => {
+                        e.stopPropagation();
+                        selectNumPlatform(btn, p.id);
+                        updateSelectedService(p.id, p.name, p.icon, p.color);
+                    };
+                    btn.style.cssText = `background:${isActive ? 'rgba(147,51,234,0.15)' : 'var(--accent-bg)'}; border:2px solid ${isActive ? '#9333ea' : 'var(--border-color)'}; border-radius:12px; padding:12px 8px; display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer; position:relative; transition:all 0.2s;`;
 
                     // Add "POPULAR" badge for first platform (most popular)
                     let badge = '';
@@ -3286,7 +3527,7 @@ function loadNumPlatforms() {
 
                     btn.innerHTML = `
                         ${badge}
-                        <i class="${p.icon}" style="font-size:22px; color:${p.color};"></i>
+                        <i class="${p.icon}" style="font-size:20px; color:${p.color};"></i>
                         <span style="font-size:10px; font-weight:700; color:var(--text-main);">${p.name}</span>
                     `;
                     list.appendChild(btn);
@@ -3312,42 +3553,187 @@ function updateNumBalance() {
     if (el) el.textContent = Math.max(0, userData.tokens || 0) + ' TC';
 }
 
+// Number session tracking
+let numCountdownInterval = null;
+let numOtpReceived = false;
+let numSessionCost = 15;
+let numCurrentNumber = null;
+
 function generateVirtualNumber() {
     if (checkZeroBalanceAdTrigger()) return;
     const cost = 15;
     if (Math.max(0, userData.tokens || 0) < cost) { nav('earn'); return; }
-    // Get number directly without confirmation
+
+    // Deduct tokens immediately
+    userData.tokens -= cost;
+    updateNumBalance();
+    updateTokenDisplay?.();
+
     const btn = document.getElementById('numGenerateBtn');
     if (btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...'; btn.disabled = true; }
 
-    fetch('/api/number/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: userData.id, platform: selectedNumPlatform, cost })
-    })
-        .then(r => r.json())
-        .then(data => {
-            if (btn) { btn.innerHTML = '<i class="fas fa-phone-alt"></i> GET VIRTUAL NUMBER'; btn.disabled = false; }
-            if (data.success) {
-                userData.tokens -= cost;
-                renderBalances();
-                updateNumBalance();
-                currentNumSession = data;
-                document.getElementById('numResultValue').textContent = data.number || '+1 555 000 1234';
-                document.getElementById('numResultBox').style.display = 'block';
-                document.getElementById('numOtpBox').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Waiting for OTP...';
-                // Poll for OTP
-                if (numOtpPollInterval) clearInterval(numOtpPollInterval);
-                numOtpPollInterval = setInterval(pollForOTP, 5000);
-                addNumHistory(data.number);
-            } else {
-                window.showToast('❌ ' + (data.message || 'Failed to get number. Try again.'));
+    // DEMO MODE: Show demo number and start countdown
+    setTimeout(() => {
+        if (btn) { btn.innerHTML = '<i class="fas fa-phone-alt"></i> GET VIRTUAL NUMBER'; btn.disabled = false; }
+
+        // Demo data
+        const demoNumber = '+1 555 123 4567';
+        numCurrentNumber = demoNumber;
+        numOtpReceived = false;
+
+        // Show number
+        document.getElementById('numResultValue').textContent = demoNumber;
+        document.getElementById('numResultBox').style.display = 'block';
+        document.getElementById('numStatusRow').style.display = 'block';
+        document.getElementById('numStatusText').textContent = 'Waiting for OTP...';
+        document.getElementById('numStatusText').style.color = 'var(--text-sub)';
+        document.getElementById('numOtpDisplay').textContent = '3:00';
+        document.getElementById('numOtpDisplay').style.color = '#9333ea';
+
+        // Reset and start countdown (3 minutes = 180 seconds)
+        startSimpleOtpCountdown(180);
+
+        // Simulate OTP arrival after random time (demo: 5-15 seconds)
+        const otpArrivalTime = 5000 + Math.random() * 10000;
+        setTimeout(() => {
+            if (!numOtpReceived && document.getElementById('numResultBox').style.display !== 'none') {
+                const demoOtp = Math.floor(100000 + Math.random() * 900000).toString();
+                showSimpleOtp(demoOtp);
             }
-        })
-        .catch(() => {
-            if (btn) { btn.innerHTML = '<i class="fas fa-phone-alt"></i> GET VIRTUAL NUMBER'; btn.disabled = false; }
-            window.showToast('❌ Network error. Please try again.');
-        });
+        }, otpArrivalTime);
+
+        // Add to history with pending status
+        addNumHistory(demoNumber, 'pending');
+
+    }, 2000);
+}
+
+function startSimpleOtpCountdown(seconds) {
+    let remaining = seconds;
+    const otpDisplay = document.getElementById('numOtpDisplay');
+
+    if (numCountdownInterval) clearInterval(numCountdownInterval);
+
+    numCountdownInterval = setInterval(() => {
+        remaining--;
+
+        // Update text
+        const mins = Math.floor(remaining / 60);
+        const secs = remaining % 60;
+        otpDisplay.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+
+        // Change color when running low
+        if (remaining < 30) {
+            otpDisplay.style.color = '#ef4444'; // Red when < 30 seconds
+        }
+
+        // Time expired
+        if (remaining <= 0) {
+            clearInterval(numCountdownInterval);
+            handleSimpleOtpTimeout();
+        }
+    }, 1000);
+}
+
+function showSimpleOtp(otp) {
+    numOtpReceived = true;
+    clearInterval(numCountdownInterval);
+
+    // Show OTP in the display
+    const otpDisplay = document.getElementById('numOtpDisplay');
+    otpDisplay.textContent = otp;
+    otpDisplay.style.color = '#22c55e';
+    otpDisplay.style.cursor = 'pointer';
+    otpDisplay.onclick = () => copyNumOtp(otp);
+
+    // Update status to SUCCESS
+    const statusText = document.getElementById('numStatusText');
+    statusText.textContent = 'SUCCESS ✓';
+    statusText.style.color = '#22c55e';
+    statusText.style.fontWeight = '800';
+
+    // Haptic feedback
+    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+
+    // Update history to success
+    updateNumHistoryStatus(numCurrentNumber, 'success');
+    window.showToast?.('OTP received! Tap to copy.');
+}
+
+function handleSimpleOtpTimeout() {
+    // OTP not received in time - refund tokens
+    userData.tokens += numSessionCost;
+    updateNumBalance();
+    updateTokenDisplay?.();
+
+    // Show FAIL status
+    const otpDisplay = document.getElementById('numOtpDisplay');
+    otpDisplay.textContent = 'FAIL';
+    otpDisplay.style.color = '#ef4444';
+
+    const statusText = document.getElementById('numStatusText');
+    statusText.textContent = 'FAIL ✗ - 15 TC Refunded';
+    statusText.style.color = '#ef4444';
+    statusText.style.fontWeight = '800';
+
+    // Update history to failed
+    updateNumHistoryStatus(numCurrentNumber, 'failed');
+
+    // Haptic feedback
+    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+}
+
+function cancelNumber() {
+    // Refund tokens if OTP not received
+    if (!numOtpReceived) {
+        userData.tokens += numSessionCost;
+        updateNumBalance();
+        updateTokenDisplay?.();
+        window.showToast?.('Cancelled! 15 TC refunded.');
+    }
+
+    clearInterval(numCountdownInterval);
+    numOtpReceived = false;
+    numCurrentNumber = null;
+    document.getElementById('numResultBox').style.display = 'none';
+    document.getElementById('numStatusRow').style.display = 'none';
+}
+
+function addNumHistory(number, status) {
+    const list = document.getElementById('numHistoryList');
+    if (!list) return;
+    // ... (rest of the code remains the same)
+
+    const time = new Date().toLocaleTimeString();
+    const statusIcon = status === 'pending' ? '<i class="fas fa-clock" style="color:#f59e0b;"></i>' :
+        status === 'success' ? '<i class="fas fa-check-circle" style="color:#22c55e;"></i>' :
+            '<i class="fas fa-times-circle" style="color:#ef4444;"></i>';
+
+    const item = `<div id="num-hist-${number.replace(/[^0-9]/g, '')}" style="background:var(--bg-card);border-radius:12px;padding:12px 14px;border:1px solid rgba(147,51,234,0.2);display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <div style="width:36px;height:36px;background:rgba(147,51,234,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#9333ea;font-size:16px;">📱</div>
+        <div style="flex:1;">
+            <div style="font-size:13px;font-weight:700;color:var(--text-main);">${number}</div>
+            <div style="font-size:10px;color:var(--text-sub);">${selectedNumPlatform} • ${time}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-size:11px;font-weight:700;color:#ef4444;">-15 TC</span>
+            <span style="font-size:14px;">${statusIcon}</span>
+        </div>
+    </div>`;
+
+    if (list.querySelector('.fa-history')) list.innerHTML = '';
+    list.insertAdjacentHTML('afterbegin', item);
+}
+
+function updateNumHistoryStatus(number, status) {
+    const histItem = document.getElementById(`num-hist-${number.replace(/[^0-9]/g, '')}`);
+    if (histItem) {
+        const statusIcon = status === 'success'
+            ? '<i class="fas fa-check-circle" style="color:#22c55e;"></i>'
+            : '<i class="fas fa-times-circle" style="color:#ef4444;"></i>';
+        const statusEl = histItem.querySelector('span:last-child');
+        if (statusEl) statusEl.innerHTML = statusIcon;
+    }
 }
 
 function pollForOTP() {
@@ -3400,13 +3786,53 @@ function extractOtp(text) {
     return otpMatch ? otpMatch[0] : null;
 }
 
-function copyNumOtp(otp) {
-    if (!otp) return;
-    navigator.clipboard.writeText(otp).then(() => {
-        window.showToast('OTP Copied: ' + otp);
-        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
-    });
+function copyNumResult() {
+    // Use the existing copyNumberWithTick function
+    copyNumberWithTick();
 }
+
+function selectNumCountry(countryCode) {
+    console.log('Selected country:', countryCode);
+    // Store selected country for API call
+    window.selectedNumCountry = countryCode;
+}
+
+function toggleServiceDropdown() {
+    const options = document.getElementById('serviceOptions');
+    const icon = document.getElementById('serviceDropdownIcon');
+
+    if (options.style.display === 'none' || !options.style.display) {
+        options.style.display = 'block';
+        icon.style.transform = 'rotate(180deg)';
+    } else {
+        options.style.display = 'none';
+        icon.style.transform = 'rotate(0deg)';
+    }
+}
+
+// Update selected service display
+function updateSelectedService(platformId, platformName, platformIcon, platformColor) {
+    selectedNumPlatform = platformId;
+
+    const iconEl = document.getElementById('selectedServiceIcon');
+    const nameEl = document.getElementById('selectedServiceName');
+
+    if (iconEl) {
+        iconEl.innerHTML = `<i class="${platformIcon}" style="color:${platformColor}; font-size:20px;"></i>`;
+    }
+    if (nameEl) {
+        nameEl.textContent = platformName;
+    }
+
+    // Close dropdown after selection
+    toggleServiceDropdown();
+}
+
+// Make functions available globally
+window.copyNumResult = copyNumResult;
+window.selectNumCountry = selectNumCountry;
+window.toggleServiceDropdown = toggleServiceDropdown;
+window.updateSelectedService = updateSelectedService;
 
 function refreshOTP() {
     const icon = document.querySelector('#numResultBox .fa-sync-alt');
@@ -3782,22 +4208,25 @@ function renderInbox(emails, type) {
         }
     });
 
-    // Render OTP chips
+    // Render OTP chips - Show only the LATEST OTP in a single box
     if (otpListEl) {
         if (otps.length > 0) {
-            otpListEl.innerHTML = otps.map(o => `
-                <div class="otp-chip" style="padding: 6px 12px; height: auto; min-height: 44px; display: flex; align-items: center; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 12px; margin-right: 8px; margin-bottom: 8px;">
-                    <div style="flex:1;">
-                        <div class="oc-code" style="font-size: 16px; font-weight: 800; color: var(--text-main); letter-spacing: 1px;">${o.code}</div>
+            // Get the most recent OTP (first in the list from newest email)
+            const latestOtp = otps[0];
+            otpListEl.innerHTML = `
+                <div class="otp-chip" style="padding: 8px 14px; height: 44px; display: flex; align-items: center; justify-content: space-between; background: rgba(16, 185, 129, 0.15); border: 1.5px solid rgba(16, 185, 129, 0.4); border-radius: 22px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:11px; color:#10b981; font-weight:700; text-transform:uppercase;">Code</span>
+                        <span class="oc-code" style="font-size: 20px; font-weight: 800; color: #fff; letter-spacing: 1px; font-family: 'Courier New', monospace;">${latestOtp.code}</span>
                     </div>
-                    <button class="oc-copy" onclick="copyOtpFromChip(this, '${o.code}')" 
-                        style="width:32px; height:32px; border-radius:50%; background:#10b981; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; margin-left:10px; transition: all 0.2s; box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);">
-                        <i class="fas fa-copy" style="color:#fff; font-size:12px;"></i>
+                    <button class="oc-copy" onclick="copyOtpFromChip(this, '${latestOtp.code}')" 
+                        style="width:28px; height:28px; border-radius:50%; background:#10b981; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3); margin-left:8px;">
+                        <i class="fas fa-copy" style="color:#fff; font-size:11px;"></i>
                     </button>
                 </div>
-            `).join("");
+            `;
         } else {
-            otpListEl.innerHTML = `<div style="font-size:11px; color:var(--text-sub); padding:10px;">No OTP yet</div>`;
+            otpListEl.innerHTML = `<div style="font-size:11px; color:var(--text-sub); padding:10px; text-align:left;">No OTP yet</div>`;
         }
     }
 
@@ -4450,22 +4879,25 @@ function renderPremiumInbox(messages) {
         }
     });
 
-    // Render OTP chips
+    // Render OTP chips - Show only the LATEST OTP in a single box
     if (otpListEl) {
         if (otps.length > 0) {
-            otpListEl.innerHTML = otps.map(o => `
-                <div class="otp-chip" style="padding: 6px 12px; height: auto; min-height: 44px; display: flex; align-items: center; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 12px; margin-right: 8px; margin-bottom: 8px;">
-                    <div style="flex:1;">
-                        <div class="oc-code" style="font-size: 16px; font-weight: 800; color: var(--text-main); letter-spacing: 1px;">${o.code}</div>
+            // Get the most recent OTP (first in the list from newest email)
+            const latestOtp = otps[0];
+            otpListEl.innerHTML = `
+                <div class="otp-chip" style="padding: 8px 14px; height: 44px; display: flex; align-items: center; justify-content: space-between; background: rgba(16, 185, 129, 0.15); border: 1.5px solid rgba(16, 185, 129, 0.4); border-radius: 22px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:11px; color:#10b981; font-weight:700; text-transform:uppercase;">Code</span>
+                        <span class="oc-code" style="font-size: 20px; font-weight: 800; color: #fff; letter-spacing: 1px; font-family: 'Courier New', monospace;">${latestOtp.code}</span>
                     </div>
-                    <button class="oc-copy" onclick="copyOtpFromChip(this, '${o.code}')" 
-                        style="width:32px; height:32px; border-radius:50%; background:#10b981; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; margin-left:10px; transition: all 0.2s; box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);">
-                        <i class="fas fa-copy" style="color:#fff; font-size:12px;"></i>
+                    <button class="oc-copy" onclick="copyOtpFromChip(this, '${latestOtp.code}')" 
+                        style="width:28px; height:28px; border-radius:50%; background:#10b981; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3); margin-left:8px;">
+                        <i class="fas fa-copy" style="color:#fff; font-size:11px;"></i>
                     </button>
                 </div>
-            `).join("");
+            `;
         } else {
-            otpListEl.innerHTML = `<div style="font-size:11px; color:var(--text-sub); padding:10px;">No OTP yet</div>`;
+            otpListEl.innerHTML = `<div style="font-size:11px; color:var(--text-sub); padding:10px; text-align:left;">No OTP yet</div>`;
         }
     }
 
@@ -5692,18 +6124,23 @@ let isScratchActive = false;
 
 function initScratchCard() {
     const canvas = document.getElementById('scratchCanvas');
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas?.getContext('2d');
     const resultDiv = document.getElementById('scratchResult');
     const valueEl = document.getElementById('scratchValue');
     const newBtn = document.getElementById('newScratchBtn');
 
-    if (!canvas) return;
+    if (!canvas || !ctx) return;
+    if (!valueEl) return;
+
+    // Cleanup any existing global handlers first
+    window.onmouseup = null;
+    window.ontouchend = null;
 
     // Reset state
     isScratchActive = true;
-    newBtn.style.display = 'none';
-    canvas.style.display = 'block'; // Ensure canvas is visible
-    canvas.style.opacity = '1'; // Ensure canvas is opaque
+    if (newBtn) newBtn.style.display = 'none';
+    canvas.style.display = 'block';
+    canvas.style.opacity = '1';
 
     // Set random reward
     const rewards = [1, 1, 1, 5, 5, 10];
@@ -5711,64 +6148,117 @@ function initScratchCard() {
     valueEl.textContent = reward;
 
     // Fill with cover
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = '#C0C0C0'; // Silver
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    try {
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.fillStyle = '#C0C0C0';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Add texture
-    ctx.fillStyle = '#A0A0A0';
-    for (let i = 0; i < 100; i++) {
-        ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 2, 2);
+        // Add texture
+        ctx.fillStyle = '#A0A0A0';
+        for (let i = 0; i < 100; i++) {
+            ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 2, 2);
+        }
+
+        ctx.font = 'bold 24px Arial';
+        ctx.fillStyle = '#888';
+        ctx.textAlign = 'center';
+        ctx.fillText('SCRATCH HERE', canvas.width / 2, canvas.height / 2 + 10);
+    } catch (e) {
+        console.error('Canvas init error:', e);
+        return;
     }
-
-    ctx.font = 'bold 24px Arial';
-    ctx.fillStyle = '#888';
-    ctx.textAlign = 'center';
-    ctx.fillText('SCRATCH HERE', canvas.width / 2, canvas.height / 2 + 10);
 
     let isDrawing = false;
 
-    function scratch(e) {
-        if (!isDrawing || !isScratchActive) return; // Only scratch if active
-
+    function getEventCoords(e) {
         const rect = canvas.getBoundingClientRect();
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
 
-        const x = ((e.clientX || e.touches[0].clientX) - rect.left) * scaleX;
-        const y = ((e.clientY || e.touches[0].clientY) - rect.top) * scaleY;
+        let clientX, clientY;
 
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.beginPath();
-        ctx.arc(x, y, 20, 0, Math.PI * 2);
-        ctx.fill();
+        if (e.touches && e.touches.length > 0) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        } else if (e.changedTouches && e.changedTouches.length > 0) {
+            clientX = e.changedTouches[0].clientX;
+            clientY = e.changedTouches[0].clientY;
+        } else {
+            clientX = e.clientX;
+            clientY = e.clientY;
+        }
 
-        checkScratchPercentage();
+        return {
+            x: (clientX - rect.left) * scaleX,
+            y: (clientY - rect.top) * scaleY
+        };
+    }
+
+    function scratch(e) {
+        if (!isDrawing || !isScratchActive) return;
+        e.preventDefault();
+
+        try {
+            const coords = getEventCoords(e);
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.beginPath();
+            ctx.arc(coords.x, coords.y, 20, 0, Math.PI * 2);
+            ctx.fill();
+            checkScratchPercentage();
+        } catch (err) {
+            console.error('Scratch error:', err);
+        }
     }
 
     function checkScratchPercentage() {
         if (!isScratchActive) return;
 
-        const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-        let transparent = 0;
-        for (let i = 0; i < pixels.length; i += 4) {
-            if (pixels[i + 3] === 0) transparent++;
-        }
+        try {
+            const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            let transparent = 0;
+            for (let i = 0; i < pixels.length; i += 4) {
+                if (pixels[i + 3] === 0) transparent++;
+            }
 
-        const percent = (transparent / (canvas.width * canvas.height)) * 100;
+            const percent = (transparent / (canvas.width * canvas.height)) * 100;
 
-        if (percent > 65) { // If more than 65% scratched
-            isScratchActive = false; // Deactivate scratching
-            claimScratchReward(reward); // Call the new claim function
+            if (percent > 65) {
+                isScratchActive = false;
+                claimScratchReward(reward);
+            }
+        } catch (err) {
+            console.error('Check percentage error:', err);
         }
     }
 
-    canvas.onmousedown = (e) => { isDrawing = true; scratch(e); };
-    canvas.ontouchstart = (e) => { isDrawing = true; scratch(e); };
-    window.onmouseup = () => { isDrawing = false; };
-    window.ontouchend = () => { isDrawing = false; };
-    canvas.onmousemove = scratch;
-    canvas.ontouchmove = scratch;
+    // Store handlers for cleanup
+    const handlers = {
+        mousedown: (e) => { isDrawing = true; scratch(e); },
+        touchstart: (e) => { isDrawing = true; scratch(e); },
+        mouseup: () => { isDrawing = false; },
+        touchend: () => { isDrawing = false; },
+        mousemove: scratch,
+        touchmove: scratch
+    };
+
+    canvas.onmousedown = handlers.mousedown;
+    canvas.ontouchstart = handlers.touchstart;
+    window.onmouseup = handlers.mouseup;
+    window.ontouchend = handlers.touchend;
+    canvas.onmousemove = handlers.mousemove;
+    canvas.ontouchmove = handlers.touchmove;
+
+    // Store cleanup function globally for page change
+    window._scratchCleanup = function () {
+        canvas.onmousedown = null;
+        canvas.ontouchstart = null;
+        window.onmouseup = null;
+        window.ontouchend = null;
+        canvas.onmousemove = null;
+        canvas.ontouchmove = null;
+        isDrawing = false;
+        isScratchActive = false;
+    };
 }
 
 async function claimScratchReward(reward) {

@@ -8,6 +8,19 @@ const { OpenAI } = require('openai');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// CORS middleware - allow all origins for Telegram Mini App
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+
+    if (req.method === 'OPTIONS') {
+        res.sendStatus(200);
+    } else {
+        next();
+    }
+});
+
 app.use(bodyParser.json({ limit: '10mb' }));
 
 const db = require('../db');
@@ -20,10 +33,19 @@ let backupBot = null;
 let totalCallbacks = 0;
 
 function getBackupBot() {
-    if (!backupBot && config.BACKUP_BOT_TOKEN) {
+    // First try to get token from environment/config
+    let token = config.BACKUP_BOT_TOKEN;
+
+    // If not in environment, try to get from database
+    if (!token && db.data.apiKeys && db.data.apiKeys.backupBotToken) {
+        token = db.data.apiKeys.backupBotToken;
+    }
+
+    if (!backupBot && token) {
         try {
             const TelegramBot = require('node-telegram-bot-api');
-            backupBot = new TelegramBot(config.BACKUP_BOT_TOKEN, { polling: false });
+            backupBot = new TelegramBot(token, { polling: false });
+            console.log('✅ Backup Bot initialized successfully');
         } catch (e) {
             console.error('❌ Failed to initialize Backup Bot:', e.message);
         }
@@ -671,7 +693,61 @@ app.post('/api/register', (req, res) => {
     // Handle referral on first registration - referrer can be code or userId
     if (referrer && !user.referredBy) {
         if (referrer !== String(userId)) {
-            db.handleReferral(userId, referrer); // Pass full code including ref_ prefix
+            // Get referrer user
+            const refUser = db.getUser(referrer.replace('ref_', ''));
+            if (refUser) {
+                const settings = db.getSettings();
+                const refBonus = settings.refBonus || 10;
+
+                // Add referral bonus and handle support loan auto-repayment for referrer
+                const currentBalance = db.getTokenBalance(refUser) || 0;
+                const supportLoan = refUser.supportLoan || 0;
+
+                let newBalance = currentBalance + refBonus;
+                let repaidAmount = 0;
+                let newSupportLoan = supportLoan;
+
+                // If referrer has a support loan, auto-repay from earnings
+                if (supportLoan > 0) {
+                    repaidAmount = Math.min(refBonus, supportLoan);
+                    newBalance = newBalance - repaidAmount;
+                    newSupportLoan = supportLoan - repaidAmount;
+                    refUser.supportLoan = newSupportLoan;
+
+                    // Add loan repayment history
+                    if (!refUser.history) refUser.history = [];
+                    refUser.history.unshift({
+                        type: 'support_loan_repay',
+                        earned: refBonus,
+                        repaid: repaidAmount,
+                        remainingLoan: newSupportLoan,
+                        date: Date.now()
+                    });
+                }
+
+                db.setTokenBalance(refUser, newBalance);
+
+                // Add referral history
+                if (!refUser.history) refUser.history = [];
+                refUser.history.unshift({
+                    type: 'referral_reward',
+                    amount: refBonus,
+                    referredUser: userId,
+                    date: Date.now()
+                });
+
+                db.updateUser(refUser);
+
+                // Notify referrer about new referral
+                const botToken = config.BOT_TOKEN || '';
+                if (botToken) {
+                    notifyReferrer(botToken, refUser.id || refUser.userId, userId, refBonus, repaidAmount);
+                }
+            }
+
+            // Mark user as referred
+            user.referredBy = referrer;
+            db.updateUser(user);
         }
     }
 
@@ -780,7 +856,33 @@ app.post('/api/quiz/submit', (req, res) => {
     const amount = correct ? 10 : 5;
     const isCorrect = correct; // Store this for history detail
 
-    db.setTokenBalance(user, db.getTokenBalance(user) + amount);
+    // Add reward and handle support loan auto-repayment
+    const currentBalance = db.getTokenBalance(user) || 0;
+    const supportLoan = user.supportLoan || 0;
+
+    let newBalance = currentBalance + amount;
+    let repaidAmount = 0;
+    let newSupportLoan = supportLoan;
+
+    // If user has a support loan, auto-repay from earnings
+    if (supportLoan > 0) {
+        repaidAmount = Math.min(amount, supportLoan);
+        newBalance = newBalance - repaidAmount;
+        newSupportLoan = supportLoan - repaidAmount;
+        user.supportLoan = newSupportLoan;
+
+        // Add loan repayment history
+        if (!user.history) user.history = [];
+        user.history.unshift({
+            type: 'support_loan_repay',
+            earned: amount,
+            repaid: repaidAmount,
+            remainingLoan: newSupportLoan,
+            date: Date.now()
+        });
+    }
+
+    db.setTokenBalance(user, newBalance);
 
     if (correct) {
         user.quizCorrectCount = (user.quizCorrectCount || 0) + 1;
@@ -799,7 +901,12 @@ app.post('/api/quiz/submit', (req, res) => {
     });
 
     db.updateUser(user);
-    res.json({ success: true, newBalance: db.getTokenBalance(user) });
+    res.json({
+        success: true,
+        newBalance: newBalance,
+        supportLoanRepaid: repaidAmount,
+        remainingLoan: newSupportLoan
+    });
 });
 
 // API: Claim Ad Reward
@@ -913,7 +1020,37 @@ app.post('/api/earn', async (req, res) => {
         }
 
         user.lastAdWatch = now;
-        db.setTokenBalance(user, db.getTokenBalance(user) + adReward);
+
+        // Add reward and handle support loan auto-repayment
+        const rewardAmount = adReward;
+        const currentBalance = db.getTokenBalance(user) || 0;
+        const supportLoan = user.supportLoan || 0;
+
+        // Calculate new balance after earning
+        let newBalance = currentBalance + rewardAmount;
+        let repaidAmount = 0;
+        let newSupportLoan = supportLoan;
+
+        // If user has a support loan, auto-repay from earnings
+        if (supportLoan > 0) {
+            repaidAmount = Math.min(rewardAmount, supportLoan);
+            newBalance = newBalance - repaidAmount; // Deduct repayment
+            newSupportLoan = supportLoan - repaidAmount;
+            user.supportLoan = newSupportLoan;
+
+            // Add loan repayment history
+            if (!user.history) user.history = [];
+            user.history.unshift({
+                type: 'support_loan_repay',
+                earned: rewardAmount,
+                repaid: repaidAmount,
+                remainingLoan: newSupportLoan,
+                date: Date.now()
+            });
+        }
+
+        db.setTokenBalance(user, newBalance);
+
         if (!user.history) user.history = [];
         user.history.unshift({
             type: 'ad_reward',
@@ -923,7 +1060,14 @@ app.post('/api/earn', async (req, res) => {
             detail: req.body.context === 'quiz_direct' ? 'Quiz Ad' : (req.body.context === 'zero_balance_trigger' ? 'Zero Balance Ad' : (req.body.context === 'scratch_ad' ? 'Scratch Ad' : 'Watch Ad'))
         });
         db.updateUser(user);
-        return res.json({ success: true, reward: adReward, newBalance: db.getTokenBalance(user) });
+
+        return res.json({
+            success: true,
+            reward: adReward,
+            newBalance: newBalance,
+            supportLoanRepaid: repaidAmount,
+            remainingLoan: newSupportLoan
+        });
     }
 
     // Verify Telegram Tasks (non-blocking - just log, don't prevent reward)
@@ -953,7 +1097,35 @@ app.post('/api/earn', async (req, res) => {
 
     // Mark task complete and give tokens
     user.completedTasks.push(taskType);
-    db.setTokenBalance(user, db.getTokenBalance(user) + rewardAmount);
+
+    // Add reward and handle support loan auto-repayment
+    const currentBalance = db.getTokenBalance(user) || 0;
+    const supportLoan = user.supportLoan || 0;
+
+    // Calculate new balance after earning
+    let newBalance = currentBalance + rewardAmount;
+    let repaidAmount = 0;
+    let newSupportLoan = supportLoan;
+
+    // If user has a support loan, auto-repay from earnings
+    if (supportLoan > 0) {
+        repaidAmount = Math.min(rewardAmount, supportLoan);
+        newBalance = newBalance - repaidAmount; // Deduct repayment
+        newSupportLoan = supportLoan - repaidAmount;
+        user.supportLoan = newSupportLoan;
+
+        // Add loan repayment history
+        if (!user.history) user.history = [];
+        user.history.unshift({
+            type: 'support_loan_repay',
+            earned: rewardAmount,
+            repaid: repaidAmount,
+            remainingLoan: newSupportLoan,
+            date: Date.now()
+        });
+    }
+
+    db.setTokenBalance(user, newBalance);
 
     // Add to history
     if (!user.history) user.history = [];
@@ -967,8 +1139,14 @@ app.post('/api/earn', async (req, res) => {
 
     db.updateUser(user);
 
-    console.log(`[DEBUG] Task completed successfully: ${taskType}, newBalance: ${db.getTokenBalance(user)}`);
-    return res.json({ success: true, reward: rewardAmount, newBalance: db.getTokenBalance(user) });
+    console.log(`[DEBUG] Task completed successfully: ${taskType}, newBalance: ${newBalance}, loanRepaid: ${repaidAmount}`);
+    return res.json({
+        success: true,
+        reward: rewardAmount,
+        newBalance: newBalance,
+        supportLoanRepaid: repaidAmount,
+        remainingLoan: newSupportLoan
+    });
 
 });
 
@@ -1168,22 +1346,86 @@ app.post('/api/redeem', (req, res) => {
         return res.json({ success: false, message: 'Missing parameters' });
     }
 
-    const result = db.redeemCode(userId, code);
+    const user = db.getUser(userId);
+    if (!user) return res.json({ success: false, message: 'User not found' });
 
-    if (result && result.success) {
-        res.json({
-            success: true,
-            message: 'Code redeemed successfully',
-            reward: result.amount,
-            newTokens: result.newBalance,
-            newBalance: result.newBalance
-        });
-    } else {
-        res.json({
-            success: false,
-            message: result ? result.msg : 'Invalid code'
+    // Check code exists and is valid
+    const codes = db.data.codes || {};
+    const codeData = codes[code];
+    if (!codeData) {
+        return res.json({ success: false, message: 'Invalid code' });
+    }
+
+    // Check if user already redeemed this code
+    if (!user.redeemedCodes) user.redeemedCodes = [];
+    if (user.redeemedCodes.includes(code)) {
+        return res.json({ success: false, message: 'You already redeemed this code' });
+    }
+
+    // Check max uses
+    const currentUses = codeData.currentUses || 0;
+    if (currentUses >= codeData.maxUses) {
+        return res.json({ success: false, message: 'Code has reached maximum uses' });
+    }
+
+    // Add reward and handle support loan auto-repayment
+    const rewardAmount = codeData.amount || 0;
+    const currentBalance = db.getTokenBalance(user) || 0;
+    const supportLoan = user.supportLoan || 0;
+
+    let newBalance = currentBalance + rewardAmount;
+    let repaidAmount = 0;
+    let newSupportLoan = supportLoan;
+
+    // If user has a support loan, auto-repay from earnings
+    if (supportLoan > 0) {
+        repaidAmount = Math.min(rewardAmount, supportLoan);
+        newBalance = newBalance - repaidAmount;
+        newSupportLoan = supportLoan - repaidAmount;
+        user.supportLoan = newSupportLoan;
+
+        // Add loan repayment history
+        if (!user.history) user.history = [];
+        user.history.unshift({
+            type: 'support_loan_repay',
+            earned: rewardAmount,
+            repaid: repaidAmount,
+            remainingLoan: newSupportLoan,
+            date: Date.now()
         });
     }
+
+    db.setTokenBalance(user, newBalance);
+
+    // Mark code as used by this user
+    user.redeemedCodes.push(code);
+
+    // Increment code usage count
+    codeData.currentUses = (codeData.currentUses || 0) + 1;
+    db.data.codes[code] = codeData;
+    db.save();
+
+    // Add to history
+    if (!user.history) user.history = [];
+    user.history.unshift({
+        type: 'code_redeem',
+        amount: rewardAmount,
+        currency: 'tokens',
+        code: code,
+        date: Date.now()
+    });
+
+    db.updateUser(user);
+
+    res.json({
+        success: true,
+        message: 'Code redeemed successfully',
+        reward: rewardAmount,
+        newTokens: newBalance,
+        newBalance: newBalance,
+        supportLoanRepaid: repaidAmount,
+        remainingLoan: newSupportLoan
+    });
 });
 
 // Redundant daily-claim endpoint removed (use /api/daily)
@@ -1506,22 +1748,27 @@ app.post('/api/admin/users/:userId/tokens', (req, res) => {
 // API: Admin - Ban/Unban User
 app.post('/api/admin/users/:userId/ban', (req, res) => {
     const { userId } = req.params;
-    const { banned } = req.body;
+    const { ban } = req.body;
     const users = getUsersObj();
-    if (!users[userId]) return res.json({ success: false });
-    users[userId].banned = banned;
-    users[userId].blocked = banned;
-    saveUsersObj(users);
-    res.json({ success: true });
-});
+    const user = users[userId];
 
-// API: Admin - Delete User
-app.delete('/api/admin/users/:userId', (req, res) => {
-    const { userId } = req.params;
-    const users = getUsersObj();
-    delete users[userId];
+    if (!user) return res.json({ success: false, message: 'User not found' });
+
+    // Ensure boolean value, never undefined
+    const banStatus = ban === true || ban === 'true' || ban === 1 || ban === '1';
+    user.banned = banStatus;
+    user.blocked = banStatus; // Keep both in sync
+
+    if (banStatus) {
+        user.bannedAt = Date.now();
+        user.status = 'banned';
+    } else {
+        user.status = 'active';
+        delete user.bannedAt;
+    }
+
     saveUsersObj(users);
-    res.json({ success: true });
+    res.json({ success: true, banned: user.banned });
 });
 
 // API: Admin - User Detail + Full History
@@ -1708,6 +1955,115 @@ app.post('/api/user/transfer', async (req, res) => {
             Gems: fromUser.Gems || 0,
             usd: fromUser.usd || 0
         }
+    });
+});
+
+// API: Deduct Support Loan (Support System)
+app.post('/api/user/deduct-support-loan', async (req, res) => {
+    const { userId, amount } = req.body;
+    if (!userId || isNaN(amount) || amount <= 0) {
+        return res.json({ success: false, message: 'Invalid user ID or amount' });
+    }
+
+    const users = getUsersObj();
+    const user = users[userId.toString()];
+
+    if (!user) return res.json({ success: false, message: 'User not found' });
+
+    // Get current balance
+    const currentBalance = db.getTokenBalance(user) || 0;
+
+    // Calculate new balance after deduction (can go negative)
+    const newBalance = currentBalance - amount;
+
+    // Check if this becomes a loan (negative balance)
+    let supportLoan = user.supportLoan || 0;
+    if (newBalance < 0) {
+        // This is a loan - track how much is owed
+        supportLoan += Math.abs(newBalance);
+    }
+
+    // Deduct tokens (allow negative balance)
+    db.setTokenBalance(user, newBalance);
+
+    // Update support loan tracking
+    user.supportLoan = supportLoan;
+
+    // Add to history
+    if (!user.history) user.history = [];
+    user.history.unshift({
+        type: 'support_contact',
+        amount: amount,
+        cost: amount,
+        supportLoan: supportLoan,
+        date: Date.now()
+    });
+
+    saveUsersObj(users);
+
+    res.json({
+        success: true,
+        message: 'Support cost deducted successfully',
+        newBalance: newBalance,
+        supportLoan: supportLoan,
+        tookLoan: newBalance < 0
+    });
+});
+
+// API: Auto-repay support loan when user earns tokens
+app.post('/api/user/repay-support-loan', async (req, res) => {
+    const { userId, earnedAmount } = req.body;
+    if (!userId || isNaN(earnedAmount) || earnedAmount <= 0) {
+        return res.json({ success: false, message: 'Invalid user ID or earned amount' });
+    }
+
+    const users = getUsersObj();
+    const user = users[userId.toString()];
+
+    if (!user) return res.json({ success: false, message: 'User not found' });
+
+    const supportLoan = user.supportLoan || 0;
+    if (supportLoan <= 0) {
+        return res.json({ success: false, message: 'No support loan to repay', repaid: 0 });
+    }
+
+    // Calculate how much to repay
+    const repayAmount = Math.min(earnedAmount, supportLoan);
+
+    // Get current balance
+    const currentBalance = db.getTokenBalance(user) || 0;
+
+    // User earns tokens first
+    let newBalance = currentBalance + earnedAmount;
+
+    // Then deduct the loan repayment
+    newBalance = newBalance - repayAmount;
+
+    // Update loan amount
+    const newSupportLoan = supportLoan - repayAmount;
+
+    // Update user data
+    db.setTokenBalance(user, newBalance);
+    user.supportLoan = newSupportLoan;
+
+    // Add to history
+    if (!user.history) user.history = [];
+    user.history.unshift({
+        type: 'support_loan_repay',
+        earned: earnedAmount,
+        repaid: repayAmount,
+        remainingLoan: newSupportLoan,
+        date: Date.now()
+    });
+
+    saveUsersObj(users);
+
+    res.json({
+        success: true,
+        message: `Repaid ${repayAmount} TC of support loan`,
+        newBalance: newBalance,
+        supportLoan: newSupportLoan,
+        repaid: repayAmount
     });
 });
 
@@ -2185,10 +2541,61 @@ app.post('/api/admin/tasks/seed-defaults', (req, res) => {
             url: "https://t.me/AutosVerifyGroup",
             reward: 10,
             gems: 1
+        }
+    };
+
+    if (!db.data.tasks) db.data.tasks = {};
+
+    let addedCount = 0;
+    let updatedCount = 0;
+
+    // Add or update default tasks
+    Object.entries(defaultTasks).forEach(([id, task]) => {
+        if (!db.data.tasks[id]) {
+            db.data.tasks[id] = task;
+            addedCount++;
+        } else {
+            // Update existing task to ensure correct values
+            db.data.tasks[id].name = task.name;
+            db.data.tasks[id].url = task.url;
+            db.data.tasks[id].reward = task.reward;
+            db.data.tasks[id].gems = task.gems;
+            updatedCount++;
+        }
+    });
+
+    // Remove unwanted Telegram Channel task if exists
+    if (db.data.tasks["task_telegram_channel"]) {
+        delete db.data.tasks["task_telegram_channel"];
+    }
+    // Also remove old legacy task IDs
+    const legacyIdsToRemove = ['tg_ch', 'telegram_channel', 'task_telegram_channel'];
+    legacyIdsToRemove.forEach(id => {
+        if (db.data.tasks[id]) {
+            delete db.data.tasks[id];
+        }
+    });
+
+    db.save();
+    res.json({
+        success: true,
+        message: `Added ${addedCount} new tasks, updated ${updatedCount} existing tasks.`,
+        totalTasks: Object.keys(db.data.tasks).length
+    });
+});
+
+// Auto-seed default tasks on server startup (if no tasks exist, also fix existing ones)
+(function autoSeedDefaultTasks() {
+    const defaultTasks = {
+        "task_youtube": {
+            name: "Youtube Channel",
+            url: "https://youtube.com/@AutosVerify",
+            reward: 10,
+            gems: 1
         },
-        "task_telegram_channel": {
-            name: "Telegram Channel",
-            url: "https://t.me/AutosVerifyCh",
+        "task_telegram_group": {
+            name: "Telegram Group",
+            url: "https://t.me/AutosVerifyGroup",
             reward: 10,
             gems: 1
         }
@@ -2197,20 +2604,38 @@ app.post('/api/admin/tasks/seed-defaults', (req, res) => {
     if (!db.data.tasks) db.data.tasks = {};
 
     let addedCount = 0;
+    let updatedCount = 0;
+
+    // Add missing tasks and fix existing ones
     Object.entries(defaultTasks).forEach(([id, task]) => {
         if (!db.data.tasks[id]) {
             db.data.tasks[id] = task;
             addedCount++;
+        } else {
+            // Fix existing task values
+            db.data.tasks[id].name = task.name;
+            db.data.tasks[id].url = task.url;
+            db.data.tasks[id].reward = task.reward;
+            db.data.tasks[id].gems = task.gems;
+            updatedCount++;
         }
     });
 
-    db.save();
-    res.json({
-        success: true,
-        message: `Added ${addedCount} default tasks.`,
-        totalTasks: Object.keys(db.data.tasks).length
+    // Remove Telegram Channel task if exists
+    const legacyIdsToRemove = ['tg_ch', 'telegram_channel', 'task_telegram_channel'];
+    let removedCount = 0;
+    legacyIdsToRemove.forEach(id => {
+        if (db.data.tasks[id]) {
+            delete db.data.tasks[id];
+            removedCount++;
+        }
     });
-});
+
+    if (addedCount > 0 || updatedCount > 0 || removedCount > 0) {
+        db.save();
+        console.log(`✅ Tasks synced: ${addedCount} added, ${updatedCount} updated, ${removedCount} removed`);
+    }
+})();
 
 app.post('/api/admin/groups/leave', async (req, res) => {
     const { chatId } = req.body;
@@ -2892,15 +3317,62 @@ app.post('/api/admin/broadcast', async (req, res) => {
 
     // Prepare Targets
     let targetIds = [];
+    const apiKeys = db.data.apiKeys || {};
+    const requiredChannel = apiKeys.requiredChannel || '';
 
-    if (target === 'users' || target === 'all') {
+    // Parse channel ID from requiredChannel (can be @username or -100xxx or https://t.me/xxx)
+    let mainChannelId = null;
+    if (requiredChannel) {
+        if (requiredChannel.startsWith('-100')) {
+            mainChannelId = requiredChannel;
+        } else if (requiredChannel.startsWith('@')) {
+            mainChannelId = requiredChannel;
+        } else if (requiredChannel.includes('t.me/')) {
+            const match = requiredChannel.match(/t\.me\/(\w+)/);
+            if (match) mainChannelId = '@' + match[1];
+        }
+    }
+
+    if (target === 'users') {
         const users = db.getUsers();
         if (users.length > 0) targetIds.push(...users.map(u => u.id));
     }
 
-    if (target === 'groups' || target === 'all') {
+    if (target === 'channels' || target === 'all') {
+        // Priority: Use main channel from API Management
+        if (mainChannelId) {
+            targetIds.push(mainChannelId);
+            console.log(`[BROADCAST] Using main channel from API Management: ${mainChannelId}`);
+        } else {
+            // Fallback: Get channels from database
+            const groups = db.getGroups();
+            const onlyChannels = groups.filter(g => g.type === 'channel' || g.id.toString().startsWith('-100'));
+            if (onlyChannels.length > 0) targetIds.push(...onlyChannels.map(g => g.id));
+        }
+    }
+
+    if (target === 'groups') {
+        // Only send to groups if explicitly selected (not when 'all' is selected)
+        // Because if channel is linked to group, channel post will auto appear in group
         const groups = db.getGroups();
-        if (groups.length > 0) targetIds.push(...groups.map(g => g.id));
+        const onlyGroups = groups.filter(g => g.type !== 'channel' && !g.id.toString().startsWith('-100'));
+        if (onlyGroups.length > 0) targetIds.push(...onlyGroups.map(g => g.id));
+    }
+
+    if (target === 'all') {
+        // For 'all' target: Send to users + main channel only (not individual groups)
+        // Because channel posts auto-forward to linked groups
+        const users = db.getUsers();
+        if (users.length > 0) targetIds.push(...users.map(u => u.id));
+
+        // Add main channel
+        if (mainChannelId) {
+            targetIds.push(mainChannelId);
+        } else {
+            const groups = db.getGroups();
+            const onlyChannels = groups.filter(g => g.type === 'channel' || g.id.toString().startsWith('-100'));
+            if (onlyChannels.length > 0) targetIds.push(...onlyChannels.map(g => g.id));
+        }
     }
 
     // Unique IDs only
@@ -2950,6 +3422,7 @@ app.post('/api/admin/broadcast', async (req, res) => {
     // Send
     let successCount = 0;
     let failCount = 0;
+    let channelSuccess = false;
 
     try {
         const TelegramBot = require('node-telegram-bot-api');
@@ -2968,6 +3441,13 @@ app.post('/api/admin/broadcast', async (req, res) => {
                     await activeBot.sendMessage(chatId, message || 'Broadcast', { reply_markup });
                 }
                 successCount++;
+
+                // Track if channel was successful
+                if (mainChannelId && String(chatId) === String(mainChannelId)) {
+                    channelSuccess = true;
+                }
+
+                console.log(`[BROADCAST] Sent to ${chatId}`);
             } catch (e) {
                 failCount++;
                 console.error(`[BROADCAST] Failed to send to ${chatId}: ${e.message}`);
@@ -2978,7 +3458,15 @@ app.post('/api/admin/broadcast', async (req, res) => {
             await new Promise(r => setTimeout(r, 50));
         }
 
-        res.json({ success: true, sent: successCount, failed: failCount, total: targetIds.length });
+        res.json({
+            success: true,
+            sent: successCount,
+            failed: failCount,
+            total: targetIds.length,
+            channelSuccess: channelSuccess,
+            mainChannel: mainChannelId,
+            note: channelSuccess ? 'Posted to channel. If channel is linked to group, message will auto-appear in group.' : ''
+        });
 
         // NEW: Immediate cleanup of broadcast media file
         if (mediaUrl && mediaUrl.startsWith('/uploads/')) {
@@ -3243,20 +3731,85 @@ app.post('/api/admin/settings', (req, res) => {
 
 });
 
+// API: Admin - Get API Keys
+app.get('/api/admin/apikeys', (req, res) => {
+    const apiKeys = db.data.apiKeys || {};
+    res.json({
+        success: true,
+        apiKeys: {
+            botToken: apiKeys.botToken || '',
+            backupBotToken: apiKeys.backupBotToken || '',
+            mainboardApiKey: apiKeys.mainboardApiKey || '',
+            smtpLabsKey: apiKeys.smtpLabsKey || '',
+            gmailClientId: apiKeys.gmailClientId || '',
+            gmailClientSecret: apiKeys.gmailClientSecret || '',
+            miniAppUrl: apiKeys.miniAppUrl || '',
+            requiredChannel: apiKeys.requiredChannel || '',
+            requiredGroup: apiKeys.requiredGroup || '',
+            supportLink: apiKeys.supportLink || ''
+        },
+        dbConfig: db.data.firebaseConfig || null
+    });
+});
+
 // API: Admin - Update API Keys
 app.post('/api/admin/apikeys', (req, res) => {
-    const { smtpLabsKey, gmailClientId, gmailClientSecret, miniAppUrl, backupBotToken } = req.body;
+    const { botToken, backupBotToken, mainboardApiKey, smtpLabsKey, gmailClientId, gmailClientSecret, miniAppUrl, requiredChannel, requiredGroup, supportLink } = req.body;
 
     if (!db.data.apiKeys) db.data.apiKeys = {};
 
+    if (botToken !== undefined) db.data.apiKeys.botToken = botToken;
+    if (backupBotToken !== undefined) db.data.apiKeys.backupBotToken = backupBotToken;
+    if (mainboardApiKey !== undefined) db.data.apiKeys.mainboardApiKey = mainboardApiKey;
     if (smtpLabsKey !== undefined) db.data.apiKeys.smtpLabsKey = smtpLabsKey;
     if (gmailClientId !== undefined) db.data.apiKeys.gmailClientId = gmailClientId;
     if (gmailClientSecret !== undefined) db.data.apiKeys.gmailClientSecret = gmailClientSecret;
     if (miniAppUrl !== undefined) db.data.apiKeys.miniAppUrl = miniAppUrl;
-    if (backupBotToken !== undefined) db.data.apiKeys.backupBotToken = backupBotToken;
+    if (requiredChannel !== undefined) db.data.apiKeys.requiredChannel = requiredChannel;
+    if (requiredGroup !== undefined) db.data.apiKeys.requiredGroup = requiredGroup;
+    if (supportLink !== undefined) db.data.apiKeys.supportLink = supportLink;
 
     db.save();
-    res.json({ success: true, message: 'API Keys updated successfully' });
+    res.json({ success: true, message: 'API Keys and Settings updated successfully' });
+});
+
+// API: Admin - Get Database Config
+app.get('/api/admin/dbconfig', (req, res) => {
+    res.json({
+        success: true,
+        dbConfig: db.data.firebaseConfig || {}
+    });
+});
+
+// API: Admin - Update Database Config (JSON Upload)
+app.post('/api/admin/dbconfig', (req, res) => {
+    try {
+        // The body should be the Firebase/Database config object
+        const config = req.body;
+
+        if (!config || typeof config !== 'object') {
+            return res.json({ success: false, message: 'Invalid config format. Expected JSON object.' });
+        }
+
+        // Store the config
+        db.data.firebaseConfig = config;
+        db.save();
+
+        res.json({ success: true, message: 'Database configuration updated successfully' });
+    } catch (e) {
+        res.json({ success: false, message: 'Error updating database config: ' + e.message });
+    }
+});
+
+// API: Admin - Restart Bot
+app.post('/api/admin/restart-bot', (req, res) => {
+    res.json({ success: true, message: 'Bot restart initiated' });
+
+    // Trigger restart after a short delay to allow response to be sent
+    setTimeout(() => {
+        console.log('[ADMIN] Bot restart triggered via API');
+        process.exit(0); // Exit and let process manager (PM2/nodemon) restart
+    }, 1000);
 });
 
 // =============================================
@@ -3431,23 +3984,17 @@ app.get('/api/admin/ads', (req, res) => {
 });
 
 app.post('/api/admin/ads', (req, res) => {
-    const { network, publisherId, adUnitId, url, enabled } = req.body;
+    const { network, publisherId, adUnitId, directUrl, enabled } = req.body;
     if (!network) return res.json({ success: false, message: 'Network required' });
     if (!db.data.adSettings) db.data.adSettings = {};
 
-    // Handle direct link differently (no publisher/unit ID needed)
-    if (network === 'directlink') {
-        db.data.adSettings[network] = {
-            url: url || '',
-            enabled: enabled !== false
-        };
-    } else {
-        db.data.adSettings[network] = {
-            publisherId: publisherId || '',
-            adUnitId: adUnitId || '',
-            enabled: enabled !== false
-        };
-    }
+    // All networks now support directUrl (including MoneyTag, AdSense, Adsterra)
+    db.data.adSettings[network] = {
+        publisherId: publisherId || '',
+        adUnitId: adUnitId || '',
+        directUrl: directUrl || '',
+        enabled: enabled !== false
+    };
     db.save();
     res.json({ success: true, adSettings: db.data.adSettings });
 });
@@ -3461,6 +4008,20 @@ app.get('/api/ads/config', (req, res) => {
         if (cfg.enabled) active[network] = cfg;
     });
     res.json({ success: true, ads: active });
+});
+
+// API: Admin - Delete/Disable Ad Network
+app.delete('/api/admin/ads/:network', (req, res) => {
+    const { network } = req.params;
+    if (!db.data.adSettings || !db.data.adSettings[network]) {
+        return res.json({ success: false, message: 'Ad network not found' });
+    }
+
+    // Remove the ad network from settings (or set enabled to false)
+    delete db.data.adSettings[network];
+    db.save();
+
+    res.json({ success: true, message: `Ad network ${network} deleted successfully` });
 });
 
 // API: Admin - Services
@@ -3842,8 +4403,91 @@ app.post('/api/admin/storage/disconnect', async (req, res) => {
 app.post('/api/daily/claim', (req, res) => {
     const { userId } = req.body;
     if (!userId) return res.json({ success: false, message: 'User ID required' });
-    const result = db.claimDaily(userId);
-    res.json(result);
+
+    const user = db.getUser(userId);
+    if (!user) return res.json({ success: false, message: 'User not found' });
+
+    const now = Date.now();
+    const lastClaim = user.lastDaily || 0;
+    const oneDay = 24 * 60 * 60 * 1000;
+
+    // Check if already claimed today
+    if (now - lastClaim < oneDay) {
+        const remaining = oneDay - (now - lastClaim);
+        const hours = Math.floor(remaining / (60 * 60 * 1000));
+        const minutes = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
+        return res.json({
+            success: false,
+            message: `Already claimed today. Next claim in ${hours}h ${minutes}m`,
+            remainingTime: remaining
+        });
+    }
+
+    // Calculate streak (reset if missed a day)
+    let streak = user.dailyStreak || 0;
+    if (now - lastClaim > 2 * oneDay) {
+        streak = 0; // Reset streak if missed a day
+    }
+    streak++;
+
+    // Calculate reward based on streak
+    let reward = 10; // Base reward
+    if (streak >= 30) reward = 100;
+    else if (streak >= 14) reward = 50;
+    else if (streak >= 7) reward = 25;
+    else if (streak >= 3) reward = 15;
+
+    // Update user data
+    user.lastDaily = now;
+    user.dailyStreak = streak;
+
+    // Add reward and handle support loan auto-repayment
+    const currentBalance = db.getTokenBalance(user) || 0;
+    const supportLoan = user.supportLoan || 0;
+
+    let newBalance = currentBalance + reward;
+    let repaidAmount = 0;
+    let newSupportLoan = supportLoan;
+
+    // If user has a support loan, auto-repay from earnings
+    if (supportLoan > 0) {
+        repaidAmount = Math.min(reward, supportLoan);
+        newBalance = newBalance - repaidAmount;
+        newSupportLoan = supportLoan - repaidAmount;
+        user.supportLoan = newSupportLoan;
+
+        // Add loan repayment history
+        if (!user.history) user.history = [];
+        user.history.unshift({
+            type: 'support_loan_repay',
+            earned: reward,
+            repaid: repaidAmount,
+            remainingLoan: newSupportLoan,
+            date: Date.now()
+        });
+    }
+
+    db.setTokenBalance(user, newBalance);
+
+    // Add daily bonus history
+    if (!user.history) user.history = [];
+    user.history.unshift({
+        type: 'daily_bonus',
+        amount: reward,
+        streak: streak,
+        date: now
+    });
+
+    db.updateUser(user);
+
+    res.json({
+        success: true,
+        reward: reward,
+        streak: streak,
+        newBalance: newBalance,
+        supportLoanRepaid: repaidAmount,
+        remainingLoan: newSupportLoan
+    });
 });
 
 // API: Leaderboard (Top Referrers)
