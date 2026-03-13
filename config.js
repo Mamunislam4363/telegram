@@ -17,7 +17,7 @@ module.exports = {
     ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'admin123',
 
     // Public URL for web panel (your domain or IP)
-    PUBLIC_URL: process.env.PUBLIC_URL || 'https://mamunislam.netlify.app', 
+    PUBLIC_URL: process.env.PUBLIC_URL || 'https://autosverifybot-production.up.railway.app/',
 
     // OAUTH CONFIGURATION (FOR GMAIL SERVICE SYSTEM)
     GMAIL_CLIENT_ID: process.env.GMAIL_CLIENT_ID,
@@ -27,13 +27,17 @@ module.exports = {
     },
 
     // Mini App URL
-    MINI_APP_URL: process.env.MINI_APP_URL || 'https://mamunislam.netlify.app',
+    MINI_APP_URL: process.env.MINI_APP_URL || 'https://autosverifybot-production.up.railway.app/',
 
     // Mandatory Channel & Group (IDs are preferred for stability)
-    REQUIRED_CHANNEL: process.env.REQUIRED_CHANNEL_ID || '@AutosVerify',
-    REQUIRED_GROUP: process.env.REQUIRED_GROUP_ID || '@AutosVerifyCh',
-    REQUIRED_CHANNEL_NAME: process.env.REQUIRED_CHANNEL_NAME || '@AutosVerify',
-    REQUIRED_GROUP_NAME: process.env.REQUIRED_GROUP_NAME || '@AutosVerifyCh',
+    // NOTE: Using usernames directly as env vars have invalid IDs
+    REQUIRED_CHANNEL: '@AutosVerify',
+    REQUIRED_GROUP: '@AutosVerifyCh',
+    REQUIRED_CHANNEL_NAME: '@AutosVerify',
+    REQUIRED_GROUP_NAME: '@AutosVerifyCh',
+
+    // Set to true to skip mandatory join check (if channels don't exist)
+    SKIP_MANDATORY_JOIN: false,
 
     // Encryption Key for sensitive data in DB
     ENCRYPTION_KEY: process.env.ENCRYPTION_KEY || 'default_secret_key_32_bytes_long____',

@@ -28,6 +28,19 @@ const config = require('../config');
 const os = require('os');
 const openai = new OpenAI({ apiKey: config.OPENAI_API_KEY });
 
+// Helper function to get local IP address
+function getLocalIP() {
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name]) {
+            if (iface.family === 'IPv4' && !iface.internal) {
+                return iface.address;
+            }
+        }
+    }
+    return 'localhost';
+}
+
 let bot = null;
 let backupBot = null;
 let totalCallbacks = 0;
@@ -57,7 +70,7 @@ function setBot(instance) {
     bot = instance;
 
     // The Public URL is the public-facing Mini App URL
-    const publicUrl = config.PUBLIC_URL || 'https://mamunislam.netlify.app';
+    const publicUrl = config.PUBLIC_URL || 'https://autosverifybot-production.up.railway.app/';
 
     setTimeout(async () => {
         try {
@@ -96,7 +109,7 @@ app.use((req, res, next) => {
 
 // CORS middleware - allows Netlify frontend to call API directly
 app.use((req, res, next) => {
-    const allowedOrigins = ['https://mamunislam.netlify.app', 'http://localhost:3000'];
+    const allowedOrigins = ['https://autosverifybot-production.up.railway.app/', 'http://localhost:3000'];
     const origin = req.headers.origin;
     if (allowedOrigins.includes(origin)) {
         res.setHeader('Access-Control-Allow-Origin', origin);
@@ -1454,20 +1467,23 @@ app.post(['/api/complete-task', '/api/earn'], (req, res) => {
     }
 
     // Add reward
-    db.setTokenBalance(user, db.getTokenBalance(user) + (parseInt(finalReward) || 0));
+    const rewardAmount = parseInt(finalReward) || 0;
+    db.setTokenBalance(user, db.getTokenBalance(user) + rewardAmount);
 
     if (oneTimeTasks.includes(finalTaskId)) {
         user.completedTasks.push(finalTaskId);
     }
 
-    // History
-    if (!user.history) user.history = [];
-    user.history.unshift({
-        type: 'tasks',
-        date: new Date().toISOString(),
-        reward: `+${finalReward} Tokens`,
-        detail: finalTaskId
-    });
+    // History - only record if reward was actually given
+    if (rewardAmount > 0) {
+        if (!user.history) user.history = [];
+        user.history.unshift({
+            type: 'tasks',
+            date: new Date().toISOString(),
+            reward: `+${rewardAmount} Tokens`,
+            detail: finalTaskId
+        });
+    }
 
     saveUsersObj(users);
 
@@ -1505,7 +1521,7 @@ app.get('/api/number/platforms', (req, res) => {
     });
 
     // Default platforms if none configured
-    const defaultPlatforms = ['telegram', 'whatsapp', 'instagram', 'twitter', 'tiktok', 'other'];
+    const defaultPlatforms = ['telegram', 'whatsapp', 'instagram', 'twitter', 'tiktok', 'facebook', 'google', 'microsoft', 'snapchat', 'linkedin', 'pinterest', 'reddit', 'discord', 'twitch', 'youtube', 'ebay', 'amazon', 'netflix', 'spotify', 'airbnb', 'uber', 'grab', 'gojek', 'shopee', 'lazada', 'tokopedia', 'blibli', 'alibaba', 'taobao', 'wechat', 'line', 'kakao', 'naver', 'qq', 'vk', 'ok', 'mailru', 'yahoo', 'outlook', 'gmail', 'protonmail', 'yandex', 'bing', 'apple', 'samsung', 'huawei', 'xiaomi', 'oppo', 'vivo', 'realme', 'oneplus', 'nokia', 'sony', 'lg', 'htc', 'motorola', 'lenovo', 'asus', 'acer', 'dell', 'hp', 'toshiba', 'panasonic', 'philips', 'sharp', 'hitachi', 'fujitsu', 'casio', 'canon', 'nikon', 'sony', 'jbl', 'bose', 'beats', 'sennheiser', 'akg', 'harman', 'jvc', 'pioneer', 'onkyo', 'denon', 'marantz', 'yamaha', 'roland', 'korg', 'casio', 'other'];
     if (platformSet.size === 0) {
         defaultPlatforms.forEach(p => platformSet.add(p));
     }
@@ -1518,6 +1534,84 @@ app.get('/api/number/platforms', (req, res) => {
         twitter: { name: 'Twitter', icon: 'fab fa-twitter', color: '#1da1f2' },
         tiktok: { name: 'TikTok', icon: 'fab fa-tiktok', color: '#fff' },
         facebook: { name: 'Facebook', icon: 'fab fa-facebook', color: '#1877f2' },
+        google: { name: 'Google', icon: 'fab fa-google', color: '#4285f4' },
+        microsoft: { name: 'Microsoft', icon: 'fab fa-microsoft', color: '#00a4ef' },
+        snapchat: { name: 'Snapchat', icon: 'fab fa-snapchat', color: '#fffc00' },
+        linkedin: { name: 'LinkedIn', icon: 'fab fa-linkedin', color: '#0a66c2' },
+        pinterest: { name: 'Pinterest', icon: 'fab fa-pinterest', color: '#e60023' },
+        reddit: { name: 'Reddit', icon: 'fab fa-reddit', color: '#ff4500' },
+        discord: { name: 'Discord', icon: 'fab fa-discord', color: '#5865f2' },
+        twitch: { name: 'Twitch', icon: 'fab fa-twitch', color: '#9146ff' },
+        youtube: { name: 'YouTube', icon: 'fab fa-youtube', color: '#ff0000' },
+        ebay: { name: 'eBay', icon: 'fab fa-ebay', color: '#e53238' },
+        amazon: { name: 'Amazon', icon: 'fab fa-amazon', color: '#ff9900' },
+        netflix: { name: 'Netflix', icon: 'fas fa-film', color: '#e50914' },
+        spotify: { name: 'Spotify', icon: 'fab fa-spotify', color: '#1db954' },
+        airbnb: { name: 'Airbnb', icon: 'fab fa-airbnb', color: '#ff5a5f' },
+        uber: { name: 'Uber', icon: 'fab fa-uber', color: '#000000' },
+        grab: { name: 'Grab', icon: 'fas fa-car', color: '#00b14f' },
+        gojek: { name: 'Gojek', icon: 'fas fa-motorcycle', color: '#00aa13' },
+        shopee: { name: 'Shopee', icon: 'fas fa-shopping-bag', color: '#ee4d2d' },
+        lazada: { name: 'Lazada', icon: 'fas fa-shopping-cart', color: '#0f146d' },
+        tokopedia: { name: 'Tokopedia', icon: 'fas fa-store', color: '#03ac0e' },
+        blibli: { name: 'Blibli', icon: 'fas fa-shopping-basket', color: '#0095d9' },
+        alibaba: { name: 'Alibaba', icon: 'fab fa-alibaba', color: '#ff6a00' },
+        taobao: { name: 'Taobao', icon: 'fas fa-shopping-bag', color: '#ff5000' },
+        wechat: { name: 'WeChat', icon: 'fab fa-weixin', color: '#07c160' },
+        line: { name: 'Line', icon: 'fab fa-line', color: '#00c300' },
+        kakao: { name: 'KakaoTalk', icon: 'fas fa-comment', color: '#ffe812' },
+        naver: { name: 'Naver', icon: 'fab fa-neos', color: '#03c75a' },
+        qq: { name: 'QQ', icon: 'fab fa-qq', color: '#12b7f5' },
+        vk: { name: 'VK', icon: 'fab fa-vk', color: '#4a76a8' },
+        ok: { name: 'OK', icon: 'fab fa-odnoklassniki', color: '#ee8208' },
+        mailru: { name: 'Mail.ru', icon: 'fas fa-envelope', color: '#168de2' },
+        yahoo: { name: 'Yahoo', icon: 'fab fa-yahoo', color: '#6001d2' },
+        outlook: { name: 'Outlook', icon: 'fas fa-envelope', color: '#0078d4' },
+        gmail: { name: 'Gmail', icon: 'fas fa-envelope', color: '#ea4335' },
+        protonmail: { name: 'ProtonMail', icon: 'fas fa-shield-alt', color: '#8b89cc' },
+        yandex: { name: 'Yandex', icon: 'fab fa-yandex', color: '#fc3f1d' },
+        bing: { name: 'Bing', icon: 'fab fa-microsoft', color: '#008373' },
+        apple: { name: 'Apple', icon: 'fab fa-apple', color: '#a3aaae' },
+        samsung: { name: 'Samsung', icon: 'fas fa-mobile-alt', color: '#1428a0' },
+        huawei: { name: 'Huawei', icon: 'fas fa-mobile-alt', color: '#cf0a2c' },
+        xiaomi: { name: 'Xiaomi', icon: 'fas fa-mobile-alt', color: '#ff6900' },
+        oppo: { name: 'OPPO', icon: 'fas fa-mobile-alt', color: '#009b77' },
+        vivo: { name: 'Vivo', icon: 'fas fa-mobile-alt', color: '#415fff' },
+        realme: { name: 'Realme', icon: 'fas fa-mobile-alt', color: '#ffca28' },
+        oneplus: { name: 'OnePlus', icon: 'fas fa-mobile-alt', color: '#f50514' },
+        nokia: { name: 'Nokia', icon: 'fas fa-mobile-alt', color: '#124191' },
+        sony: { name: 'Sony', icon: 'fas fa-mobile-alt', color: '#000000' },
+        lg: { name: 'LG', icon: 'fas fa-mobile-alt', color: '#a50034' },
+        htc: { name: 'HTC', icon: 'fas fa-mobile-alt', color: '#8cc63f' },
+        motorola: { name: 'Motorola', icon: 'fas fa-mobile-alt', color: '#000000' },
+        lenovo: { name: 'Lenovo', icon: 'fab fa-lenovo', color: '#e2231a' },
+        asus: { name: 'ASUS', icon: 'fas fa-laptop', color: '#00539b' },
+        acer: { name: 'Acer', icon: 'fas fa-laptop', color: '#83b81a' },
+        dell: { name: 'Dell', icon: 'fas fa-laptop', color: '#007db8' },
+        hp: { name: 'HP', icon: 'fas fa-laptop', color: '#0096d6' },
+        toshiba: { name: 'Toshiba', icon: 'fas fa-laptop', color: '#ea0a2e' },
+        panasonic: { name: 'Panasonic', icon: 'fas fa-tv', color: '#0068b7' },
+        philips: { name: 'Philips', icon: 'fas fa-tv', color: '#0b5ed7' },
+        sharp: { name: 'Sharp', icon: 'fas fa-tv', color: '#ff0000' },
+        hitachi: { name: 'Hitachi', icon: 'fas fa-tv', color: '#ed1c24' },
+        fujitsu: { name: 'Fujitsu', icon: 'fas fa-laptop', color: '#c3003f' },
+        casio: { name: 'Casio', icon: 'fas fa-clock', color: '#000000' },
+        canon: { name: 'Canon', icon: 'fas fa-camera', color: '#bc0024' },
+        nikon: { name: 'Nikon', icon: 'fas fa-camera', color: '#ffe600' },
+        jbl: { name: 'JBL', icon: 'fas fa-headphones', color: '#ff6600' },
+        bose: { name: 'Bose', icon: 'fas fa-headphones', color: '#000000' },
+        beats: { name: 'Beats', icon: 'fas fa-headphones', color: '#ff0000' },
+        sennheiser: { name: 'Sennheiser', icon: 'fas fa-headphones', color: '#0096d6' },
+        akg: { name: 'AKG', icon: 'fas fa-headphones', color: '#0095d9' },
+        harman: { name: 'Harman', icon: 'fas fa-headphones', color: '#00a3e0' },
+        jvc: { name: 'JVC', icon: 'fas fa-tv', color: '#b71c1c' },
+        pioneer: { name: 'Pioneer', icon: 'fas fa-music', color: '#e4002b' },
+        onkyo: { name: 'Onkyo', icon: 'fas fa-music', color: '#000000' },
+        denon: { name: 'Denon', icon: 'fas fa-music', color: '#000000' },
+        marantz: { name: 'Marantz', icon: 'fas fa-music', color: '#8b0000' },
+        yamaha: { name: 'Yamaha', icon: 'fas fa-music', color: '#4b0082' },
+        roland: { name: 'Roland', icon: 'fas fa-music', color: '#000000' },
+        korg: { name: 'Korg', icon: 'fas fa-music', color: '#000000' },
         other: { name: 'Other', icon: 'fas fa-ellipsis-h', color: 'var(--text-sub)' }
     };
 
@@ -1720,6 +1814,9 @@ app.get('/api/admin/users', (req, res) => {
         invites: u.invites || u.referralCount || 0,
         verified: u.verified || false,
         adminVerified: u.adminVerified || false,
+        verifiedAt: u.verifiedAt || null,
+        leftAt: u.leftAt || null,
+        leftFrom: u.leftFrom || null,
         banned: u.banned || u.blocked || false,
         joinDate: u.joinDate || u.joinedAt || null, lastActive: u.lastActive || null
     }));
@@ -2468,18 +2565,20 @@ app.post('/api/admin/tasks', (req, res) => {
     res.json({ success: true, id });
 });
 
-// Update task (edit tokens and gems rewards)
+// Update task (edit tokens, gems, name, and url)
 app.put('/api/admin/tasks/:id', (req, res) => {
     const id = req.params.id;
-    const { reward, gems } = req.body;
+    const { reward, gems, name, url } = req.body;
 
     if (!db.data.tasks || !db.data.tasks[id]) {
         return res.json({ success: false, message: 'Task not found' });
     }
 
-    // Update task rewards
+    // Update task fields
     if (reward !== undefined) db.data.tasks[id].reward = parseInt(reward) || 0;
     if (gems !== undefined) db.data.tasks[id].gems = parseInt(gems) || 0;
+    if (name !== undefined) db.data.tasks[id].name = name;
+    if (url !== undefined) db.data.tasks[id].url = url;
     db.save();
 
     res.json({ success: true, message: 'Task updated successfully' });
@@ -2532,13 +2631,19 @@ app.post('/api/admin/tasks/seed-defaults', (req, res) => {
     const defaultTasks = {
         "task_youtube": {
             name: "Youtube Channel",
-            url: "https://youtube.com/@AutosVerify",
+            url: "https://www.youtube.com/@MamunIslamyts",
             reward: 10,
             gems: 1
         },
         "task_telegram_group": {
             name: "Telegram Group",
-            url: "https://t.me/AutosVerifyGroup",
+            url: "https://t.me/AutosVerifyCh",
+            reward: 10,
+            gems: 1
+        },
+        "task_telegram_channel": {
+            name: "Telegram Channel",
+            url: "https://t.me/AutosVerify",
             reward: 10,
             gems: 1
         }
@@ -2564,12 +2669,8 @@ app.post('/api/admin/tasks/seed-defaults', (req, res) => {
         }
     });
 
-    // Remove unwanted Telegram Channel task if exists
-    if (db.data.tasks["task_telegram_channel"]) {
-        delete db.data.tasks["task_telegram_channel"];
-    }
-    // Also remove old legacy task IDs
-    const legacyIdsToRemove = ['tg_ch', 'telegram_channel', 'task_telegram_channel'];
+    // Remove old legacy task IDs that are no longer used
+    const legacyIdsToRemove = ['tg_ch', 'telegram_channel'];
     legacyIdsToRemove.forEach(id => {
         if (db.data.tasks[id]) {
             delete db.data.tasks[id];
@@ -2589,13 +2690,19 @@ app.post('/api/admin/tasks/seed-defaults', (req, res) => {
     const defaultTasks = {
         "task_youtube": {
             name: "Youtube Channel",
-            url: "https://youtube.com/@AutosVerify",
+            url: "https://www.youtube.com/@MamunIslamyts",
             reward: 10,
             gems: 1
         },
         "task_telegram_group": {
             name: "Telegram Group",
-            url: "https://t.me/AutosVerifyGroup",
+            url: "https://t.me/AutosVerifyCh",
+            reward: 10,
+            gems: 1
+        },
+        "task_telegram_channel": {
+            name: "Telegram Channel",
+            url: "https://t.me/AutosVerify",
             reward: 10,
             gems: 1
         }
@@ -2621,8 +2728,8 @@ app.post('/api/admin/tasks/seed-defaults', (req, res) => {
         }
     });
 
-    // Remove Telegram Channel task if exists
-    const legacyIdsToRemove = ['tg_ch', 'telegram_channel', 'task_telegram_channel'];
+    // Remove old legacy task IDs that are no longer used
+    const legacyIdsToRemove = ['tg_ch', 'telegram_channel'];
     let removedCount = 0;
     legacyIdsToRemove.forEach(id => {
         if (db.data.tasks[id]) {
@@ -2728,6 +2835,40 @@ app.get('/api/admin/costs', (req, res) => {
         },
         sellingRewards: db.data.sellingRewards || {},
         dbSize: (fs.existsSync(db.DB_FILE) ? (fs.statSync(db.DB_FILE).size / 1024).toFixed(2) : 0) + ' KB'
+    });
+});
+
+// Public API: Get Costs (for user panel)
+app.get('/api/public/costs', (req, res) => {
+    const settings = db.getSettings();
+    const adminSettings = db.data.adminSettings || {};
+    const costs = settings.costs || {};
+    const creditRates = adminSettings.creditRates || { crypto: 0.01, bkash: 1, nagad: 1 };
+
+    res.json({
+        success: true,
+        costs: {
+            quizReward: settings.quizReward || 0,
+            spaceReward: settings.spaceReward || 0,
+            inviteBonus: settings.refBonus || 0,
+            welcomeBonus: adminSettings.welcomeCredits || 0,
+            adReward: settings.adReward || 5,
+            zeroBalanceAdReward: settings.zeroBalanceAdReward || 5,
+            taskReward: settings.taskReward || 10,
+            transferFee: settings.transferFee || 0,
+            supportCost: settings.supportCost || 0,
+            gmailCost: costs.gmail || 0,
+            verificationCost: costs.verification || 0,
+            numberCost: costs.number || 0,
+            usdToToken: settings.usdToToken || 100,
+            gemToToken: settings.gemToToken || 100,
+            tokenToGem: settings.tokenToGem || 1,
+            takaToGem: settings.takaToGem || 100,
+            platformFee: settings.platformFee || 20,
+            cryptoRate: creditRates.crypto || 0.01,
+            bkashRate: creditRates.bkash || 1,
+            nagadRate: creditRates.nagad || 1
+        }
     });
 });
 
@@ -3396,7 +3537,7 @@ app.post('/api/admin/broadcast', async (req, res) => {
 
             // Fix: Replace localhost with PUBLIC_URL for Telegram buttons
             if (bUrl.includes('localhost:') || bUrl.includes('127.0.0.1:')) {
-                const publicUrl = config.PUBLIC_URL || 'https://mamunislam.netlify.app';
+                const publicUrl = config.PUBLIC_URL || 'https://autosverifybot-production.up.railway.app/';
                 bUrl = bUrl.replace(/https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/, publicUrl);
             }
 
@@ -4030,6 +4171,12 @@ app.get('/api/admin/services', (req, res) => {
     res.json({ success: true, services: Object.values(services) });
 });
 
+// Public API: Get Services (for user panel)
+app.get('/api/public/services', (req, res) => {
+    const services = db.data.services || {};
+    res.json({ success: true, services: Object.values(services) });
+});
+
 app.post('/api/admin/services', (req, res) => {
     const item = req.body;
     db.data.services = db.data.services || {};
@@ -4051,6 +4198,12 @@ app.delete('/api/admin/services/:id', (req, res) => {
 
 // API: Admin - Shop Items
 app.get('/api/admin/shop', (req, res) => {
+    const items = db.data.shopItems || {};
+    res.json({ success: true, shopItems: Object.values(items) });
+});
+
+// Public API: Get Shop Items (for user panel)
+app.get('/api/shop', (req, res) => {
     const items = db.data.shopItems || {};
     res.json({ success: true, shopItems: Object.values(items) });
 });
@@ -4653,24 +4806,35 @@ app.get('/api/user/item-sales/my', (req, res) => {
 app.get('/api/user/item-sales/approved', (req, res) => {
     const items = Object.values(db.data.itemSales || {})
         .filter(s => s.status === 'approved' && (s.stock || 0) > 0)
-        .map(s => ({
-            id: s.id,
-            itemType: s.itemType,
-            customName: s.customName || '',
-            serviceName: s.serviceName || '',
-            vpnName: s.vpnName || '',
-            vpnPlan: s.vpnPlan || '',
-            cardType: s.cardType || '',
-            iconBase64: s.iconBase64 || '',
-            appUrl: s.appUrl || '',
-            is2fa: s.is2fa,
-            twoFA: s.twoFA ? { appCode: s.twoFA.appCode ? '***' : '' } : null,
-            stock: s.stock || 1,
-            price: s.price || s.sellingPrice || 0,
-            createdAt: s.createdAt
-        }))
-        .sort((a, b) => b.createdAt - a.createdAt);
+        .sort((a, b) => b.createdAt - a.createdAt)
+        .slice(0, 50);
     res.json({ success: true, items });
+});
+
+// Admin: Delete an approved item
+app.delete('/api/admin/item-sales/:id', (req, res) => {
+    const { id } = req.params;
+
+    if (!db.data.itemSales || !db.data.itemSales[id]) {
+        return res.json({ success: false, message: 'Item not found' });
+    }
+
+    // Get item details for notification
+    const item = db.data.itemSales[id];
+    const itemName = item.itemName || 'Item';
+    const sellerId = item.userId;
+
+    // Delete the item
+    delete db.data.itemSales[id];
+    db.save();
+
+    // Notify seller if bot is available
+    if (bot && sellerId) {
+        const deleteMsg = `🗑️ <b>Item Deleted by Admin</b>\n\nYour item <b>${itemName}</b> has been removed from the marketplace by an admin.\n\nIf you have questions, please contact support.`;
+        bot.sendMessage(sellerId, deleteMsg, { parse_mode: 'HTML' }).catch(e => console.error('Delete notify error:', e.message));
+    }
+
+    res.json({ success: true, message: 'Item deleted successfully' });
 });
 
 // Admin: Get all sale submissions (pending/approved/rejected)
@@ -4897,10 +5061,14 @@ async function startServer() {
     console.log(`[DEBUG] Attempting to start server on PORT: ${PORT}`);
     try {
         const server = app.listen(PORT, '0.0.0.0', () => {
-            console.log(`🌐 Web Panel running on http://localhost:${PORT}`);
-            console.log(`   ├─ User Panel:  http://localhost:${PORT}/`);
-            console.log(`   ├─ Admin Panel: http://localhost:${PORT}/admin`);
-            console.log(`   └─ API Base:    http://localhost:${PORT}/api`);
+            const localIP = getLocalIP();
+            console.log(`🌐 Web Panel running on:`);
+            console.log(`   ├─ Local:       http://localhost:${PORT}`);
+            console.log(`   ├─ Network:     http://${localIP}:${PORT}`);
+            console.log(`   │`);
+            console.log(`   ├─ User Panel:  http://localhost:${PORT}/  |  http://${localIP}:${PORT}/`);
+            console.log(`   ├─ Admin Panel: http://localhost:${PORT}/admin  |  http://${localIP}:${PORT}/admin`);
+            console.log(`   └─ API Base:    http://localhost:${PORT}/api  |  http://${localIP}:${PORT}/api`);
         });
 
         server.on('error', (e) => {

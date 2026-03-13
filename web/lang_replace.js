@@ -310,58 +310,65 @@ const newScript = `<!-- ====== LANGUAGE SYSTEM JS ====== -->
                 // 1) All data-i18n tagged elements across entire app
                 document.querySelectorAll('[data-i18n]').forEach(el => {
                     const key = el.getAttribute('data-i18n');
-                    if (t[key] !== undefined) el.textContent = t[key];
-                });
-
-                // 2) Language modal header
-                const lmt = document.getElementById('langModalTitle');
-                if (lmt) lmt.textContent = t.selectLang;
-                const lms = document.getElementById('langModalSub');
-                if (lms) lms.textContent = t.chooseLang;
-
-                // 3) Current language display badge
-                const display = document.getElementById('currentLangDisplay');
-                if (display) display.textContent = lang.flag + ' ' + lang.name.toUpperCase();
-
-                // 4) Fallback: .mi-t and .grid-btn-text items without data-i18n
-                const menuMap = {
-                    'Deposit':t.deposit,'History':t.history,'Verification':t.verification,
-                    'Services':t.services,'Shop':t.shop,'Leaderboard':t.leaderboard,
-                    'Exchange':t.exchange,'Redeem Code':t.redeemCode,
-                    'Virtual Number':t.virtualNumber,'Email':t.email,
-                    'Invite & Earn':t.inviteEarn,'Support Team':t.support,
-                    'Appearance':t.appearance,'Account Status':t.accountStatus,
-                    'Language':t.language,'Daily':t.daily,'Tasks':t.tasks,
-                    'Invite':t.invite,'Service':t.service,'Earn':t.earn,
-                    'Accounts':t.accounts,'Number':t.number,
-                };
-                document.querySelectorAll('.mi-t, .grid-btn-text').forEach(el => {
-                    if (!el.getAttribute('data-i18n')) {
-                        const txt = el.textContent.trim();
-                        if (menuMap[txt] !== undefined) el.textContent = menuMap[txt];
+                    if (t[key] !== undefined) {
+                        // Check if element has icons (i tags, images, or other inline elements)
+                        const hasIcons = el.querySelector('i, svg, img, .icon') !== null || 
+                                        el.innerHTML.includes('<i ') || 
+                                        el.innerHTML.includes('<svg') ||
+                                        el.innerHTML.includes('<img');
+                        
+                        if (hasIcons) {
+                            // Preserve icons - only update text content
+                            // Get the HTML and replace only text portions
+                            let html = el.innerHTML;
+                            // Find text content between tags
+                            const textMatch = html.match(/>([^<]+)</g);
+                            if (textMatch) {
+                                // Replace text while keeping tags
+                                html = html.replace(/>([^<]+)</g, `> ${ t[key]}< `);
+                                el.innerHTML = html;
+                            } else {
+                                // Fallback if no text nodes found between tags
+                                el.textContent = t[key];
+                            }
+                        } else {
+                            // No icons, safe to replace textContent
+                            el.textContent = t[key];
+                        }
                     }
                 });
 
-                // 5) Section titles without data-i18n
-                const secMap = {
-                    'DISPLAY & SECURITY': t.displaySecurity,
-                    'HOW TO EARN': t.howToEarn,
-                    'MISSION CENTER': t.missionCenter,
-                    'AVAILABLE ITEMS': t.availableItems,
-                    'TOP 10 REFERRERS': t.topRefs,
-                };
-                document.querySelectorAll('.section-title').forEach(el => {
-                    if (!el.getAttribute('data-i18n')) {
-                        const sec = secMap[el.textContent.trim()];
-                        if (sec) el.textContent = sec;
-                    }
-                });
+                // Update HTML lang attribute
+                document.documentElement.lang = code;
+                
+                // Update direction for RTL languages
+                const langInfo = LANGUAGES.find(l => l.code === code);
+                if (langInfo) {
+                    document.documentElement.dir = langInfo.dir || 'ltr';
+                }
 
-                // 6) Re-apply after delay for dynamic content loaded by script.js
+                // Re-apply after delay for dynamic content
                 setTimeout(() => {
                     document.querySelectorAll('[data-i18n]').forEach(el => {
                         const key = el.getAttribute('data-i18n');
-                        if (t[key] !== undefined) el.textContent = t[key];
+                        if (t[key] !== undefined) {
+                            const hasIcons = el.querySelector('i, svg, img, .icon') !== null || 
+                                            el.innerHTML.includes('<i ') || 
+                                            el.innerHTML.includes('<svg') ||
+                                            el.innerHTML.includes('<img');
+                            
+
+                            if (hasIcons) {
+                                let html = el.innerHTML;
+                                const textMatch = html.match(/>([^<]+)</g);
+                                if (textMatch) {
+                                    html = html.replace(/>([^<]+)</g, `> ${ t[key] }< `);
+                                    el.innerHTML = html;
+                                }
+                            } else {
+                                el.textContent = t[key];
+                            }
+                        }
                     });
                 }, 600);
             }

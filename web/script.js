@@ -1192,6 +1192,142 @@ function submitPayment() {
 // TASK LOGIC
 const IN_PROGRESS_TASKS = {};
 
+// Fetch and render tasks from API
+async function loadUserTasks() {
+    const container = document.getElementById('tasksListContainer');
+    if (!container) return;
+
+    try {
+        const res = await fetch('/api/admin/tasks');
+        const data = await res.json();
+
+        if (!data.success || !data.tasks || data.tasks.length === 0) {
+            container.innerHTML = `
+                <div style="text-align:center; padding:40px; color:#666;">
+                    <i class="fas fa-inbox" style="font-size:32px; margin-bottom:10px;"></i>
+                    <p>No tasks available</p>
+                </div>`;
+            return;
+        }
+
+        // Render tasks
+        container.innerHTML = data.tasks.map(task => {
+            const icon = getTaskIcon(task.name);
+            const bg = getTaskBg(task.name);
+            const border = getTaskBorder(task.name);
+            return `
+            <div class="task-card-new" data-task-id="${task.id}">
+                <div class="tcn-left">
+                    <div class="tcn-icon" style="background:${bg}; border:1px solid ${border}; padding:0; overflow:hidden;">
+                        ${icon}
+                    </div>
+                    <div class="tcn-info">
+                        <h4>${task.name}</h4>
+                        <div class="tcn-rewards">
+                            <div class="tcn-badge" style="color:#fbbf24"><i class="fas fa-coins"></i> +${task.reward || 10}</div>
+                            <div class="tcn-badge" style="color:#38bdf8"><i class="fas fa-gem"></i> +${task.gems || 1}</div>
+                        </div>
+                    </div>
+                </div>
+                <button class="tcn-btn" onclick="startTask(this, '${task.id}', '${task.url}', ${task.reward || 10})">START</button>
+            </div>`;
+        }).join('');
+
+    } catch (e) {
+        console.error('Error loading tasks:', e);
+        container.innerHTML = `
+            <div style="text-align:center; padding:40px; color:#666;">
+                <i class="fas fa-exclamation-triangle" style="font-size:24px; margin-bottom:10px;"></i>
+                <p>Failed to load tasks</p>
+            </div>`;
+    }
+}
+
+// Helper function to get task icon
+function getTaskIcon(name) {
+    const lower = name.toLowerCase();
+    if (lower.includes('youtube')) {
+        return `<img src="https://img.icons8.com/color/48/youtube-play.png" alt="YT" style="width:28px; height:28px; object-fit:contain;" onerror="this.parentElement.innerHTML='<i class=\'fab fa-youtube\' style=\'color:#ff0000; font-size:22px\'></i>'">`;
+    } else if (lower.includes('telegram')) {
+        return `<img src="https://img.icons8.com/color/48/telegram-app.png" alt="TG" style="width:28px; height:28px; object-fit:contain;" onerror="this.parentElement.innerHTML='<i class=\'fab fa-telegram\' style=\'color:#229ed9; font-size:22px\'></i>'">`;
+    } else {
+        return `<i class="fas fa-tasks" style="color:#f59e0b; font-size:20px;"></i>`;
+    }
+}
+
+// Helper function to get task background color
+function getTaskBg(name) {
+    const lower = name.toLowerCase();
+    if (lower.includes('youtube')) return '#1a0000';
+    if (lower.includes('telegram')) return '#003a4a';
+    return '#1a1a2e';
+}
+
+// Helper function to get task border color
+function getTaskBorder(name) {
+    const lower = name.toLowerCase();
+    if (lower.includes('youtube')) return '#ff0000';
+    if (lower.includes('telegram')) return '#229ed9';
+    return '#333';
+}
+
+// Start task - open URL and track
+function startTask(button, taskId, url, reward) {
+    if (!url) {
+        showToast('Task URL not configured');
+        return;
+    }
+
+    // Mark as in progress
+    button.textContent = 'VERIFY';
+    button.style.background = '#22c55e';
+    button.onclick = function () {
+        completeTask(taskId, reward, button);
+    };
+
+    // Open the task URL
+    window.open(url, '_blank');
+}
+
+// Complete task and claim reward
+async function completeTask(taskId, reward, button) {
+    try {
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+        const res = await fetch('/api/complete-task', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: userData?.id,
+                taskId: taskId,
+                reward: reward
+            })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            button.textContent = 'DONE';
+            button.style.background = '#666';
+            button.disabled = true;
+            showToast(`✅ Task completed! +${reward} tokens`);
+            refreshBalance();
+        } else {
+            button.textContent = 'START';
+            button.style.background = '#f59e0b';
+            button.disabled = false;
+            showToast(data.message || 'Task already completed');
+        }
+    } catch (e) {
+        console.error('Error completing task:', e);
+        button.textContent = 'START';
+        button.style.background = '#f59e0b';
+        button.disabled = false;
+        showToast('Network error. Please try again.');
+    }
+}
+
 function earn(buttonElement, type, amount) {
     console.log(`[DEBUG] earn() called - type: ${type}, state: ${IN_PROGRESS_TASKS[type]}, userId: ${userData.id}`);
 
@@ -1228,7 +1364,7 @@ function earn(buttonElement, type, amount) {
 
     // YouTube task - countdown then auto-complete (NO CLAIM BUTTON)
     if (type === 'yt') {
-        window.open('https://youtube.com/@MamunIslamyts');
+        window.open('https://www.youtube.com/@MamunIslamyts', '_blank');
 
         IN_PROGRESS_TASKS[type] = 'waiting';
         buttonElement.style.pointerEvents = 'none';
@@ -1577,13 +1713,11 @@ function renderDailyGrid() {
         const isActive = i === userClaimedDay + 1 && canClaim;
         const isDay7 = i === 7;
 
-        let iconHtml = `<i class="fas ${isClaimed ? 'fa-check-circle' : (i === 7 ? 'fa-crown' : 'fa-coins')}" style="${!isClaimed ? 'color: #fbbf24;' : ''}"></i>`;
-        let rewardText = `${rewards[i - 1]} tokens`;
-
-        if (i === 5 || i === 6) {
-            rewardText = `${rewards[i - 1]} tokens + <i class="fas fa-gem" style="color:#38bdf8;"></i> 1`;
-        } else if (i === 7) {
-            rewardText = `2 <i class="fas fa-gem" style="color:#38bdf8;"></i>`;
+        // Show green checkmark for claimed days, otherwise show coins/crown
+        let iconHtml;
+        if (isClaimed) {
+            iconHtml = `<i class="fas fa-check-circle" style="color: #22c55e; font-size: 28px;"></i>`; // Green checkmark
+        } else if (isDay7) {
             iconHtml = `
                 <i class="fas fa-crown" style="color: #fbbf24; font-size: 32px;"></i>
                 <div style="display: flex; flex-direction: column; align-items: flex-start;">
@@ -1591,15 +1725,30 @@ function renderDailyGrid() {
                     <span style="font-size:12px; color: #aaa;">100 Tokens + 2 Gems</span>
                 </div>
             `;
+        } else {
+            iconHtml = `<i class="fas fa-coins" style="color: #fbbf24; font-size: 24px;"></i>`;
         }
 
+        let rewardText = `${rewards[i - 1]} tokens`;
+
+        if (i === 5 || i === 6) {
+            rewardText = `${rewards[i - 1]} tokens + <i class="fas fa-gem" style="color:#38bdf8;"></i> 1`;
+        } else if (i === 7) {
+            rewardText = `2 <i class="fas fa-gem" style="color:#38bdf8;"></i>`;
+        }
+
+        // Styling for claimed days
+        const claimedStyle = isClaimed ? 'background: rgba(34, 197, 94, 0.1) !important; border-color: #22c55e !important;' : '';
+        const claimedLabelStyle = isClaimed ? 'color: #22c55e !important;' : '';
+        const claimedRewardStyle = isClaimed ? 'color: #22c55e !important;' : '';
+
         html += `
-        <div class="ds-day ${isClaimed ? 'claimed' : ''} ${isActive ? 'active' : ''} ${isDay7 ? 'day-7' : ''}">
-            <div class="ds-day-label">DAY ${i}</div>
+        <div class="ds-day ${isClaimed ? 'claimed' : ''} ${isActive ? 'active' : ''} ${isDay7 ? 'day-7' : ''}" style="${claimedStyle}">
+            <div class="ds-day-label" style="${claimedLabelStyle}">DAY ${i}</div>
             <div class="ds-day-icon" style="${isDay7 ? 'flex-direction: row; gap: 10px;' : ''}">
                 ${iconHtml}
             </div>
-            <div class="ds-day-reward" style="${isDay7 ? 'text-align: right;' : ''}">${rewardText}</div>
+            <div class="ds-day-reward" style="${isDay7 ? 'text-align: right;' : ''} ${claimedRewardStyle}">${rewardText}</div>
         </div>`;
     }
     grid.innerHTML = html;
@@ -1671,7 +1820,49 @@ function startDailyCountdown() {
 function claimDaily() {
     const btn = document.getElementById('claimDailyBtn');
     if (!btn || btn.disabled) return;
-    showAdAndEarn('daily_bonus');
+
+    // Show loading state
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> CLAIMING...';
+    btn.disabled = true;
+
+    // Call the API to claim daily reward
+    fetch('/api/daily/claim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: userData.id })
+    })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                // Update user data
+                userData.tokens = data.newBalance;
+                userData.dailyStreak = data.streak;
+                userData.lastDailyClaim = Date.now();
+
+                // Show success message
+                window.showToast(`✅ Daily reward claimed! +${data.reward} Tokens`);
+
+                // Refresh the daily grid to show green checkmark
+                renderDailyGrid();
+
+                // Refresh balances
+                renderBalances();
+
+                // Restart the countdown timer
+                startDailyCountdown();
+            } else {
+                // Show error message
+                window.showToast(data.message || 'Failed to claim daily reward');
+
+                // Reset button state
+                renderDailyGrid();
+            }
+        })
+        .catch(err => {
+            console.error('Error claiming daily:', err);
+            window.showToast('❌ Error claiming daily reward');
+            renderDailyGrid();
+        });
 }
 
 async function redeemCode() {
@@ -2071,6 +2262,10 @@ showPage = function (targetId) {
         renderReferralHistory();
         loadInviteStats();
     }
+    if (targetId === 'tasks') {
+        // Load tasks dynamically from API
+        loadUserTasks();
+    }
 };
 
 // Call init functions
@@ -2089,6 +2284,9 @@ window.exchangeTokens = exchangeTokens;
 window.earn = earn;
 window.verifyAndComplete = verifyAndComplete;
 window.completeTaskReward = completeTaskReward;
+window.loadUserTasks = loadUserTasks;
+window.startTask = startTask;
+window.completeTask = completeTask;
 window.selectPayMethod = selectPayMethod;
 window.submitPayment = submitPayment;
 window.payWithBalance = payWithBalance;
@@ -2841,7 +3039,8 @@ function getShopItems() {
 
 // Fetch from backend and update UI
 function syncAdminData() {
-    fetch('/api/admin/services')
+    // Sync services
+    fetch('/api/public/services')
         .then(r => r.json())
         .then(data => {
             if (data.success && data.services) {
@@ -2849,13 +3048,27 @@ function syncAdminData() {
                 renderServicesList();
             }
         });
-    fetch('/api/admin/shop')
+
+    // Sync shop items
+    fetch('/api/shop')
         .then(r => r.json())
         .then(data => {
             if (data.success && data.shopItems) {
                 localStorage.setItem('adminShopItems', JSON.stringify(data.shopItems));
             }
         });
+
+    // Sync costs/rewards
+    fetch('/api/public/costs')
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.costs) {
+                localStorage.setItem('adminCosts', JSON.stringify(data.costs));
+                // Update global config if needed
+                window.ADMIN_CONFIG = data.costs;
+            }
+        });
+
     // Also fetch approved user-submitted items
     fetch('/api/user/item-sales/approved')
         .then(r => r.json())

@@ -11,6 +11,9 @@ const fs = require('fs');
 const path = require('path');
 const apiGateway = require('./services/api-gateway');
 
+// Store original console.log for internal logging
+const originalConsoleLog = console.log.bind(console);
+
 // Validate Config
 const token = config.TELEGRAM_BOT_TOKEN;
 
@@ -224,9 +227,76 @@ bot.getMe().then(me => {
     if (!db.data.settings) db.data.settings = {};
     db.data.settings.botUsername = me.username;
     db.save();
+
+    // Validate mandatory channels
+    validateMandatoryChannels();
 }).catch(err => {
     // Silently handle connection errors
 });
+
+// Validate mandatory channels on startup
+let channelsValidated = false;
+let channelsAccessible = false;
+
+async function validateMandatoryChannels() {
+    if (config.SKIP_MANDATORY_JOIN) {
+        console.log('⏭️ Mandatory join check is DISABLED (SKIP_MANDATORY_JOIN=true)');
+        channelsValidated = true;
+        channelsAccessible = false;
+        return;
+    }
+
+    try {
+        let channelOk = false;
+        let groupOk = false;
+
+        if (config.REQUIRED_CHANNEL) {
+            try {
+                const chat = await bot.getChat(config.REQUIRED_CHANNEL);
+                console.log(`✅ Channel accessible: ${chat.title || config.REQUIRED_CHANNEL}`);
+                channelOk = true;
+            } catch (e) {
+                console.warn(`⚠️ Channel not accessible: ${config.REQUIRED_CHANNEL} - ${e.message}`);
+                console.warn('   Users will be blocked until this is fixed or SKIP_MANDATORY_JOIN is enabled');
+            }
+        } else {
+            channelOk = true;
+        }
+
+        if (config.REQUIRED_GROUP) {
+            try {
+                const chat = await bot.getChat(config.REQUIRED_GROUP);
+                console.log(`✅ Group accessible: ${chat.title || config.REQUIRED_GROUP}`);
+                groupOk = true;
+            } catch (e) {
+                console.warn(`⚠️ Group not accessible: ${config.REQUIRED_GROUP} - ${e.message}`);
+                console.warn('   Users will be blocked until this is fixed or SKIP_MANDATORY_JOIN is enabled');
+            }
+        } else {
+            groupOk = true;
+        }
+
+        channelsValidated = true;
+        channelsAccessible = channelOk && groupOk;
+
+        if (!channelsAccessible) {
+            console.warn('\n⚠️⚠️⚠️ MANDATORY CHANNELS NOT ACCESSIBLE ⚠️⚠️⚠️');
+            console.warn('To fix this, either:');
+            console.warn('1. Create the channels and add the bot as admin');
+            console.warn('2. Update REQUIRED_CHANNEL and REQUIRED_GROUP in config.js');
+            console.warn('3. Set SKIP_MANDATORY_JOIN=true in config.js to disable this check\n');
+        }
+    } catch (e) {
+        console.error('Error validating channels:', e.message);
+    }
+}
+
+// Helper: Check if membership check should be skipped
+function shouldSkipMembershipCheck() {
+    if (config.SKIP_MANDATORY_JOIN) return true;
+    if (channelsValidated && !channelsAccessible) return false; // Let it fail naturally to show error
+    return false;
+}
 
 bot.on('message', (msg) => {
     console.log(`[DEBUG] RAW MESSAGE RECEIVED from ${msg.from?.id}: ${msg.text}`);
@@ -359,10 +429,17 @@ async function showBroadcastOptions(chatId, userId) {
 
 // Helper: Check if user is member of required channel and group
 async function checkMembership(userId) {
+    // Skip check if disabled in config
+    if (shouldSkipMembershipCheck()) {
+        return { channel: true, group: true, skipped: true };
+    }
+
     try {
         const results = {
             channel: false,
-            group: false
+            group: false,
+            channelError: null,
+            groupError: null
         };
         const validStatuses = ['creator', 'administrator', 'member', 'restricted'];
 
@@ -371,8 +448,15 @@ async function checkMembership(userId) {
             try {
                 const channelMember = await bot.getChatMember(config.REQUIRED_CHANNEL, userId);
                 results.channel = validStatuses.includes(channelMember.status);
+                console.log(`[MEMBERSHIP] User ${userId} in channel ${config.REQUIRED_CHANNEL}: ${channelMember.status} -> ${results.channel}`);
             } catch (error) {
-                console.error(`Check Channel Error (${userId}):`, error.message);
+                results.channelError = error.message;
+                // If bot is not admin or chat not found, treat as not a member
+                if (error.message.includes('chat not found') || error.message.includes('bot is not a member')) {
+                    console.log(`[MEMBERSHIP] Channel ${config.REQUIRED_CHANNEL} not accessible: ${error.message}`);
+                } else {
+                    console.error(`[MEMBERSHIP] Channel check error (${userId}):`, error.message);
+                }
                 results.channel = false;
             }
         } else {
@@ -384,8 +468,15 @@ async function checkMembership(userId) {
             try {
                 const groupMember = await bot.getChatMember(config.REQUIRED_GROUP, userId);
                 results.group = validStatuses.includes(groupMember.status);
+                console.log(`[MEMBERSHIP] User ${userId} in group ${config.REQUIRED_GROUP}: ${groupMember.status} -> ${results.group}`);
             } catch (error) {
-                console.error(`Check Group Error (${userId}):`, error.message);
+                results.groupError = error.message;
+                // If bot is not admin or chat not found, treat as not a member
+                if (error.message.includes('chat not found') || error.message.includes('bot is not a member')) {
+                    console.log(`[MEMBERSHIP] Group ${config.REQUIRED_GROUP} not accessible: ${error.message}`);
+                } else {
+                    console.error(`[MEMBERSHIP] Group check error (${userId}):`, error.message);
+                }
                 results.group = false;
             }
         } else {
@@ -395,48 +486,81 @@ async function checkMembership(userId) {
         return results;
     } catch (error) {
         console.error('Membership check error:', error);
-        return { channel: false, group: false };
+        return { channel: false, group: false, channelError: error.message, groupError: error.message };
     }
 }
 
-// Helper: Show mandatory join message (smart - shows only missing items)
-function showMandatoryJoin(chatId, membership, msgId = null) {
+function showMandatoryJoin(chatId, membership, msgId = null, isFirstTime = false) {
     const channelName = config.REQUIRED_CHANNEL_NAME || '@AutosVerify';
     const groupName = config.REQUIRED_GROUP_NAME || '@AutosVerifyCh';
 
-    // Determine what's missing
+    // Determine what's missing and what's joined
     const missingItems = [];
+    const joinedItems = [];
+
     if (!membership.channel) {
         missingItems.push({ label: '📢 Channel', name: channelName });
+    } else {
+        joinedItems.push({ label: '📢 Channel', name: channelName });
     }
+
     if (!membership.group) {
         missingItems.push({ label: '💬 Group', name: groupName });
+    } else {
+        joinedItems.push({ label: '💬 Group', name: groupName });
     }
 
     // Build message
     let msg = `🚫 *Access Restricted!*\n\n`;
-    if (missingItems.length === 1) {
-        const item = missingItems[0];
-        msg += `You left our ${item.label} and your access has been *revoked*\n\n`;
+
+    if (missingItems.length === 1 && joinedItems.length === 1) {
+        // One missing, one joined - show which one they left
+        const missing = missingItems[0];
+        const joined = joinedItems[0];
+
+        msg += `You left our ${missing.label} and your access has been *revoked*.\n\n`;
         msg += `Please rejoin to continue using the bot:\n\n`;
+        msg += `✅ ${joined.label}: \`${joined.name}\` *(Already joined)*\n`;
+        msg += `❌ ${missing.label}: \`${missing.name}\` *(Missing)*`;
+    } else if (missingItems.length === 1) {
+        // Only one item configured, and it's missing
+        const item = missingItems[0];
+        if (isFirstTime) {
+            msg += `To use this bot, you need to join our ${item.label}.\n\n`;
+            msg += `Please join to continue:\n\n`;
+        } else {
+            msg += `You left our ${item.label} and your access has been *revoked*.\n\n`;
+            msg += `Please rejoin to continue using the bot:\n\n`;
+        }
         msg += `❌ ${item.label}: \`${item.name}\``;
-    } else {
-        msg += `You are not a member of our required communities.\n\n`;
-        msg += `Please join to use the bot:\n\n`;
+    } else if (missingItems.length === 2) {
+        // Both missing
+        if (isFirstTime) {
+            msg += `To use this bot, you need to join our communities.\n\n`;
+            msg += `Please join both to continue:\n\n`;
+        } else {
+            msg += `You are not a member of our required communities.\n\n`;
+            msg += `Please join to use the bot:\n\n`;
+        }
         missingItems.forEach(item => {
             msg += `❌ ${item.label}: \`${item.name}\`\n`;
         });
     }
-    msg += `\n\n✅ After joining, click *I Joined* below to verify.`;
+    msg += `\n\n✅ After joining, click *Verify* below.`;
 
-    // Build join buttons
+    // Build join buttons - only show buttons for missing items
     const buttons = [];
-    const joinRow = missingItems.map(item => ({
-        text: `Join ${item.label}`,
-        url: `https://t.me/${item.name.replace('@', '')}`
-    }));
-    if (joinRow.length) buttons.push(joinRow);
-    buttons.push([{ text: '✅ I Joined - Verify Now', callback_data: 'verify_membership' }]);
+
+    // Add join buttons for missing items only
+    missingItems.forEach(item => {
+        buttons.push([{
+            text: `Join ${item.label} ↗`,
+            url: `https://t.me/${item.name.replace('@', '')}`
+        }]);
+    });
+
+    // Add verify button
+    buttons.push([{ text: '✅ Verify Membership', callback_data: 'verify_membership' }]);
 
     const opts = {
         parse_mode: 'Markdown',
@@ -444,11 +568,17 @@ function showMandatoryJoin(chatId, membership, msgId = null) {
     };
 
     if (msgId) {
-        bot.editMessageText(msg, { chat_id: chatId, message_id: msgId, ...opts }).catch(() => {
-            bot.sendMessage(chatId, msg, opts).catch(e => console.error('Mandatory Join Msg Error:', e));
-        });
+        // Try to edit existing message
+        bot.editMessageText(msg, { chat_id: chatId, message_id: msgId, ...opts })
+            .then(() => console.log(`[JOIN] Updated message ${msgId} for ${chatId}`))
+            .catch((e) => {
+                console.log(`[JOIN] Could not edit message ${msgId}: ${e.message}`);
+                // Don't send new message - just log error
+            });
     } else {
-        bot.sendMessage(chatId, msg, opts).catch(e => console.error('Mandatory Join Msg Error:', e));
+        bot.sendMessage(chatId, msg, opts)
+            .then((sent) => console.log(`[JOIN] Sent new message ${sent.message_id} to ${chatId}`))
+            .catch(e => console.error('Mandatory Join Msg Error:', e));
     }
 }
 
@@ -495,10 +625,16 @@ bot.onText(/\/start/, async (msg) => {
         startChatSendLock.set(chatId, now);
 
         const username = msg.from.username || msg.from.first_name || 'Unknown';
-        const user = db.getUser(userId);
+
+        // Ensure user exists in database
+        let user = db.getUser(userId);
+        if (!user) {
+            console.log(`[DEBUG] Creating new user: ${userId}`);
+            user = db.getUser(userId); // This should create the user
+        }
 
         // Log user activity
-        originalConsoleLog(`👤 User: ${userId} (${username}) | 🚀 Started bot | ⏰ ${new Date().toLocaleTimeString()}`);
+        console.log(`👤 User: ${userId} (${username}) | 🚀 Started bot | ⏰ ${new Date().toLocaleTimeString()}`);
 
         // Referral Logic (Pending Verification)
         const refMatch = msg.text.split(' ')[1];
@@ -515,16 +651,22 @@ bot.onText(/\/start/, async (msg) => {
         }
 
         // Check mandatory membership
-        const membership = await checkMembership(userId);
+        let membership = { channel: true, group: true };
+        try {
+            membership = await checkMembership(userId);
+        } catch (membershipError) {
+            console.error('[ERROR] checkMembership failed:', membershipError.message);
+            // Continue with default membership (allow through)
+        }
 
         if (!membership.channel || !membership.group) {
-            // User not joined, show mandatory join screen
+            // User not joined, show mandatory join screen (first time)
 
             // Remove lingering keyboard if it exists
             const cleanupMsg = await bot.sendMessage(chatId, "⏳ Initializing...", { reply_markup: { Remove_keyboard: true } });
             bot.deleteMessage(chatId, cleanupMsg.message_id).catch(() => { });
 
-            showMandatoryJoin(chatId, membership);
+            showMandatoryJoin(chatId, membership, null, true);
             return;
         }
 
@@ -536,7 +678,7 @@ bot.onText(/\/start/, async (msg) => {
         await sendMainMenu(chatId, user, msg.from);
     } catch (e) {
         console.error('Error handling /start:', e);
-        bot.sendMessage(chatId, '❌ Bot error. Please try again in a moment.').catch(() => { });
+        bot.sendMessage(chatId, `❌ Bot error: ${e.message || 'Please try again in a moment.'}`).catch(() => { });
     }
 });
 
@@ -704,7 +846,7 @@ bot.on('message', async (msg) => {
             const welcomeText = `👋 Welcome ${newMember.first_name || 'New Member'} to ${msg.chat.title || 'our group'}!\n\n🎉 We're glad to have you here. Feel free to introduce yourself and enjoy the community!`;
 
             try {
-                await bot.sendMessage(chatId, welcomeText, {
+                const sentMsg = await bot.sendMessage(chatId, welcomeText, {
                     reply_markup: {
                         inline_keyboard: [
                             [{ text: '🚀 Start Bot', url: `https://t.me/${db.data.settings?.botUsername || 'YourBot'}?start=welcome` }]
@@ -712,6 +854,12 @@ bot.on('message', async (msg) => {
                     }
                 });
                 console.log(`[WELCOME] Sent welcome to ${newMember.first_name} (${newMember.id})`);
+
+                // Auto-delete welcome message after 1 minute (60 seconds)
+                setTimeout(() => {
+                    bot.deleteMessage(chatId, sentMsg.message_id).catch(() => { });
+                    console.log(`[WELCOME] Auto-deleted welcome message for ${newMember.first_name} after 1 minute`);
+                }, 60000);
             } catch (e) {
                 console.log(`[WELCOME] Failed to send welcome: ${e.message}`);
             }
@@ -976,8 +1124,33 @@ bot.on('chat_member', async (update) => {
         if (!leftStatuses.includes(newStatus)) return; // User is still in (joined, etc)
         if (newStatus === 'restricted' && update.new_chat_member.is_member) return; // Still member
 
-        // User left or was kicked from a required chat - notify them
-        originalConsoleLog(`🚨 User ${userId} left monitored chat: ${chatUsername}`);
+        // User left or was kicked from a required chat - update status
+        console.log(`🚨 User ${userId} left monitored chat: ${chatUsername}`);
+
+        // Update user verification status in database
+        const user = db.getUser(userId);
+        if (user) {
+            user.verified = false;
+            user.verifiedAt = null;
+            user.leftAt = new Date().toISOString();
+            user.leftFrom = chatUsername;
+            db.updateUser(user);
+            console.log(`[VERIFICATION] User ${userId} marked as UNVERIFIED (left ${chatUsername})`);
+        }
+
+        // Notify admin immediately
+        const adminId = config.ADMIN_ID;
+        if (adminId) {
+            bot.sendMessage(adminId,
+                `⚠️ *User Left Community*\n\n` +
+                `User ID: \`${userId}\`\n` +
+                `Left from: ${chatUsername}\n` +
+                `Status: ${newStatus}\n` +
+                `Time: ${new Date().toLocaleString()}\n\n` +
+                `User marked as UNVERIFIED in database.`,
+                { parse_mode: 'Markdown' }
+            ).catch(() => { });
+        }
 
         // Re-check full membership status
         const membership = await checkMembership(userId);
@@ -988,6 +1161,7 @@ bot.on('chat_member', async (update) => {
         }
     } catch (e) {
         // Silently handle errors
+        console.error('[chat_member] Error:', e.message);
     }
 });
 
@@ -1017,10 +1191,24 @@ bot.on('callback_query', async (query) => {
         const username = query.from.username || query.from.first_name || 'Unknown';
 
         // Log user activity
-        originalConsoleLog(`👤 User: ${userId} (${username}) | 💬 Action: ${data} | ⏰ ${new Date().toLocaleTimeString()}`);
+        console.log(`👤 User: ${userId} (${username}) | 💬 Action: ${data} | ⏰ ${new Date().toLocaleTimeString()}`);
 
         // Ensure User Exists
         const user = db.getUser(userId);
+
+        // CHECK MEMBERSHIP ON EVERY ACTION (except verify, main_menu, admin)
+        const skipMembershipCheck = ['verify_membership', 'main_menu', 'admin_panel'].includes(data);
+        if (!skipMembershipCheck && !isAdmin(userId)) {
+            const membership = await checkMembership(userId);
+            if (!membership.channel || !membership.group) {
+                // User left group/channel - show join message immediately
+                showMandatoryJoin(chatId, membership, msgId);
+                return bot.answerCallbackQuery(query.id, {
+                    text: "⚠️ Please join required communities first!",
+                    show_alert: true
+                });
+            }
+        }
 
         // VERIFY MEMBERSHIP (Mandatory Join Check)
         if (data === 'verify_membership') {
@@ -1033,11 +1221,31 @@ bot.on('callback_query', async (query) => {
                 // Still not joined - update existing message with accurate status
                 showMandatoryJoin(chatId, membership, msgId);
             } else {
-                // Successfully joined both
+                // Successfully joined both - mark as verified
                 await bot.answerCallbackQuery(query.id, {
                     text: "✅ Verified! Welcome!",
                     show_alert: true
                 }).catch(() => { });
+
+                // Mark user as verified in database
+                user.verified = true;
+                user.verifiedAt = new Date().toISOString();
+                user.leftAt = null;
+                user.leftFrom = null;
+                db.updateUser(user);
+                console.log(`[VERIFICATION] User ${userId} marked as VERIFIED`);
+
+                // Notify admin
+                const adminId = config.ADMIN_ID;
+                if (adminId) {
+                    bot.sendMessage(adminId,
+                        `✅ *User Verified*\n\n` +
+                        `User ID: \`${userId}\`\n` +
+                        `Username: @${username}\n` +
+                        `Time: ${new Date().toLocaleString()}`,
+                        { parse_mode: 'Markdown' }
+                    ).catch(() => { });
+                }
 
                 // PROCESS PENDING REFERRAL
                 if (user.pendingReferrer) {

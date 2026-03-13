@@ -2484,10 +2484,28 @@ input:checked+.slider-modern:before {
     font-family: 'Noto Sans Bengali', 'Noto Sans', sans-serif !important;
 }
 
+/* Preserve Font Awesome icons - exclude from Bengali font */
+[lang='bn'] .fas,
+[lang='bn'] .fab,
+[lang='bn'] .far,
+[lang='bn'] .fal,
+[lang='bn'] .fad {
+    font-family: 'Font Awesome 6 Free', 'Font Awesome 6 Brands', 'Font Awesome 5 Free', 'Font Awesome 5 Brands', 'FontAwesome' !important;
+}
+
 /* Arabic Font Support */
 [lang='ar'] *,
 [lang='ar'] body {
     font-family: 'Noto Sans Arabic', 'Noto Sans', sans-serif !important;
+}
+
+/* Preserve Font Awesome icons - exclude from Arabic font */
+[lang='ar'] .fas,
+[lang='ar'] .fab,
+[lang='ar'] .far,
+[lang='ar'] .fal,
+[lang='ar'] .fad {
+    font-family: 'Font Awesome 6 Free', 'Font Awesome 6 Brands', 'Font Awesome 5 Free', 'Font Awesome 5 Brands', 'FontAwesome' !important;
 }
 
 /* Hindi/Devanagari Font Support */
@@ -2496,16 +2514,43 @@ input:checked+.slider-modern:before {
     font-family: 'Noto Sans Devanagari', 'Noto Sans', sans-serif !important;
 }
 
+/* Preserve Font Awesome icons - exclude from Hindi font */
+[lang='hi'] .fas,
+[lang='hi'] .fab,
+[lang='hi'] .far,
+[lang='hi'] .fal,
+[lang='hi'] .fad {
+    font-family: 'Font Awesome 6 Free', 'Font Awesome 6 Brands', 'Font Awesome 5 Free', 'Font Awesome 5 Brands', 'FontAwesome' !important;
+}
+
 /* Chinese Font Support */
 [lang='zh'] *,
 [lang='zh'] body {
     font-family: 'Noto Sans SC', 'Noto Sans', sans-serif !important;
 }
 
+/* Preserve Font Awesome icons - exclude from Chinese font */
+[lang='zh'] .fas,
+[lang='zh'] .fab,
+[lang='zh'] .far,
+[lang='zh'] .fal,
+[lang='zh'] .fad {
+    font-family: 'Font Awesome 6 Free', 'Font Awesome 6 Brands', 'Font Awesome 5 Free', 'Font Awesome 5 Brands', 'FontAwesome' !important;
+}
+
 /* Russian/Cyrillic Font Support */
 [lang='ru'] *,
 [lang='ru'] body {
     font-family: 'Noto Sans Cyrl', 'Noto Sans', sans-serif !important;
+}
+
+/* Preserve Font Awesome icons - exclude from Russian font */
+[lang='ru'] .fas,
+[lang='ru'] .fab,
+[lang='ru'] .far,
+[lang='ru'] .fal,
+[lang='ru'] .fad {
+    font-family: 'Font Awesome 6 Free', 'Font Awesome 6 Brands', 'Font Awesome 5 Free', 'Font Awesome 5 Brands', 'FontAwesome' !important;
 }
 
 /* Ensure all text elements use proper fonts */
