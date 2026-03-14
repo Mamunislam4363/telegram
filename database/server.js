@@ -1454,6 +1454,8 @@ app.post('/api/redeem', async (req, res) => {
 
         await db.updateUser(user);
 
+        // Broadcast disabled - no notifications sent to other users
+
         res.json({
             success: true,
             message: 'Code redeemed successfully',
@@ -4773,7 +4775,7 @@ app.post('/api/user/item-sales/submit', (req, res) => {
         vpnName, vpnPlan, cardType, cardNumber, cardExpiry, cardCVV, cardHolder, cardCountry, cardBillingAddress } = req.body;
     if (!userId || !itemType) return res.json({ success: false, message: 'Missing fields' });
 
-    if (!db.data.itemSales) db.data.itemSales = {};
+    if (!db.getItemSales()) return res.json({ success: false, message: 'Database not ready' });
 
     const saleId = 'sale_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
     const saleData = {
@@ -4812,8 +4814,7 @@ app.post('/api/user/item-sales/submit', (req, res) => {
         updatedAt: Date.now()
     };
 
-    db.data.itemSales[saleId] = saleData;
-    db.save();
+    db.saveItemSale(saleData);
 
     res.json({ success: true, message: 'Item submitted successfully! Waiting for admin approval.', sale: saleData });
 });
@@ -4868,7 +4869,8 @@ app.delete('/api/admin/item-sales/:id', (req, res) => {
 
 // Admin: Get all sale submissions (pending/approved/rejected)
 app.get('/api/admin/item-sales/all', (req, res) => {
-    const sales = Object.values(db.data.itemSales || {});
+    const itemSales = db.getItemSales ? db.getItemSales() : (db.data.itemSales || {});
+    const sales = Object.values(itemSales);
     // Filter/Sort
     const pending = sales.filter(s => s.status === 'pending').sort((a, b) => b.createdAt - a.createdAt);
     const history = sales.filter(s => s.status !== 'pending').sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 50);
@@ -4881,11 +4883,12 @@ app.post('/api/admin/item-sales/update', (req, res) => {
     const { saleId, status, rewardAmount, sellingPrice, stock } = req.body;
     if (!saleId || !status) return res.json({ success: false, message: 'Missing fields' });
 
-    if (!db.data.itemSales || !db.data.itemSales[saleId]) {
+    const itemSales = db.getItemSales ? db.getItemSales() : (db.data.itemSales || {});
+    if (!itemSales[saleId]) {
         return res.json({ success: false, message: 'Submission not found' });
     }
 
-    const sale = db.data.itemSales[saleId];
+    const sale = itemSales[saleId];
     sale.status = status;
     sale.updatedAt = Date.now();
 
@@ -4936,11 +4939,12 @@ app.post('/api/user/item-sales/offer-action', (req, res) => {
     const { saleId, action, userId } = req.body; // action: 'accept' or 'reject'
     if (!saleId || !action || !userId) return res.json({ success: false, message: 'Missing fields' });
 
-    if (!db.data.itemSales || !db.data.itemSales[saleId]) {
+    const itemSales = db.getItemSales ? db.getItemSales() : (db.data.itemSales || {});
+    if (!itemSales[saleId]) {
         return res.json({ success: false, message: 'Submission not found' });
     }
 
-    const sale = db.data.itemSales[saleId];
+    const sale = itemSales[saleId];
     if (sale.userId !== userId.toString()) return res.json({ success: false, message: 'Unauthorized' });
     if (sale.status !== 'offer_sent') return res.json({ success: false, message: 'No pending offer for this item' });
 
@@ -4982,11 +4986,12 @@ app.post('/api/user/item-sales/buy', (req, res) => {
     const user = db.getUser(userId);
     if (!user) return res.json({ success: false, message: 'User not found' });
 
-    if (!db.data.itemSales || !db.data.itemSales[saleId]) {
+    const itemSales = db.getItemSales ? db.getItemSales() : (db.data.itemSales || {});
+    if (!itemSales[saleId]) {
         return res.json({ success: false, message: 'Item not found' });
     }
 
-    const sale = db.data.itemSales[saleId];
+    const sale = itemSales[saleId];
     if (sale.status !== 'approved' || (sale.stock || 0) <= 0) {
         return res.json({ success: false, message: 'Item no longer available' });
     }
@@ -5166,10 +5171,11 @@ setInterval(monitorSystemWithAI, 1000 * 60 * 60 * 4);
 // --- EXPIRED ITEMS CLEANUP ------------------------------------------------
 // Items that are not sold within 7 days will be removed and seller loses them
 async function cleanupExpiredItems() {
-    if (!db.data.itemSales) return;
+    const itemSales = db.getItemSales ? db.getItemSales() : (db.data.itemSales || {});
+    if (!itemSales || Object.keys(itemSales).length === 0) return;
 
     const now = Date.now();
-    const sales = Object.values(db.data.itemSales);
+    const sales = Object.values(itemSales);
     let expiredCount = 0;
 
     for (const sale of sales) {
@@ -5184,7 +5190,11 @@ async function cleanupExpiredItems() {
             }
 
             // Delete the expired item
-            delete db.data.itemSales[sale.id];
+            if (db.deleteItemSale) {
+                db.deleteItemSale(sale.id);
+            } else {
+                delete db.data.itemSales[sale.id];
+            }
             expiredCount++;
 
             console.log(`[CLEANUP] Expired item removed: ${sale.id} - ${itemName}`);

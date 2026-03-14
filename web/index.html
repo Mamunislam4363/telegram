@@ -115,23 +115,23 @@
         /* FLOATING ISLAND NAV DESIGN - MOBILE SIZE LOCKED */
         .bottom-nav {
             position: fixed !important;
-            bottom: 16px !important;
+            bottom: 12px !important;
             left: 50% !important;
             transform: translateX(-50%) !important;
             width: 92% !important;
-            max-width: 400px !important;
-            height: 76px !important;
+            max-width: 380px !important;
+            height: 56px !important;
             /* Glass effect - transparent */
             background: rgba(30, 14, 7, 0.45) !important;
             backdrop-filter: blur(35px) !important;
             -webkit-backdrop-filter: blur(35px) !important;
-            border-radius: 40px !important;
+            border-radius: 28px !important;
             border: 1px solid rgba(255, 255, 255, 0.15) !important;
             display: flex !important;
             justify-content: space-around !important;
             align-items: center !important;
             z-index: 2147483647 !important;
-            padding: 0 8px !important;
+            padding: 0 6px !important;
             box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
         }
 
@@ -141,10 +141,10 @@
             flex-direction: column !important;
             justify-content: center !important;
             align-items: center !important;
-            gap: 3px !important;
-            width: 56px !important;
-            height: 60px !important;
-            border-radius: 20px !important;
+            gap: 2px !important;
+            width: 44px !important;
+            height: 48px !important;
+            border-radius: 14px !important;
             cursor: pointer !important;
             color: #666 !important;
             transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
@@ -155,7 +155,7 @@
         }
 
         .nav-item i {
-            font-size: 20px !important;
+            font-size: 18px !important;
             line-height: 1 !important;
         }
 
@@ -173,20 +173,20 @@
             display: flex !important;
             justify-content: center !important;
             align-items: center !important;
-            width: 58px !important;
-            height: 58px !important;
+            width: 48px !important;
+            height: 48px !important;
             border-radius: 50% !important;
             cursor: pointer !important;
             background: linear-gradient(135deg, #fbbf24, #f59e0b) !important;
             color: #000 !important;
             transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
             box-shadow: 0 4px 15px rgba(251, 191, 36, 0.3) !important;
-            margin-top: -16px !important;
-            border: 6px solid #1e0e07 !important;
+            margin-top: -12px !important;
+            border: 4px solid #1e0e07 !important;
         }
 
         .nav-center i {
-            font-size: 20px !important;
+            font-size: 18px !important;
         }
 
         /* Active State - Subtle dark brown tint with yellow text */
@@ -195,7 +195,7 @@
             color: #fbbf24 !important;
             transform: translateY(0) !important;
             box-shadow: none !important;
-            border-radius: 20px !important;
+            border-radius: 14px !important;
         }
 
         .nav-item.active i,
@@ -3527,7 +3527,161 @@
             </div>
         </div>
 
-        <!-- ACCOUNT DETAIL PAGE (Shows credentials) -->
+        <!-- CARD DETAIL PAGE (Shows purchased card credentials) -->
+        <div id="cardDetailPage" class="page">
+            <!-- Header -->
+            <div
+                style="background:linear-gradient(135deg,#4a044e,#9333ea); border-radius:24px; padding:16px 20px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between;">
+                <div onclick="goBack()"
+                    style="width:36px; height:36px; background:rgba(255,255,255,0.15); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                    <i class="fas fa-arrow-left" style="color:#fff; font-size:14px;"></i>
+                </div>
+                <div style="font-size:16px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:1px;">
+                    CARD DETAILS</div>
+                <div onclick="toggleTheme()"
+                    style="width:36px; height:36px; background:rgba(255,255,255,0.15); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                    <i class="fas fa-sun" style="color:#fbbf24; font-size:16px;"></i>
+                </div>
+            </div>
+
+            <!-- Secured Credentials Label -->
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px; padding:0 4px;">
+                <i class="fas fa-shield-alt" style="color:var(--text-sub); font-size:14px;"></i>
+                <span
+                    style="font-size:11px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:1px;">SECURED
+                    CREDENTIALS</span>
+            </div>
+
+            <!-- Card Display -->
+            <div
+                style="background:linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%); border-radius:20px; padding:24px; margin-bottom:24px; position:relative; box-shadow:0 10px 40px rgba(0,0,0,0.4);">
+                <!-- Card Label -->
+                <div style="font-size:11px; font-weight:700; color:rgba(255,255,255,0.5); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;"
+                    id="cardDetailLabel">GEMINI</div>
+
+                <!-- Cardholder Name with Copy -->
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+                    <div id="cardDetailHolder"
+                        style="font-size:22px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:1px; flex:1;">
+                        CALEB OLIVER</div>
+                    <button onclick="copyToClipboard('cardDetailHolder', this)"
+                        style="width:36px; height:36px; background:rgba(255,255,255,0.1); border:none; border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.3s;">
+                        <i class="fas fa-copy" style="color:#fbbf24; font-size:14px;"></i>
+                    </button>
+                </div>
+
+                <!-- Card Number with Copy -->
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
+                    <div id="cardDetailNumber"
+                        style="font-size:20px; font-weight:600; color:#fff; letter-spacing:2px; font-family:'Courier New', monospace; flex:1;">
+                        5154 6200 2250 4656</div>
+                    <button onclick="copyToClipboard('cardDetailNumber', this)"
+                        style="width:36px; height:36px; background:rgba(255,255,255,0.1); border:none; border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.3s;">
+                        <i class="fas fa-copy" style="color:#fbbf24; font-size:14px;"></i>
+                    </button>
+                </div>
+
+                <!-- Expiry and CVV Row -->
+                <div style="display:flex; gap:40px;">
+                    <!-- Expiry -->
+                    <div>
+                        <div
+                            style="font-size:9px; font-weight:700; color:rgba(255,255,255,0.5); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">
+                            EXPIRY</div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <div id="cardDetailExpiry" style="font-size:16px; font-weight:600; color:#fff;">11/2030
+                            </div>
+                            <button onclick="copyToClipboard('cardDetailExpiry', this)"
+                                style="width:28px; height:28px; background:rgba(255,255,255,0.1); border:none; border-radius:6px; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                                <i class="fas fa-copy" style="color:#fbbf24; font-size:11px;"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- CVV -->
+                    <div>
+                        <div
+                            style="font-size:9px; font-weight:700; color:rgba(255,255,255,0.5); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">
+                            CVV</div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <div id="cardDetailCVV" style="font-size:16px; font-weight:600; color:#fff;">508</div>
+                            <button onclick="copyToClipboard('cardDetailCVV', this)"
+                                style="width:28px; height:28px; background:rgba(255,255,255,0.1); border:none; border-radius:6px; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                                <i class="fas fa-copy" style="color:#fbbf24; font-size:11px;"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Billing Information Label -->
+            <div
+                style="font-size:11px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:1px; margin-bottom:16px; padding:0 4px;">
+                BILLING INFORMATION</div>
+
+            <!-- Billing Info Boxes -->
+            <div id="cardBillingInfoContainer" style="display:flex; flex-direction:column; gap:12px;">
+                <!-- Full Name -->
+                <div
+                    style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:16px 20px;">
+                    <div
+                        style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">
+                        FULL NAME</div>
+                    <div id="cardDetailFullName" style="font-size:16px; font-weight:600; color:#fff;">Caleb Oliver</div>
+                </div>
+
+                <!-- Country -->
+                <div
+                    style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:16px 20px;">
+                    <div
+                        style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">
+                        COUNTRY</div>
+                    <div id="cardDetailCountry" style="font-size:16px; font-weight:600; color:#fff;">Bangladesh</div>
+                </div>
+
+                <!-- City -->
+                <div
+                    style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:16px 20px;">
+                    <div
+                        style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">
+                        CITY</div>
+                    <div id="cardDetailCity" style="font-size:16px; font-weight:600; color:#fff;">Dhaka</div>
+                </div>
+
+                <!-- State/Province -->
+                <div
+                    style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:16px 20px;">
+                    <div
+                        style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">
+                        STATE/PROVINCE</div>
+                    <div id="cardDetailState" style="font-size:16px; font-weight:600; color:#fff;">Dhaka</div>
+                </div>
+
+                <!-- Address -->
+                <div
+                    style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:16px 20px;">
+                    <div
+                        style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">
+                        ADDRESS</div>
+                    <div id="cardDetailAddress" style="font-size:16px; font-weight:600; color:#fff;">Gulshan Avenue
+                    </div>
+                </div>
+
+                <!-- Postal Code -->
+                <div
+                    style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:16px 20px;">
+                    <div
+                        style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">
+                        POSTAL CODE</div>
+                    <div id="cardDetailPostal" style="font-size:16px; font-weight:600; color:#fff;">1212</div>
+                </div>
+            </div>
+
+            <button onclick="nav('history')"
+                style="margin-top:24px; width:100%; padding:16px; border-radius:14px; background:var(--accent-color); color:#000; border:none; font-weight:800; font-size:14px; cursor:pointer;">
+                <i class="fas fa-history" style="margin-right:8px;"></i> VIEW PURCHASE HISTORY
+            </button>
+        </div>
+
         <div id="accountDetailPage" class="page">
             <div id="accountDetailContent">
                 <div style="text-align:center; padding:40px 0; color:var(--text-sub);"><i class="fas fa-spinner fa-spin"
@@ -3961,99 +4115,364 @@
 
                         <!-- CARD FIELDS -->
                         <div id="cardFields" style="display:none; margin-bottom:16px;">
+                            <!-- Info Banner -->
                             <div
                                 style="background:rgba(139,92,246,0.08); border:1px solid rgba(139,92,246,0.2); border-radius:12px; padding:12px 14px; margin-bottom:14px; font-size:12px; color:#8b5cf6; font-weight:600;">
                                 <i class="fas fa-credit-card" style="margin-right:6px;"></i>Provide full
                                 card details.
                                 Admin verifies before listing.
                             </div>
-                            <!-- Card Type Selection -->
-                            <div style="margin-bottom:12px;">
+
+                            <!-- Card Name -->
+                            <div style="margin-bottom:16px;">
                                 <label
-                                    style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px;">Card
-                                    Type <span style="color:#ef4444;">*</span></label>
-                                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
-                                    <label id="cardTypeVisa"
-                                        style="display:flex; flex-direction:column; align-items:center; gap:6px; padding:12px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; cursor:pointer; font-size:11px; font-weight:800; color:var(--text-sub); transition:0.2s;">
-                                        <input type="radio" name="cardType" value="visa" style="display:none;"
-                                            onchange="selectCardType('visa')">
-                                        <i class="fab fa-cc-visa" style="font-size:22px;"></i>
-                                        VISA
-                                    </label>
-                                    <label id="cardTypeMC"
-                                        style="display:flex; flex-direction:column; align-items:center; gap:6px; padding:12px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; cursor:pointer; font-size:11px; font-weight:800; color:var(--text-sub); transition:0.2s;">
-                                        <input type="radio" name="cardType" value="mastercard" style="display:none;"
-                                            onchange="selectCardType('mastercard')">
-                                        <i class="fab fa-cc-mastercard" style="font-size:22px;"></i>
-                                        MASTERCARD
-                                    </label>
-                                    <label id="cardTypeAmex"
-                                        style="display:flex; flex-direction:column; align-items:center; gap:6px; padding:12px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; cursor:pointer; font-size:11px; font-weight:800; color:var(--text-sub); transition:0.2s;">
-                                        <input type="radio" name="cardType" value="amex" style="display:none;"
-                                            onchange="selectCardType('amex')">
-                                        <i class="fab fa-cc-amex" style="font-size:22px;"></i>
-                                        AMEX
-                                    </label>
-                                </div>
-                            </div>
-                            <div style="margin-bottom:12px;">
-                                <label
-                                    style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px;">Card
-                                    Number <span style="color:#ef4444;">*</span></label>
-                                <input type="text" id="cardNumber" placeholder="1234 5678 9012 3456" maxlength="19"
-                                    style="width:100%; height:50px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; color:#fff; padding:0 14px; font-weight:600; outline:none; font-family:monospace; letter-spacing:2px;"
-                                    oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/(.{4})/g,'$1 ').trim()"
-                                    onfocus="this.style.borderColor='#8b5cf6'"
-                                    onblur="this.style.borderColor='var(--border-color)'">
-                            </div>
-                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
-                                <div>
-                                    <label
-                                        style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px;">Expiry
-                                        <span style="color:#ef4444;">*</span></label>
-                                    <input type="text" id="cardExpiry" placeholder="MM/YY" maxlength="5"
-                                        style="width:100%; height:50px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; color:#fff; padding:0 14px; font-weight:600; outline:none;"
-                                        oninput="let v=this.value.replace(/\D/g,''); if(v.length>2) v=v.slice(0,2)+'/'+v.slice(2); this.value=v;"
-                                        onfocus="this.style.borderColor='#8b5cf6'"
-                                        onblur="this.style.borderColor='var(--border-color)'">
-                                </div>
-                                <div>
-                                    <label
-                                        style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px;">CVV
-                                        <span style="color:#ef4444;">*</span></label>
-                                    <input type="password" id="cardCVV" placeholder="***" maxlength="4"
-                                        style="width:100%; height:50px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; color:#fff; padding:0 14px; font-weight:600; outline:none;"
-                                        onfocus="this.style.borderColor='#8b5cf6'"
-                                        onblur="this.style.borderColor='var(--border-color)'">
-                                </div>
-                            </div>
-                            <div style="margin-bottom:12px;">
-                                <label
-                                    style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px;">Cardholder
-                                    Name <span style="color:#ef4444;">*</span></label>
-                                <input type="text" id="cardHolder" placeholder="Full name as on card"
-                                    style="width:100%; height:50px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; color:#fff; padding:0 14px; font-weight:600; outline:none; text-transform:uppercase;"
-                                    onfocus="this.style.borderColor='#8b5cf6'"
-                                    onblur="this.style.borderColor='var(--border-color)'">
-                            </div>
-                            <div style="margin-bottom:12px;">
-                                <label
-                                    style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px;">Billing
-                                    Country / IP Region <span style="color:#ef4444;">*</span></label>
-                                <input type="text" id="cardCountry" placeholder="e.g. Bangladesh, USA, UK..."
+                                    style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px;">
+                                    Card Name <span style="color:#ef4444;">*</span>
+                                </label>
+                                <input type="text" id="cardName" placeholder="e.g. Platinum Card, Business Card..."
                                     style="width:100%; height:50px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; color:#fff; padding:0 14px; font-weight:600; outline:none;"
                                     onfocus="this.style.borderColor='#8b5cf6'"
                                     onblur="this.style.borderColor='var(--border-color)'">
                             </div>
-                            <div style="margin-bottom:12px;">
+
+                            <!-- Card Logo Upload -->
+                            <div style="margin-bottom:16px;">
                                 <label
-                                    style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px;">Billing
-                                    Address <span style="color:#888; font-size:9px;">(Optional)</span></label>
-                                <textarea id="cardBillingAddress" placeholder="Full billing address..."
-                                    style="width:100%; height:70px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; color:#fff; padding:12px 14px; font-weight:600; outline:none; resize:none;"
-                                    onfocus="this.style.borderColor='#8b5cf6'"
-                                    onblur="this.style.borderColor='var(--border-color)'"></textarea>
+                                    style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px;">
+                                    Card Logo <span style="color:#888; font-size:10px;">(Optional)</span>
+                                </label>
+                                <div style="display:flex; align-items:center; gap:12px;">
+                                    <!-- Logo Preview -->
+                                    <div id="cardLogoPreview"
+                                        style="width:60px; height:60px; background:rgba(0,0,0,0.2); border:2px dashed var(--border-color); border-radius:12px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                                        <i class="fas fa-image" style="color:var(--text-sub); font-size:24px;"></i>
+                                    </div>
+                                    <!-- Upload Button -->
+                                    <label
+                                        style="flex:1; height:50px; background:rgba(139,92,246,0.1); border:1px solid rgba(139,92,246,0.3); border-radius:12px; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; color:#8b5cf6; font-weight:700; font-size:13px;">
+                                        <i class="fas fa-upload"></i> Upload Logo
+                                        <input type="file" id="cardLogoFile" accept="image/*" style="display:none;"
+                                            onchange="previewCardLogo(this)">
+                                    </label>
+                                </div>
+                                <div style="font-size:10px; color:var(--text-sub); margin-top:6px;">
+                                    <i class="fas fa-info-circle" style="margin-right:4px;"></i>Upload card
+                                    logo/icon
+                                    (PNG, JPG)
+                                </div>
                             </div>
+
+                            <!-- Auto Fill Button -->
+                            <div style="display:flex; justify-content:flex-end; margin-bottom:16px;">
+                                <button type="button" onclick="autoFillCardDetails()"
+                                    style="background:linear-gradient(135deg, #10b981, #059669); border:none; border-radius:10px; padding:10px 18px; color:#fff; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px; box-shadow:0 4px 15px rgba(16,185,129,0.3);">
+                                    <i class="fas fa-magic"></i> AUTO FILL
+                                </button>
+                            </div>
+
+                            <!-- Card Type Selection - Horizontal Slider -->
+                            <div style="margin-bottom:16px;">
+                                <label
+                                    style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:10px;">
+                                    Card Type <span style="color:#ef4444;">*</span>
+                                </label>
+                                <div style="position:relative;">
+                                    <!-- Slider Container -->
+                                    <div id="cardTypeSlider"
+                                        style="display:flex; gap:10px; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none; -ms-overflow-style:none; padding:4px 0;"
+                                        onclick="this.style.scrollBehavior='smooth'">
+
+                                        <!-- Visa -->
+                                        <label id="cardTypeVisa"
+                                            style="flex:0 0 auto; width:100px; scroll-snap-align:center; display:flex; flex-direction:column; align-items:center; gap:8px; padding:16px 8px; background:rgba(0,0,0,0.2); border:2px solid var(--border-color); border-radius:16px; cursor:pointer; transition:all 0.3s; position:relative;">
+                                            <input type="radio" name="cardType" value="visa" style="display:none;"
+                                                onchange="selectCardType('visa')">
+                                            <i class="fab fa-cc-visa" style="font-size:32px; color:#1a1f71;"></i>
+                                            <span
+                                                style="font-size:11px; font-weight:700; color:var(--text-sub);">VISA</span>
+                                            <div class="check-icon"
+                                                style="position:absolute; top:6px; right:6px; width:20px; height:20px; background:#8b5cf6; border-radius:50%; display:none; align-items:center; justify-content:center; color:#fff; font-size:10px;">
+                                                <i class="fas fa-check"></i>
+                                            </div>
+                                        </label>
+
+                                        <!-- Mastercard -->
+                                        <label id="cardTypeMC"
+                                            style="flex:0 0 auto; width:100px; scroll-snap-align:center; display:flex; flex-direction:column; align-items:center; gap:8px; padding:16px 8px; background:rgba(0,0,0,0.2); border:2px solid var(--border-color); border-radius:16px; cursor:pointer; transition:all 0.3s; position:relative;">
+                                            <input type="radio" name="cardType" value="mastercard" style="display:none;"
+                                                onchange="selectCardType('mastercard')">
+                                            <i class="fab fa-cc-mastercard" style="font-size:32px; color:#eb001b;"></i>
+                                            <span
+                                                style="font-size:11px; font-weight:700; color:var(--text-sub);">MASTERCARD</span>
+                                            <div class="check-icon"
+                                                style="position:absolute; top:6px; right:6px; width:20px; height:20px; background:#8b5cf6; border-radius:50%; display:none; align-items:center; justify-content:center; color:#fff; font-size:10px;">
+                                                <i class="fas fa-check"></i>
+                                            </div>
+                                        </label>
+
+                                        <!-- Amex -->
+                                        <label id="cardTypeAmex"
+                                            style="flex:0 0 auto; width:100px; scroll-snap-align:center; display:flex; flex-direction:column; align-items:center; gap:8px; padding:16px 8px; background:rgba(0,0,0,0.2); border:2px solid var(--border-color); border-radius:16px; cursor:pointer; transition:all 0.3s; position:relative;">
+                                            <input type="radio" name="cardType" value="amex" style="display:none;"
+                                                onchange="selectCardType('amex')">
+                                            <i class="fab fa-cc-amex" style="font-size:32px; color:#006fcf;"></i>
+                                            <span
+                                                style="font-size:11px; font-weight:700; color:var(--text-sub);">AMEX</span>
+                                            <div class="check-icon"
+                                                style="position:absolute; top:6px; right:6px; width:20px; height:20px; background:#8b5cf6; border-radius:50%; display:none; align-items:center; justify-content:center; color:#fff; font-size:10px;">
+                                                <i class="fas fa-check"></i>
+                                            </div>
+                                        </label>
+
+                                        <!-- Discover -->
+                                        <label id="cardTypeDiscover"
+                                            style="flex:0 0 auto; width:100px; scroll-snap-align:center; display:flex; flex-direction:column; align-items:center; gap:8px; padding:16px 8px; background:rgba(0,0,0,0.2); border:2px solid var(--border-color); border-radius:16px; cursor:pointer; transition:all 0.3s; position:relative;">
+                                            <input type="radio" name="cardType" value="discover" style="display:none;"
+                                                onchange="selectCardType('discover')">
+                                            <i class="fas fa-credit-card" style="font-size:32px; color:#ff6000;"></i>
+                                            <span
+                                                style="font-size:11px; font-weight:700; color:var(--text-sub);">DISCOVER</span>
+                                            <div class="check-icon"
+                                                style="position:absolute; top:6px; right:6px; width:20px; height:20px; background:#8b5cf6; border-radius:50%; display:none; align-items:center; justify-content:center; color:#fff; font-size:10px;">
+                                                <i class="fas fa-check"></i>
+                                            </div>
+                                        </label>
+
+                                        <!-- JCB -->
+                                        <label id="cardTypeJCB"
+                                            style="flex:0 0 auto; width:100px; scroll-snap-align:center; display:flex; flex-direction:column; align-items:center; gap:8px; padding:16px 8px; background:rgba(0,0,0,0.2); border:2px solid var(--border-color); border-radius:16px; cursor:pointer; transition:all 0.3s; position:relative;">
+                                            <input type="radio" name="cardType" value="jcb" style="display:none;"
+                                                onchange="selectCardType('jcb')">
+                                            <i class="fas fa-credit-card" style="font-size:32px; color:#0066b3;"></i>
+                                            <span
+                                                style="font-size:11px; font-weight:700; color:var(--text-sub);">JCB</span>
+                                            <div class="check-icon"
+                                                style="position:absolute; top:6px; right:6px; width:20px; height:20px; background:#8b5cf6; border-radius:50%; display:none; align-items:center; justify-content:center; color:#fff; font-size:10px;">
+                                                <i class="fas fa-check"></i>
+                                            </div>
+                                        </label>
+
+                                        <!-- UnionPay -->
+                                        <label id="cardTypeUnionPay"
+                                            style="flex:0 0 auto; width:100px; scroll-snap-align:center; display:flex; flex-direction:column; align-items:center; gap:8px; padding:16px 8px; background:rgba(0,0,0,0.2); border:2px solid var(--border-color); border-radius:16px; cursor:pointer; transition:all 0.3s; position:relative;">
+                                            <input type="radio" name="cardType" value="unionpay" style="display:none;"
+                                                onchange="selectCardType('unionpay')">
+                                            <i class="fas fa-credit-card" style="font-size:32px; color:#c8102e;"></i>
+                                            <span
+                                                style="font-size:11px; font-weight:700; color:var(--text-sub);">UNIONPAY</span>
+                                            <div class="check-icon"
+                                                style="position:absolute; top:6px; right:6px; width:20px; height:20px; background:#8b5cf6; border-radius:50%; display:none; align-items:center; justify-content:center; color:#fff; font-size:10px;">
+                                                <i class="fas fa-check"></i>
+                                            </div>
+                                        </label>
+                                    </div>
+
+                                    <!-- Slide Indicators -->
+                                    <div style="display:flex; justify-content:center; gap:6px; margin-top:10px;">
+                                        <span class="slide-dot"
+                                            style="width:8px; height:8px; background:rgba(139,92,246,0.5); border-radius:50%; transition:all 0.3s;"></span>
+                                        <span class="slide-dot"
+                                            style="width:8px; height:8px; background:rgba(255,255,255,0.3); border-radius:50%; transition:all 0.3s;"></span>
+                                        <span class="slide-dot"
+                                            style="width:8px; height:8px; background:rgba(255,255,255,0.3); border-radius:50%; transition:all 0.3s;"></span>
+                                        <span class="slide-dot"
+                                            style="width:8px; height:8px; background:rgba(255,255,255,0.3); border-radius:50%; transition:all 0.3s;"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Card Data Input (Number|Month|Year|CVV format) -->
+                            <div style="margin-bottom:16px;">
+                                <label
+                                    style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px;">
+                                    Card Data <span style="color:#ef4444;">*</span>
+                                    <span
+                                        style="color:var(--text-sub); font-size:10px; font-weight:500; text-transform:none;">(Format:
+                                        Number|MM|YYYY|CVV)</span>
+                                </label>
+                                <textarea id="cardNumber"
+                                    placeholder="6258142602558823|06|2030|282&#10;6258142602534378|06|2030|140&#10;6258142602526754|05|2030|191"
+                                    style="width:100%; min-height:120px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; color:#fff; padding:12px 14px; font-weight:600; outline:none; font-family:monospace; font-size:13px; resize:vertical;"
+                                    onfocus="this.style.borderColor='#8b5cf6'"
+                                    onblur="this.style.borderColor='var(--border-color)'"
+                                    oninput="parseCardData(this)"></textarea>
+                                <div
+                                    style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
+                                    <span style="font-size:10px; color:var(--text-sub);">Format:
+                                        6258142602558823|06|2030|282</span>
+                                    <span id="cardCountBadge"
+                                        style="background:rgba(139,92,246,0.2); color:#8b5cf6; padding:4px 10px; border-radius:20px; font-size:10px; font-weight:700;">0
+                                        cards</span>
+                                </div>
+                            </div>
+
+                            <!-- Card Preview (Shows when cards are valid) -->
+                            <div id="cardPreviewContainer" style="display:none; margin-bottom:20px; position:relative;">
+                                <label
+                                    style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:10px;">
+                                    Card Preview <span style="color:#22c55e;">&#10004; Valid</span>
+                                </label>
+                                <div style="display:flex; justify-content:center;">
+                                    <!-- Visa Card Visual -->
+                                    <div id="visaCardPreview"
+                                        style="width:340px; height:215px; background:linear-gradient(135deg, #1a1f71 0%, #4a5568 50%, #1a1f71 100%); border-radius:18px; padding:24px; position:relative; box-shadow:0 10px 30px rgba(26,31,113,0.4); overflow:hidden;">
+                                        <!-- Card Background Pattern -->
+                                        <div
+                                            style="position:absolute; top:0; left:0; right:0; bottom:0; opacity:0.1; background-image: repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(255,255,255,.1) 35px, rgba(255,255,255,.1) 70px);">
+                                        </div>
+                                        <div
+                                            style="position:absolute; top:-20px; right:-20px; width:100px; height:100px; background:rgba(255,255,255,0.05); border-radius:50%;">
+                                        </div>
+                                        <div
+                                            style="position:absolute; bottom:-30px; left:-30px; width:120px; height:120px; background:rgba(255,255,255,0.03); border-radius:50%;">
+                                        </div>
+
+                                        <!-- Card Logo & Name -->
+                                        <div
+                                            style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:18px;">
+                                            <div style="display:flex; align-items:center; gap:10px; flex:1;">
+                                                <div id="previewCardLogo"
+                                                    style="width:36px; height:36px; border-radius:8px; background:rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                                                    <i class="fas fa-credit-card"
+                                                        style="color:#fff; font-size:18px;"></i>
+                                                </div>
+                                                <div id="previewCardCustomName"
+                                                    style="font-size:12px; font-weight:600; color:#fff; text-transform:uppercase; letter-spacing:0.5px; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                                    CARD NAME</div>
+                                            </div>
+                                            <div
+                                                style="font-size:24px; font-weight:800; color:#fff; font-style:italic; letter-spacing:1px;">
+                                                VISA</div>
+                                        </div>
+
+                                        <!-- Card Number with Copy -->
+                                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px;">
+                                            <div id="previewCardNumber"
+                                                style="font-size:22px; font-weight:600; color:#fff; letter-spacing:2px; font-family:'Courier New', monospace; flex:1;">
+                                                6258 1426 0255 8823</div>
+                                            <button onclick="copyCardPreviewText('previewCardNumber', this)"
+                                                style="width:32px; height:32px; background:rgba(255,255,255,0.15); border:none; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s;">
+                                                <i class="fas fa-copy" style="color:#fbbf24; font-size:14px;"></i>
+                                            </button>
+                                        </div>
+
+                                        <!-- Card Holder, Expiry & CVC Row -->
+                                        <div
+                                            style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:15px;">
+                                            <div>
+                                                <div
+                                                    style="font-size:11px; color:rgba(255,255,255,0.9); text-transform:uppercase; margin-bottom:4px; font-weight:600;">
+                                                    Card Holder</div>
+                                                <div style="display:flex; align-items:center; gap:8px;">
+                                                    <div id="previewCardHolder"
+                                                        style="font-size:15px; font-weight:700; color:#fff; text-transform:uppercase; letter-spacing:0.5px;">
+                                                        JOHN DOE</div>
+                                                    <button onclick="copyCardPreviewText('previewCardHolder', this)"
+                                                        style="width:24px; height:24px; background:rgba(255,255,255,0.15); border:none; border-radius:5px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s;">
+                                                        <i class="fas fa-copy"
+                                                            style="color:#fbbf24; font-size:11px;"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div
+                                                    style="font-size:11px; color:rgba(255,255,255,0.9); text-transform:uppercase; margin-bottom:4px; font-weight:600;">
+                                                    Expires</div>
+                                                <div style="display:flex; align-items:center; gap:8px;">
+                                                    <div id="previewCardExpiry"
+                                                        style="font-size:15px; font-weight:700; color:#fff;">
+                                                        06/30</div>
+                                                    <button onclick="copyCardPreviewText('previewCardExpiry', this)"
+                                                        style="width:24px; height:24px; background:rgba(255,255,255,0.15); border:none; border-radius:5px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s;">
+                                                        <i class="fas fa-copy"
+                                                            style="color:#fbbf24; font-size:11px;"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div
+                                                    style="font-size:11px; color:rgba(255,255,255,0.9); text-transform:uppercase; margin-bottom:4px; font-weight:600;">
+                                                    CVC</div>
+                                                <div style="display:flex; align-items:center; gap:8px;">
+                                                    <div id="previewCardCVV"
+                                                        style="font-size:15px; font-weight:700; color:#fff;">282
+                                                    </div>
+                                                    <button onclick="copyCardPreviewText('previewCardCVV', this)"
+                                                        style="width:24px; height:24px; background:rgba(255,255,255,0.15); border:none; border-radius:5px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s;">
+                                                        <i class="fas fa-copy"
+                                                            style="color:#fbbf24; font-size:11px;"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Address Preview (Shows how it will look after purchase) -->
+                            <div id="addressPreviewContainer" style="display:none; margin-bottom:20px;">
+                                <label
+                                    style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:10px;">
+                                    Address Preview <span style="color:#8b5cf6;">&#9432; How buyers will see it</span>
+                                </label>
+                                <div id="addressPreviewBox" style="display:flex; flex-direction:column; gap:10px;">
+                                    <!-- Dynamic address fields will appear here -->
+                                </div>
+                            </div>
+
+                            <!-- Country (Card Working Location) -->
+                            <div style="margin-bottom:16px;">
+                                <label
+                                    style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px;">
+                                    Country <span style="color:#ef4444;">*</span>
+                                    <span
+                                        style="color:var(--text-sub); font-size:10px; font-weight:500; text-transform:none;">(Where
+                                        card works - e.g. Bangladesh, India)</span>
+                                </label>
+                                <input type="text" id="cardIP" placeholder="e.g. Bangladesh, India, USA, UK..."
+                                    style="width:100%; height:50px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; color:#fff; padding:0 14px; font-weight:600; outline:none; font-size:14px;"
+                                    onfocus="this.style.borderColor='#8b5cf6'"
+                                    onblur="this.style.borderColor='var(--border-color)'">
+                            </div>
+
+                            <!-- Multiple Cardholder Names (One per line for multiple cards) -->
+                            <div style="margin-bottom:16px;">
+                                <label
+                                    style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px;">
+                                    Cardholder Names <span style="color:#ef4444;">*</span>
+                                    <span
+                                        style="color:var(--text-sub); font-size:10px; font-weight:500; text-transform:none;">(One
+                                        per line for each card)</span>
+                                </label>
+                                <textarea id="cardHolderNames" placeholder="JOHN DOE&#10;JANE SMITH&#10;ROBERT JOHNSON"
+                                    style="width:100%; min-height:80px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; color:#fff; padding:12px 14px; font-weight:600; outline:none; text-transform:uppercase; font-size:14px; resize:vertical;"
+                                    onfocus="this.style.borderColor='#8b5cf6'"
+                                    onblur="this.style.borderColor='var(--border-color)'"
+                                    oninput="const cardNumberEl = document.getElementById('cardNumber'); if(cardNumberEl && cardNumberEl.value.trim()) { parseCardData(cardNumberEl); }"></textarea>
+                                <div style="font-size:10px; color:var(--text-sub); margin-top:6px;">
+                                    <i class="fas fa-info-circle" style="margin-right:4px;"></i>Enter one
+                                    name per line.
+                                    First name for first card, second name for second card, etc.
+                                </div>
+                            </div>
+
+                            <!-- Full Address (Single address for all cards) -->
+                            <div style="margin-bottom:16px;">
+                                <label
+                                    style="display:block; color:var(--text-sub); font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:8px;">
+                                    Full Address <span style="color:#ef4444;">*</span>
+                                    <span
+                                        style="color:var(--text-sub); font-size:10px; font-weight:500; text-transform:none;">(Applies
+                                        to all cards)</span>
+                                </label>
+                                <textarea id="cardBillingAddress"
+                                    placeholder="Country: Kazakhstan&#10;Type: MASTER CARD&#10;State: Almaty&#10;City: Semipalatinsk&#10;District: Almaty&#10;Address: Semipalatinsk&#10;Postal Code: 020101"
+                                    style="width:100%; min-height:140px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; color:#fff; padding:12px 14px; font-weight:600; outline:none; font-size:14px; resize:vertical;"
+                                    onfocus="this.style.borderColor='#8b5cf6'"
+                                    onblur="this.style.borderColor='var(--border-color)'"
+                                    oninput="updateAddressPreview()"></textarea>
+                            </div>
+
                         </div>
 
                         <!-- ACCOUNT FIELDS (Email/Password) -->

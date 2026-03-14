@@ -322,6 +322,11 @@ class Database {
                 this.data.tasks = defaultData.tasks;
                 console.log("📋 Initialized default tasks from defaultData.");
             }
+            // Ensure itemSales exists if not already in database
+            if (!this.data.itemSales) {
+                this.data.itemSales = {};
+                console.log("🛒 Initialized itemSales in database.");
+            }
             console.log("✅ Database loaded from Firebase.");
         } else if (localData) {
             // Remote empty but Local exists -> MIGRATE
@@ -752,6 +757,11 @@ class Database {
 
     updateSetting(key, value) {
         this.data.settings[key] = value;
+        this.save();
+    }
+
+    updateSettings(settings) {
+        this.data.settings = { ...this.data.settings, ...settings };
         this.save();
     }
 
@@ -2142,6 +2152,48 @@ class Database {
     }
 
     // ==================== GEMS TOKEN SYSTEM ====================
+
+    // ==================== ITEM SALES SYSTEM ====================
+
+    getItemSales() {
+        if (!this.data.itemSales) {
+            this.data.itemSales = {};
+            this.save();
+        }
+        return this.data.itemSales;
+    }
+
+    saveItemSale(saleData) {
+        if (!this.data.itemSales) this.data.itemSales = {};
+        this.data.itemSales[saleData.id] = saleData;
+        this.save();
+        return saleData;
+    }
+
+    deleteItemSale(saleId) {
+        if (this.data.itemSales && this.data.itemSales[saleId]) {
+            delete this.data.itemSales[saleId];
+            this.save();
+            return true;
+        }
+        return false;
+    }
+
+    updateItemSaleStatus(saleId, status, updates = {}) {
+        if (!this.data.itemSales || !this.data.itemSales[saleId]) return false;
+
+        const sale = this.data.itemSales[saleId];
+        sale.status = status;
+        sale.updatedAt = Date.now();
+
+        // Apply any additional updates
+        Object.keys(updates).forEach(key => {
+            sale[key] = updates[key];
+        });
+
+        this.save();
+        return sale;
+    }
 
     // ==================== WELCOME CREDITS ====================
 

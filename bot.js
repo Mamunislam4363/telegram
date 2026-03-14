@@ -491,8 +491,13 @@ async function checkMembership(userId) {
 }
 
 function showMandatoryJoin(chatId, membership, msgId = null, isFirstTime = false) {
-    const channelName = config.REQUIRED_CHANNEL_NAME || '@AutosVerify';
-    const groupName = config.REQUIRED_GROUP_NAME || '@AutosVerifyCh';
+    // Get settings from database (admin panel configured)
+    const settings = db.getSettings ? db.getSettings() : (db.data.settings || {});
+    const apiKeys = db.data?.apiKeys || {};
+
+    // Use admin panel configured channel/group names or fallbacks
+    const channelName = apiKeys.requiredChannel || settings.requiredChannel || config.REQUIRED_CHANNEL_NAME || '@AutosVerify';
+    const groupName = apiKeys.requiredGroup || settings.requiredGroup || config.REQUIRED_GROUP_NAME || '@AutosVerifyCh';
 
     // Determine what's missing and what's joined
     const missingItems = [];
@@ -599,10 +604,20 @@ global.emitLog = (message, type = 'info') => {
 
 // ================= COMMAND HANDLERS =================
 
+console.log('[BOT] Registering command handlers...');
+
+// Debug: Log bot info on startup
+bot.getMe().then(botInfo => {
+    console.log(`[BOT] Bot initialized: @${botInfo.username} (ID: ${botInfo.id})`);
+}).catch(err => {
+    console.error('[BOT] Failed to get bot info:', err.message);
+});
+
 // /start
 const startThrottle = new Map();
 const startChatSendLock = new Map();
 bot.onText(/\/start/, async (msg) => {
+    console.log(`[BOT] /start command received from ${msg.from?.id}`);
     const chatId = msg.chat.id;
     try {
         const userId = msg.from.id;
@@ -656,8 +671,10 @@ bot.onText(/\/start/, async (msg) => {
             membership = await checkMembership(userId);
         } catch (membershipError) {
             console.error('[ERROR] checkMembership failed:', membershipError.message);
-            // Continue with default membership (allow through)
+            membership = { channel: true, group: true, error: membershipError.message };
         }
+
+        console.log(`[DEBUG] Membership check result: ${JSON.stringify(membership)}`);
 
         if (!membership.channel || !membership.group) {
             // User not joined, show mandatory join screen (first time)
@@ -722,29 +739,33 @@ bot.onText(/\/admin/, async (msg) => {
     }
 });
 async function sendMainMenu(chatId, user, msgFrom) {
-    const publicUrl = process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`;
+    // Get settings from database (admin panel configured)
+    const settings = db.getSettings ? db.getSettings() : (db.data.settings || {});
+    const apiKeys = db.data?.apiKeys || {};
+
+    // Use admin panel configured URLs or fallbacks
+    const miniAppUrl = apiKeys.miniAppUrl || settings.miniAppUrl || process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`;
+    const requiredChannel = apiKeys.requiredChannel || settings.requiredChannel || config.REQUIRED_CHANNEL || '@AutosVerify';
+    const requiredGroup = apiKeys.requiredGroup || settings.requiredGroup || config.REQUIRED_GROUP || '@AutosVerifyCh';
+    const requiredYoutube = apiKeys.requiredYoutube || settings.requiredYoutube || 'https://youtube.com/@MamunIslamyts';
 
     // Get fresh name from Telegram message context if available, else use stored
     const firstName = (msgFrom && msgFrom.first_name) ? msgFrom.first_name :
         (user.firstName || user.first_name || 'Friend');
-    const tokens = user.balance_tokens !== undefined ? user.balance_tokens :
-        (user.tokens || user.balance || 0);
 
-    // Welcome message matching screenshot style
+    // Welcome message - can be customized via admin panel in future
     const welcomeText = `👋 *Hello, ${firstName}!*\n\n` +
         `Welcome to Gemini Verified! 🚀\n\n` +
         `Launch our Mini App to start earning rewards, invite friends, and manage your assets.`;
 
-    const appUrl = `${publicUrl}`;
-
-    // Keyboard matching screenshot style - vertical layout, 1 button per row
+    // Keyboard with admin-configurable links
     const keyboard = {
         reply_markup: {
             inline_keyboard: [
-                [{ text: '🚀 Launch App', web_app: { url: appUrl } }],
-                [{ text: '📢 Join Channel', url: `https://t.me/${(config.REQUIRED_CHANNEL_NAME || '@AutosVerify').replace('@', '')}` }],
-                [{ text: '👥 Join Group', url: `https://t.me/${(config.REQUIRED_GROUP_NAME || '@AutosVerifyCh').replace('@', '')}` }],
-                [{ text: '📺 YouTube Channel', url: 'https://youtube.com/@MamunIslamyts' }]
+                [{ text: '🚀 Launch App', web_app: { url: miniAppUrl } }],
+                [{ text: '📢 Join Channel', url: `https://t.me/${requiredChannel.replace('@', '')}` }],
+                [{ text: '👥 Join Group', url: `https://t.me/${requiredGroup.replace('@', '')}` }],
+                [{ text: '📺 YouTube Channel', url: requiredYoutube }]
             ]
         }
     };

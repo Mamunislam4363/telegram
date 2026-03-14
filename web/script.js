@@ -3383,11 +3383,19 @@ window.renderShopItems = renderShopItems;
 function renderCards() {
     const container = document.getElementById('cardsList');
     if (!container) return;
-    const cards = JSON.parse(localStorage.getItem('adminCards') || '[]');
+
+    // Get admin cards
+    const adminCards = JSON.parse(localStorage.getItem('adminCards') || '[]');
+
+    // Get user-submitted approved cards
+    const approvedUserItems = JSON.parse(localStorage.getItem('approvedUserItems') || '[]');
+    const userCards = approvedUserItems.filter(item => item.itemType === 'Card');
+
     let html = '';
 
-    if (cards.length > 0) {
-        html += cards.map(c => `
+    // Render admin cards
+    if (adminCards.length > 0) {
+        html += adminCards.map(c => `
         <div class="service-card" style="margin-bottom:12px; cursor:default; padding:16px;">
             <div class="sc-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706); width:50px; height:50px; border-radius:16px; flex-shrink:0;">
                 <i class="fas fa-credit-card"></i>
@@ -3406,10 +3414,136 @@ function renderCards() {
         </div>`).join('');
     }
 
+    // Render user-submitted cards with custom name and logo
+    if (userCards.length > 0) {
+        html += userCards.map(card => {
+            const cardData = card.cards && card.cards[0] ? card.cards[0] : {};
+            const cardNumber = cardData.number ? '**** ' + cardData.number.slice(-4) : '**** ****';
+            const cardLogo = card.cardLogo || null;
+
+            return `
+            <div class="service-card" onclick="showCardDetail({cardName: '${card.cardName || 'Virtual Card'}', holderName: '${cardData.holderName || 'CARD HOLDER'}', number: '${cardData.displayNumber || cardNumber}', month: '${cardData.month || 'MM'}', year: '${cardData.year || 'YYYY'}', cvv: '${cardData.cvv || '***'}', country: '${(card.cardBillingAddress && card.cardBillingAddress.Country) || 'N/A'}'})" 
+                style="margin-bottom:12px; cursor:pointer; padding:16px; background:linear-gradient(135deg, #1a1f71 0%, #4a5568 100%); border:1px solid rgba(255,255,255,0.1);">
+                <div style="display:flex; align-items:center; gap:12px; flex:1;">
+                    ${cardLogo ? `<div style="width:50px; height:50px; border-radius:12px; overflow:hidden; flex-shrink:0; background:#fff;"><img src="${cardLogo}" style="width:100%; height:100%; object-fit:cover;"></div>` :
+                    `<div class="sc-icon" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9); width:50px; height:50px; border-radius:16px; flex-shrink:0;">
+                        <i class="fas fa-credit-card"></i>
+                    </div>`}
+                    <div class="sc-info" style="flex:1;">
+                        <h3 style="font-size:15px; font-weight:700; color:#fff; margin:0;">${card.cardName || 'Virtual Card'}</h3>
+                        <p style="font-size:12px; color:rgba(255,255,255,0.7); margin:4px 0 0 0; font-family:monospace; letter-spacing:1px;">${cardNumber}</p>
+                        <p style="font-size:10px; color:rgba(255,255,255,0.5); margin:2px 0 0 0;">Type: ${card.cardType || 'Visa'} • IP: ${card.cardIP || 'N/A'}</p>
+                    </div>
+                </div>
+                <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+                    <div style="font-weight:900; color:#22c55e; font-size:15px; letter-spacing:0.5px;">${card.rewardOffer || 0} TC</div>
+                    <button onclick="event.stopPropagation(); buyUserCard('${card.id}', ${card.rewardOffer || 0})" 
+                        style="padding:6px 16px; border-radius:12px; background:#22c55e; color:#fff; font-weight:800; font-size:11px; border:none; cursor:pointer; box-shadow:0 4px 10px rgba(34,197,94,0.3);">
+                        BUY
+                    </button>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
     if (window._userCardHtml) html += window._userCardHtml;
 
     container.innerHTML = html || '<div style="text-align:center; padding:40px 0; color:var(--text-sub); opacity:0.5;">No cards available</div>';
 }
+window.renderCards = renderCards;
+
+// Buy user-submitted card
+async function buyUserCard(cardId, price) {
+    const userId = userData.id;
+    const balance = userData.tokens || 0;
+
+    if (balance < price) {
+        window.showToast('❌ Insufficient balance!');
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/user/item-sales/buy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId, cardId })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            userData.tokens = data.newBalance;
+            renderBalances();
+            window.showToast('✅ Card purchased successfully!');
+            loadRecentActivity();
+
+            if (window.Telegram?.WebApp?.HapticFeedback) {
+                window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+            }
+        } else {
+            window.showToast('❌ ' + data.message);
+        }
+    } catch (e) {
+        window.showToast('Error purchasing card');
+    }
+}
+window.buyUserCard = buyUserCard;
+
+// Copy to clipboard function with visual feedback
+function copyToClipboard(elementId, button) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+
+    const text = element.textContent.trim();
+
+    // Copy to clipboard
+    navigator.clipboard.writeText(text).then(() => {
+        // Visual feedback - change icon to checkmark
+        const icon = button.querySelector('i');
+        if (icon) {
+            const originalClass = icon.className;
+            icon.className = 'fas fa-check';
+            icon.style.color = '#22c55e';
+
+            // Revert after 2 seconds
+            setTimeout(() => {
+                icon.className = originalClass;
+                icon.style.color = button.style.background === 'rgb(251, 191, 36)' ? '#000' : '#fbbf24';
+            }, 2000);
+        }
+
+        // Show toast
+        if (window.showToast) {
+            window.showToast('✅ Copied to clipboard!');
+        }
+
+        // Haptic feedback
+        if (tg.HapticFeedback) {
+            tg.HapticFeedback.impactOccurred('light');
+        }
+    }).catch(() => {
+        if (window.showToast) {
+            window.showToast('❌ Failed to copy');
+        }
+    });
+}
+window.copyToClipboard = copyToClipboard;
+
+// Show card details page with data
+function showCardDetail(cardData) {
+    if (!cardData) return;
+
+    // Populate card details
+    document.getElementById('cardDetailLabel').textContent = cardData.cardName || 'VIRTUAL CARD';
+    document.getElementById('cardDetailHolder').textContent = cardData.holderName || 'CARD HOLDER';
+    document.getElementById('cardDetailNumber').textContent = cardData.number || '**** **** **** ****';
+    document.getElementById('cardDetailExpiry').textContent = `${cardData.month || 'MM'}/${cardData.year || 'YYYY'}`;
+    document.getElementById('cardDetailCVV').textContent = cardData.cvv || '***';
+    document.getElementById('cardDetailCountry').textContent = cardData.country || 'N/A';
+
+    // Navigate to card detail page
+    nav('cardDetail');
+}
+window.showCardDetail = showCardDetail;
 
 function renderVPN() {
     const container = document.getElementById('vpnList');
@@ -5881,13 +6015,23 @@ function previewCustomIcon(input) {
     preview.innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;">`;
 }
 
+function previewCardLogo(input) {
+    const preview = document.getElementById('cardLogoPreview');
+    if (!preview || !input.files || !input.files[0]) return;
+    const file = input.files[0];
+    const url = URL.createObjectURL(file);
+    preview.innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:cover; border-radius:10px;">`;
+    preview.style.border = '2px solid #8b5cf6';
+}
+window.previewCardLogo = previewCardLogo;
+
 function resetSellCategory() {
     document.getElementById('itemSellCategoryGrid').style.display = 'grid';
     document.getElementById('itemSellFormContainer').style.display = 'none';
     document.getElementById('selItemCategory').value = '';
 
     // Reset all form fields
-    const fields = ['selItemEmail', 'selItemPassword', 'selItemCustomName', 'apiServiceName', 'apiKeyValue', 'apiQuota', 'apiExtraInfo', 'sel2FAAuthCode', 'sel2FABackupCode', 'sel2FAAppCode', 'vpnName', 'vpnEmail', 'vpnPassword', 'vpnPlan', 'cardNumber', 'cardExpiry', 'cardCVV', 'cardHolder', 'cardCountry', 'cardBillingAddress', 'selItemCustomDuration', 'selItemRequestedPrice'];
+    const fields = ['selItemEmail', 'selItemPassword', 'selItemCustomName', 'apiServiceName', 'apiKeyValue', 'apiQuota', 'apiExtraInfo', 'sel2FAAuthCode', 'sel2FABackupCode', 'sel2FAAppCode', 'vpnName', 'vpnEmail', 'vpnPassword', 'vpnPlan', 'cardNumber', 'cardName', 'cardIP', 'cardHolderNames', 'cardBillingAddress', 'selItemCustomDuration', 'selItemRequestedPrice'];
     fields.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
 
     // Reset Card Types
@@ -5910,6 +6054,15 @@ function resetSellCategory() {
 
     const iconFile = document.getElementById('selItemIconFile');
     if (iconFile) iconFile.value = '';
+
+    // Reset card logo preview
+    const cardLogoPreview = document.getElementById('cardLogoPreview');
+    if (cardLogoPreview) {
+        cardLogoPreview.innerHTML = '<i class="fas fa-image" style="color:var(--text-sub); font-size:24px;"></i>';
+        cardLogoPreview.style.border = '2px dashed var(--border-color)';
+    }
+    const cardLogoFile = document.getElementById('cardLogoFile');
+    if (cardLogoFile) cardLogoFile.value = '';
 
     setSellDuration(30); // Reset to 30 days default
 
@@ -6046,22 +6199,91 @@ async function submitItemForSale() {
             window.showToast('Please select a Card Type');
             return;
         }
+        const cardName = document.getElementById('cardName')?.value.trim();
         const cardNumber = document.getElementById('cardNumber')?.value.trim();
-        const cardExpiry = document.getElementById('cardExpiry')?.value.trim();
-        const cardCVV = document.getElementById('cardCVV')?.value.trim();
-        const cardHolder = document.getElementById('cardHolder')?.value.trim();
-        const cardCountry = document.getElementById('cardCountry')?.value.trim();
-        if (!cardNumber || !cardExpiry || !cardCVV || !cardHolder || !cardCountry) {
-            window.showToast('Please fill all required card fields');
+        const cardIP = document.getElementById('cardIP')?.value.trim();
+        const cardHolderNames = document.getElementById('cardHolderNames')?.value.trim();
+        const cardBillingAddress = document.getElementById('cardBillingAddress')?.value.trim();
+
+        if (!cardName) {
+            window.showToast('Please enter card name');
             return;
         }
+        if (!cardNumber) {
+            window.showToast('Please enter card data');
+            return;
+        }
+        if (!cardIP) {
+            window.showToast('Please enter IP address');
+            return;
+        }
+        if (!cardHolderNames) {
+            window.showToast('Please enter cardholder names');
+            return;
+        }
+        if (!cardBillingAddress) {
+            window.showToast('Please enter full address');
+            return;
+        }
+
+        // Parse card data from format: number|month|year|cvv
+        const cards = parseCardData(document.getElementById('cardNumber'));
+        if (cards.length === 0) {
+            window.showToast('Please enter valid card data in format: number|month|year|cvv');
+            return;
+        }
+
+        // Parse cardholder names (one per line)
+        const holderNames = cardHolderNames.split('\n').filter(name => name.trim().length > 0);
+
+        const firstNames = ['James', 'John', 'Robert', 'Michael', 'William', 'David', 'Richard', 'Joseph', 'Thomas', 'Charles', 'Daniel', 'Matthew', 'Anthony', 'Mark', 'Donald', 'Steven', 'Paul', 'Andrew', 'Joshua', 'Kenneth', 'Kevin', 'Brian', 'George', 'Timothy', 'Ronald', 'Edward', 'Jason', 'Jeffrey', 'Ryan', 'Jacob', 'Gary', 'Nicholas', 'Eric', 'Jonathan', 'Stephen', 'Larry', 'Justin', 'Scott', 'Brandon', 'Benjamin', 'Samuel', 'Gregory', 'Frank', 'Alexander', 'Raymond', 'Patrick', 'Jack', 'Dennis', 'Jerry', 'Tyler', 'Aaron', 'Jose', 'Adam', 'Nathan', 'Henry', 'Douglas', 'Zachary', 'Peter', 'Kyle', 'Ethan', 'Walter', 'Noah', 'Jeremy', 'Christian', 'Keith', 'Roger', 'Terry', 'Gerald', 'Harold', 'Sean', 'Austin', 'Carl', 'Arthur', 'Lawrence', 'Dylan', 'Jesse', 'Jordan', 'Bryan', 'Billy', 'Joe', 'Bruce', 'Gabriel', 'Logan', 'Albert', 'Willie', 'Alan', 'Juan', 'Wayne', 'Elijah', 'Randy', 'Roy', 'Vincent', 'Ralph', 'Eugene', 'Russell', 'Bobby', 'Mason', 'Philip', 'Louis'];
+        const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin', 'Lee', 'Perez', 'Thompson', 'White', 'Harris', 'Sanchez', 'Clark', 'Ramirez', 'Lewis', 'Robinson', 'Walker', 'Young', 'Allen', 'King', 'Wright', 'Scott', 'Torres', 'Nguyen', 'Hill', 'Flores', 'Green', 'Adams', 'Nelson', 'Baker', 'Hall', 'Rivera', 'Campbell', 'Mitchell', 'Carter', 'Roberts', 'Gomez', 'Phillips', 'Evans', 'Turner', 'Diaz', 'Parker', 'Cruz', 'Edwards', 'Collins', 'Reyes', 'Stewart', 'Morris', 'Morales', 'Murphy', 'Cook', 'Rogers', 'Gutierrez', 'Ortiz', 'Morgan', 'Cooper', 'Peterson', 'Bailey', 'Reed', 'Kelly', 'Howard', 'Ramos', 'Kim', 'Cox', 'Ward', 'Richardson', 'Watson', 'Brooks', 'Chavez', 'Wood', 'James', 'Bennett', 'Gray', 'Mendoza', 'Ruiz', 'Hughes', 'Price', 'Alvarez', 'Castillo', 'Sanders', 'Patel', 'Myers', 'Long', 'Ross', 'Foster', 'Jimenez'];
+
+        // Generate random name function
+        function generateRandomName() {
+            const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+            const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+            return `${firstName} ${lastName}`.toUpperCase();
+        }
+
+        // Assign names to cards - use provided names first, then auto-generate
+        cards.forEach((card, index) => {
+            if (index < holderNames.length && holderNames[index].trim()) {
+                card.holderName = holderNames[index].trim().toUpperCase();
+            } else {
+                // Auto-generate random name for this card
+                card.holderName = generateRandomName();
+            }
+        });
+
+        // Parse address dynamically using colon separator
+        // Format: "FieldName: Value" - whatever is before colon is field name, after is value
+        const addressLines = cardBillingAddress.split('\n').filter(line => line.trim().length > 0);
+        const parsedAddress = {};
+
+        addressLines.forEach(line => {
+            const colonIndex = line.indexOf(':');
+            if (colonIndex > 0) {
+                const fieldName = line.substring(0, colonIndex).trim();
+                const fieldValue = line.substring(colonIndex + 1).trim();
+                if (fieldName && fieldValue) {
+                    parsedAddress[fieldName] = fieldValue;
+                }
+            }
+        });
+
         payload.cardType = cardTypeInput.value;
-        payload.cardNumber = cardNumber;
-        payload.cardExpiry = cardExpiry;
-        payload.cardCVV = cardCVV;
-        payload.cardHolder = cardHolder;
-        payload.cardCountry = cardCountry;
-        payload.cardBillingAddress = document.getElementById('cardBillingAddress')?.value.trim() || '';
+        payload.cardName = cardName;
+        payload.cardIP = cardIP;
+        payload.cards = cards; // Array of card objects with number, month, year, cvv, holderName
+        payload.cardBillingAddress = parsedAddress; // Dynamic object with field names as keys
+
+        // Get card logo if uploaded
+        const logoPreview = document.getElementById('cardLogoPreview');
+        const logoImg = logoPreview?.querySelector('img');
+        if (logoImg) {
+            payload.cardLogo = logoImg.src;
+        }
     } else {
         const email = document.getElementById('selItemEmail')?.value.trim();
         const password = document.getElementById('selItemPassword')?.value.trim();
@@ -6266,24 +6488,305 @@ window.previewCustomIcon = previewCustomIcon;
 window.respondToOffer = respondToOffer;
 
 function selectCardType(type) {
-    const types = ['visa', 'mastercard', 'amex'];
+    const types = ['visa', 'mastercard', 'amex', 'discover', 'jcb', 'unionpay'];
+    const idMap = { 'visa': 'Visa', 'mastercard': 'MC', 'amex': 'Amex', 'discover': 'Discover', 'jcb': 'JCB', 'unionpay': 'UnionPay' };
+
     types.forEach(t => {
-        const idMap = { 'visa': 'Visa', 'mastercard': 'MC', 'amex': 'Amex' };
         const el = document.getElementById('cardType' + idMap[t]);
+        const checkIcon = el?.querySelector('.check-icon');
+
         if (el) {
             if (t === type) {
                 el.style.borderColor = '#8b5cf6';
                 el.style.background = 'rgba(139,92,246,0.2)';
                 el.style.color = '#fff';
+                if (checkIcon) checkIcon.style.display = 'flex';
             } else {
                 el.style.borderColor = 'var(--border-color)';
                 el.style.background = 'rgba(0,0,0,0.2)';
                 el.style.color = 'var(--text-sub)';
+                if (checkIcon) checkIcon.style.display = 'none';
             }
+        }
+    });
+
+    // Update slide indicators based on selection
+    const dots = document.querySelectorAll('.slide-dot');
+    const selectedIndex = types.indexOf(type);
+    dots.forEach((dot, index) => {
+        if (index === selectedIndex) {
+            dot.style.background = 'rgba(139,92,246,0.8)';
+            dot.style.transform = 'scale(1.2)';
+        } else {
+            dot.style.background = 'rgba(255,255,255,0.3)';
+            dot.style.transform = 'scale(1)';
         }
     });
 }
 window.selectCardType = selectCardType;
+
+// Auto Fill Card Details with sample data
+function autoFillCardDetails() {
+    // Sample card data in new format: number|month|year|cvv
+    const sampleCards = [
+        '6258142602558823|06|2030|282',
+        '6258142602534378|06|2030|140',
+        '6258142602526754|05|2030|191',
+        '6258142602507390|04|2026|578',
+        '6258142602589349|08|2028|410'
+    ];
+
+    // Select mastercard as default for these cards
+    const radio = document.querySelector('input[name="cardType"][value="mastercard"]');
+    if (radio) {
+        radio.checked = true;
+        selectCardType('mastercard');
+    }
+
+    // Fill card name
+    document.getElementById('cardName').value = 'Business Platinum Card';
+
+    // Fill card data
+    const cardData = sampleCards.slice(0, 3).join('\n');
+    document.getElementById('cardNumber').value = cardData;
+    parseCardData(document.getElementById('cardNumber'));
+
+    // Fill Country
+    document.getElementById('cardIP').value = 'Bangladesh';
+
+    // Generate random names for ALL cards automatically
+    // Large name database for variety
+    const firstNames = ['James', 'John', 'Robert', 'Michael', 'William', 'David', 'Richard', 'Joseph', 'Thomas', 'Charles', 'Daniel', 'Matthew', 'Anthony', 'Mark', 'Donald', 'Steven', 'Paul', 'Andrew', 'Joshua', 'Kenneth', 'Kevin', 'Brian', 'George', 'Timothy', 'Ronald', 'Edward', 'Jason', 'Jeffrey', 'Ryan', 'Jacob', 'Gary', 'Nicholas', 'Eric', 'Jonathan', 'Stephen', 'Larry', 'Justin', 'Scott', 'Brandon', 'Benjamin', 'Samuel', 'Gregory', 'Frank', 'Alexander', 'Raymond', 'Patrick', 'Jack', 'Dennis', 'Jerry', 'Tyler', 'Aaron', 'Jose', 'Adam', 'Nathan', 'Henry', 'Douglas', 'Zachary', 'Peter', 'Kyle', 'Ethan', 'Walter', 'Noah', 'Jeremy', 'Christian', 'Keith', 'Roger', 'Terry', 'Gerald', 'Harold', 'Sean', 'Austin', 'Carl', 'Arthur', 'Lawrence', 'Dylan', 'Jesse', 'Jordan', 'Bryan', 'Billy', 'Joe', 'Bruce', 'Gabriel', 'Logan', 'Albert', 'Willie', 'Alan', 'Juan', 'Wayne', 'Elijah', 'Randy', 'Roy', 'Vincent', 'Ralph', 'Eugene', 'Russell', 'Bobby', 'Mason', 'Philip', 'Louis', 'Mary', 'Patricia', 'Jennifer', 'Linda', 'Elizabeth', 'Barbara', 'Susan', 'Jessica', 'Sarah', 'Karen', 'Nancy', 'Lisa', 'Betty', 'Margaret', 'Sandra', 'Ashley', 'Kimberly', 'Emily', 'Donna', 'Michelle', 'Dorothy', 'Carol', 'Amanda', 'Melissa', 'Deborah', 'Stephanie', 'Rebecca', 'Laura', 'Sharon', 'Cynthia', 'Kathleen', 'Amy', 'Shirley', 'Angela', 'Helen', 'Anna', 'Brenda', 'Pamela', 'Nicole', 'Emma', 'Samantha', 'Katherine', 'Christine', 'Debra', 'Rachel', 'Catherine', 'Carolyn', 'Janet', 'Ruth', 'Maria', 'Heather', 'Diane', 'Virginia', 'Julie', 'Joyce', 'Victoria', 'Olivia', 'Kelly', 'Christina', 'Lauren', 'Joan', 'Evelyn', 'Judith', 'Megan', 'Cheryl', 'Andrea', 'Hannah', 'Martha', 'Jacqueline', 'Frances', 'Gloria', 'Ann', 'Teresa', 'Kathryn', 'Sara', 'Janice', 'Jean', 'Alice', 'Madison', 'Doris', 'Abigail', 'Julia', 'Judy', 'Grace', 'Denise', 'Amber', 'Marilyn', 'Beverly', 'Danielle', 'Theresa', 'Sophia', 'Marie', 'Diana', 'Brittany', 'Natalie', 'Isabella', 'Charlotte', 'Rose', 'Alexis', 'Kayla'];
+    const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin', 'Lee', 'Perez', 'Thompson', 'White', 'Harris', 'Sanchez', 'Clark', 'Ramirez', 'Lewis', 'Robinson', 'Walker', 'Young', 'Allen', 'King', 'Wright', 'Scott', 'Torres', 'Nguyen', 'Hill', 'Flores', 'Green', 'Adams', 'Nelson', 'Baker', 'Hall', 'Rivera', 'Campbell', 'Mitchell', 'Carter', 'Roberts', 'Gomez', 'Phillips', 'Evans', 'Turner', 'Diaz', 'Parker', 'Cruz', 'Edwards', 'Collins', 'Reyes', 'Stewart', 'Morris', 'Morales', 'Murphy', 'Cook', 'Rogers', 'Gutierrez', 'Ortiz', 'Morgan', 'Cooper', 'Peterson', 'Bailey', 'Reed', 'Kelly', 'Howard', 'Ramos', 'Kim', 'Cox', 'Ward', 'Richardson', 'Watson', 'Brooks', 'Chavez', 'Wood', 'James', 'Bennett', 'Gray', 'Mendoza', 'Ruiz', 'Hughes', 'Price', 'Alvarez', 'Castillo', 'Sanders', 'Patel', 'Myers', 'Long', 'Ross', 'Foster', 'Jimenez', 'Powell', 'Jenkins', 'Perry', 'Russell', 'Sullivan', 'Bell', 'Coleman', 'Butler', 'Henderson', 'Barnes', 'Gonzales', 'Fisher', 'Vasquez', 'Simpson', 'Romero', 'Jordan', 'Patterson', 'Alexander', 'Hamilton', 'Graham', 'Reynolds', 'Griffin', 'Wallace', 'Moreno', 'West', 'Cole', 'Hayes', 'Bryant', 'Herrera', 'Gibson', 'Ellis', 'Tran', 'Medina', 'Aguilar', 'Stevens', 'Murray', 'Ford', 'Castro', 'Marshall', 'Owens', 'Harrison', 'Fernandez', 'Mcdonald', 'Woods', 'Washington', 'Kennedy', 'Wells', 'Vargas', 'Henry', 'Chen', 'Freeman', 'Webb', 'Tucker', 'Guerrero', 'Burns', 'Crawford', 'Olson', 'Simpson', 'Porter', 'Hunter', 'Gordon', 'Mendez', 'Silva', 'Shaw', 'Snyder', 'Mason', 'Dixon', 'Munoz', 'Hunt', 'Hicks', 'Holmes', 'Palmer', 'Wagner', 'Black', 'Boyd', 'Ramos', 'Rose', 'Stone', 'Salazar', 'Fox', 'Warren', 'Mills', 'Meyer', 'Rice', 'Schmidt', 'Garza', 'Daniels', 'Ferguson', 'Nichols', 'Stephens', 'Soto', 'Weaver', 'Ryan', 'Gardner', 'Payne', 'Grant', 'Dunn', 'Kelley', 'Spencer', 'Hawkins', 'Arnold', 'Pierce', 'Vazquez', 'Hansen', 'Peters', 'Santos', 'Hart', 'Bradley', 'Knight', 'Elliott', 'Cunningham', 'Duncan', 'Olson'];
+
+    // Generate random name function
+    function generateRandomName() {
+        const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+        const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+        return `${firstName} ${lastName}`.toUpperCase();
+    }
+
+    // Generate names for all 3 sample cards
+    const cardCount = 3;
+    const autoNames = [];
+    for (let i = 0; i < cardCount; i++) {
+        autoNames.push(generateRandomName());
+    }
+
+    // Fill Cardholder Names (auto-generated for all cards)
+    document.getElementById('cardHolderNames').value = autoNames.join('\n');
+
+    // Fill address
+    document.getElementById('cardBillingAddress').value = `Country: Bangladesh
+Type: MASTER CARD
+State: Dhaka
+City: Dhaka
+District: Dhaka
+Address: Gulshan Avenue, Dhaka
+Postal Code: 1212`;
+
+    // Show toast notification
+    if (window.showToast) {
+        window.showToast(' Card details auto-filled with random names!');
+    }
+
+    if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+}
+window.autoFillCardDetails = autoFillCardDetails;
+
+// Parse card data in format: number|month|year|cvv
+function parseCardData(textarea) {
+    let value = textarea.value.trim();
+
+    // Parse cards in format: number|month|year|cvv
+    const lines = value.split('\n').filter(line => line.trim().length > 0);
+    const cards = [];
+
+    lines.forEach(line => {
+        const parts = line.split('|');
+        if (parts.length >= 4) {
+            const number = parts[0].trim();
+            const month = parts[1].trim();
+            const year = parts[2].trim();
+            const cvv = parts[3].trim();
+
+            // Validate basic card number (16 digits)
+            if (number.length >= 15 && /^\d+$/.test(number.replace(/\s/g, ''))) {
+                cards.push({
+                    number: number.replace(/\s/g, ''),
+                    month: month,
+                    year: year,
+                    cvv: cvv,
+                    displayNumber: formatCardNumber(number.replace(/\s/g, ''))
+                });
+            }
+        }
+    });
+
+    const count = cards.length;
+
+    // Update badge
+    const badge = document.getElementById('cardCountBadge');
+    if (badge) {
+        badge.textContent = `${count} card${count !== 1 ? 's' : ''}`;
+        badge.style.background = count > 0 ? 'rgba(139,92,246,0.3)' : 'rgba(139,92,246,0.2)';
+        badge.style.color = count > 0 ? '#8b5cf6' : '#8b5cf6';
+    }
+
+    // Show/hide card preview
+    const previewContainer = document.getElementById('cardPreviewContainer');
+    if (previewContainer) {
+        if (count > 0) {
+            previewContainer.style.display = 'block';
+            // Update preview with first card
+            updateCardPreview(cards[0]);
+        } else {
+            previewContainer.style.display = 'none';
+        }
+    }
+
+    return cards;
+}
+window.parseCardData = parseCardData;
+
+// Copy text from card preview with visual feedback
+function copyCardPreviewText(elementId, btn) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+
+    const text = el.textContent.trim();
+    navigator.clipboard.writeText(text).then(() => {
+        // Change icon to checkmark
+        const icon = btn.querySelector('i');
+        if (icon) {
+            icon.className = 'fas fa-check';
+            icon.style.color = '#22c55e';
+        }
+
+        // Show toast notification
+        if (window.showToast) {
+            window.showToast('Copied!');
+        }
+
+        // Revert back to copy icon after 2 seconds
+        setTimeout(() => {
+            if (icon) {
+                icon.className = 'fas fa-copy';
+                icon.style.color = '#fbbf24';
+            }
+        }, 2000);
+    }).catch(() => {
+        if (window.showToast) {
+            window.showToast('Failed to copy');
+        }
+    });
+}
+window.copyCardPreviewText = copyCardPreviewText;
+
+// Update address preview to show how it will look after purchase
+function updateAddressPreview() {
+    const addressTextarea = document.getElementById('cardBillingAddress');
+    const previewContainer = document.getElementById('addressPreviewContainer');
+    const previewBox = document.getElementById('addressPreviewBox');
+
+    if (!addressTextarea || !previewContainer || !previewBox) return;
+
+    const addressText = addressTextarea.value.trim();
+
+    if (!addressText) {
+        previewContainer.style.display = 'none';
+        return;
+    }
+
+    // Parse address lines (format: "FieldName: Value")
+    const lines = addressText.split('\n').filter(line => line.trim().length > 0);
+    const addressFields = [];
+
+    lines.forEach(line => {
+        const colonIndex = line.indexOf(':');
+        if (colonIndex > 0) {
+            const fieldName = line.substring(0, colonIndex).trim();
+            const fieldValue = line.substring(colonIndex + 1).trim();
+            if (fieldName && fieldValue) {
+                addressFields.push({ name: fieldName.toUpperCase(), value: fieldValue });
+            }
+        }
+    });
+
+    if (addressFields.length === 0) {
+        previewContainer.style.display = 'none';
+        return;
+    }
+
+    // Generate preview HTML
+    previewBox.innerHTML = addressFields.map(field => `
+        <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:12px; padding:14px 16px;">
+            <div style="font-size:9px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">
+                ${field.name}
+            </div>
+            <div style="font-size:15px; font-weight:600; color:#fff;">
+                ${field.value}
+            </div>
+        </div>
+    `).join('');
+
+    previewContainer.style.display = 'block';
+}
+window.updateAddressPreview = updateAddressPreview;
+
+// Format card number with spaces
+function formatCardNumber(number) {
+    return number.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
+}
+
+// Update card preview
+function updateCardPreview(card) {
+    const numberEl = document.getElementById('previewCardNumber');
+    const expiryEl = document.getElementById('previewCardExpiry');
+    const cvvEl = document.getElementById('previewCardCVV');
+    const holderEl = document.getElementById('previewCardHolder');
+    const nameEl = document.getElementById('previewCardCustomName');
+    const logoEl = document.getElementById('previewCardLogo');
+
+    if (numberEl) numberEl.textContent = card.displayNumber || formatCardNumber(card.number);
+    if (expiryEl) expiryEl.textContent = `${card.month}/${card.year.slice(-2)}`;
+    if (cvvEl) cvvEl.textContent = card.cvv;
+
+    // Read holder name from cardHolderNames textarea
+    const holderNamesTextarea = document.getElementById('cardHolderNames');
+    if (holderEl && holderNamesTextarea) {
+        const holderNames = holderNamesTextarea.value.split('\n').filter(name => name.trim().length > 0);
+        if (holderNames.length > 0) {
+            holderEl.textContent = holderNames[0].trim().toUpperCase();
+        } else {
+            holderEl.textContent = 'CARD HOLDER';
+        }
+    } else if (holderEl) {
+        holderEl.textContent = card.holderName || 'CARD HOLDER';
+    }
+
+    // Update custom card name from input
+    const cardNameInput = document.getElementById('cardName');
+    if (nameEl && cardNameInput && cardNameInput.value.trim()) {
+        nameEl.textContent = cardNameInput.value.trim().toUpperCase();
+    }
+
+    // Update logo from uploaded image
+    const logoPreview = document.getElementById('cardLogoPreview');
+    if (logoEl && logoPreview) {
+        const img = logoPreview.querySelector('img');
+        if (img) {
+            logoEl.innerHTML = `<img src="${img.src}" style="width:100%; height:100%; object-fit:cover; border-radius:4px;">`;
+        } else {
+            logoEl.innerHTML = '<i class="fas fa-credit-card" style="color:#fff; font-size:16px;"></i>';
+        }
+    }
+}
+
+// Format card numbers (legacy function for compatibility)
+function formatCardNumbers(textarea) {
+    parseCardData(textarea);
+}
 
 function switchPremiumTab(tabStr) {
     const tabs = ['vpn', 'account'];

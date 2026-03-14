@@ -376,7 +376,8 @@
             </section>
             <div id="page-dashboard" class="page active">
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-8">
-                    <div class="glass-card p-6 rounded-2xl">
+                    <div class="glass-card p-6 rounded-2xl cursor-pointer hover:bg-white/5 transition-colors"
+                        onclick="nav('users')">
                         <div class="flex justify-between items-start mb-4">
                             <div class="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center"><i
                                     class="fas fa-users text-blue-400 text-xl"></i></div>
@@ -384,7 +385,8 @@
                         <h3 class="text-gray-400 text-xs font-bold uppercase">Total Users</h3>
                         <div class="text-2xl font-bold mt-1" id="dash-total-users">...</div>
                     </div>
-                    <div class="glass-card p-6 rounded-2xl">
+                    <div class="glass-card p-6 rounded-2xl cursor-pointer hover:bg-white/5 transition-colors"
+                        onclick="nav('users')">
                         <div class="flex justify-between items-start mb-4">
                             <div class="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center"><i
                                     class="fas fa-user-check text-green-400 text-xl"></i></div>
@@ -392,7 +394,8 @@
                         <h3 class="text-gray-400 text-xs font-bold uppercase">Active (24h)</h3>
                         <div class="text-2xl font-bold mt-1" id="dash-active">...</div>
                     </div>
-                    <div class="glass-card p-6 rounded-2xl">
+                    <div class="glass-card p-6 rounded-2xl cursor-pointer hover:bg-white/5 transition-colors"
+                        onclick="nav('users')">
                         <div class="flex justify-between items-start mb-4">
                             <div class="w-12 h-12 rounded-xl bg-yellow-500/20 flex items-center justify-center"><i
                                     class="fas fa-coins text-yellow-400 text-xl"></i></div>
@@ -400,7 +403,8 @@
                         <h3 class="text-gray-400 text-xs font-bold uppercase">Total Tokens</h3>
                         <div class="text-2xl font-bold mt-1" id="dash-total-tokens">...</div>
                     </div>
-                    <div class="glass-card p-6 rounded-2xl">
+                    <div class="glass-card p-6 rounded-2xl cursor-pointer hover:bg-white/5 transition-colors"
+                        onclick="nav('users')">
                         <div class="flex justify-between items-start mb-4">
                             <div class="w-12 h-12 rounded-xl bg-indigo-500/20 flex items-center justify-center"><i
                                     class="fas fa-user-shield text-indigo-400 text-xl"></i></div>
@@ -408,7 +412,8 @@
                         <h3 class="text-gray-400 text-xs font-bold uppercase">Verified</h3>
                         <div class="text-2xl font-bold mt-1" id="dash-verified">...</div>
                     </div>
-                    <div class="glass-card p-6 rounded-2xl">
+                    <div class="glass-card p-6 rounded-2xl cursor-pointer hover:bg-white/5 transition-colors"
+                        onclick="nav('shopmanage')">
                         <div class="flex justify-between items-start mb-4">
                             <div class="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center"><i
                                     class="fas fa-store text-purple-400 text-xl"></i></div>
@@ -416,7 +421,8 @@
                         <h3 class="text-gray-400 text-xs font-bold uppercase">Shop Items</h3>
                         <div class="text-2xl font-bold mt-1" id="dash-shop-items">...</div>
                     </div>
-                    <div class="glass-card p-6 rounded-2xl">
+                    <div class="glass-card p-6 rounded-2xl cursor-pointer hover:bg-white/5 transition-colors"
+                        onclick="nav('shopmanage')">
                         <div class="flex justify-between items-start mb-4">
                             <div class="w-12 h-12 rounded-xl bg-teal-500/20 flex items-center justify-center"><i
                                     class="fas fa-user-circle text-teal-400 text-xl"></i></div>
@@ -424,7 +430,8 @@
                         <h3 class="text-gray-400 text-xs font-bold uppercase">Accounts</h3>
                         <div class="text-2xl font-bold mt-1" id="dash-accounts">...</div>
                     </div>
-                    <div class="glass-card p-6 rounded-2xl">
+                    <div class="glass-card p-6 rounded-2xl cursor-pointer hover:bg-white/5 transition-colors"
+                        onclick="nav('services')">
                         <div class="flex justify-between items-start mb-4">
                             <div class="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center"><i
                                     class="fas fa-envelope text-red-400 text-xl"></i></div>
@@ -432,7 +439,8 @@
                         <h3 class="text-gray-400 text-xs font-bold uppercase">Gmails Used</h3>
                         <div class="text-2xl font-bold mt-1" id="dash-gmails">...</div>
                     </div>
-                    <div class="glass-card p-6 rounded-2xl">
+                    <div class="glass-card p-6 rounded-2xl cursor-pointer hover:bg-white/5 transition-colors"
+                        onclick="nav('vpn')">
                         <div class="flex justify-between items-start mb-4">
                             <div class="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center"><i
                                     class="fas fa-shield-alt text-cyan-400 text-xl"></i></div>
@@ -440,7 +448,8 @@
                         <h3 class="text-gray-400 text-xs font-bold uppercase">Available VPNs</h3>
                         <div class="text-2xl font-bold mt-1" id="dash-vpns">...</div>
                     </div>
-                    <div class="glass-card p-6 rounded-2xl">
+                    <div class="glass-card p-6 rounded-2xl cursor-pointer hover:bg-white/5 transition-colors"
+                        onclick="nav('cards')">
                         <div class="flex justify-between items-start mb-4">
                             <div class="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center"><i
                                     class="fas fa-credit-card text-orange-400 text-xl"></i></div>
@@ -1415,55 +1424,6 @@
                                 </div>
                             </div>
 
-                            <!-- External Services -->
-                            <div class="space-y-4">
-                                <div class="border-b border-white/10 pb-4">
-                                    <label
-                                        class="text-xs text-gray-400 uppercase font-bold block mb-1 flex items-center">
-                                        <i class="fas fa-envelope text-yellow-400 mr-2"></i> SMTP Labs Key
-                                    </label>
-                                    <div class="relative">
-                                        <input type="password" id="api-smtp-key"
-                                            class="w-full bg-black/40 border border-white/10 focus:border-blue-500 rounded-lg p-3 transition-colors pr-10"
-                                            placeholder="Enter SMTP Labs API Key">
-                                        <button onclick="togglePasswordVisibility('api-smtp-key')"
-                                            class="absolute right-3 top-3.5 text-gray-400 hover:text-white transition-colors">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label
-                                        class="text-xs text-gray-400 uppercase font-bold block mb-1 flex items-center">
-                                        <i class="fas fa-key text-purple-400 mr-2"></i> Mainboard API Key
-                                    </label>
-                                    <div class="relative">
-                                        <input type="password" id="api-mainboard-key"
-                                            class="w-full bg-black/40 border border-white/10 focus:border-blue-500 rounded-lg p-3 transition-colors pr-10"
-                                            placeholder="Enter Mainboard API Key">
-                                        <button onclick="togglePasswordVisibility('api-mainboard-key')"
-                                            class="absolute right-3 top-3.5 text-gray-400 hover:text-white transition-colors">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div class="border-t border-white/10 pt-4 mt-4 space-y-3">
-                                    <label class="text-xs text-gray-400 uppercase font-bold block">Gmail OAuth
-                                        Settings</label>
-                                    <input type="text" id="api-gmail-client" placeholder="Gmail Client ID"
-                                        class="w-full bg-black/40 border border-white/10 focus:border-blue-500 rounded-lg p-3 transition-colors mb-2">
-                                    <div class="relative">
-                                        <input type="password" id="api-gmail-secret" placeholder="Gmail Client Secret"
-                                            class="w-full bg-black/40 border border-white/10 focus:border-blue-500 rounded-lg p-3 transition-colors pr-10">
-                                        <button onclick="togglePasswordVisibility('api-gmail-secret')"
-                                            class="absolute right-3 top-3.5 text-gray-400 hover:text-white transition-colors">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
 
                         <!-- Database Configuration Section -->
@@ -2593,12 +2553,6 @@
                 // Bot Tokens
                 const elBot = document.getElementById('api-bot-token');
                 const elBackup = document.getElementById('api-backup-token');
-                const elMainboard = document.getElementById('api-mainboard-key');
-
-                // External Services
-                const elSmtp = document.getElementById('api-smtp-key');
-                const elGmailClient = document.getElementById('api-gmail-client');
-                const elGmailSecret = document.getElementById('api-gmail-secret');
 
                 // URLs & Links
                 const elMini = document.getElementById('api-miniapp-url');
@@ -2610,10 +2564,6 @@
                 // Set values with current config
                 if (elBot) elBot.value = api.botToken || '';
                 if (elBackup) elBackup.value = api.backupBotToken || '';
-                if (elMainboard) elMainboard.value = api.mainboardApiKey || '';
-                if (elSmtp) elSmtp.value = api.smtpLabsKey || '';
-                if (elGmailClient) elGmailClient.value = api.gmailClientId || '';
-                if (elGmailSecret) elGmailSecret.value = api.gmailClientSecret || '';
 
                 if (elMini) elMini.value = api.miniAppUrl || '';
                 if (elChannel) elChannel.value = api.requiredChannel || '';
@@ -2651,10 +2601,6 @@
             const payload = {
                 botToken: document.getElementById('api-bot-token')?.value || '',
                 backupBotToken: document.getElementById('api-backup-token')?.value || '',
-                mainboardApiKey: document.getElementById('api-mainboard-key')?.value || '',
-                smtpLabsKey: document.getElementById('api-smtp-key')?.value || '',
-                gmailClientId: document.getElementById('api-gmail-client')?.value || '',
-                gmailClientSecret: document.getElementById('api-gmail-secret')?.value || '',
                 miniAppUrl: document.getElementById('api-miniapp-url')?.value || '',
                 requiredChannel: document.getElementById('api-channel-link')?.value || '',
                 requiredGroup: document.getElementById('api-group-link')?.value || '',
@@ -2733,15 +2679,18 @@
         // Restart bot
         async function restartBot() {
             try {
-                const res = await fetch('/api/admin/restart');
+                const res = await fetch('/api/admin/restart-bot', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
                 const data = await res.json();
                 if (data?.success) {
-                    alert('✅ Bot restarted successfully!');
+                    alert('✅ Bot restart initiated! The bot will restart shortly.');
                 } else {
                     alert('❌ Failed to restart: ' + (data.message || 'Unknown error'));
                 }
             } catch (e) {
-                alert('❌ Network error restarting bot');
+                alert('❌ Network error restarting bot: ' + e.message);
             }
         }
 
@@ -2966,6 +2915,7 @@
                 'users': 'User Management',
                 'bannedusers': 'Banned Users',
                 'codes': 'Promo Codes',
+                'itemsales': 'Item Sales',
                 'tasks': 'Tasks',
                 'settings': 'Configuration',
                 'cards': 'Cards',
@@ -3038,6 +2988,12 @@
                     break;
                 case 'codes':
                     renderCodes();
+                    break;
+                case 'itemsales':
+                    loadItemSales();
+                    break;
+                case 'settings':
+                    loadApiKeys();
                     break;
             }
 
@@ -4738,10 +4694,19 @@ Admins can use /settings command in the group to manage settings.`);
 
         // ITEM SALES
         function loadItemSales() {
+            console.log('[ItemSales] Loading item sales...');
             fetch('/api/admin/item-sales/all')
                 .then(r => r.json())
                 .then(data => {
-                    if (!data.success) return;
+                    console.log('[ItemSales] API response:', data);
+                    if (!data.success) {
+                        console.error('[ItemSales] API returned success: false');
+                        const pendingBody = document.getElementById('pendingItemSalesBody');
+                        if (pendingBody) {
+                            pendingBody.innerHTML = '<tr><td colspan="6" class="text-center text-red-500 py-8">Error loading data</td></tr>';
+                        }
+                        return;
+                    }
 
                     // Update Badge
                     const badge = document.getElementById('pendingSalesBadge');
@@ -5720,7 +5685,7 @@ Admins can use /settings command in the group to manage settings.`);
                         class="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white focus:border-orange-500 outline-none">
                 </div>
                 <div>
-                    <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Max Uses (0 = unlimited)</label>
+                    <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Max Uses</label>
                     <input type="number" id="code-uses" placeholder="e.g., 100" value="100"
                         class="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white focus:border-orange-500 outline-none">
                 </div>
