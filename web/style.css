@@ -392,7 +392,8 @@ body {
 }
 
 .page.active {
-    display: block;
+    /* display: block; - Removed to allow JS to control flex/block */
+    overflow-y: visible;
 }
 
 /* Ensure pages inside main-scroll can scroll properly */
@@ -402,8 +403,39 @@ body {
 }
 
 .main-scroll .page.active {
-    display: block;
     overflow-y: visible;
+}
+
+/* Pages outside main-scroll - mobile screen fit */
+.page:not(.main-scroll .page) {
+    position: fixed;
+    top: 70px;
+    left: 0;
+    right: 0;
+    bottom: 85px;
+    height: calc(100vh - 155px);
+    max-height: calc(100vh - 155px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 100;
+    padding: 8px 0 100px 0;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+}
+
+.page:not(.main-scroll .page)::-webkit-scrollbar {
+    display: none;
+}
+
+/* Ensure cards inside pages fit properly */
+.page:not(.main-scroll .page) .gv-card {
+    width: 92%;
+    max-width: 400px;
+    box-sizing: border-box;
+    margin: 0 auto;
 }
 
 @keyframes fadeIn {
@@ -1902,6 +1934,27 @@ body {
     text-align: center;
     border: 1px solid var(--border-color);
     margin-bottom: 30px;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+/* Specific fix for Redeem, Transfer, Sell, Accounts pages */
+#redeemPage,
+#transferPage,
+#itemSellPage,
+#accountsStorePage {
+    padding: 8px !important;
+}
+
+#redeemPage .gv-card,
+#transferPage .gv-card {
+    width: calc(100% - 16px) !important;
+    max-width: calc(100% - 16px) !important;
+    margin: 0 auto !important;
+    padding: 20px !important;
+    box-sizing: border-box !important;
 }
 
 .gv-header {

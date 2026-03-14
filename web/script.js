@@ -5,6 +5,110 @@ function isValidUserId(userId) {
     return !isNaN(numericId) && numericId > 0;
 }
 
+// Success modal for code redemption
+function showRedeemSuccessModal(rewardAmount) {
+    // Create modal if doesn't exist
+    let modal = document.getElementById('redeem-success-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'redeem-success-modal';
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        `;
+        modal.innerHTML = `
+            <div style="
+                background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                border: 2px solid #22c55e;
+                border-radius: 20px;
+                padding: 40px 30px;
+                text-align: center;
+                transform: scale(0.8);
+                transition: transform 0.3s ease;
+                max-width: 280px;
+                width: 90%;
+            ">
+                <div style="
+                    width: 80px;
+                    height: 80px;
+                    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin: 0 auto 20px;
+                    animation: checkmarkPop 0.5s ease;
+                ">
+                    <i class="fas fa-check" style="font-size: 40px; color: white;"></i>
+                </div>
+                <h3 style="color: #22c55e; font-size: 24px; margin: 0 0 10px 0; font-weight: 700;">Successful!</h3>
+                <p style="color: #fff; font-size: 16px; margin: 0 0 8px 0;">You received</p>
+                <p style="color: #22c55e; font-size: 32px; margin: 0 0 20px 0; font-weight: 800;">+${rewardAmount} Tokens</p>
+                <button onclick="closeRedeemModal()" style="
+                    background: #22c55e;
+                    color: white;
+                    border: none;
+                    padding: 12px 30px;
+                    border-radius: 25px;
+                    font-size: 16px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    width: 100%;
+                ">OK</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        // Add animation styles
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes checkmarkPop {
+                0% { transform: scale(0); }
+                50% { transform: scale(1.2); }
+                100% { transform: scale(1); }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    // Update reward amount
+    const rewardEl = modal.querySelector('p:nth-of-type(2)');
+    if (rewardEl) rewardEl.textContent = `+${rewardAmount} Tokens`;
+
+    // Show modal
+    modal.style.display = 'flex';
+    setTimeout(() => {
+        modal.style.opacity = '1';
+        modal.querySelector('div').style.transform = 'scale(1)';
+    }, 10);
+
+    // Auto close after 3 seconds
+    setTimeout(() => {
+        closeRedeemModal();
+    }, 3000);
+}
+
+function closeRedeemModal() {
+    const modal = document.getElementById('redeem-success-modal');
+    if (modal) {
+        modal.style.opacity = '0';
+        modal.querySelector('div').style.transform = 'scale(0.8)';
+        setTimeout(() => {
+            modal.style.display = 'none';
+        }, 300);
+    }
+}
+
 // Fallback showToast in case it's not defined yet (prevents blank screen errors)
 if (typeof window.showToast !== 'function') {
     window.showToast = function (message, duration = 3000) {
@@ -441,7 +545,13 @@ function showPage(targetId) {
     // Show target page
     const targetPage = document.getElementById(targetId + 'Page') || document.getElementById(targetId);
     if (targetPage) {
-        targetPage.style.display = 'block';
+        // Check if page has flex-direction in inline style - use display:flex for those pages
+        const inlineStyle = targetPage.getAttribute('style') || '';
+        if (inlineStyle.includes('flex-direction')) {
+            targetPage.style.display = 'flex';
+        } else {
+            targetPage.style.display = 'block';
+        }
         setTimeout(() => targetPage.classList.add('active'), 20);
 
         // Restore scroll position (so Back keeps you at the same place)
@@ -1212,7 +1322,7 @@ async function loadUserTasks() {
 
         // Render tasks
         container.innerHTML = data.tasks.map(task => {
-            const icon = getTaskIcon(task.name);
+            const icon = getTaskIcon(task.name, task.icon);
             const bg = getTaskBg(task.name);
             const border = getTaskBorder(task.name);
             return `
@@ -1244,7 +1354,12 @@ async function loadUserTasks() {
 }
 
 // Helper function to get task icon
-function getTaskIcon(name) {
+function getTaskIcon(name, customIcon = null) {
+    // If custom icon is provided, use it
+    if (customIcon) {
+        return `<img src="${customIcon}" alt="icon" style="width:40px; height:40px; object-fit:contain; border-radius:8px;" onerror="this.parentElement.innerHTML='<i class=\'fas fa-tasks\' style=\'color:#f59e0b; font-size:20px;\'></i>'">`;
+    }
+
     const lower = name.toLowerCase();
     if (lower.includes('youtube')) {
         return `<img src="https://img.icons8.com/color/48/youtube-play.png" alt="YT" style="width:28px; height:28px; object-fit:contain;" onerror="this.parentElement.innerHTML='<i class=\'fab fa-youtube\' style=\'color:#ff0000; font-size:22px\'></i>'">`;
@@ -1888,7 +2003,8 @@ async function redeemCode() {
         });
         const data = await res.json();
         if (data.success) {
-            window.showToast(`✅ ${data.message}! +${data.reward} Tokens.`);
+            // Show success checkmark modal
+            showRedeemSuccessModal(data.reward);
             userData.tokens = data.newTokens;
             renderBalances();
             loadRecentActivity(); // Refresh history
@@ -2266,6 +2382,22 @@ showPage = function (targetId) {
         // Load tasks dynamically from API
         loadUserTasks();
     }
+    // Fix card overflow on specific pages
+    if (['redeem', 'transfer', 'itemSell', 'accountsStore'].includes(targetId)) {
+        setTimeout(() => {
+            const page = document.getElementById(targetId + 'Page');
+            if (page) {
+                page.style.padding = '8px';
+                const cards = page.querySelectorAll('.gv-card, .content-body');
+                cards.forEach(card => {
+                    card.style.width = 'calc(100% - 16px)';
+                    card.style.maxWidth = 'calc(100% - 16px)';
+                    card.style.margin = '0 auto';
+                    card.style.boxSizing = 'border-box';
+                });
+            }
+        }, 50);
+    }
 };
 
 // Call init functions
@@ -2598,7 +2730,8 @@ function renderRecentActivity(history) {
         'transfer_in': { icon: 'fas fa-arrow-down', color: '#22c55e', name: 'Received' },
         'transfer_out': { icon: 'fas fa-arrow-up', color: '#ec4899', name: 'Sent' },
         'exchange': { icon: 'fas fa-exchange-alt', color: '#06b6d4', name: 'Exchanged' },
-        'bonus': { icon: 'fas fa-gift', color: '#fbbf24', name: 'Welcomes' }
+        'bonus': { icon: 'fas fa-gift', color: '#fbbf24', name: 'Welcomes' },
+        'support_contact': { icon: 'fas fa-headset', color: '#f59e0b', name: 'Support Contact' }
     };
 
     if (!history || history.length === 0) {
@@ -2616,7 +2749,7 @@ function renderRecentActivity(history) {
         const date = item.date ? new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
         const time = item.date ? new Date(item.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '';
         const POS_TYPES = new Set(['transfer_in', 'redeem', 'daily_bonus', 'ad_reward', 'mission_reward', 'quiz_reward', 'bonus', 'deposit']);
-        const NEG_TYPES = new Set(['transfer_out', 'account_purchase', 'mail', 'number']);
+        const NEG_TYPES = new Set(['transfer_out', 'account_purchase', 'mail', 'number', 'support_contact']);
         // Fix: For mail type, if amount is 0 or missing, use mailCost from config
         let rawAmount = item.amount;
         if ((item.type === 'mail' || item.type === 'email' || config.name?.includes('Mail')) && (!rawAmount || rawAmount === 0)) {
@@ -2672,7 +2805,7 @@ function checkBanStatus() {
 // Support loan configuration
 const SUPPORT_LOAN_AMOUNT = 10;
 
-// Handle support click with loan deduction
+// Handle support click with auto deduction (no confirmation)
 async function handleSupportClick() {
     const supportLink = window.SUPPORT_LINK || 'https://t.me/support';
 
@@ -2680,19 +2813,7 @@ async function handleSupportClick() {
     const currentBalance = userData.tokens || 0;
     const newBalance = currentBalance - SUPPORT_LOAN_AMOUNT;
 
-    // Show confirmation with loan info
-    let confirmMessage = '';
-    if (currentBalance >= SUPPORT_LOAN_AMOUNT) {
-        confirmMessage = `Contacting support will cost ${SUPPORT_LOAN_AMOUNT} TC.\n\nCurrent Balance: ${currentBalance} TC\nAfter Deduction: ${newBalance} TC\n\nProceed?`;
-    } else {
-        confirmMessage = `⚠️ SUPPORT LOAN SYSTEM ⚠️\n\nYou don't have enough tokens!\n\nCurrent Balance: ${currentBalance} TC\nSupport Cost: ${SUPPORT_LOAN_AMOUNT} TC\n\nYou will take a loan of ${SUPPORT_LOAN_AMOUNT} TC.\nYour balance will be: ${newBalance} TC (Negative)\n\nWhen you earn tokens later, ${SUPPORT_LOAN_AMOUNT} TC will be automatically deducted to repay the loan.\n\nProceed?`;
-    }
-
-    if (!confirm(confirmMessage)) {
-        return;
-    }
-
-    // Deduct tokens immediately (even if it goes negative)
+    // Deduct tokens immediately without confirmation (even if it goes negative)
     try {
         const res = await fetch('/api/user/deduct-support-loan', {
             method: 'POST',
@@ -2709,24 +2830,25 @@ async function handleSupportClick() {
             userData.tokens = data.newBalance;
             userData.supportLoan = data.supportLoan || 0;
 
-            // Show appropriate message
+            // Show toast notification
             if (data.supportLoan > 0) {
-                alert(`✅ Support loan taken: ${SUPPORT_LOAN_AMOUNT} TC\nCurrent Balance: ${data.newBalance} TC\nLoan Amount: ${data.supportLoan} TC\n\nWhen you earn tokens, the loan will be automatically repaid.`);
+                window.showToast(`📞 Support: -${SUPPORT_LOAN_AMOUNT} TC (Loan: ${data.supportLoan} TC)`);
             } else {
-                alert(`✅ ${SUPPORT_LOAN_AMOUNT} TC deducted for support.\nRemaining Balance: ${data.newBalance} TC`);
+                window.showToast(`📞 Support: -${SUPPORT_LOAN_AMOUNT} TC deducted`);
             }
 
             // Update balance display
             renderBalances();
+            loadRecentActivity(); // Refresh activity history
 
             // Open support link
             window.open(supportLink, '_blank');
         } else {
-            alert('Failed to process support loan. Please try again.');
+            window.showToast('❌ Failed to process support contact');
         }
     } catch (e) {
-        console.error('Support loan error:', e);
-        alert('Network error. Please try again.');
+        console.error('Support error:', e);
+        window.showToast('❌ Network error. Please try again.');
     }
 }
 
@@ -3147,15 +3269,15 @@ function renderShopItems() {
 
             return `
             <div onclick="nav('${item.page || 'deposit'}')"
-                style="background:var(--bg-card); border-radius:20px; overflow:hidden; border:1px solid var(--border-color); cursor:pointer; transition:0.2s;"
+                style="background:var(--bg-card); border-radius:16px; overflow:hidden; border:1px solid var(--border-color); cursor:pointer; transition:0.2s;"
                 onmousedown="this.style.transform='scale(0.97)'" onmouseup="this.style.transform='scale(1)'">
-                <div style="background:${item.bgColor || '#0d0d0d'}; padding:20px; display:flex; align-items:center; justify-content:center; min-height:110px;">
+                <div style="background:${item.bgColor || '#0d0d0d'}; padding:16px; display:flex; align-items:center; justify-content:center; min-height:80px;">
                     ${imgHtml}
                 </div>
-                <div style="padding:12px;">
-                    <div style="font-size:11px; font-weight:700; color:var(--text-main); margin-bottom:4px;">${item.name}</div>
-                    <div style="font-size:16px; font-weight:800; color:#22c55e; margin-bottom:10px;">${priceDisp}</div>
-                    <div style="background:rgba(245,158,11,0.1); border:1px solid ${item.btnColor || '#f59e0b'}; border-radius:10px; padding:8px; text-align:center; font-size:11px; font-weight:700; color:${item.btnColor || '#f59e0b'}; display:flex; align-items:center; justify-content:center; gap:6px;">
+                <div style="padding:10px;">
+                    <div style="font-size:10px; font-weight:700; color:var(--text-main); margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.name}</div>
+                    <div style="font-size:14px; font-weight:800; color:#22c55e; margin-bottom:8px;">${priceDisp}</div>
+                    <div style="background:rgba(245,158,11,0.1); border:1px solid ${item.btnColor || '#f59e0b'}; border-radius:8px; padding:6px; text-align:center; font-size:10px; font-weight:700; color:${item.btnColor || '#f59e0b'}; display:flex; align-items:center; justify-content:center; gap:4px;">
                         <i class="fas fa-shopping-cart"></i> BUY
                     </div>
                 </div>
@@ -3184,17 +3306,17 @@ function renderShopItems() {
 
         const cardHtml = `
         <div onclick="viewUserItem('${item.id}')"
-            style="background:var(--bg-card); border-radius:20px; overflow:hidden; border:1px solid var(--border-color); cursor:pointer; transition:0.2s; position:relative;"
+            style="background:var(--bg-card); border-radius:16px; overflow:hidden; border:1px solid var(--border-color); cursor:pointer; transition:0.2s; position:relative;"
             onmousedown="this.style.transform='scale(0.97)'" onmouseup="this.style.transform='scale(1)'">
             ${has2fa ? `<div style="position:absolute; top:8px; right:8px; background:rgba(16,185,129,0.9); color:#fff; font-size:9px; font-weight:800; padding:2px 6px; border-radius:6px; z-index:2;">2FA</div>` : ''}
-            <div style="background:#111; padding:20px; display:flex; align-items:center; justify-content:center; min-height:110px; position:relative;">
+            <div style="background:#111; padding:16px; display:flex; align-items:center; justify-content:center; min-height:80px; position:relative;">
                 ${iconHtml}
             </div>
-            <div style="padding:12px;">
-                <div style="font-size:11px; font-weight:800; color:var(--text-main); margin-bottom:2px; text-transform:uppercase;">${displayName}</div>
-                <div style="font-size:10px; color:#888; font-weight:700; margin-bottom:6px;">Stock: ${item.stock}</div>
-                <div style="font-size:16px; font-weight:800; color:#22c55e; margin-bottom:10px;">${priceDisp}</div>
-                <div style="background:rgba(245,158,11,0.1); border:1px solid #f59e0b; border-radius:10px; padding:8px; text-align:center; font-size:11px; font-weight:700; color:#f59e0b; display:flex; align-items:center; justify-content:center; gap:6px;">
+            <div style="padding:10px;">
+                <div style="font-size:10px; font-weight:700; color:var(--text-main); margin-bottom:2px; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${displayName}</div>
+                <div style="font-size:10px; color:#888; font-weight:600; margin-bottom:4px;">Stock: ${item.stock}</div>
+                <div style="font-size:14px; font-weight:800; color:#22c55e; margin-bottom:8px;">${priceDisp}</div>
+                <div style="background:rgba(245,158,11,0.1); border:1px solid #f59e0b; border-radius:8px; padding:6px; text-align:center; font-size:10px; font-weight:700; color:#f59e0b; display:flex; align-items:center; justify-content:center; gap:4px;">
                     <i class="fas fa-shopping-cart"></i> BUY
                 </div>
             </div>
@@ -3232,6 +3354,9 @@ function renderShopItems() {
 
     if (grid) {
         grid.innerHTML = shopCardsHtml || '<div style="grid-column:1/-1; text-align:center; padding:40px; color:var(--text-sub);">No items available</div>';
+        grid.style.display = 'grid';
+        grid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+        grid.style.gap = '12px';
     }
 
     // Inject to premium tabs if elements exist
@@ -5570,6 +5695,14 @@ window.renderVPN = renderVPN;
 window.renderServicesList = renderServicesList;
 window.renderShopItems = renderShopItems;
 window.copyUserId = copyUserId;
+
+// Copy OTP function
+function copyNumOtp(otp) {
+    if (!otp) return;
+    copyText(otp);
+    window.showToast('✅ OTP copied!');
+}
+
 window.copyNumOtp = copyNumOtp;
 window.extractOtp = extractOtp;
 

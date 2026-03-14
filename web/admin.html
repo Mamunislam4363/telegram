@@ -3036,6 +3036,9 @@
                     loadDbSchedule();
                     loadBackupHistory();
                     break;
+                case 'codes':
+                    renderCodes();
+                    break;
             }
 
             // Close mobile menu after navigation
@@ -3804,13 +3807,16 @@
             fetch('/api/admin/codes').then(r => r.json()).then(data => {
                 const tbody = document.getElementById('codesTable');
                 if (!tbody) return;
-                tbody.innerHTML = (data.codes || []).map(c => `
+                tbody.innerHTML = (data.codes || []).map(c => {
+                    const usesLeft = c.maxUses - c.used;
+                    return `
                 <tr>
                     <td class="font-mono text-orange-400">${c.code}</td>
                     <td>${c.amount}</td>
-                    <td>${c.used}/${c.maxUses}</td>
+                    <td>${usesLeft}/${c.maxUses}</td>
                     <td><button onclick="deleteCode('${c.code}')" class="text-red-400 hover:text-red-300"><i class="fas fa-trash"></i></button></td>
-                </tr>`).join('') || '<tr><td colspan="4" class="text-center text-gray-500 py-4">No codes</td></tr>';
+                </tr>`;
+                }).join('') || '<tr><td colspan="4" class="text-center text-gray-500 py-4">No codes</td></tr>';
             });
         }
 
@@ -3849,9 +3855,14 @@
                 tbody.innerHTML = (data.tasks || []).map(t => `
                 <tr>
                     <td>
-                        <strong>${t.name}</strong><br>
-                        <span style="font-size:10px; color:#666;">${t.id}</span><br>
-                        <button onclick="openEditTaskModal('${t.id}', '${escapeHtml(t.name)}', '${escapeHtml(t.url || '')}', ${t.reward || 0}, ${t.gems || 0})" 
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            ${t.icon ? `<img src="${t.icon}" style="width:28px; height:28px; object-fit:contain; border-radius:4px;">` : '<i class="fas fa-tasks text-gray-500"></i>'}
+                            <div>
+                                <strong>${t.name}</strong><br>
+                                <span style="font-size:10px; color:#666;">${t.id}</span>
+                            </div>
+                        </div>
+                        <button onclick="openEditTaskModal('${t.id}', '${escapeHtml(t.name)}', '${escapeHtml(t.url || '')}', ${t.reward || 0}, ${t.gems || 0}, '${escapeHtml(t.icon || '')}')" 
                             class="text-blue-400 hover:text-blue-300 text-xs mt-1" style="background:none; border:none; cursor:pointer;">
                             <i class="fas fa-edit"></i> Edit All
                         </button>
@@ -3878,7 +3889,7 @@
         }
 
         // Open Edit Task Modal
-        function openEditTaskModal(id, name, url, reward, gems) {
+        function openEditTaskModal(id, name, url, reward, gems, icon = null) {
             const modal = document.getElementById('editTaskModal');
             if (!modal) {
                 // Create modal if it doesn't exist
@@ -3889,6 +3900,9 @@
             document.getElementById('editTaskUrl').value = url;
             document.getElementById('editTaskTokens').value = reward;
             document.getElementById('editTaskGems').value = gems;
+            document.getElementById('editTaskIcon').value = icon || '';
+            document.getElementById('editTaskIconPreview').src = icon || '';
+            document.getElementById('editTaskIconPreview').style.display = icon ? 'block' : 'none';
             document.getElementById('editTaskModal').style.display = 'flex';
         }
 
@@ -3896,7 +3910,7 @@
         function createEditTaskModal() {
             const modalHtml = `
             <div id="editTaskModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center;">
-                <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:24px; max-width:400px; width:90%;">
+                <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:24px; max-width:400px; width:90%; max-height:90vh; overflow-y:auto;">
                     <h3 style="margin-bottom:16px; color:var(--text-main);"><i class="fas fa-edit text-blue-400"></i> Edit Task</h3>
                     <input type="hidden" id="editTaskId">
                     <div style="margin-bottom:12px;">
@@ -3907,7 +3921,7 @@
                         <label style="display:block; font-size:12px; color:var(--text-sub); margin-bottom:4px;">URL</label>
                         <input type="text" id="editTaskUrl" style="width:100%; background:#1a1a2e; border:1px solid #333; color:#fff; padding:8px 12px; border-radius:8px;">
                     </div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
                         <div>
                             <label style="display:block; font-size:12px; color:var(--text-sub); margin-bottom:4px;">Tokens</label>
                             <input type="number" id="editTaskTokens" style="width:100%; background:#1a1a2e; border:1px solid #333; color:#fff; padding:8px 12px; border-radius:8px; text-align:center;">
@@ -3915,6 +3929,20 @@
                         <div>
                             <label style="display:block; font-size:12px; color:var(--text-sub); margin-bottom:4px;">Gems</label>
                             <input type="number" id="editTaskGems" style="width:100%; background:#1a1a2e; border:1px solid #333; color:#38bdf8; padding:8px 12px; border-radius:8px; text-align:center;">
+                        </div>
+                    </div>
+                    <div style="margin-bottom:16px;">
+                        <label style="display:block; font-size:12px; color:var(--text-sub); margin-bottom:4px;">Icon</label>
+                        <input type="file" id="editTaskIconFile" accept="image/*" style="display:none;" onchange="handleIconFileUpload(this)">
+                        <div style="display:flex; gap:8px; margin-bottom:8px;">
+                            <input type="text" id="editTaskIcon" placeholder="https://example.com/icon.png" style="flex:1; background:#1a1a2e; border:1px solid #333; color:#fff; padding:8px 12px; border-radius:8px;">
+                            <button onclick="document.getElementById('editTaskIconFile').click()" style="background:#333; color:#fff; border:none; padding:8px 16px; border-radius:8px; cursor:pointer; white-space:nowrap;">
+                                <i class="fas fa-upload"></i> Upload
+                            </button>
+                        </div>
+                        <img id="editTaskIconPreview" style="width:40px; height:40px; object-fit:contain; border-radius:8px; display:none; border:1px solid #333;">
+                        <div style="margin-top:8px; font-size:11px; color:#666;">
+                            <i class="fas fa-info-circle"></i> Leave empty for default icons (YouTube, Telegram, etc.)
                         </div>
                     </div>
                     <div style="display:flex; gap:8px; justify-content:flex-end;">
@@ -3939,12 +3967,13 @@
             const url = document.getElementById('editTaskUrl').value;
             const tokens = parseInt(document.getElementById('editTaskTokens').value) || 0;
             const gems = parseInt(document.getElementById('editTaskGems').value) || 0;
+            const icon = document.getElementById('editTaskIcon').value.trim();
 
             try {
                 const res = await fetch('/api/admin/tasks/' + id, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, url, reward: tokens, gems })
+                    body: JSON.stringify({ name, url, reward: tokens, gems, icon: icon || null })
                 });
                 const data = await res.json();
                 if (data.success) {
@@ -4054,6 +4083,28 @@
         function deleteTask(id) {
             if (!confirm('Delete this task? Users will no longer see it.')) return;
             fetch('/api/admin/tasks/' + id, { method: 'DELETE' }).then(() => loadTasks());
+        }
+
+        // Handle icon file upload - convert to base64
+        function handleIconFileUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            // Check file size (max 100KB)
+            if (file.size > 100 * 1024) {
+                alert('File too large! Maximum size is 100KB. Please use a smaller image or compress it.');
+                input.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const base64 = e.target.result;
+                document.getElementById('editTaskIcon').value = base64;
+                document.getElementById('editTaskIconPreview').src = base64;
+                document.getElementById('editTaskIconPreview').style.display = 'block';
+            };
+            reader.readAsDataURL(file);
         }
 
         // MODAL

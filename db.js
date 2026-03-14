@@ -762,13 +762,16 @@ class Database {
 
     // Codes
     createCode(code, amount, maxUses) {
-        this.data.codes[code] = { amount, uses: 0, maxUses, valid: true };
+        this.getSettings();
+        if (!this.data.settings.codes) this.data.settings.codes = {};
+        this.data.settings.codes[code] = { amount, uses: 0, maxUses, valid: true, createdAt: Date.now(), redeemedBy: [] };
         this.save();
     }
 
     deleteCode(code) {
-        if (this.data.codes[code]) {
-            delete this.data.codes[code];
+        this.getSettings();
+        if (this.data.settings.codes && this.data.settings.codes[code]) {
+            delete this.data.settings.codes[code];
             this.save();
             return true;
         }
@@ -776,7 +779,9 @@ class Database {
     }
 
     redeemCode(userId, code) {
-        const c = this.data.codes[code];
+        this.getSettings();
+        if (!this.data.settings.codes) return { success: false, msg: "Invalid code" };
+        const c = this.data.settings.codes[code];
         if (!c || !c.valid) return { success: false, msg: "Invalid code" };
         if (c.maxUses > 0 && c.uses >= c.maxUses) return { success: false, msg: "Code fully redeemed" };
 
@@ -860,14 +865,15 @@ class Database {
         return this.data.tasks || {};
     }
 
-    createTask(name, url, reward, gems = 0) {
+    createTask(name, url, reward, gems = 0, icon = null) {
         if (!this.data.tasks) this.data.tasks = {};
         const id = 'task_' + Date.now();
         this.data.tasks[id] = {
             name,
             url,
             reward: parseInt(reward),
-            gems: parseInt(gems) || 0
+            gems: parseInt(gems) || 0,
+            icon: icon || null
         };
         this.save();
         return id;

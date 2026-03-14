@@ -212,6 +212,42 @@ class UnifiedDatabase {
     }
 
     /**
+     * Create promo code
+     */
+    async createCode(code, amount, maxUses) {
+        if (this.storageType === 'google_drive') {
+            const settings = await this.getSettings();
+            if (!settings.codes) settings.codes = {};
+            settings.codes[code] = {
+                amount: amount,
+                maxUses: maxUses,
+                used: 0,
+                createdAt: Date.now()
+            };
+            await googleDriveStorage.saveData('settings.json', settings);
+        } else {
+            localDb.createCode(code, amount, maxUses);
+        }
+    }
+
+    /**
+     * Delete promo code
+     */
+    async deleteCode(code) {
+        if (this.storageType === 'google_drive') {
+            const settings = await this.getSettings();
+            if (settings.codes && settings.codes[code]) {
+                delete settings.codes[code];
+                await googleDriveStorage.saveData('settings.json', settings);
+                return true;
+            }
+            return false;
+        } else {
+            return localDb.deleteCode(code);
+        }
+    }
+
+    /**
      * Get storage status
      */
     async getStorageStatus() {
@@ -265,6 +301,27 @@ class UnifiedDatabase {
      */
     getStorageType() {
         return this.storageType;
+    }
+
+    /**
+     * Get token balance from user object
+     */
+    getTokenBalance(user) {
+        if (!user) return 0;
+        if (user.tokens !== undefined) return user.tokens;
+        if (user.balance_tokens !== undefined) return user.balance_tokens;
+        return user.balance || 0;
+    }
+
+    /**
+     * Set token balance (keeps all fields in sync)
+     */
+    setTokenBalance(user, amount) {
+        if (!user) return;
+        const val = Math.max(0, Math.round(amount));
+        user.tokens = val;
+        user.balance_tokens = val;
+        user.balance = val;
     }
 }
 

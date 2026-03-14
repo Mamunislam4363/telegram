@@ -606,30 +606,47 @@ module.exports.generateAdminToken = generateAdminToken;
 // (Settings saved via the full endpoint at bottom of file)
 
 // API: Get Codes
-app.get('/api/admin/codes', (req, res) => {
-    // codes stored in db.data.codes (primary)
-    const codes = db.data.codes || {};
+app.get('/api/admin/codes', async (req, res) => {
+    // codes stored in db.data.settings.codes
+    const settings = await db.getSettings();
+    const codes = settings.codes || {};
     const codeList = Object.keys(codes).map(key => ({
         code: key,
         ...codes[key],
         amount: codes[key].amount,
-        maxUses: codes[key].maxUses || codes[key].uses
+        maxUses: codes[key].maxUses || codes[key].uses || 0,
+        used: codes[key].redeemedBy ? codes[key].redeemedBy.length : 0
     }));
     res.json({ success: true, codes: codeList });
 });
 
 // API: Create Code
-app.post('/api/admin/codes', (req, res) => {
+app.post('/api/admin/codes', async (req, res) => {
     const { code, amount, maxUses } = req.body;
     if (!code) return res.json({ success: false, message: 'Code required' });
-    db.createCode(code, parseInt(amount) || 0, parseInt(maxUses) || 0);
+    await db.createCode(code, parseInt(amount) || 0, parseInt(maxUses) || 0);
     res.json({ success: true });
 });
 
 // API: Delete Code
-app.delete('/api/admin/codes/:code', (req, res) => {
+app.delete('/api/admin/codes/:code', async (req, res) => {
     const { code } = req.params;
-    const success = db.deleteCode(code);
+
+    // First, remove this code from all users' redeemed arrays
+    const users = await db.getUsers();
+    let usersUpdated = 0;
+    for (const userId in users) {
+        const user = users[userId];
+        if (user.redeemed && user.redeemed.includes(code)) {
+            user.redeemed = user.redeemed.filter(c => c !== code);
+            await db.saveUser(userId, user);
+            usersUpdated++;
+        }
+    }
+    console.log(`[DELETE CODE] Removed '${code}' from ${usersUpdated} users' redeemed arrays`);
+
+    // Now delete the code from settings
+    const success = await db.deleteCode(code);
     res.json({ success });
 });
 
@@ -1352,93 +1369,104 @@ app.post('/api/verify', (req, res) => {
 });
 
 // API: Redeem Code
-app.post('/api/redeem', (req, res) => {
-    const { userId, code } = req.body;
+app.post('/api/redeem', async (req, res) => {
+    try {
+        const { userId, code } = req.body;
 
-    if (!userId || !code) {
-        return res.json({ success: false, message: 'Missing parameters' });
-    }
+        if (!userId || !code) {
+            return res.json({ success: false, message: 'Missing parameters' });
+        }
 
-    const user = db.getUser(userId);
-    if (!user) return res.json({ success: false, message: 'User not found' });
+        const user = await db.getUser(userId);
+        if (!user) return res.json({ success: false, message: 'User not found' });
 
-    // Check code exists and is valid
-    const codes = db.data.codes || {};
-    const codeData = codes[code];
-    if (!codeData) {
-        return res.json({ success: false, message: 'Invalid code' });
-    }
+        // Check code exists and is valid (in settings.codes)
+        const settings = await db.getSettings();
+        const codes = settings.codes || {};
+        const codeData = codes[code];
+        if (!codeData) {
+            return res.json({ success: false, message: 'Invalid code' });
+        }
 
-    // Check if user already redeemed this code
-    if (!user.redeemedCodes) user.redeemedCodes = [];
-    if (user.redeemedCodes.includes(code)) {
-        return res.json({ success: false, message: 'You already redeemed this code' });
-    }
+        // Check if user already redeemed this code
+        if (!user.redeemed) user.redeemed = [];
+        if (user.redeemed.includes(code)) {
+            return res.json({ success: false, message: 'You already redeemed this code' });
+        }
 
-    // Check max uses
-    const currentUses = codeData.currentUses || 0;
-    if (currentUses >= codeData.maxUses) {
-        return res.json({ success: false, message: 'Code has reached maximum uses' });
-    }
+        // Check max uses
+        const currentUses = codeData.uses || 0;
+        const maxUses = codeData.maxUses || 0;
+        if (maxUses > 0 && currentUses >= maxUses) {
+            return res.json({ success: false, message: 'Code has reached maximum uses' });
+        }
 
-    // Add reward and handle support loan auto-repayment
-    const rewardAmount = codeData.amount || 0;
-    const currentBalance = db.getTokenBalance(user) || 0;
-    const supportLoan = user.supportLoan || 0;
+        // Add reward and handle support loan auto-repayment
+        const rewardAmount = codeData.amount || 0;
+        const currentBalance = db.getTokenBalance(user) || 0;
+        const supportLoan = user.supportLoan || 0;
 
-    let newBalance = currentBalance + rewardAmount;
-    let repaidAmount = 0;
-    let newSupportLoan = supportLoan;
+        let newBalance = currentBalance + rewardAmount;
+        let repaidAmount = 0;
+        let newSupportLoan = supportLoan;
 
-    // If user has a support loan, auto-repay from earnings
-    if (supportLoan > 0) {
-        repaidAmount = Math.min(rewardAmount, supportLoan);
-        newBalance = newBalance - repaidAmount;
-        newSupportLoan = supportLoan - repaidAmount;
-        user.supportLoan = newSupportLoan;
+        // If user has a support loan, auto-repay from earnings
+        if (supportLoan > 0) {
+            repaidAmount = Math.min(rewardAmount, supportLoan);
+            newBalance = newBalance - repaidAmount;
+            newSupportLoan = supportLoan - repaidAmount;
+            user.supportLoan = newSupportLoan;
 
-        // Add loan repayment history
+            // Add loan repayment history
+            if (!user.history) user.history = [];
+            user.history.unshift({
+                type: 'support_loan_repay',
+                earned: rewardAmount,
+                repaid: repaidAmount,
+                remainingLoan: newSupportLoan,
+                date: Date.now()
+            });
+        }
+
+        db.setTokenBalance(user, newBalance);
+
+        // Mark code as used by this user
+        user.redeemed.push(code);
+
+        // Increment code usage count
+        codeData.uses = (codeData.uses || 0) + 1;
+        if (!codeData.redeemedBy) codeData.redeemedBy = [];
+        codeData.redeemedBy.push(userId);
+
+        // Save settings back
+        settings.codes = codes;
+        await db.updateSettings(settings);
+
+        // Add to history
         if (!user.history) user.history = [];
         user.history.unshift({
-            type: 'support_loan_repay',
-            earned: rewardAmount,
-            repaid: repaidAmount,
-            remainingLoan: newSupportLoan,
+            type: 'redeem',
+            amount: rewardAmount,
+            currency: 'tokens',
+            code: code,
             date: Date.now()
         });
+
+        await db.updateUser(user);
+
+        res.json({
+            success: true,
+            message: 'Code redeemed successfully',
+            reward: rewardAmount,
+            newTokens: newBalance,
+            newBalance: newBalance,
+            supportLoanRepaid: repaidAmount,
+            remainingLoan: newSupportLoan
+        });
+    } catch (error) {
+        console.error('[REDEEM ERROR]', error);
+        res.json({ success: false, message: 'Server error: ' + error.message });
     }
-
-    db.setTokenBalance(user, newBalance);
-
-    // Mark code as used by this user
-    user.redeemedCodes.push(code);
-
-    // Increment code usage count
-    codeData.currentUses = (codeData.currentUses || 0) + 1;
-    db.data.codes[code] = codeData;
-    db.save();
-
-    // Add to history
-    if (!user.history) user.history = [];
-    user.history.unshift({
-        type: 'code_redeem',
-        amount: rewardAmount,
-        currency: 'tokens',
-        code: code,
-        date: Date.now()
-    });
-
-    db.updateUser(user);
-
-    res.json({
-        success: true,
-        message: 'Code redeemed successfully',
-        reward: rewardAmount,
-        newTokens: newBalance,
-        newBalance: newBalance,
-        supportLoanRepaid: repaidAmount,
-        remainingLoan: newSupportLoan
-    });
 });
 
 // Redundant daily-claim endpoint removed (use /api/daily)
@@ -2560,15 +2588,15 @@ app.get('/api/admin/tasks', (req, res) => {
 });
 
 app.post('/api/admin/tasks', (req, res) => {
-    const { name, url, reward, gems } = req.body;
-    const id = db.createTask(name, url, reward, gems);
+    const { name, url, reward, gems, icon } = req.body;
+    const id = db.createTask(name, url, reward, gems, icon);
     res.json({ success: true, id });
 });
 
-// Update task (edit tokens, gems, name, and url)
+// Update task (edit tokens, gems, name, url, and icon)
 app.put('/api/admin/tasks/:id', (req, res) => {
     const id = req.params.id;
-    const { reward, gems, name, url } = req.body;
+    const { reward, gems, name, url, icon } = req.body;
 
     if (!db.data.tasks || !db.data.tasks[id]) {
         return res.json({ success: false, message: 'Task not found' });
@@ -2579,6 +2607,7 @@ app.put('/api/admin/tasks/:id', (req, res) => {
     if (gems !== undefined) db.data.tasks[id].gems = parseInt(gems) || 0;
     if (name !== undefined) db.data.tasks[id].name = name;
     if (url !== undefined) db.data.tasks[id].url = url;
+    if (icon !== undefined) db.data.tasks[id].icon = icon;
     db.save();
 
     res.json({ success: true, message: 'Task updated successfully' });
