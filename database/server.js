@@ -109,7 +109,7 @@ app.use((req, res, next) => {
 
 // CORS middleware - allows Netlify frontend to call API directly
 app.use((req, res, next) => {
-    const allowedOrigins = ['https://autosverifybot-production.up.railway.app/', 'http://localhost:3000'];
+    const allowedOrigins = ['https://autosverifybot-production.up.railway.app/'];
     const origin = req.headers.origin;
     if (allowedOrigins.includes(origin)) {
         res.setHeader('Access-Control-Allow-Origin', origin);
@@ -723,8 +723,9 @@ app.post('/api/register', (req, res) => {
     // Handle referral on first registration - referrer can be code or userId
     if (referrer && !user.referredBy) {
         if (referrer !== String(userId)) {
-            // Get referrer user
-            const refUser = db.getUser(referrer.replace('ref_', ''));
+            // Get referrer userId from referral code using proper method
+            const referrerId = db.getUserIdFromReferralCode ? db.getUserIdFromReferralCode(referrer) : referrer.replace('ref_', '');
+            const refUser = db.getUser(referrerId);
             if (refUser) {
                 const settings = db.getSettings();
                 const refBonus = settings.refBonus || 10;
@@ -4199,19 +4200,33 @@ app.delete('/api/admin/ads/:network', (req, res) => {
 // API: Admin - Services
 app.get('/api/admin/services', (req, res) => {
     const services = db.data.services || {};
-    res.json({ success: true, services: Object.values(services) });
+    const servicesWithSections = Object.values(services).map(s => ({
+        ...s,
+        section: db.getServiceSection(s.id)
+    }));
+    res.json({ success: true, services: servicesWithSections });
 });
 
 // Public API: Get Services (for user panel)
 app.get('/api/public/services', (req, res) => {
     const services = db.data.services || {};
-    res.json({ success: true, services: Object.values(services) });
+    const servicesWithSections = Object.values(services).map(s => ({
+        ...s,
+        section: db.getServiceSection(s.id)
+    }));
+    res.json({ success: true, services: servicesWithSections });
 });
 
 app.post('/api/admin/services', (req, res) => {
     const item = req.body;
     db.data.services = db.data.services || {};
     db.data.services[item.id] = item;
+
+    // Save section assignment
+    if (item.section) {
+        db.updateServiceSection(item.id, item.section);
+    }
+
     db.save();
     res.json({ success: true });
 });
@@ -4721,20 +4736,20 @@ app.get('/api/referrals/:userId', (req, res) => {
     // Get or generate referral code for user
     const referralCode = db.getReferralCode(userId);
 
-    // Get referred users
+    // Get referred users with Pending/Verified status
     const referredUsers = (user.referredUsers || []).map(ref => {
         const refUser = db.getUser(ref.userId);
         return {
             name: refUser ? (refUser.firstName || refUser.username || `User ${String(ref.userId).slice(-4)}`) : `User ${String(ref.userId).slice(-4)}`,
             date: ref.date || Date.now(),
-            status: ref.rewarded ? 'Active' : 'Pending',
-            reward: ref.rewarded ? `+${refBonus}` : '0'
+            status: ref.rewarded ? 'Verified' : 'Pending',
+            reward: ref.rewarded ? `+${refBonus}` : 'Pending'
         };
     }).reverse(); // Most recent first
 
     // Calculate stats
     const totalInvited = referredUsers.length;
-    const totalEarned = referredUsers.filter(r => r.status === 'Active').length * refBonus;
+    const totalEarned = referredUsers.filter(r => r.status === 'Verified').length * refBonus;
 
     res.json({
         success: true,

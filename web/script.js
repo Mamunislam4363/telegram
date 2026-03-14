@@ -409,7 +409,7 @@ function nav(p) {
     if (p === 'mailService' && !checkFeatureOrComingSoon('tempMail', 'Temp Mail')) return;
     if (p === 'numberService' && !checkFeatureOrComingSoon('virtualNumber', 'Virtual Number')) return;
     if (p === 'premiumMail' && !checkFeatureOrComingSoon('premiumMail', 'Premium Mail')) return;
-    if (p === 'accountsStore' && !checkFeatureOrComingSoon('accountsShop', 'Accounts Shop')) return;
+    // if (p === 'accountsStore' && !checkFeatureOrComingSoon('accountsShop', 'Accounts Shop')) return;
     if (p === 'vccCards' && !checkFeatureOrComingSoon('cardsVcc', 'Cards / VCC')) return;
 
     // Save current scroll position before navigating away
@@ -535,9 +535,9 @@ function showPage(targetId) {
     if (targetId === 'premiumMail' && !checkFeatureOrComingSoon('premiumMail', 'Premium Mail')) {
         targetId = 'home';
     }
-    if (targetId === 'accountsStore' && !checkFeatureOrComingSoon('accountsShop', 'Accounts Shop')) {
-        targetId = 'home';
-    }
+    // if (targetId === 'accountsStore' && !checkFeatureOrComingSoon('accountsShop', 'Accounts Shop')) {
+    //     targetId = 'home';
+    // }
     if (targetId === 'vccCards' && !checkFeatureOrComingSoon('cardsVcc', 'Cards / VCC')) {
         targetId = 'home';
     }

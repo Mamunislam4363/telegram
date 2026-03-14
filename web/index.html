@@ -2417,13 +2417,9 @@
                         </button>
                         <button onclick="shareViaWhatsApp()"
                             style="background:#25D366; color:#fff; border:none; padding:12px; border-radius:10px; font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
-                            <i class="fab fa-whatsapp"></i> Share on WhatsApp
-                        </button>
+                            <i class="fab fa-whatsapp" style="font-size:16px;"></i>
+                            <span style="font-size:12px;">Share on WhatsApp</span>
                     </div>
-                    <button onclick="openShareInviteModal()"
-                        style="background:var(--accent-color); color:#000; border:none; padding:12px; border-radius:10px; font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; width:100%;">
-                        <i class="fas fa-share-alt"></i> More Share Options
-                    </button>
                 </div>
 
                 <!-- Stats Cards -->
@@ -3500,21 +3496,7 @@
                     <div style="color:var(--text-sub); font-size:11px; line-height:1.5;">Transfers
                         are permanent and cannot be reversed. Please double-check the Recipient User ID before sending.
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="redeemPage" class="page" style="display:none;">
-            <div style="width:calc(100% - 16px); max-width:calc(100% - 16px); margin:0 auto;">
-                <div class="gv-card">
-                    <div style="display:flex; align-items:center; gap:12px; margin-bottom:24px;">
-                        <div
-                            style="width:40px; height:40px; background:rgba(245,158,11,0.1); border-radius:12px; display:flex; align-items:center; justify-content:center; color:#f59e0b; font-size:18px;">
-                            <i class="fas fa-ticket-alt"></i>
-                        </div>
-                        <div style="font-size:18px; font-weight:800; color:#fff;">Redeem Coupon</div>
-                    </div>
-                    <div class="gv-input-box"
+                    <div class="gv-input-box redeem-coupon-card"
                         style="margin-bottom:18px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:12px;">
                         <input type="text" class="gv-input" id="redeemCodeInput" placeholder="Enter Coupon Code"
                             style="width:100%; background:transparent; border:none; outline:none; color:#fff; font-size:16px; font-weight:700; padding:4px">

@@ -236,9 +236,29 @@
                 <div class="nav-item" onclick="nav('buttons')"><i class="fas fa-toggle-on w-5"></i> Button Management
                 </div>
                 <div class="nav-item" onclick="nav('shopmanage')"><i class="fas fa-store w-5"></i> Shop Items</div>
-                <div class="nav-item" onclick="nav('itemsales')"><i class="fas fa-shopping-basket w-5"></i> Item Sales
-                    <span id="pendingSalesBadge"
-                        class="hidden ml-auto bg-orange-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">0</span>
+
+                <!-- Item Sales with Sub-menu -->
+                <div class="nav-item-has-submenu">
+                    <div class="nav-item" onclick="toggleItemSalesSubmenu()">
+                        <i class="fas fa-shopping-basket w-5"></i> Item Sales
+                        <span id="pendingSalesBadge"
+                            class="hidden ml-auto bg-orange-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">0</span>
+                        <i id="itemSalesArrow" class="fas fa-chevron-down ml-2 text-xs transition-transform"></i>
+                    </div>
+                    <div id="itemSalesSubmenu" class="hidden pl-4 space-y-1 mt-1">
+                        <div class="nav-item-submenu" onclick="nav('itemsales'); filterItemSales('Card')">
+                            <i class="fas fa-credit-card w-5 text-blue-400"></i> Virtual Cards
+                        </div>
+                        <div class="nav-item-submenu" onclick="nav('itemsales'); filterItemSales('VPN')">
+                            <i class="fas fa-shield-alt w-5 text-green-400"></i> VPN Services
+                        </div>
+                        <div class="nav-item-submenu" onclick="nav('itemsales'); filterItemSales('Account')">
+                            <i class="fas fa-user-circle w-5 text-orange-400"></i> Accounts
+                        </div>
+                        <div class="nav-item-submenu" onclick="nav('itemsales'); filterItemSales('API')">
+                            <i class="fas fa-key w-5 text-purple-400"></i> API Keys
+                        </div>
+                    </div>
                 </div>
                 <div class="nav-item" onclick="nav('history')"><i class="fas fa-history w-5"></i> History</div>
                 <div class="nav-item" onclick="nav('broadcast')"><i class="fas fa-bullhorn w-5"></i> Broadcast</div>
@@ -718,58 +738,130 @@
 
             <!-- ITEM SALES MANAGEMENT -->
             <section id="page-itemsales" class="page">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <!-- Pending Item Sales -->
-                    <div class="lg:col-span-2 glass-card rounded-2xl p-6 overflow-hidden">
-                        <div class="flex items-center justify-between mb-6">
-                            <h3 class="font-bold flex items-center gap-2"><i class="fas fa-clock text-orange-400"></i>
-                                PENDING ITEM SALES</h3>
-                            <button onclick="loadItemSales()"
-                                class="p-2 rounded-lg bg-orange-500/10 text-orange-400 hover:bg-orange-500/20"><i
-                                    class="fas fa-sync-alt"></i></button>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table id="pendingItemSalesTable">
-                                <thead>
+                <div class="flex gap-4">
+                    <!-- Sub Sidebar -->
+                    <div id="itemSalesSubSidebar" class="w-64 flex-shrink-0">
+                        <div class="glass-card rounded-2xl p-4 sticky top-24">
+                            <h4 class="font-bold text-sm mb-4 text-orange-400 uppercase tracking-wider">
+                                <i class="fas fa-filter mr-2"></i>Categories
+                            </h4>
+                            <div class="space-y-2">
+                                <button onclick="filterItemSales('all')" id="filter-all"
+                                    class="w-full text-left px-4 py-3 rounded-xl bg-gradient-to-r from-orange-500/20 to-orange-600/10 border border-orange-500/30 text-white font-medium hover:from-orange-500/30 hover:to-orange-600/20 transition-all flex items-center gap-3">
+                                    <div
+                                        class="w-8 h-8 rounded-lg bg-gradient-to-br from-gray-500 to-gray-600 flex items-center justify-center">
+                                        <i class="fas fa-th-large text-white text-sm"></i>
+                                    </div>
+                                    <span>All Items</span>
+                                </button>
 
-                                    <tr>
-                                        <th>USER ID</th>
-                                        <th>CATEGORY</th>
-                                        <th>ACCOUNT DETAIL</th>
-                                        <th>PASSWORD</th>
-                                        <th>NOTE</th>
-                                        <th>ACTION</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="pendingItemSalesBody">
-                                    <tr>
+                                <button onclick="filterItemSales('Card')" id="filter-card"
+                                    class="w-full text-left px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 hover:border-white/20 transition-all flex items-center gap-3">
+                                    <div
+                                        class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                                        <i class="fas fa-credit-card text-white text-sm"></i>
+                                    </div>
+                                    <span>Virtual Cards</span>
+                                </button>
 
-                                        <td colspan="6" class="text-center py-8 text-gray-500">Loading
-                                            submissions...
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                                <button onclick="filterItemSales('VPN')" id="filter-vpn"
+                                    class="w-full text-left px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 hover:border-white/20 transition-all flex items-center gap-3">
+                                    <div
+                                        class="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center">
+                                        <i class="fas fa-shield-alt text-white text-sm"></i>
+                                    </div>
+                                    <span>VPN Services</span>
+                                </button>
+
+                                <button onclick="filterItemSales('Account')" id="filter-account"
+                                    class="w-full text-left px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 hover:border-white/20 transition-all flex items-center gap-3">
+                                    <div
+                                        class="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center">
+                                        <i class="fas fa-user-circle text-white text-sm"></i>
+                                    </div>
+                                    <span>Accounts</span>
+                                </button>
+
+                                <button onclick="filterItemSales('API')" id="filter-api"
+                                    class="w-full text-left px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 hover:border-white/20 transition-all flex items-center gap-3">
+                                    <div
+                                        class="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
+                                        <i class="fas fa-key text-white text-sm"></i>
+                                    </div>
+                                    <span>API Keys</span>
+                                </button>
+                            </div>
+
+                            <div class="mt-6 pt-4 border-t border-white/10">
+                                <div class="text-xs text-gray-400 mb-2">Quick Stats</div>
+                                <div class="grid grid-cols-2 gap-2 text-center">
+                                    <div class="bg-white/5 rounded-lg p-2">
+                                        <div id="pendingCount" class="text-lg font-bold text-orange-400">0</div>
+                                        <div class="text-[10px] text-gray-500">Pending</div>
+                                    </div>
+                                    <div class="bg-white/5 rounded-lg p-2">
+                                        <div id="todayCount" class="text-lg font-bold text-green-400">0</div>
+                                        <div class="text-[10px] text-gray-500">Today</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Processed History -->
-                    <div class="lg:col-span-2 glass-card rounded-2xl p-6 overflow-hidden">
-                        <h3 class="font-bold flex items-center gap-2 mb-6"><i class="fas fa-history text-green-400"></i>
-                            RECENT PROCESSED SALES</h3>
-                        <div class="overflow-x-auto">
-                            <table id="itemSalesHistoryTable">
-                                <thead>
-                                    <tr>
-                                        <th>USER ID</th>
-                                        <th>CATEGORY</th>
-                                        <th>EMAIL/USER</th>
-                                        <th>STATUS</th>
-                                        <th>DATE</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="itemSalesHistoryBody"></tbody>
-                            </table>
+                    <!-- Main Content -->
+                    <div class="flex-1 grid grid-cols-1 gap-6">
+                        <!-- Pending Item Sales -->
+                        <div class="glass-card rounded-2xl p-6 overflow-hidden">
+                            <div class="flex items-center justify-between mb-6">
+                                <h3 class="font-bold flex items-center gap-2"><i
+                                        class="fas fa-clock text-orange-400"></i>
+                                    PENDING ITEM SALES</h3>
+                                <button onclick="loadItemSales()"
+                                    class="p-2 rounded-lg bg-orange-500/10 text-orange-400 hover:bg-orange-500/20"><i
+                                        class="fas fa-sync-alt"></i></button>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table id="pendingItemSalesTable">
+                                    <thead>
+                                        <tr>
+                                            <th>USER ID</th>
+                                            <th>CATEGORY</th>
+                                            <th>ACCOUNT DETAIL</th>
+                                            <th>PASSWORD</th>
+                                            <th>NOTE</th>
+                                            <th>ACTION</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="pendingItemSalesBody">
+                                        <tr>
+                                            <td colspan="6" class="text-center py-8 text-gray-500">Loading
+                                                submissions...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Processed History -->
+                        <div class="glass-card rounded-2xl p-6 overflow-hidden">
+                            <h3 class="font-bold flex items-center gap-2 mb-6"><i
+                                    class="fas fa-history text-green-400"></i>
+                                RECENT PROCESSED SALES</h3>
+                            <div class="overflow-x-auto">
+                                <table id="itemSalesHistoryTable">
+                                    <thead>
+                                        <tr>
+                                            <th>USER ID</th>
+                                            <th>CATEGORY</th>
+                                            <th>EMAIL/USER</th>
+                                            <th>STATUS</th>
+                                            <th>DATE</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="itemSalesHistoryBody"></tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2863,18 +2955,25 @@
         function toggleMobileMenu() {
             const sidebar = document.querySelector('aside');
             const overlay = document.getElementById('sidebarOverlay');
-            if (sidebar && overlay) {
-                sidebar.classList.toggle('mobile-open');
-                overlay.classList.toggle('active');
-            }
+            sidebar.classList.toggle('mobile-open');
+            overlay.classList.toggle('active');
         }
 
         function closeMobileMenu() {
             const sidebar = document.querySelector('aside');
             const overlay = document.getElementById('sidebarOverlay');
-            if (sidebar && overlay) {
-                sidebar.classList.remove('mobile-open');
-                overlay.classList.remove('active');
+            sidebar.classList.remove('mobile-open');
+            overlay.classList.remove('active');
+        }
+
+        function toggleItemSalesSubmenu() {
+            const submenu = document.getElementById('itemSalesSubmenu');
+            const arrow = document.getElementById('itemSalesArrow');
+            if (submenu) {
+                submenu.classList.toggle('hidden');
+                if (arrow) {
+                    arrow.style.transform = submenu.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+                }
             }
         }
 
@@ -2918,12 +3017,14 @@
                 'itemsales': 'Item Sales',
                 'tasks': 'Tasks',
                 'settings': 'Configuration',
-                'cards': 'Cards',
+                'cards': 'Virtual Cards',
+                'vpn': 'VPN Services',
+                'accounts': 'Accounts',
+                'apikeys': 'API Keys',
                 'broadcast': 'Broadcast',
                 'services': 'Services Management',
                 'shopmanage': 'Shop Management',
                 'buttons': 'Button Management',
-                'accounts': 'Premium Accounts',
                 'storage': 'Storage (Drive)',
                 'groups': 'Groups & Moderation',
                 'premiumemail': 'Premium Email',
@@ -2946,7 +3047,7 @@
                     loadCryptoConfig();
                     break;
                 case 'services':
-                    if (typeof renderAdminServices === 'function') renderAdminServices();
+                    renderAdminServices();
                     break;
                 case 'shopmanage':
                     if (typeof renderAdminShopItems === 'function') renderAdminShopItems();
@@ -2990,10 +3091,20 @@
                     renderCodes();
                     break;
                 case 'itemsales':
+                    console.log('[NAV] Loading item sales data...');
                     loadItemSales();
                     break;
                 case 'settings':
                     loadApiKeys();
+                    break;
+                case 'cards':
+                    loadSectionServices('cards');
+                    break;
+                case 'vpn':
+                    loadSectionServices('vpn');
+                    break;
+                case 'apikeys':
+                    loadSectionServices('apikeys');
                     break;
             }
 
@@ -3801,6 +3912,192 @@
         function deleteCode(code) {
             if (!confirm('Delete promo code ' + code + '?')) return;
             fetch('/api/admin/codes/' + code, { method: 'DELETE' }).then(() => renderCodes());
+        }
+
+        // SECTION SERVICES LOADER
+        function loadSectionServices(section) {
+            console.log('[Section] Loading services for:', section);
+            fetch('/api/admin/services').then(r => r.json()).then(data => {
+                const containerId = 'section-' + section + '-container';
+                let container = document.getElementById(containerId);
+
+                // Create container if it doesn't exist
+                if (!container) {
+                    const pageSection = document.getElementById('page-' + section);
+                    if (pageSection) {
+                        container = document.createElement('div');
+                        container.id = containerId;
+                        container.className = 'section-services-container';
+                        pageSection.appendChild(container);
+                    }
+                }
+
+                if (!container) {
+                    console.error('[Section] Container not found for:', section);
+                    return;
+                }
+
+                const services = data.services || [];
+                const sectionServices = services.filter(s => s.section === section || (section === 'accounts' && s.section === 'all'));
+
+                const sectionNames = {
+                    'cards': 'Virtual Cards',
+                    'vpn': 'VPN Services',
+                    'accounts': 'Accounts',
+                    'apikeys': 'API Keys'
+                };
+
+                let html = `
+                    <div class="glass-card p-6 rounded-2xl mb-6">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-xl font-bold flex items-center gap-2">
+                                <i class="fas fa-${section === 'cards' ? 'credit-card' : section === 'vpn' ? 'shield-alt' : section === 'accounts' ? 'user-circle' : 'key'} text-orange-400"></i>
+                                ${sectionNames[section] || section}
+                            </h3>
+                            <button onclick="openServiceModal('${section}')" class="px-4 py-2 bg-gradient-to-r from-orange-500 to-yellow-500 rounded-lg font-bold text-sm hover:opacity-90">
+                                <i class="fas fa-plus"></i> Add Service
+                            </button>
+                        </div>
+                        <div id="${section}-services-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                `;
+
+                if (sectionServices.length === 0) {
+                    html += `
+                            <div class="col-span-full text-center py-8 text-gray-400">
+                                <i class="fas fa-inbox text-4xl mb-3 opacity-50"></i>
+                                <p>No services in this section yet.</p>
+                                <p class="text-sm mt-2">Click "Add Service" to create one.</p>
+                            </div>
+                    `;
+                } else {
+                    sectionServices.forEach(s => {
+                        html += `
+                            <div class="glass-card p-4 rounded-xl border border-white/10 hover:border-orange-500/50 transition-all">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br ${s.color || 'from-blue-500 to-purple-600'} flex items-center justify-center">
+                                        <i class="fas ${s.icon || 'fa-cube'} text-white"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-sm">${s.name}</h4>
+                                        <p class="text-xs text-gray-400">${s.id}</p>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-gray-400 mb-3">${s.desc || 'No description'}</p>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs px-2 py-1 rounded bg-white/10">${s.cost || 0} TC</span>
+                                    <div class="flex gap-2">
+                                        <button onclick="editService('${s.id}')" class="text-blue-400 hover:text-blue-300 text-xs">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button onclick="deleteService('${s.id}')" class="text-red-400 hover:text-red-300 text-xs">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+
+                html += `
+                        </div>
+                    </div>
+                `;
+
+                container.innerHTML = html;
+            }).catch(err => {
+                console.error('[Section] Error loading services:', err);
+            });
+        }
+
+        // SERVICES MANAGEMENT WITH SECTION ASSIGNMENT
+        function renderAdminServices() {
+            fetch('/api/admin/services').then(r => r.json()).then(data => {
+                const container = document.getElementById('servicesContainer');
+                if (!container) return;
+
+                const services = data.services || [];
+                const sections = ['all', 'cards', 'vpn', 'accounts', 'apikeys', 'shop', 'other'];
+
+                // Group services by section
+                const grouped = {};
+                sections.forEach(s => grouped[s] = []);
+                services.forEach(s => {
+                    const section = s.section || 'all';
+                    if (!grouped[section]) grouped[section] = [];
+                    grouped[section].push(s);
+                });
+
+                let html = '';
+                sections.forEach(section => {
+                    const sectionServices = grouped[section] || [];
+                    const sectionName = section === 'all' ? 'All Sections' :
+                        section === 'cards' ? 'Cards Section' :
+                            section === 'vpn' ? 'VPN Section' :
+                                section === 'accounts' ? 'Accounts Section' :
+                                    section === 'apikeys' ? 'API Keys Section' :
+                                        section === 'shop' ? 'Shop Section' : 'Other';
+
+                    html += `
+                    <div class="mb-6">
+                        <h4 class="text-lg font-bold mb-3 text-orange-400">${sectionName}</h4>
+                        ${sectionServices.length === 0 ? '<p class="text-gray-500 text-sm">No services assigned</p>' : `
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            ${sectionServices.map(s => `
+                            <div class="glass-card p-4 rounded-xl border border-white/10">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br ${s.color || 'from-blue-500 to-purple-600'} flex items-center justify-center">
+                                        <i class="fas ${s.icon || 'fa-cube'} text-white"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="font-bold text-sm">${s.name}</h5>
+                                        <p class="text-xs text-gray-400">${s.id}</p>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-gray-400 mb-3">${s.desc || 'No description'}</p>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs px-2 py-1 rounded bg-white/10">${s.section || 'all'}</span>
+                                    <button onclick="deleteService('${s.id}')" class="text-red-400 hover:text-red-300 text-xs">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
+                                </div>
+                            </div>
+                            `).join('')}
+                        </div>
+                        `}
+                    </div>`;
+                });
+
+                container.innerHTML = html;
+            });
+        }
+
+        function deleteService(id) {
+            if (!confirm('Delete service ' + id + '?')) return;
+            fetch('/api/admin/services/' + id, { method: 'DELETE' }).then(() => renderAdminServices());
+        }
+
+        function saveAdminService() {
+            const id = document.getElementById('svc-id').value.trim();
+            const name = document.getElementById('svc-name').value.trim();
+            const desc = document.getElementById('svc-desc').value.trim();
+            const icon = document.getElementById('svc-icon').value.trim() || 'fa-cube';
+            const color = document.getElementById('svc-color').value.trim() || 'from-blue-500 to-purple-600';
+            const section = document.getElementById('svc-section').value;
+            const cost = parseInt(document.getElementById('svc-cost').value) || 0;
+
+            if (!id || !name) return alert('ID and Name are required');
+
+            const service = { id, name, desc, icon, color, section, cost };
+
+            fetch('/api/admin/services', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(service)
+            }).then(() => {
+                closeModal();
+                renderAdminServices();
+            });
         }
 
         // TASKS
@@ -4693,6 +4990,106 @@ Admins can use /settings command in the group to manage settings.`);
         }
 
         // ITEM SALES
+        let currentItemSalesFilter = 'all';
+        let allItemSalesData = { pending: [], history: [] };
+
+        function filterItemSales(category) {
+            console.log('[ItemSales] Filtering by:', category);
+            currentItemSalesFilter = category;
+
+            // Update button styles
+            const buttons = ['all', 'card', 'vpn', 'account', 'api'];
+            buttons.forEach(btn => {
+                const el = document.getElementById('filter-' + btn);
+                if (el) {
+                    if (btn === category.toLowerCase()) {
+                        el.className = 'w-full text-left px-4 py-3 rounded-xl bg-gradient-to-r from-orange-500/20 to-orange-600/10 border border-orange-500/30 text-white font-medium hover:from-orange-500/30 hover:to-orange-600/20 transition-all flex items-center gap-3';
+                    } else {
+                        el.className = 'w-full text-left px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 hover:border-white/20 transition-all flex items-center gap-3';
+                    }
+                }
+            });
+
+            // Render with filter
+            renderItemSalesWithFilter();
+        }
+
+        function renderItemSalesWithFilter() {
+            const category = currentItemSalesFilter;
+
+            // Filter pending items
+            let filteredPending = allItemSalesData.pending;
+            if (category !== 'all') {
+                filteredPending = allItemSalesData.pending.filter(s =>
+                    s.itemType && s.itemType.toLowerCase() === category.toLowerCase()
+                );
+            }
+
+            // Filter history items
+            let filteredHistory = allItemSalesData.history;
+            if (category !== 'all') {
+                filteredHistory = allItemSalesData.history.filter(s =>
+                    s.itemType && s.itemType.toLowerCase() === category.toLowerCase()
+                );
+            }
+
+            // Render Pending
+            const pendingBody = document.getElementById('pendingItemSalesBody');
+            if (pendingBody) {
+                pendingBody.innerHTML = filteredPending.map(s => `
+                <tr>
+                    <td class="font-mono text-xs">${s.userId}</td>
+                    <td><span class="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 text-[10px] font-bold">${s.itemType}</span></td>
+                    <td class="max-w-[150px] truncate" title="${s.email || s.serviceName || s.vpnName}">${s.email || s.serviceName || s.vpnName || s.customName}</td>
+                    <td class="font-mono text-xs truncate max-w-[120px]"><code>${s.password || s.apiKey || s.cardNumber || '-'}</code></td>
+                    <td class="max-w-[250px] truncate text-xs text-gray-400">
+                        ${s.accountName ? "Acc: " + s.accountName + " | " : ""}
+                        ${s.customName ? "Name: " + s.customName + " | " : ""}
+                        ${s.isSubscription ? "SUBSCRIPTION | " : "ACCOUNT | "}
+                        ${s.rewardCurrency ? "Pay in: " + s.rewardCurrency + " | " : ""}
+                        ${s.is2fa ? "2FA YES | " : ""}
+                    </td>
+                    <td>
+                        <div class="flex gap-2">
+                            <button onclick="updateItemSaleStatus('${s.id}', 'approved')" title="Directly Approve" class="bg-green-500/10 text-green-500 p-2 rounded-lg hover:bg-green-500/20 shadow-sm"><i class="fas fa-check"></i></button>
+                            <button onclick="updateItemSaleStatus('${s.id}', 'offer_sent')" title="Send Offer" class="bg-purple-500/10 text-purple-500 p-2 rounded-lg hover:bg-purple-500/20 shadow-sm"><i class="fas fa-handshake"></i></button>
+                            <button onclick="updateItemSaleStatus('${s.id}', 'rejected')" title="Reject" class="bg-red-500/10 text-red-500 p-2 rounded-lg hover:bg-red-500/20 shadow-sm"><i class="fas fa-times"></i></button>
+                        </div>
+                    </td>
+                </tr>`).join('') || '<tr><td colspan="6" class="text-center text-gray-500 py-8">No pending submissions</td></tr>';
+            }
+
+            // Render History
+            const historyBody = document.getElementById('itemSalesHistoryBody');
+            if (historyBody) {
+                historyBody.innerHTML = filteredHistory.map(s => `
+                <tr>
+                    <td class="font-mono text-xs">${s.userId}</td>
+                    <td>${s.itemType}</td>
+                    <td class="text-xs">${s.email}</td>
+                    <td><span class="px-2 py-0.5 rounded-full ${s.status === 'approved' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'} text-[10px] font-bold uppercase">${s.status}</span></td>
+                    <td class="text-[10px] text-gray-400">${new Date(s.updatedAt).toLocaleString()}</td>
+                    <td>
+                        ${s.status === 'approved' ? `
+                        <button onclick="deleteItemSale('${s.id}')" class="text-red-400 hover:text-red-300" title="Delete Approved Item">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        ` : '-'}
+                    </td>
+                </tr>`).join('') || '<tr><td colspan="6" class="text-center text-gray-500 py-8">No history</td></tr>';
+            }
+
+            // Update stats
+            const pendingCount = document.getElementById('pendingCount');
+            const todayCount = document.getElementById('todayCount');
+            if (pendingCount) pendingCount.textContent = filteredPending.length;
+            if (todayCount) {
+                const today = new Date().toDateString();
+                const todayItems = filteredHistory.filter(s => new Date(s.updatedAt).toDateString() === today);
+                todayCount.textContent = todayItems.length;
+            }
+        }
+
         function loadItemSales() {
             console.log('[ItemSales] Loading item sales...');
             fetch('/api/admin/item-sales/all')
@@ -5692,6 +6089,112 @@ Admins can use /settings command in the group to manage settings.`);
             </div>
             <div class="flex gap-3 mt-6">
                 <button onclick="addCode()"
+                    class="flex-1 gold-gradient py-3 rounded-xl font-bold text-black shadow-lg">CREATE</button>
+                <button onclick="closeModal()"
+                    class="flex-1 bg-white/5 border border-white/10 py-3 rounded-xl text-gray-400">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section Pages -->
+    <div id="page-cards" class="page" style="display:none;">
+        <div id="section-cards-container" class="p-6">
+            <div class="glass-card p-6 rounded-2xl">
+                <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <i class="fas fa-credit-card text-orange-400"></i> Virtual Cards
+                </h3>
+                <p class="text-sm text-gray-400 mb-4">Manage virtual card services and assignments.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="page-vpn" class="page" style="display:none;">
+        <div id="section-vpn-container" class="p-6">
+            <div class="glass-card p-6 rounded-2xl">
+                <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <i class="fas fa-shield-alt text-orange-400"></i> VPN Services
+                </h3>
+                <p class="text-sm text-gray-400 mb-4">Manage VPN services and subscriptions.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="page-accounts" class="page" style="display:none;">
+        <div id="section-accounts-container" class="p-6">
+            <div class="glass-card p-6 rounded-2xl">
+                <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <i class="fas fa-user-circle text-orange-400"></i> Accounts
+                </h3>
+                <p class="text-sm text-gray-400 mb-4">Manage account services and credentials.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="page-apikeys" class="page" style="display:none;">
+        <div id="section-apikeys-container" class="p-6">
+            <div class="glass-card p-6 rounded-2xl">
+                <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <i class="fas fa-key text-orange-400"></i> API Keys
+                </h3>
+                <p class="text-sm text-gray-400 mb-4">Manage API key services and access tokens.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Service Modal -->
+    <div id="modal-createService" class="modal-overlay" style="display:none;">
+        <div class="glass-card p-6 rounded-2xl w-full max-w-md mx-4">
+            <h3 class="text-xl font-bold mb-6 flex items-center gap-2">
+                <i class="fas fa-plus-circle text-orange-400"></i> Create Service
+            </h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Service ID</label>
+                    <input type="text" id="svc-id" placeholder="e.g., netflix-premium"
+                        class="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white focus:border-orange-500 outline-none">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Name</label>
+                    <input type="text" id="svc-name" placeholder="e.g., Netflix Premium"
+                        class="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white focus:border-orange-500 outline-none">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Description</label>
+                    <input type="text" id="svc-desc" placeholder="Brief description"
+                        class="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white focus:border-orange-500 outline-none">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Section</label>
+                    <select id="svc-section"
+                        class="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white focus:border-orange-500 outline-none">
+                        <option value="all">All Sections</option>
+                        <option value="cards">Virtual Cards</option>
+                        <option value="vpn">VPN Services</option>
+                        <option value="accounts">Accounts</option>
+                        <option value="apikeys">API Keys</option>
+                        <option value="shop">Shop</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Icon (FontAwesome class)</label>
+                    <input type="text" id="svc-icon" placeholder="e.g., fa-play-circle" value="fa-cube"
+                        class="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white focus:border-orange-500 outline-none">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Color (Tailwind
+                        gradient)</label>
+                    <input type="text" id="svc-color" placeholder="e.g., from-red-500 to-pink-600"
+                        value="from-blue-500 to-purple-600"
+                        class="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white focus:border-orange-500 outline-none">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Cost (Tokens)</label>
+                    <input type="number" id="svc-cost" placeholder="e.g., 100" value="0"
+                        class="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white focus:border-orange-500 outline-none">
+                </div>
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button onclick="saveAdminService()"
                     class="flex-1 gold-gradient py-3 rounded-xl font-bold text-black shadow-lg">CREATE</button>
                 <button onclick="closeModal()"
                     class="flex-1 bg-white/5 border border-white/10 py-3 rounded-xl text-gray-400">CANCEL</button>

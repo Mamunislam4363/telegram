@@ -654,7 +654,7 @@ class Database {
         return null;
     }
 
-    // Referrals - Updated to work with codes
+    // Referrals - Create pending referral when user clicks link
     handleReferral(newUserId, referrerCode) {
         const newUser = this.getUser(newUserId);
         // If already referred or self-referral, ignore
@@ -670,14 +670,43 @@ class Database {
         // Set referral relationship
         newUser.referredBy = String(referrerId);
         newUser.referredByCode = referrer.referralCode || referrerCode;
+        newUser.referralVerified = false; // Track verification status
 
-        // Track in referrer's list
+        // Track in referrer's list as PENDING (not rewarded yet)
         if (!referrer.referredUsers) referrer.referredUsers = [];
         referrer.referredUsers.push({
             userId: String(newUserId),
             date: Date.now(),
-            rewarded: true
+            rewarded: false, // Pending until verified
+            status: 'Pending'
         });
+
+        // DO NOT add bonus yet - wait for verification
+        // DO NOT increment referralCount yet - wait for verification
+
+        this.save();
+        return true;
+    }
+
+    // Verify referral and give reward after user completes requirements
+    verifyReferral(newUserId) {
+        const newUser = this.getUser(newUserId);
+        if (!newUser || !newUser.referredBy || newUser.referralVerified) return false;
+
+        const referrerId = newUser.referredBy;
+        const referrer = this.getUser(referrerId);
+        if (!referrer) return false;
+
+        // Find the pending referral record
+        if (!referrer.referredUsers) return false;
+        const referralRecord = referrer.referredUsers.find(r => r.userId === String(newUserId));
+        if (!referralRecord || referralRecord.rewarded) return false; // Already rewarded or not found
+
+        // Mark as verified
+        newUser.referralVerified = true;
+        referralRecord.rewarded = true;
+        referralRecord.status = 'Verified';
+        referralRecord.verifiedDate = Date.now();
 
         // Increment count
         if (!referrer.referralCount) referrer.referralCount = 0;
@@ -699,8 +728,9 @@ class Database {
             amount: refBonus,
             currency: 'tokens',
             date: Date.now(),
-            details: `Referred user #${newUserId}`,
-            reward: `+${refBonus} Tokens`
+            details: `Referred and verified user #${newUserId}`,
+            reward: `+${refBonus} Tokens`,
+            status: 'Verified'
         });
 
         // Add to new user's history
@@ -710,16 +740,23 @@ class Database {
             amount: refBonus,
             currency: 'tokens',
             date: Date.now(),
-            details: `Joined via referral from #${referrerId}`,
+            details: `Joined via referral from #${referrerId} - Verified`,
             reward: `+${refBonus} Tokens`
         });
 
         // Add transaction record
-        this.addTransaction(referrerId, 'referral', refBonus, 'Tokens', `Referral bonus from #${newUserId}`, 'user-plus');
-        this.addTransaction(newUserId, 'bonus', refBonus, 'Tokens', 'Welcome referral bonus', 'gift');
+        this.addTransaction(referrerId, 'referral', refBonus, 'Tokens', `Referral bonus from verified user #${newUserId}`, 'user-check');
+        this.addTransaction(newUserId, 'bonus', refBonus, 'Tokens', 'Welcome referral bonus - Verified', 'gift');
 
         this.save();
-        return true;
+
+        // Notify referrer
+        return {
+            referrerId,
+            newUserId,
+            refBonus,
+            referrerName: referrer.firstName || referrer.username || 'User'
+        };
     }
 
     getTopReferrers(limit = 10) {
@@ -1006,14 +1043,16 @@ class Database {
     // Service Management
 
 
-    createService(id, name, price) {
+    createService(id, name, price, section = 'all') {
         if (!this.data.cards) this.data.cards = {};
         if (!this.data.serviceNames) this.data.serviceNames = {};
         if (!this.data.cardPrices) this.data.cardPrices = {};
+        if (!this.data.serviceSections) this.data.serviceSections = {};
 
         if (!this.data.cards[id]) this.data.cards[id] = [];
         this.data.serviceNames[id] = name;
         this.data.cardPrices[id] = parseInt(price);
+        this.data.serviceSections[id] = section;
         this.save();
     }
 
@@ -1021,7 +1060,24 @@ class Database {
         if (this.data.cards && this.data.cards[id]) delete this.data.cards[id];
         if (this.data.serviceNames && this.data.serviceNames[id]) delete this.data.serviceNames[id];
         if (this.data.cardPrices && this.data.cardPrices[id]) delete this.data.cardPrices[id];
+        if (this.data.serviceSections && this.data.serviceSections[id]) delete this.data.serviceSections[id];
         this.save();
+    }
+
+    getServiceSection(id) {
+        return this.data.serviceSections?.[id] || 'all';
+    }
+
+    updateServiceSection(id, section) {
+        if (!this.data.serviceSections) this.data.serviceSections = {};
+        this.data.serviceSections[id] = section;
+        this.save();
+    }
+
+    getServicesBySection(section) {
+        const allServices = this.getServices();
+        if (section === 'all') return allServices;
+        return allServices.filter(s => this.getServiceSection(s.id) === section);
     }
 
     // ==================== TRANSACTION HISTORY ====================

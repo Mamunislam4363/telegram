@@ -661,6 +661,9 @@ bot.onText(/\/start/, async (msg) => {
                 if (!user.referredBy && !user.pendingReferrer) {
                     user.pendingReferrer = refCode; // Store the full code
                     db.updateUser(user);
+
+                    // Immediately create pending referral record
+                    db.handleReferral(userId, refCode);
                 }
             }
         }
@@ -705,9 +708,10 @@ bot.onText(/\/admin/, async (msg) => {
     const userId = msg.from.id;
     const username = msg.from.username || msg.from.first_name || 'Unknown';
 
-    // Check if user is admin - silently ignore for non-admins
+    // Check if user is admin
     if (!isAdmin(userId)) {
-        return;
+        // Send response to non-admins
+        return bot.sendMessage(chatId, "⚠️ *Admin Access Only*\n\nThis command is restricted to administrators only.", { parse_mode: 'Markdown' });
     }
 
     const publicUrl = process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`;
@@ -736,6 +740,7 @@ bot.onText(/\/admin/, async (msg) => {
         console.log(`[ADMIN] Admin ${username} (${userId}) accessed admin panel`);
     } catch (e) {
         console.error('Error sending admin panel:', e);
+        bot.sendMessage(chatId, "❌ Error opening admin panel. Please try again.");
     }
 });
 async function sendMainMenu(chatId, user, msgFrom) {
@@ -1268,10 +1273,11 @@ bot.on('callback_query', async (query) => {
                     ).catch(() => { });
                 }
 
-                // PROCESS PENDING REFERRAL
+                // PROCESS PENDING REFERRAL - Verify and give reward
                 if (user.pendingReferrer) {
-                    if (db.handleReferral(userId, user.pendingReferrer)) {
-                        bot.sendMessage(user.pendingReferrer, `🎉 *Referral Bonus!*\n\nUser ${user.first_name || userId} joined and verified!\n💰 +${db.getSettings().refBonus} Credits added!`, { parse_mode: 'Markdown' }).catch(() => { });
+                    const result = db.verifyReferral(userId);
+                    if (result) {
+                        bot.sendMessage(result.referrerId, `🎉 *Referral Verified!*\n\nUser ${user.first_name || userId} completed verification!\n💰 +${result.refBonus} Tokens added!`, { parse_mode: 'Markdown' }).catch(() => { });
                     }
                     user.pendingReferrer = null;
                     db.updateUser(user);
