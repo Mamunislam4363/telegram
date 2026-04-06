@@ -1897,6 +1897,34 @@
                                 style="font-size:15px; font-weight:900; color:var(--text-main); letter-spacing:0.5px; text-transform:uppercase; text-align:center; width:100%;">
                                 PREMIUM MAIL</div>
                         </div>
+
+                        <!-- Hot Mail Card -->
+                        <div id="hotMailCard" onclick="openHotMailDirect()"
+                            style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:18px; padding:28px 12px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px; cursor:pointer; transition:transform 0.2s; min-height:160px; width:100%;"
+                            onmousedown="this.style.transform='scale(0.97)'"
+                            onmouseup="this.style.transform='scale(1)'">
+                            <div
+                                style="width:60px; height:60px; background:linear-gradient(135deg, #f97316, #ea580c); border-radius:18px; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 24px rgba(249,115,22,0.3); flex-shrink:0; margin: 0 auto;">
+                                <i class="fas fa-fire" style="font-size:28px; color:#fff;"></i>
+                            </div>
+                            <div
+                                style="font-size:15px; font-weight:900; color:var(--text-main); letter-spacing:0.5px; text-transform:uppercase; text-align:center; width:100%;">
+                                HOT MAIL</div>
+                        </div>
+
+                        <!-- Student Email Card -->
+                        <div id="studentMailCard" onclick="openStudentMailDirect()"
+                            style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:18px; padding:28px 12px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px; cursor:pointer; transition:transform 0.2s; min-height:160px; width:100%;"
+                            onmousedown="this.style.transform='scale(0.97)'"
+                            onmouseup="this.style.transform='scale(1)'">
+                            <div
+                                style="width:60px; height:60px; background:linear-gradient(135deg, #3b82f6, #2563eb); border-radius:18px; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 24px rgba(59,130,246,0.3); flex-shrink:0; margin: 0 auto;">
+                                <i class="fas fa-graduation-cap" style="font-size:28px; color:#fff;"></i>
+                            </div>
+                            <div
+                                style="font-size:15px; font-weight:900; color:var(--text-main); letter-spacing:0.5px; text-transform:uppercase; text-align:center; width:100%;">
+                                STUDENT MAIL</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2021,16 +2049,32 @@
                         </div>
                         <div
                             style="font-size:11px; color:#f59e0b; font-weight:700; background:rgba(245,158,11,0.1); padding:5px 12px; border-radius:20px; border:1px solid rgba(245,158,11,0.3);">
-                            <span id="premiumMailCostBadge">20 TC / Email</span>
+                            <span id="premiumMailCostBadge">50 TC / Gmail</span>
                         </div>
                     </div>
 
-                    <!-- Active Email State (Always show this, auto-generate if needed) -->
+                    <!-- Email Type Tabs -->
+                    <div style="display:flex; gap:8px; margin-bottom:20px;">
+                        <button id="tab-gmail" class="premium-tab active" onclick="switchPremiumTab('gmail')"
+                            style="flex:1; padding:12px; border-radius:10px; border:1px solid var(--border-color); background:rgba(245,158,11,0.2); color:#f59e0b; font-weight:700; font-size:12px; cursor:pointer;">
+                            <i class="fab fa-google" style="margin-right:6px;"></i>GMAIL
+                        </button>
+                        <button id="tab-hotmail" class="premium-tab" onclick="switchPremiumTab('hotmail')"
+                            style="flex:1; padding:12px; border-radius:10px; border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-sub); font-weight:700; font-size:12px; cursor:pointer;">
+                            <i class="fab fa-microsoft" style="margin-right:6px;"></i>HOTMAIL
+                        </button>
+                        <button id="tab-student" class="premium-tab" onclick="switchPremiumTab('student')"
+                            style="flex:1; padding:12px; border-radius:10px; border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-sub); font-weight:700; font-size:12px; cursor:pointer;">
+                            <i class="fas fa-graduation-cap" style="margin-right:6px;"></i>STUDENT
+                        </button>
+                    </div>
+
+                    <!-- Active Email State -->
                     <div id="premiumMailActive" style="display:block;">
                         <!-- Email Address Display -->
                         <div style="text-align:center; margin-bottom:16px;">
                             <div style="font-size:13px; font-weight:700; color:var(--text-main); margin-bottom:12px;">
-                                Your Premium Email Address</div>
+                                Your <span id="premiumMailType">Gmail</span> Address</div>
                             <div
                                 style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:50px; padding:12px 20px; display:flex; align-items:center; justify-content:space-between; gap:12px;">
                                 <div style="flex:1; overflow:hidden;">
@@ -2051,27 +2095,22 @@
 
                         <!-- Description -->
                         <div style="text-align:center; margin-bottom:20px; padding:0 10px;">
-                            <p style="font-size:12px; color:var(--text-sub); line-height:1.6;">Premium email service
-                                with enhanced privacy, longer storage duration, and priority support. Keep your
-                                communications secure.</p>
+                            <p id="premiumMailDesc" style="font-size:12px; color:var(--text-sub); line-height:1.6;">
+                                Premium Gmail service via mailticking.com & emailnator.com. Auto-refresh inbox, instant
+                                OTP detection, and secure temporary access.</p>
                         </div>
 
                         <!-- Action Buttons -->
                         <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:20px;">
-                            <button class="mail-action-btn" onclick="loadPremiumEmailsFromAdmin()">
-                                <i class="fas fa-crown"></i> NEW GMAIL
+                            <button class="mail-action-btn" onclick="generatePremiumEmail()">
+                                <i class="fas fa-crown"></i> GENERATE
                             </button>
-                            <button class="mail-action-btn renew" onclick="renewTempMail('premium')">
-                                <i class="fas fa-history"></i> RENEW GMAIL
+                            <button class="mail-action-btn renew" onclick="generatePremiumEmail()">
+                                <i class="fas fa-history"></i> NEW EMAIL
                             </button>
-                            <button class="mail-action-btn refresh" onclick="refreshPremiumInbox()">
+                            <button class="mail-action-btn refresh" onclick="loadPremiumInbox()">
                                 <i class="fas fa-sync"></i> REFRESH
                             </button>
-                        </div>
-
-                        <!-- OTP Quick View -->
-                        <div id="premiumOtpList"
-                            style="display:flex; justify-content:flex-start; padding:10px 0; margin-bottom:16px;">
                         </div>
 
                         <!-- Inbox Table -->
@@ -2086,6 +2125,206 @@
                             </div>
                             <!-- Inbox List -->
                             <div id="premiumInboxList" style="min-height:200px;">
+                                <div style="text-align:center; padding:60px 20px; color:var(--text-sub);">
+                                    <div
+                                        style="width:60px; height:60px; background:rgba(156,163,175,0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
+                                        <i class="fas fa-envelope" style="font-size:24px; color:#9ca3af;"></i>
+                                    </div>
+                                    <div style="font-size:14px; font-weight:600; margin-bottom:6px;">Your inbox is empty
+                                    </div>
+                                    <div style="font-size:12px; opacity:0.7;">Generate an email to start receiving
+                                        messages</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HOT MAIL PAGE -->
+            <div id="hotMailPage" class="page">
+                <div class="content-body" style="padding:20px; padding-bottom:140px;">
+                    <!-- Balance Display -->
+                    <div
+                        style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:14px 18px;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div
+                                style="width:38px; height:38px; background:rgba(249,115,22,0.15); border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                                <i class="fas fa-coins" style="color:#f97316; font-size:16px;"></i>
+                            </div>
+                            <div>
+                                <div
+                                    style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase;">
+                                    Your Balance</div>
+                                <div id="hotMailBalanceDisplay"
+                                    style="font-size:16px; font-weight:800; color:var(--text-main);">0 TC</div>
+                            </div>
+                        </div>
+                        <div
+                            style="font-size:11px; color:#f97316; font-weight:700; background:rgba(249,115,22,0.1); padding:5px 12px; border-radius:20px; border:1px solid rgba(249,115,22,0.3);">
+                            <span id="hotMailCostBadge">15 TC / Email</span>
+                        </div>
+                    </div>
+
+                    <!-- Active Email State -->
+                    <div id="hotMailActive" style="display:block;">
+                        <!-- Email Address Display -->
+                        <div style="text-align:center; margin-bottom:16px;">
+                            <div style="font-size:13px; font-weight:700; color:var(--text-main); margin-bottom:12px;">
+                                Your Hot Mail Address</div>
+                            <div
+                                style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:50px; padding:12px 20px; display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                                <div style="flex:1; overflow:hidden;">
+                                    <div id="hotMailAddr"
+                                        style="font-size:15px; font-weight:700; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                        <i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>loading...
+                                    </div>
+                                </div>
+                                <div style="display:flex; gap:8px;">
+                                    <button
+                                        style="width:36px; height:36px; border-radius:50%; background:#f97316; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer;"
+                                        onclick="copyToClipboard('hotMailAddr')">
+                                        <i class="fas fa-copy" style="color:#fff; font-size:14px;"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Description -->
+                        <div style="text-align:center; margin-bottom:20px; padding:0 10px;">
+                            <p style="font-size:12px; color:var(--text-sub); line-height:1.6;">Hot Mail provides fast,
+                                reliable temporary email service with instant delivery. Perfect for quick verifications
+                                and sign-ups.</p>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:20px;">
+                            <button class="mail-action-btn" onclick="generateTempMail('hot')">
+                                <i class="fas fa-fire"></i> NEW EMAIL
+                            </button>
+                            <button class="mail-action-btn renew" onclick="renewTempMail('hot')">
+                                <i class="fas fa-history"></i> RENEW
+                            </button>
+                            <button class="mail-action-btn refresh" onclick="refreshInbox('hot')">
+                                <i class="fas fa-sync"></i> REFRESH
+                            </button>
+                        </div>
+
+                        <!-- OTP Quick View -->
+                        <div id="hotOtpList" style="display:flex; justify-content:flex-start; padding:10px 0;"></div>
+
+                        <!-- Inbox Table -->
+                        <div
+                            style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:12px; overflow:hidden;">
+                            <!-- Table Header -->
+                            <div
+                                style="display:grid; grid-template-columns:1fr 1fr 60px; background:#1f2937; padding:12px 16px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; letter-spacing:0.5px;">
+                                <div>SENDER</div>
+                                <div>SUBJECT</div>
+                                <div style="text-align:center;">VIEW</div>
+                            </div>
+                            <!-- Inbox List -->
+                            <div id="hotInboxList" style="min-height:200px;">
+                                <div style="text-align:center; padding:60px 20px; color:var(--text-sub);">
+                                    <div
+                                        style="width:60px; height:60px; background:rgba(156,163,175,0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
+                                        <i class="fas fa-envelope" style="font-size:24px; color:#9ca3af;"></i>
+                                    </div>
+                                    <div style="font-size:14px; font-weight:600; margin-bottom:6px;">Your inbox is empty
+                                    </div>
+                                    <div style="font-size:12px; opacity:0.7;">Waiting for incoming emails</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STUDENT MAIL PAGE -->
+            <div id="studentMailPage" class="page">
+                <div class="content-body" style="padding:20px; padding-bottom:140px;">
+                    <!-- Balance Display -->
+                    <div
+                        style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:14px 18px;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div
+                                style="width:38px; height:38px; background:rgba(59,130,246,0.15); border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                                <i class="fas fa-coins" style="color:#3b82f6; font-size:16px;"></i>
+                            </div>
+                            <div>
+                                <div
+                                    style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase;">
+                                    Your Balance</div>
+                                <div id="studentMailBalanceDisplay"
+                                    style="font-size:16px; font-weight:800; color:var(--text-main);">0 TC</div>
+                            </div>
+                        </div>
+                        <div
+                            style="font-size:11px; color:#3b82f6; font-weight:700; background:rgba(59,130,246,0.1); padding:5px 12px; border-radius:20px; border:1px solid rgba(59,130,246,0.3);">
+                            <span id="studentMailCostBadge">20 TC / Email</span>
+                        </div>
+                    </div>
+
+                    <!-- Active Email State -->
+                    <div id="studentMailActive" style="display:block;">
+                        <!-- Email Address Display -->
+                        <div style="text-align:center; margin-bottom:16px;">
+                            <div style="font-size:13px; font-weight:700; color:var(--text-main); margin-bottom:12px;">
+                                Your Student Email Address</div>
+                            <div
+                                style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:50px; padding:12px 20px; display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                                <div style="flex:1; overflow:hidden;">
+                                    <div id="studentMailAddr"
+                                        style="font-size:15px; font-weight:700; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                        <i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>loading...
+                                    </div>
+                                </div>
+                                <div style="display:flex; gap:8px;">
+                                    <button
+                                        style="width:36px; height:36px; border-radius:50%; background:#3b82f6; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer;"
+                                        onclick="copyToClipboard('studentMailAddr')">
+                                        <i class="fas fa-copy" style="color:#fff; font-size:14px;"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Description -->
+                        <div style="text-align:center; margin-bottom:20px; padding:0 10px;">
+                            <p style="font-size:12px; color:var(--text-sub); line-height:1.6;">Student Email provides
+                                .edu style temporary email addresses perfect for educational discounts and student
+                                offers. Reliable and secure.</p>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:20px;">
+                            <button class="mail-action-btn" onclick="generateTempMail('student')">
+                                <i class="fas fa-graduation-cap"></i> NEW EMAIL
+                            </button>
+                            <button class="mail-action-btn renew" onclick="renewTempMail('student')">
+                                <i class="fas fa-history"></i> RENEW
+                            </button>
+                            <button class="mail-action-btn refresh" onclick="refreshInbox('student')">
+                                <i class="fas fa-sync"></i> REFRESH
+                            </button>
+                        </div>
+
+                        <!-- OTP Quick View -->
+                        <div id="studentOtpList" style="display:flex; justify-content:flex-start; padding:10px 0;">
+                        </div>
+
+                        <!-- Inbox Table -->
+                        <div
+                            style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:12px; overflow:hidden;">
+                            <!-- Table Header -->
+                            <div
+                                style="display:grid; grid-template-columns:1fr 1fr 60px; background:#1f2937; padding:12px 16px; font-size:11px; font-weight:700; color:#fff; text-transform:uppercase; letter-spacing:0.5px;">
+                                <div>SENDER</div>
+                                <div>SUBJECT</div>
+                                <div style="text-align:center;">VIEW</div>
+                            </div>
+                            <!-- Inbox List -->
+                            <div id="studentInboxList" style="min-height:200px;">
                                 <div style="text-align:center; padding:60px 20px; color:var(--text-sub);">
                                     <div
                                         style="width:60px; height:60px; background:rgba(156,163,175,0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">

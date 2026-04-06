@@ -3115,7 +3115,9 @@ window.appCostConfig = window.appCostConfig || {
     adReward: 5,
     zeroBalanceAdReward: 5,
     mailCost: 10,
-    premiumMailCost: 50
+    premiumMailCost: 50,
+    hotMailCost: 15,
+    studentMailCost: 20
 };
 
 async function loadAppCostConfig() {
@@ -3129,11 +3131,19 @@ async function loadAppCostConfig() {
         window.appCostConfig.mailCost = parseInt(c.mailCost) || 10;
         // Premium mail cost uses token-based cost if present; otherwise fallback to 50
         window.appCostConfig.premiumMailCost = parseInt(c.premiumMailCost || c.gmailCost || 0) || 50;
+        // Hot mail cost
+        window.appCostConfig.hotMailCost = parseInt(c.hotMailCost) || 15;
+        // Student mail cost
+        window.appCostConfig.studentMailCost = parseInt(c.studentMailCost) || 20;
 
         const tempBadge = document.getElementById('tempMailCostBadge');
         if (tempBadge) tempBadge.textContent = `${window.appCostConfig.mailCost} TC / Email`;
         const premBadge = document.getElementById('premiumMailCostBadge');
         if (premBadge) premBadge.textContent = `${window.appCostConfig.premiumMailCost} TC / Email`;
+        const hotBadge = document.getElementById('hotMailCostBadge');
+        if (hotBadge) hotBadge.textContent = `${window.appCostConfig.hotMailCost} TC / Email`;
+        const studentBadge = document.getElementById('studentMailCostBadge');
+        if (studentBadge) studentBadge.textContent = `${window.appCostConfig.studentMailCost} TC / Email`;
     } catch (e) {
         // silent
     }
