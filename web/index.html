@@ -52,7 +52,12 @@
         #redeemPage,
         #transferPage,
         #itemSellPage,
-        #accountsStorePage {
+        #accountsStorePage,
+        #watermarkRemoverPage,
+        #videoDownloadPage,
+        #aiPhotoGeneratorPage,
+        #aiVideoGeneratorPage,
+        #bgRemoverPage {
             padding: 8px !important;
         }
 
@@ -1380,6 +1385,50 @@
 
 
 <body>
+    <!-- EARLY SCRIPT DEFINITIONS FOR GLOBAL FUNCTIONS -->
+    <script>
+        // Define global placeholder functions early so inline onclick handlers can access them
+        // These will be replaced by actual implementations when the main script loads
+        window.openPaymentSelectionModal = window.openPaymentSelectionModal || function () {
+            console.log('Payment selection modal placeholder - waiting for full implementation to load');
+            // Try to call the real implementation if it exists
+            if (typeof window._realOpenPaymentSelectionModal === 'function') {
+                window._realOpenPaymentSelectionModal();
+            } else {
+                // Show an alert if the real implementation isn't loaded yet
+                alert('Payment system is loading. Please try again in a moment.');
+            }
+        };
+        window.openLocalPaymentModal = window.openLocalPaymentModal || function () {
+            if (typeof window._realOpenLocalPaymentModal === 'function') {
+                window._realOpenLocalPaymentModal();
+            } else {
+                alert('Payment system is loading. Please try again in a moment.');
+            }
+        };
+        window.openInternationalPaymentModal = window.openInternationalPaymentModal || function () {
+            if (typeof window._realOpenInternationalPaymentModal === 'function') {
+                window._realOpenInternationalPaymentModal();
+            } else {
+                alert('Payment system is loading. Please try again in a moment.');
+            }
+        };
+        window.closePaymentSelectionModal = window.closePaymentSelectionModal || function () {
+            if (typeof window._realClosePaymentSelectionModal === 'function') {
+                window._realClosePaymentSelectionModal();
+            }
+        };
+        window.closeLocalPaymentModal = window.closeLocalPaymentModal || function () {
+            if (typeof window._realCloseLocalPaymentModal === 'function') {
+                window._realCloseLocalPaymentModal();
+            }
+        };
+        window.closeInternationalPaymentModal = window.closeInternationalPaymentModal || function () {
+            if (typeof window._realCloseInternationalPaymentModal === 'function') {
+                window._realCloseInternationalPaymentModal();
+            }
+        };
+    </script>
     <div id="app-container">
         <!-- Header -->
         <div class="sticky-header-container">
@@ -1527,21 +1576,35 @@
                                 class="fas fa-envelope"></i></div>
                         <div class="grid-btn-text" data-i18n="email">Email</div>
                     </div>
-
                     <div class="grid-btn" onclick="nav('itemSell')">
                         <div class="grid-btn-icon" style="background: linear-gradient(135deg,#1e3a8a,#1d4ed8);"><i
                                 class="fas fa-shopping-basket"></i></div>
                         <div class="grid-btn-text" data-i18n="itemSell">Item Sell</div>
                     </div>
-                    <div class="grid-btn" onclick="nav('accountsStore')">
+                    <div class="grid-btn" onclick="nav('watermarkRemover')">
                         <div class="grid-btn-icon" style="background: linear-gradient(135deg,#f59e0b,#d97706);"><i
-                                class="fas fa-user-shield"></i></div>
-                        <div class="grid-btn-text" data-i18n="accounts">Accounts</div>
+                                class="fas fa-eraser"></i></div>
+                        <div class="grid-btn-text" data-i18n="watermark">Watermark Remover</div>
                     </div>
-                    <div class="grid-btn" onclick="nav('history')">
-                        <div class="grid-btn-icon" style="background: linear-gradient(135deg,#6366f1,#4338ca);"><i
-                                class="fas fa-history"></i></div>
-                        <div class="grid-btn-text" data-i18n="history">History</div>
+                    <div class="grid-btn" onclick="nav('videoDownload')">
+                        <div class="grid-btn-icon" style="background: linear-gradient(135deg,#ec4899,#8b5cf6);"><i
+                                class="fas fa-video"></i></div>
+                        <div class="grid-btn-text" data-i18n="videoDownload">Any Video Download</div>
+                    </div>
+                    <div class="grid-btn" onclick="nav('aiPhotoGenerator')">
+                        <div class="grid-btn-icon" style="background: linear-gradient(135deg,#a855f7,#ec4899);"><i
+                                class="fas fa-image"></i></div>
+                        <div class="grid-btn-text" data-i18n="aiPhoto">AI Photo Generator</div>
+                    </div>
+                    <div class="grid-btn" onclick="nav('aiVideoGenerator')">
+                        <div class="grid-btn-icon" style="background: linear-gradient(135deg,#3b82f6,#8b5cf6);"><i
+                                class="fas fa-film"></i></div>
+                        <div class="grid-btn-text" data-i18n="aiVideo">AI Video Generator</div>
+                    </div>
+                    <div class="grid-btn" onclick="nav('bgRemover')">
+                        <div class="grid-btn-icon" style="background: linear-gradient(135deg,#14b8a6,#06b6d4);"><i
+                                class="fas fa-magic"></i></div>
+                        <div class="grid-btn-text" data-i18n="bgRemover">BG Remover</div>
                     </div>
                 </div>
 
@@ -2796,13 +2859,16 @@
             <div id="depositPage" class="page">
 
                 <!-- Select Payment Method Title -->
-                <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px; padding:0 4px;">
+                <div onclick="openPaymentSelectionModal()"
+                    style="cursor:pointer; display:flex; align-items:center; gap:12px; margin-bottom:20px; padding:0 4px;">
                     <div
                         style="width:44px; height:44px; background:linear-gradient(135deg, #f59e0b, #d97706); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; color:#fff;">
                         <i class="fas fa-wallet"></i>
                     </div>
                     <div style="font-size:18px; font-weight:800; color:#fff;">Select Payment
                         Method</div>
+                    <i class="fas fa-chevron-right"
+                        style="margin-left:auto; color:var(--text-sub); font-size:14px;"></i>
                 </div>
 
                 <!-- Payment Method Cards -->
@@ -3308,6 +3374,14 @@
 
                 <!-- Grid View (Hidden by default) - Service Cards in Square Format -->
                 <div id="servicesGridView" class="services-grid" style="display:none;">
+                    <!-- Website Traffic Card -->
+                    <div class="sg-card" onclick="nav('websiteTraffic')">
+                        <div class="sg-card-icon" style="background:linear-gradient(135deg,#10b981,#059669)">
+                            <i class="fas fa-globe"></i>
+                        </div>
+                        <span>WEBSITE TRAFFIC</span>
+                    </div>
+
                     <div class="sg-card" onclick="nav('vccCards')">
                         <div class="sg-card-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)">
                             <i class="fas fa-credit-card"></i>
@@ -3489,13 +3563,35 @@
                 </div>
 
                 <div
-                    style="margin-top:20px; background:rgba(236,72,153,0.05); border-radius:16px; border:1px dashed rgba(236,72,153,0.3);">
+                    style="margin-top:20px; background:rgba(236,72,153,0.05); border-radius:16px; border:1px dashed rgba(236,72,153,0.3); padding:16px;">
                     <div style="color:#ec4899; font-size:12px; font-weight:700; margin-bottom:6px;">
                         <i class="fas fa-info-circle"></i> Important Note
                     </div>
                     <div style="color:var(--text-sub); font-size:11px; line-height:1.5;">Transfers
                         are permanent and cannot be reversed. Please double-check the Recipient User ID before sending.
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Redeem Token Page -->
+        <div id="redeemPage" class="page" style="display:none;">
+            <div style="width:calc(100% - 16px); max-width:calc(100% - 16px); margin:0 auto;">
+                <div class="gv-card">
+                    <div style="display:flex; align-items:center; gap:12px; margin-bottom:24px;">
+                        <div
+                            style="width:40px; height:40px; background:rgba(245,158,11,0.1); border-radius:12px; display:flex; align-items:center; justify-content:center; color:#f59e0b; font-size:18px;">
+                            <i class="fas fa-ticket-alt"></i>
+                        </div>
+                        <div style="font-size:18px; font-weight:800; color:#fff;">Redeem Token
+                        </div>
+                    </div>
+
+                    <p style="color:var(--text-sub); font-size:14px; margin-bottom:20px; line-height:1.5;">
+                        Enter your coupon code below to redeem tokens and exclusive rewards.
+                    </p>
+
+                    <!-- Redeem Code Input -->
                     <div class="gv-input-box redeem-coupon-card"
                         style="margin-bottom:18px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:12px;">
                         <input type="text" class="gv-input" id="redeemCodeInput" placeholder="Enter Coupon Code"
@@ -3505,6 +3601,17 @@
                         style="width:100%; height:56px; background:linear-gradient(135deg, #f59e0b, #d97706); border:none; border-radius:18px; font-weight:900; color:#000; font-size:16px; box-shadow:0 8px 16px rgba(245,158,11,0.2);">
                         REDEEM NOW
                     </button>
+                </div>
+
+                <div
+                    style="margin-top:20px; background:rgba(245,158,11,0.05); border-radius:16px; border:1px dashed rgba(245,158,11,0.3); padding:16px;">
+                    <div style="color:#f59e0b; font-size:12px; font-weight:700; margin-bottom:6px;">
+                        <i class="fas fa-gift"></i> How to get codes?
+                    </div>
+                    <div style="color:var(--text-sub); font-size:11px; line-height:1.5;">
+                        Follow our Telegram channel and participate in events to receive exclusive redeem codes with
+                        amazing rewards!
+                    </div>
                 </div>
             </div>
         </div>
@@ -5626,7 +5733,721 @@
             }
             window.showToast = showToast;
         </script>
+        <!-- AI Services Pages -->
+        <!-- Watermark Remover Page -->
+        <div id="watermarkRemoverPage" class="page" style="display:none;">
+            <div class="content-body" style="padding:20px; padding-bottom:140px;">
+                <div class="adc-header" style="margin-bottom: 24px; text-align:center;">
+                    <div
+                        style="width:70px; height:70px; background:linear-gradient(135deg,#f59e0b,#d97706); border-radius:20px; display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
+                        <i class="fas fa-eraser" style="font-size:32px; color:#fff;"></i>
+                    </div>
+                    <h2
+                        style="font-size:22px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:1px;">
+                        Watermark Remover</h2>
+                    <p style="color:var(--text-sub); font-size:13px; margin-top:8px;">Remove watermarks from images and
+                        videos</p>
+                </div>
+                <div
+                    style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:20px; text-align:center;">
+                    <div
+                        style="border:2px dashed var(--border-color); border-radius:12px; padding:40px 20px; margin-bottom:20px;">
+                        <i class="fas fa-cloud-upload-alt"
+                            style="font-size:48px; color:var(--accent-color); margin-bottom:16px;"></i>
+                        <p style="color:var(--text-sub); font-size:14px; margin-bottom:8px;">Drop your file here or
+                            click to upload</p>
+                        <p style="color:var(--text-muted); font-size:12px;">Supports: JPG, PNG, MP4 (Max 50MB)</p>
+                    </div>
+                    <button class="gv-btn" style="width:100%; background:linear-gradient(135deg,#f59e0b,#d97706);">
+                        <i class="fas fa-magic"></i> Remove Watermark
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Video Download Page -->
+        <div id="videoDownloadPage" class="page" style="display:none;">
+            <div class="content-body" style="padding:20px; padding-bottom:140px;">
+                <div class="adc-header" style="margin-bottom: 24px; text-align:center;">
+                    <div
+                        style="width:70px; height:70px; background:linear-gradient(135deg,#ec4899,#8b5cf6); border-radius:20px; display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
+                        <i class="fas fa-video" style="font-size:32px; color:#fff;"></i>
+                    </div>
+                    <h2
+                        style="font-size:22px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:1px;">
+                        Video Downloader</h2>
+                    <p style="color:var(--text-sub); font-size:13px; margin-top:8px;">Download videos from any platform
+                    </p>
+                </div>
+                <div
+                    style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:20px;">
+                    <div style="margin-bottom:16px;">
+                        <label
+                            style="display:block; font-size:12px; font-weight:700; color:var(--text-sub); margin-bottom:8px; text-transform:uppercase;">Video
+                            URL</label>
+                        <div class="gv-input-box">
+                            <i class="fas fa-link" style="color:var(--text-sub)"></i>
+                            <input type="text" class="gv-input" placeholder="Paste video link here...">
+                        </div>
+                    </div>
+                    <button class="gv-btn" style="width:100%; background:linear-gradient(135deg,#ec4899,#8b5cf6);">
+                        <i class="fas fa-download"></i> Download Video
+                    </button>
+                    <div style="margin-top:20px; padding-top:20px; border-top:1px solid var(--border-color);">
+                        <p style="color:var(--text-sub); font-size:12px; text-align:center;">Supported: YouTube, TikTok,
+                            Instagram, Facebook, Twitter</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Photo Generator Page -->
+        <div id="aiPhotoGeneratorPage" class="page" style="display:none;">
+            <div class="content-body" style="padding:20px; padding-bottom:140px;">
+                <div class="adc-header" style="margin-bottom: 24px; text-align:center;">
+                    <div
+                        style="width:70px; height:70px; background:linear-gradient(135deg,#a855f7,#ec4899); border-radius:20px; display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
+                        <i class="fas fa-image" style="font-size:32px; color:#fff;"></i>
+                    </div>
+                    <h2
+                        style="font-size:22px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:1px;">
+                        AI Photo Generator</h2>
+                    <p style="color:var(--text-sub); font-size:13px; margin-top:8px;">Create stunning images with AI</p>
+                </div>
+                <div
+                    style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:20px;">
+                    <div style="margin-bottom:16px;">
+                        <label
+                            style="display:block; font-size:12px; font-weight:700; color:var(--text-sub); margin-bottom:8px; text-transform:uppercase;">Describe
+                            your image</label>
+                        <textarea class="gv-input" rows="4"
+                            placeholder="A futuristic city at sunset with flying cars..."></textarea>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+                        <div>
+                            <label
+                                style="display:block; font-size:11px; font-weight:700; color:var(--text-sub); margin-bottom:6px;">Style</label>
+                            <select class="gv-input" style="height:44px;">
+                                <option>Realistic</option>
+                                <option>Anime</option>
+                                <option>Digital Art</option>
+                                <option>Oil Painting</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label
+                                style="display:block; font-size:11px; font-weight:700; color:var(--text-sub); margin-bottom:6px;">Aspect
+                                Ratio</label>
+                            <select class="gv-input" style="height:44px;">
+                                <option>1:1 Square</option>
+                                <option>16:9 Wide</option>
+                                <option>9:16 Portrait</option>
+                                <option>4:3 Classic</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="gv-btn" style="width:100%; background:linear-gradient(135deg,#a855f7,#ec4899);">
+                        <i class="fas fa-wand-magic-sparkles"></i> Generate Image
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Video Generator Page -->
+        <div id="aiVideoGeneratorPage" class="page" style="display:none;">
+            <div class="content-body" style="padding:20px; padding-bottom:140px;">
+                <div class="adc-header" style="margin-bottom: 24px; text-align:center;">
+                    <div
+                        style="width:70px; height:70px; background:linear-gradient(135deg,#3b82f6,#8b5cf6); border-radius:20px; display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
+                        <i class="fas fa-film" style="font-size:32px; color:#fff;"></i>
+                    </div>
+                    <h2
+                        style="font-size:22px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:1px;">
+                        AI Video Generator</h2>
+                    <p style="color:var(--text-sub); font-size:13px; margin-top:8px;">Create videos from text prompts
+                    </p>
+                </div>
+                <div
+                    style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:20px;">
+                    <div style="margin-bottom:16px;">
+                        <label
+                            style="display:block; font-size:12px; font-weight:700; color:var(--text-sub); margin-bottom:8px; text-transform:uppercase;">Describe
+                            your video</label>
+                        <textarea class="gv-input" rows="4"
+                            placeholder="A serene ocean sunset with waves gently crashing..."></textarea>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+                        <div>
+                            <label
+                                style="display:block; font-size:11px; font-weight:700; color:var(--text-sub); margin-bottom:6px;">Duration</label>
+                            <select class="gv-input" style="height:44px;">
+                                <option>5 seconds</option>
+                                <option>10 seconds</option>
+                                <option>15 seconds</option>
+                                <option>30 seconds</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label
+                                style="display:block; font-size:11px; font-weight:700; color:var(--text-sub); margin-bottom:6px;">Quality</label>
+                            <select class="gv-input" style="height:44px;">
+                                <option>HD (720p)</option>
+                                <option>FHD (1080p)</option>
+                                <option>4K (2160p)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="gv-btn" style="width:100%; background:linear-gradient(135deg,#3b82f6,#8b5cf6);">
+                        <i class="fas fa-play"></i> Generate Video
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- BG Remover Page -->
+        <div id="bgRemoverPage" class="page" style="display:none;">
+            <div class="content-body" style="padding:20px; padding-bottom:140px;">
+                <div class="adc-header" style="margin-bottom: 24px; text-align:center;">
+                    <div
+                        style="width:70px; height:70px; background:linear-gradient(135deg,#14b8a6,#06b6d4); border-radius:20px; display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
+                        <i class="fas fa-magic" style="font-size:32px; color:#fff;"></i>
+                    </div>
+                    <h2
+                        style="font-size:22px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:1px;">
+                        Background Remover</h2>
+                    <p style="color:var(--text-sub); font-size:13px; margin-top:8px;">Remove background from images
+                        instantly</p>
+                </div>
+                <div
+                    style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:20px; text-align:center;">
+                    <div
+                        style="border:2px dashed var(--border-color); border-radius:12px; padding:40px 20px; margin-bottom:20px;">
+                        <i class="fas fa-image"
+                            style="font-size:48px; color:var(--accent-color); margin-bottom:16px;"></i>
+                        <p style="color:var(--text-sub); font-size:14px; margin-bottom:8px;">Upload image to remove
+                            background</p>
+                        <p style="color:var(--text-muted); font-size:12px;">Supports: JPG, PNG (Max 10MB)</p>
+                    </div>
+                    <div style="display:flex; gap:12px; margin-bottom:20px;">
+                        <button class="gv-btn" style="flex:1; background:linear-gradient(135deg,#14b8a6,#06b6d4);">
+                            <i class="fas fa-upload"></i> Upload
+                        </button>
+                        <button class="gv-btn" style="flex:1; background:var(--bg-secondary);">
+                            <i class="fas fa-camera"></i> Camera
+                        </button>
+                    </div>
+                    <div style="padding:16px; background:var(--bg-secondary); border-radius:12px;">
+                        <p style="color:var(--text-sub); font-size:12px;"><i class="fas fa-info-circle"
+                                style="color:var(--accent-color); margin-right:8px;"></i>AI will automatically detect
+                            and remove the background</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="app-toast" class="toast-notify"></div>
+        <!-- ====== PAYMENT SELECTION MODAL ====== -->
+        <div id="paymentSelectionModal" style="
+            display:none; position:fixed; top:0; left:0; right:0; bottom:0;
+            z-index:99999; align-items:flex-end; justify-content:center;
+        " onclick="if(event.target===this) closePaymentSelectionModal()">
+            <!-- Backdrop -->
+            <div style="position:absolute; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(6px);"></div>
+            <!-- Sheet -->
+            <div id="paymentSheet" style="
+                position:relative; z-index:1;
+                width:100%; max-width:430px;
+                background:var(--bg-card, #1e1410);
+                border-radius:28px 28px 0 0;
+                padding:0 0 32px;
+                transform:translateY(100%);
+                transition:transform 0.38s cubic-bezier(0.34,1.26,0.64,1);
+                max-height:85vh; overflow-y:auto;
+                scrollbar-width:none; -ms-overflow-style:none;
+            ">
+                <!-- Handle -->
+                <div style="text-align:center; padding:14px 0 4px;">
+                    <div
+                        style="width:40px; height:4px; border-radius:4px; background:rgba(255,255,255,0.18); display:inline-block;">
+                    </div>
+                </div>
+                <!-- Header -->
+                <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 22px 20px;">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <div
+                            style="width:42px; height:42px; border-radius:14px; background:rgba(251,191,36,0.15); display:flex; align-items:center; justify-content:center;">
+                            <i class="fas fa-wallet" style="color:#fbbf24; font-size:18px;"></i>
+                        </div>
+                        <div>
+                            <div style="font-size:18px; font-weight:800; color:var(--text-main,#fff);">Select Payment
+                                Method</div>
+                            <div
+                                style="font-size:10px; color:var(--text-sub,#888); font-weight:600; text-transform:uppercase; margin-top:2px;">
+                                Choose your preferred option</div>
+                        </div>
+                    </div>
+                    <button onclick="closePaymentSelectionModal()"
+                        style="background:rgba(255,255,255,0.08); border:none; width:34px; height:34px; border-radius:50%; color:var(--text-sub,#888); font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <!-- Payment Options -->
+                <div style="padding:0 16px; display:flex; flex-direction:column; gap:12px;">
+                    <!-- Local Payment -->
+                    <button onclick="openLocalPaymentModal()" style="
+                        display:flex; align-items:center; gap:14px;
+                        padding:16px;
+                        border-radius:16px;
+                        border:1.5px solid rgba(34,197,94,0.3);
+                        cursor:pointer;
+                        transition:all 0.22s ease;
+                        background:rgba(34,197,94,0.08);
+                        text-align:left;
+                        width:100%;
+                    ">
+                        <div
+                            style="width:48px; height:48px; border-radius:14px; background:rgba(34,197,94,0.2); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                            <i class="fas fa-money-bill-wave" style="color:#22c55e; font-size:20px;"></i>
+                        </div>
+                        <div style="flex:1;">
+                            <div style="font-size:15px; font-weight:700; color:var(--text-main,#fff);">Local Payment
+                            </div>
+                            <div style="font-size:11px; color:var(--text-sub,#888); margin-top:2px;">Bkash, Nagad,
+                                Rocket & More</div>
+                        </div>
+                        <i class="fas fa-chevron-right" style="color:#22c55e; font-size:14px;"></i>
+                    </button>
+                    <!-- International Payment -->
+                    <button onclick="nav('cryptoMethods'); closePaymentSelectionModal();" style="
+                        display:flex; align-items:center; gap:14px;
+                        padding:16px;
+                        border-radius:16px;
+                        border:1.5px solid rgba(168,85,247,0.3);
+                        cursor:pointer;
+                        transition:all 0.22s ease;
+                        background:rgba(168,85,247,0.08);
+                        text-align:left;
+                        width:100%;
+                    ">
+                        <div
+                            style="width:48px; height:48px; border-radius:14px; background:rgba(168,85,247,0.2); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                            <i class="fas fa-globe" style="color:#a855f7; font-size:20px;"></i>
+                        </div>
+                        <div style="flex:1;">
+                            <div style="font-size:15px; font-weight:700; color:var(--text-main,#fff);">International
+                                Payment</div>
+                            <div style="font-size:11px; color:var(--text-sub,#888); margin-top:2px;">Crypto & Global
+                                Methods</div>
+                        </div>
+                        <i class="fas fa-chevron-right" style="color:#a855f7; font-size:14px;"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== LOCAL PAYMENT MODAL ====== -->
+        <div id="localPaymentModal" style="
+            display:none; position:fixed; top:0; left:0; right:0; bottom:0;
+            z-index:99999; align-items:flex-end; justify-content:center;
+        " onclick="if(event.target===this) closeLocalPaymentModal()">
+            <!-- Backdrop -->
+            <div style="position:absolute; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(6px);"></div>
+            <!-- Sheet -->
+            <div id="localPaymentSheet" style="
+                position:relative; z-index:1;
+                width:100%; max-width:430px;
+                background:var(--bg-card, #1e1410);
+                border-radius:28px 28px 0 0;
+                padding:0 0 32px;
+                transform:translateY(100%);
+                transition:transform 0.38s cubic-bezier(0.34,1.26,0.64,1);
+                max-height:85vh; overflow-y:auto;
+                scrollbar-width:none; -ms-overflow-style:none;
+            ">
+                <!-- Handle -->
+                <div style="text-align:center; padding:14px 0 4px;">
+                    <div
+                        style="width:40px; height:4px; border-radius:4px; background:rgba(255,255,255,0.18); display:inline-block;">
+                    </div>
+                </div>
+                <!-- Header -->
+                <div style="display:flex; align-items:center; gap:12px; padding:12px 22px 20px;">
+                    <button onclick="backToPaymentSelection()"
+                        style="background:rgba(255,255,255,0.08); border:none; width:34px; height:34px; border-radius:50%; color:var(--text-sub,#888); font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <div
+                            style="width:42px; height:42px; border-radius:14px; background:rgba(34,197,94,0.15); display:flex; align-items:center; justify-content:center;">
+                            <i class="fas fa-money-bill-wave" style="color:#22c55e; font-size:18px;"></i>
+                        </div>
+                        <div>
+                            <div style="font-size:18px; font-weight:800; color:var(--text-main,#fff);">Local Payment
+                            </div>
+                            <div
+                                style="font-size:10px; color:var(--text-sub,#888); font-weight:600; text-transform:uppercase; margin-top:2px;">
+                                Bangladeshi Payment Methods</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Payment Methods Grid -->
+                <div style="padding:0 16px; display:grid; grid-template-columns:repeat(2, 1fr); gap:12px;">
+                    <!-- Bkash -->
+                    <button onclick="showPaymentDetails('bkash')" style="
+                        display:flex; flex-direction:column; align-items:center; gap:8px;
+                        padding:20px 12px;
+                        border-radius:16px;
+                        border:1.5px solid rgba(220,38,38,0.3);
+                        cursor:pointer;
+                        transition:all 0.22s ease;
+                        background:rgba(220,38,38,0.08);
+                        text-align:center;
+                        width:100%;
+                    ">
+                        <div
+                            style="width:56px; height:56px; border-radius:16px; background:rgba(220,38,38,0.2); display:flex; align-items:center; justify-content:center;">
+                            <span style="color:#dc2626; font-size:14px; font-weight:800;">bKash</span>
+                        </div>
+                        <div style="font-size:13px; font-weight:700; color:var(--text-main,#fff);">Bkash</div>
+                        <div style="font-size:10px; color:var(--text-sub,#888);">Send Money</div>
+                    </button>
+                    <!-- Nagad -->
+                    <button onclick="showPaymentDetails('nagad')" style="
+                        display:flex; flex-direction:column; align-items:center; gap:8px;
+                        padding:20px 12px;
+                        border-radius:16px;
+                        border:1.5px solid rgba(234,179,8,0.3);
+                        cursor:pointer;
+                        transition:all 0.22s ease;
+                        background:rgba(234,179,8,0.08);
+                        text-align:center;
+                        width:100%;
+                    ">
+                        <div
+                            style="width:56px; height:56px; border-radius:16px; background:rgba(234,179,8,0.2); display:flex; align-items:center; justify-content:center;">
+                            <span style="color:#eab308; font-size:14px; font-weight:800;">Nagad</span>
+                        </div>
+                        <div style="font-size:13px; font-weight:700; color:var(--text-main,#fff);">Nagad</div>
+                        <div style="font-size:10px; color:var(--text-sub,#888);">Send Money</div>
+                    </button>
+                    <!-- Rocket -->
+                    <button onclick="showPaymentDetails('rocket')" style="
+                        display:flex; flex-direction:column; align-items:center; gap:8px;
+                        padding:20px 12px;
+                        border-radius:16px;
+                        border:1.5px solid rgba(59,130,246,0.3);
+                        cursor:pointer;
+                        transition:all 0.22s ease;
+                        background:rgba(59,130,246,0.08);
+                        text-align:center;
+                        width:100%;
+                    ">
+                        <div
+                            style="width:56px; height:56px; border-radius:16px; background:rgba(59,130,246,0.2); display:flex; align-items:center; justify-content:center;">
+                            <span style="color:#3b82f6; font-size:12px; font-weight:800;">Rocket</span>
+                        </div>
+                        <div style="font-size:13px; font-weight:700; color:var(--text-main,#fff);">Rocket</div>
+                        <div style="font-size:10px; color:var(--text-sub,#888);">Send Money</div>
+                    </button>
+                    <!-- Upay -->
+                    <button onclick="showPaymentDetails('upay')" style="
+                        display:flex; flex-direction:column; align-items:center; gap:8px;
+                        padding:20px 12px;
+                        border-radius:16px;
+                        border:1.5px solid rgba(168,85,247,0.3);
+                        cursor:pointer;
+                        transition:all 0.22s ease;
+                        background:rgba(168,85,247,0.08);
+                        text-align:center;
+                        width:100%;
+                    ">
+                        <div
+                            style="width:56px; height:56px; border-radius:16px; background:rgba(168,85,247,0.2); display:flex; align-items:center; justify-content:center;">
+                            <span style="color:#a855f7; font-size:14px; font-weight:800;">Upay</span>
+                        </div>
+                        <div style="font-size:13px; font-weight:700; color:var(--text-main,#fff);">Upay</div>
+                        <div style="font-size:10px; color:var(--text-sub,#888);">Send Money</div>
+                    </button>
+                </div>
+                <!-- Instructions -->
+                <div style="margin:20px 16px; padding:16px; border-radius:12px; background:rgba(255,255,255,0.04);">
+                    <div style="font-size:12px; font-weight:600; color:#fbbf24; margin-bottom:8px;"><i
+                            class="fas fa-info-circle"></i> How to Pay:</div>
+                    <ol
+                        style="font-size:11px; color:var(--text-sub,#888); padding-left:16px; margin:0; line-height:1.8;">
+                        <li>Select your payment method</li>
+                        <li>Send money to the admin number</li>
+                        <li>Take a screenshot of the transaction</li>
+                        <li>Submit the screenshot with Transaction ID</li>
+                        <li>Your balance will be added within 30 minutes</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== PAYMENT DETAILS MODAL ====== -->
+        <div id="paymentDetailsModal" style="
+            display:none; position:fixed; top:0; left:0; right:0; bottom:0;
+            z-index:99999; align-items:flex-end; justify-content:center;
+        " onclick="if(event.target===this) closePaymentDetailsModal()">
+            <!-- Backdrop -->
+            <div style="position:absolute; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(6px);"></div>
+            <!-- Sheet -->
+            <div id="paymentDetailsSheet" style="
+                position:relative; z-index:1;
+                width:100%; max-width:430px;
+                background:var(--bg-card, #1e1410);
+                border-radius:28px 28px 0 0;
+                padding:0 0 32px;
+                transform:translateY(100%);
+                transition:transform 0.38s cubic-bezier(0.34,1.26,0.64,1);
+                max-height:85vh; overflow-y:auto;
+                scrollbar-width:none; -ms-overflow-style:none;
+            ">
+                <!-- Handle -->
+                <div style="text-align:center; padding:14px 0 4px;">
+                    <div
+                        style="width:40px; height:4px; border-radius:4px; background:rgba(255,255,255,0.18); display:inline-block;">
+                    </div>
+                </div>
+                <!-- Header -->
+                <div style="display:flex; align-items:center; gap:12px; padding:12px 22px 20px;">
+                    <button onclick="backToLocalPayment()"
+                        style="background:rgba(255,255,255,0.08); border:none; width:34px; height:34px; border-radius:50%; color:var(--text-sub,#888); font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <div>
+                        <div id="paymentMethodTitle"
+                            style="font-size:18px; font-weight:800; color:var(--text-main,#fff);">Payment Details</div>
+                        <div
+                            style="font-size:10px; color:var(--text-sub,#888); font-weight:600; text-transform:uppercase; margin-top:2px;">
+                            Complete your payment</div>
+                    </div>
+                </div>
+                <!-- Payment Info -->
+                <div style="padding:0 16px;">
+                    <div
+                        style="padding:20px; border-radius:16px; background:rgba(34,197,94,0.08); border:1.5px solid rgba(34,197,94,0.3); margin-bottom:16px;">
+                        <div style="font-size:11px; color:var(--text-sub,#888); margin-bottom:8px;">Send Money To:</div>
+                        <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+                            <div id="paymentNumber"
+                                style="font-size:24px; font-weight:800; color:#22c55e; font-family:monospace;">
+                                01XXXXXXXXX</div>
+                            <button onclick="copyPaymentNumber()"
+                                style="background:rgba(34,197,94,0.2); border:none; width:32px; height:32px; border-radius:8px; color:#22c55e; cursor:pointer;">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                        <div style="font-size:11px; color:var(--text-sub,#888);">Account Type: <span
+                                style="color:#22c55e; font-weight:600;">Personal</span></div>
+                    </div>
+                    <!-- Amount Input -->
+                    <div style="margin-bottom:16px;">
+                        <label
+                            style="display:block; font-size:11px; color:var(--text-sub,#888); margin-bottom:8px; text-transform:uppercase; font-weight:600;">Enter
+                            Amount (BDT)</label>
+                        <input type="number" id="paymentAmount" placeholder="Enter amount..." style="
+                            width:100%;
+                            padding:14px 16px;
+                            border-radius:12px;
+                            border:1.5px solid rgba(255,255,255,0.1);
+                            background:rgba(0,0,0,0.3);
+                            color:var(--text-main,#fff);
+                            font-size:16px;
+                            outline:none;
+                        ">
+                    </div>
+                    <!-- Transaction ID Input -->
+                    <div style="margin-bottom:16px;">
+                        <label
+                            style="display:block; font-size:11px; color:var(--text-sub,#888); margin-bottom:8px; text-transform:uppercase; font-weight:600;">Transaction
+                            ID</label>
+                        <input type="text" id="transactionId" placeholder="Enter transaction ID..." style="
+                            width:100%;
+                            padding:14px 16px;
+                            border-radius:12px;
+                            border:1.5px solid rgba(255,255,255,0.1);
+                            background:rgba(0,0,0,0.3);
+                            color:var(--text-main,#fff);
+                            font-size:16px;
+                            outline:none;
+                        ">
+                    </div>
+                    <!-- Screenshot Upload -->
+                    <div style="margin-bottom:20px;">
+                        <label
+                            style="display:block; font-size:11px; color:var(--text-sub,#888); margin-bottom:8px; text-transform:uppercase; font-weight:600;">Payment
+                            Screenshot</label>
+                        <label style="
+                            display:flex; flex-direction:column; align-items:center; gap:8px;
+                            padding:24px;
+                            border-radius:12px;
+                            border:2px dashed rgba(255,255,255,0.2);
+                            background:rgba(0,0,0,0.2);
+                            cursor:pointer;
+                            transition:all 0.22s ease;
+                        " onmouseover="this.style.borderColor='rgba(251,191,36,0.5)'; this.style.background='rgba(251,191,36,0.05)'"
+                            onmouseout="this.style.borderColor='rgba(255,255,255,0.2)'; this.style.background='rgba(0,0,0,0.2)'">
+                            <i class="fas fa-cloud-upload-alt" style="color:#fbbf24; font-size:28px;"></i>
+                            <span style="font-size:13px; color:var(--text-sub,#888);">Tap to upload screenshot</span>
+                            <input type="file" id="paymentScreenshot" accept="image/*" style="display:none;"
+                                onchange="handleScreenshotUpload(this)">
+                        </label>
+                        <div id="screenshotPreview"
+                            style="display:none; margin-top:12px; border-radius:8px; overflow:hidden;">
+                            <img style="width:100%; max-height:200px; object-fit:cover;">
+                        </div>
+                    </div>
+                    <!-- Submit Button -->
+                    <button onclick="submitPayment()" style="
+                        width:100%;
+                        padding:16px;
+                        border-radius:12px;
+                        border:none;
+                        background:linear-gradient(135deg, #fbbf24, #f59e0b);
+                        color:#000;
+                        font-size:15px;
+                        font-weight:700;
+                        cursor:pointer;
+                        transition:transform 0.2s ease;
+                    " onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                        <i class="fas fa-paper-plane"></i> Submit Payment Request
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== PAYMENT MODALS SCRIPT ====== -->
+        <script>
+            // Payment Selection Modal Functions
+            function _realOpenPaymentSelectionModal() {
+                const modal = document.getElementById('paymentSelectionModal');
+                const sheet = document.getElementById('paymentSheet');
+                modal.style.display = 'flex';
+                setTimeout(() => { sheet.style.transform = 'translateY(0)'; }, 20);
+            }
+
+            function _realClosePaymentSelectionModal() {
+                const modal = document.getElementById('paymentSelectionModal');
+                const sheet = document.getElementById('paymentSheet');
+                sheet.style.transform = 'translateY(100%)';
+                setTimeout(() => { modal.style.display = 'none'; }, 380);
+            }
+
+            // Local Payment Modal Functions
+            function _realOpenLocalPaymentModal() {
+                closePaymentSelectionModal();
+                setTimeout(() => {
+                    const modal = document.getElementById('localPaymentModal');
+                    const sheet = document.getElementById('localPaymentSheet');
+                    modal.style.display = 'flex';
+                    setTimeout(() => { sheet.style.transform = 'translateY(0)'; }, 20);
+                }, 400);
+            }
+
+            function _realCloseLocalPaymentModal() {
+                const modal = document.getElementById('localPaymentModal');
+                const sheet = document.getElementById('localPaymentSheet');
+                sheet.style.transform = 'translateY(100%)';
+                setTimeout(() => { modal.style.display = 'none'; }, 380);
+            }
+
+            function backToPaymentSelection() {
+                closeLocalPaymentModal();
+                setTimeout(() => { openPaymentSelectionModal(); }, 400);
+            }
+
+            // Payment Details Modal Functions
+
+            // Export functions to window for inline onclick access
+            window._realOpenPaymentSelectionModal = _realOpenPaymentSelectionModal;
+            window._realClosePaymentSelectionModal = _realClosePaymentSelectionModal;
+            window._realOpenLocalPaymentModal = _realOpenLocalPaymentModal;
+            window._realCloseLocalPaymentModal = _realCloseLocalPaymentModal;
+            window.backToPaymentSelection = backToPaymentSelection;
+            window.showPaymentDetails = showPaymentDetails;
+            window.closePaymentDetailsModal = closePaymentDetailsModal;
+            window.backToLocalPayment = backToLocalPayment;
+            window.copyPaymentNumber = copyPaymentNumber;
+            window.handleScreenshotUpload = handleScreenshotUpload;
+            window.submitPayment = submitPayment;
+
+            const paymentData = {
+                bkash: { name: 'Bkash', number: '01712345678', color: '#dc2626' },
+                nagad: { name: 'Nagad', number: '01787654321', color: '#eab308' },
+                rocket: { name: 'Rocket', number: '01711223344', color: '#3b82f6' },
+                upay: { name: 'Upay', number: '01755667788', color: '#a855f7' }
+            };
+
+            function showPaymentDetails(method) {
+                const data = paymentData[method];
+                document.getElementById('paymentMethodTitle').textContent = data.name + ' Payment';
+                document.getElementById('paymentMethodTitle').style.color = data.color;
+                document.getElementById('paymentNumber').textContent = data.number;
+                document.getElementById('paymentNumber').style.color = data.color;
+
+                closeLocalPaymentModal();
+                setTimeout(() => {
+                    const modal = document.getElementById('paymentDetailsModal');
+                    const sheet = document.getElementById('paymentDetailsSheet');
+                    modal.style.display = 'flex';
+                    setTimeout(() => { sheet.style.transform = 'translateY(0)'; }, 20);
+                }, 400);
+            }
+
+            function closePaymentDetailsModal() {
+                const modal = document.getElementById('paymentDetailsModal');
+                const sheet = document.getElementById('paymentDetailsSheet');
+                sheet.style.transform = 'translateY(100%)';
+                setTimeout(() => { modal.style.display = 'none'; }, 380);
+            }
+
+            function backToLocalPayment() {
+                closePaymentDetailsModal();
+                setTimeout(() => { openLocalPaymentModal(); }, 400);
+            }
+
+            function copyPaymentNumber() {
+                const number = document.getElementById('paymentNumber').textContent;
+                navigator.clipboard.writeText(number).then(() => {
+                    alert('Number copied to clipboard!');
+                });
+            }
+
+            function handleScreenshotUpload(input) {
+                if (input.files && input.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        const preview = document.getElementById('screenshotPreview');
+                        preview.style.display = 'block';
+                        preview.querySelector('img').src = e.target.result;
+                    };
+                    reader.readAsDataURL(input.files[0]);
+                }
+            }
+
+            function submitPayment() {
+                const amount = document.getElementById('paymentAmount').value;
+                const transactionId = document.getElementById('transactionId').value;
+                const screenshot = document.getElementById('paymentScreenshot').files[0];
+
+                if (!amount || !transactionId) {
+                    alert('Please fill in all required fields!');
+                    return;
+                }
+
+                // Here you would typically send the data to your backend
+                alert('Payment request submitted! We will verify and add balance within 30 minutes.');
+
+                // Close modal and reset form
+                closePaymentDetailsModal();
+                document.getElementById('paymentAmount').value = '';
+                document.getElementById('transactionId').value = '';
+                document.getElementById('paymentScreenshot').value = '';
+                document.getElementById('screenshotPreview').style.display = 'none';
+            }
+        </script>
+
 </body>
 
 

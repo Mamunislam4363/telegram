@@ -1,7 +1,7 @@
 const TelegramBot = require('node-telegram-bot-api');
 process.env.NTBA_FIX_350 = 1;
 const axios = require('axios');
-const { verifySheerID } = require('./verifier');
+
 const config = require('./config');
 const tempMail = require('./services/tempmail-providers');
 const oauth = require('./oauth');
@@ -209,13 +209,35 @@ db.dbReady.then(() => {
     bot.startPolling();
 });
 
-// Suppress polling error logs
+// Suppress polling error logs with retry logic
+let retryCount = 0;
+const maxRetries = 5;
+let retryTimeout = null;
+
 bot.on('polling_error', (err) => {
     // Only log actual errors, not conflict warnings
     if (err.code !== 'ETELEGRAM' || !err.message.includes('409')) {
         console.log(`⚠️ Bot connection issue: ${err.message}`);
+
+        // Auto-retry on network errors
+        if (err.message.includes('ECONNRESET') || err.message.includes('ETIMEDOUT') || err.message.includes('ECONNREFUSED')) {
+            retryCount++;
+            if (retryCount <= maxRetries) {
+                const delay = Math.min(30000, retryCount * 5000);
+                console.log(`🔄 Retrying connection in ${delay / 1000}s (attempt ${retryCount}/${maxRetries})...`);
+                retryTimeout = setTimeout(() => {
+                    bot.startPolling().catch(e => console.log('⚠️ Retry failed:', e.message));
+                }, delay);
+            } else {
+                console.log('❌ Max retries reached, waiting for manual restart...');
+                retryCount = 0;
+            }
+        }
     }
 });
+
+// Reset retry count on successful message
+bot.on('message', () => { retryCount = 0; });
 
 // File logging disabled as requested by user
 
@@ -714,7 +736,7 @@ bot.onText(/\/admin/, async (msg) => {
         return bot.sendMessage(chatId, "⚠️ *Admin Access Only*\n\nThis command is restricted to administrators only.", { parse_mode: 'Markdown' });
     }
 
-    const publicUrl = process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`;
+    const publicUrl = (process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`).trim();
     const adminUrl = `${publicUrl}/admin`;
 
     const adminText = `👑 *Admin Panel Access*\n\n` +
@@ -749,7 +771,7 @@ async function sendMainMenu(chatId, user, msgFrom) {
     const apiKeys = db.data?.apiKeys || {};
 
     // Use admin panel configured URLs or fallbacks
-    const miniAppUrl = apiKeys.miniAppUrl || settings.miniAppUrl || process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`;
+    const miniAppUrl = (apiKeys.miniAppUrl || settings.miniAppUrl || process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`).trim();
     const requiredChannel = apiKeys.requiredChannel || settings.requiredChannel || config.REQUIRED_CHANNEL || '@AutosVerify';
     const requiredGroup = apiKeys.requiredGroup || settings.requiredGroup || config.REQUIRED_GROUP || '@AutosVerifyCh';
     const requiredYoutube = apiKeys.requiredYoutube || settings.requiredYoutube || 'https://youtube.com/@MamunIslamyts';
@@ -1224,7 +1246,9 @@ bot.on('callback_query', async (query) => {
 
         // CHECK MEMBERSHIP ON EVERY ACTION (except verify, main_menu, admin)
         const skipMembershipCheck = ['verify_membership', 'main_menu', 'admin_panel'].includes(data);
-        if (!skipMembershipCheck && !isAdmin(userId)) {
+        // Skip if admin OR if user is manually verified by admin
+        const isManuallyVerified = user && (user.adminVerified === true || user.verifiedByAdmin === true);
+        if (!skipMembershipCheck && !isAdmin(userId) && !isManuallyVerified) {
             const membership = await checkMembership(userId);
             if (!membership.channel || !membership.group) {
                 // User left group/channel - show join message immediately
@@ -1243,48 +1267,26 @@ bot.on('callback_query', async (query) => {
             const membership = await checkMembership(userId);
             const allJoined = membership.channel && membership.group;
 
-            if (!allJoined) {
-                // Still not joined - update existing message with accurate status
-                showMandatoryJoin(chatId, membership, msgId);
-            } else {
-                // Successfully joined both - mark as verified
-                await bot.answerCallbackQuery(query.id, {
-                    text: "✅ Verified! Welcome!",
-                    show_alert: true
+            if (allJoined) {
+                // Verification Success
+                bot.editMessageText(`✅ *Verification Success!*\n\nTime: ${new Date().toLocaleString()}`, {
+                    chat_id: chatId,
+                    message_id: msgId,
+                    parse_mode: 'Markdown'
                 }).catch(() => { });
-
-                // Mark user as verified in database
-                user.verified = true;
-                user.verifiedAt = new Date().toISOString();
-                user.leftAt = null;
-                user.leftFrom = null;
-                db.updateUser(user);
-                console.log(`[VERIFICATION] User ${userId} marked as VERIFIED`);
-
-                // Notify admin
-                const adminId = config.ADMIN_ID;
-                if (adminId) {
-                    bot.sendMessage(adminId,
-                        `✅ *User Verified*\n\n` +
-                        `User ID: \`${userId}\`\n` +
-                        `Username: @${username}\n` +
-                        `Time: ${new Date().toLocaleString()}`,
-                        { parse_mode: 'Markdown' }
-                    ).catch(() => { });
-                }
 
                 // PROCESS PENDING REFERRAL - Verify and give reward
                 if (user.pendingReferrer) {
-                    const result = db.verifyReferral(userId);
-                    if (result) {
-                        bot.sendMessage(result.referrerId, `🎉 *Referral Verified!*\n\nUser ${user.first_name || userId} completed verification!\n💰 +${result.refBonus} Tokens added!`, { parse_mode: 'Markdown' }).catch(() => { });
-                    }
+                    db.verifyReferral(userId);
                     user.pendingReferrer = null;
                     db.updateUser(user);
                 }
 
                 bot.deleteMessage(chatId, msgId).catch(() => { });
                 sendMainMenu(chatId, user);
+            } else {
+                // Still missing communities
+                showMandatoryJoin(chatId, membership, msgId);
             }
             return;
         }
@@ -1307,7 +1309,7 @@ bot.on('callback_query', async (query) => {
 
             const msg = `⚙️ <b>Admin Panel</b>\n\nManage your bot from here:`;
 
-            const publicUrl = process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`;
+            const publicUrl = (process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`).trim();
             const adminUrl = `${publicUrl}/admin`;
 
             bot.sendMessage(chatId, msg, {

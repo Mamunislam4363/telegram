@@ -79,9 +79,45 @@ const defaultData = {
         "cyberghost": "👻 CyberGhost",
         "protonvpn": "🔒 ProtonVPN"
     },
+    // Service Categories for new Services Management system
+    serviceCategories: [
+        {
+            id: "virtual-cards",
+            name: "Virtual Cards",
+            description: "API Keys & Accounts",
+            icon: "fa-credit-card",
+            color: "from-orange-500 to-red-600",
+            type: "card",
+            order: 1
+        },
+        {
+            id: "vpn",
+            name: "VPN Services",
+            description: "VPN Accounts & Keys",
+            icon: "fa-shield-alt",
+            color: "from-cyan-500 to-blue-600",
+            type: "account",
+            order: 2
+        }
+    ],
+    // Service Items with their types and stock
+    serviceItems: {
+        "gemini": { categoryId: "virtual-cards", type: "apikey", name: "Gemini", icon: "fa-brain", color: "from-purple-500 to-pink-600", price: 150 },
+        "chatgpt": { categoryId: "virtual-cards", type: "apikey", name: "ChatGPT", icon: "fa-robot", color: "from-green-500 to-emerald-600", price: 200 },
+        "4jibit": { categoryId: "virtual-cards", type: "apikey", name: "4jibit", icon: "fa-key", color: "from-blue-500 to-indigo-600", price: 100 },
+        "spotify": { categoryId: "virtual-cards", type: "account", name: "Spotify", icon: "fa-music", color: "from-green-400 to-green-600", price: 50 },
+        "nordvpn": { categoryId: "vpn", type: "account", name: "NordVPN", icon: "fa-shield-alt", color: "from-blue-600 to-blue-800", price: 100 },
+        "expressvpn": { categoryId: "vpn", type: "account", name: "ExpressVPN", icon: "fa-bolt", color: "from-red-500 to-red-700", price: 120 },
+        "surfshark": { categoryId: "vpn", type: "account", name: "Surfshark", icon: "fa-water", color: "from-cyan-500 to-teal-600", price: 80 },
+        "cyberghost": { categoryId: "vpn", type: "account", name: "CyberGhost", icon: "fa-ghost", color: "from-yellow-500 to-orange-600", price: 70 },
+        "protonvpn": { categoryId: "vpn", type: "account", name: "ProtonVPN", icon: "fa-lock", color: "from-purple-600 to-indigo-800", price: 90 }
+    },
     adminSettings: {
         supportCost: 10,
-        gmailCost: 50, // Default Gmail Cost
+        gmailCost: 20, // Default Gmail Cost
+        tempMailCost: 10, // Default Temp Mail Cost
+        hotmailCost: 25, // Default Hotmail Cost
+        studentEmailCost: 50, // Default Student Email Cost
         creditRates: {
             crypto: 0.01,
             bkash: 1,
@@ -283,7 +319,6 @@ function decrypt(text) {
 
 
 const firebaseManager = require('./database/firebase-manager');
-const googleDriveStorage = require('./database/google-drive-storage'); // Integrated Drive
 
 class Database {
     constructor() {
@@ -291,8 +326,18 @@ class Database {
         this.ready = false;
         this.DB_FILE = DB_FILE; // Expose for server.js file size stats
 
+        this._firebaseSaveTimer = null;
+        this._firebaseSavePending = false;
+
         // Initialize Asynchronously
         this.dbReady = this.init();
+    }
+
+    _getFirebasePayload() {
+        const payload = { ...this.data };
+        if (payload.broadcasts) delete payload.broadcasts;
+        if (payload.scheduledBroadcasts) delete payload.scheduledBroadcasts;
+        return payload;
     }
 
 
@@ -368,34 +413,27 @@ class Database {
     async save() {
         if (!this.ready) return;
 
-        // 1. Sync to Firebase (Primary & Critical)
-        if (firebaseManager.connected) {
-            try {
-                await firebaseManager.setData(this.data);
+        // Always keep the local cache for reliability.
+        this.saveLocalBackup();
 
-                // Keep the local cache for reliability, don't unlink it.
-                this.saveLocalBackup();
+        // Sync to Firebase (Primary). Debounced to avoid heavy full overwrites on every small change.
+        if (!firebaseManager.connected) return;
+
+        this._firebaseSavePending = true;
+        if (this._firebaseSaveTimer) return;
+
+        this._firebaseSaveTimer = setTimeout(async () => {
+            this._firebaseSaveTimer = null;
+            if (!this._firebaseSavePending) return;
+            this._firebaseSavePending = false;
+
+            try {
+                const payload = this._getFirebasePayload();
+                await firebaseManager.setData(payload);
             } catch (e) {
                 console.error("Firebase Sync Error:", e.message);
-                this.saveLocalBackup();
             }
-        } else {
-            // Fallback: Save to local disk if Firebase is not connected
-            this.saveLocalBackup();
-        }
-
-        // 2. Sync to Google Drive (Secondary & Background)
-        if (googleDriveStorage && googleDriveStorage.connected) {
-            (async () => {
-                try {
-                    await googleDriveStorage.saveData('users.json', this.data.users);
-                    await googleDriveStorage.saveData('gmails.json', this.data.gmails);
-                    await googleDriveStorage.saveData('services.json', this.data.emailServices);
-                } catch (e) {
-                    console.error("Drive Sync Error:", e.message);
-                }
-            })();
-        }
+        }, 120);
     }
 
     saveLocalBackup() {
@@ -721,32 +759,34 @@ class Database {
         const newUserBalance = this.getTokenBalance(newUser);
         this.setTokenBalance(newUser, newUserBalance + refBonus);
 
-        // Add to referrer's history
+        // Add to referrer's history (only once, not in addTransaction)
         if (!referrer.history) referrer.history = [];
         referrer.history.unshift({
-            type: 'referral',
+            type: 'referral_bonus',
             amount: refBonus,
             currency: 'tokens',
             date: Date.now(),
             details: `Referred and verified user #${newUserId}`,
-            reward: `+${refBonus} Tokens`,
-            status: 'Verified'
+            reward: `+${refBonus} TC`,
+            status: 'Verified',
+            userId: newUserId
         });
 
-        // Add to new user's history
+        // Add to new user's history (only once)
         if (!newUser.history) newUser.history = [];
         newUser.history.unshift({
-            type: 'welcome_bonus',
+            type: 'welcome_referral',
             amount: refBonus,
             currency: 'tokens',
             date: Date.now(),
-            details: `Joined via referral from #${referrerId} - Verified`,
-            reward: `+${refBonus} Tokens`
+            details: `Welcome bonus from referral`,
+            reward: `+${refBonus} TC`,
+            referrerId: referrerId
         });
 
-        // Add transaction record
-        this.addTransaction(referrerId, 'referral', refBonus, 'Tokens', `Referral bonus from verified user #${newUserId}`, 'user-check');
-        this.addTransaction(newUserId, 'bonus', refBonus, 'Tokens', 'Welcome referral bonus - Verified', 'gift');
+        // Add transaction record (global transactions only, no duplicate history)
+        this.addTransaction(referrerId, 'referral', refBonus, 'TC', `Referral bonus from verified user #${newUserId}`, 'user-check');
+        this.addTransaction(newUserId, 'bonus', refBonus, 'TC', 'Welcome referral bonus - Verified', 'gift');
 
         this.save();
 
@@ -1080,6 +1120,114 @@ class Database {
         return allServices.filter(s => this.getServiceSection(s.id) === section);
     }
 
+    // ==================== SERVICE CATEGORIES & ITEMS (NEW SYSTEM) ====================
+
+    getServiceCategories() {
+        return this.data.serviceCategories || [];
+    }
+
+    createServiceCategory(categoryData) {
+        if (!this.data.serviceCategories) this.data.serviceCategories = [];
+        const newCategory = {
+            id: categoryData.id || 'cat_' + Date.now(),
+            name: categoryData.name || 'New Category',
+            description: categoryData.description || '',
+            icon: categoryData.icon || 'fa-box',
+            color: categoryData.color || 'from-blue-500 to-purple-600',
+            type: categoryData.type || 'card',
+            order: categoryData.order || this.data.serviceCategories.length + 1
+        };
+        this.data.serviceCategories.push(newCategory);
+        this.save();
+        return newCategory;
+    }
+
+    updateServiceCategory(categoryId, updates) {
+        if (!this.data.serviceCategories) return null;
+        const index = this.data.serviceCategories.findIndex(c => c.id === categoryId);
+        if (index === -1) return null;
+        this.data.serviceCategories[index] = { ...this.data.serviceCategories[index], ...updates };
+        this.save();
+        return this.data.serviceCategories[index];
+    }
+
+    deleteServiceCategory(categoryId) {
+        if (!this.data.serviceCategories) return false;
+        const index = this.data.serviceCategories.findIndex(c => c.id === categoryId);
+        if (index === -1) return false;
+        this.data.serviceCategories.splice(index, 1);
+        this.save();
+        return true;
+    }
+
+    getServiceItems(categoryId = null) {
+        const items = this.data.serviceItems || {};
+        if (categoryId) {
+            const filtered = {};
+            Object.keys(items).forEach(key => {
+                if (items[key].categoryId === categoryId) {
+                    filtered[key] = items[key];
+                }
+            });
+            return filtered;
+        }
+        return items;
+    }
+
+    createServiceItem(itemId, itemData) {
+        if (!this.data.serviceItems) this.data.serviceItems = {};
+        if (!this.data.cards) this.data.cards = {};
+        if (!this.data.vpnAccounts) this.data.vpnAccounts = {};
+
+        this.data.serviceItems[itemId] = {
+            categoryId: itemData.categoryId,
+            type: itemData.type || 'apikey',
+            name: itemData.name || itemId,
+            icon: itemData.icon || 'fa-key',
+            color: itemData.color || 'from-blue-500 to-purple-600',
+            price: itemData.price || 100
+        };
+
+        // Initialize stock storage based on type
+        if (itemData.type === 'card' || itemData.type === 'apikey') {
+            if (!this.data.cards[itemId]) this.data.cards[itemId] = [];
+        } else if (itemData.type === 'account' || itemData.categoryId === 'vpn') {
+            if (!this.data.vpnAccounts[itemId]) this.data.vpnAccounts[itemId] = [];
+        }
+
+        this.save();
+        return this.data.serviceItems[itemId];
+    }
+
+    updateServiceItem(itemId, updates) {
+        if (!this.data.serviceItems || !this.data.serviceItems[itemId]) return null;
+        this.data.serviceItems[itemId] = { ...this.data.serviceItems[itemId], ...updates };
+        this.save();
+        return this.data.serviceItems[itemId];
+    }
+
+    deleteServiceItem(itemId) {
+        if (!this.data.serviceItems || !this.data.serviceItems[itemId]) return false;
+        delete this.data.serviceItems[itemId];
+        // Also delete stock
+        if (this.data.cards && this.data.cards[itemId]) delete this.data.cards[itemId];
+        if (this.data.vpnAccounts && this.data.vpnAccounts[itemId]) delete this.data.vpnAccounts[itemId];
+        this.save();
+        return true;
+    }
+
+    getServiceItemStock(itemId) {
+        const item = this.data.serviceItems?.[itemId];
+        if (!item) return 0;
+
+        if (item.type === 'card' || item.type === 'apikey') {
+            return this.data.cards?.[itemId]?.length || 0;
+        } else if (item.type === 'account' || item.categoryId === 'vpn') {
+            return this.data.vpnAccounts?.[itemId]?.length || 0;
+        }
+        return 0;
+    }
+
     // ==================== TRANSACTION HISTORY ====================
 
     addTransaction(userId, type, amount, currency, title, icon = 'circle') {
@@ -1098,22 +1246,8 @@ class Database {
 
         this.data.transactions.unshift(transaction); // Add to beginning
 
-        // ALSO add to user's specific history for the web panel
-        const user = this.getUser(userId);
-        if (user) {
-            if (!user.history) user.history = [];
-            user.history.unshift({
-                type: type === 'bonus' ? 'ad_reward' : (type === 'service' ? 'account_purchase' : type),
-                amount: amount,
-                reward: (amount > 0 ? '+' : '') + amount + ' ' + (currency || 'Tokens'),
-                date: Date.now(),
-                detail: title
-            });
-            // Keep user history from growing too large
-            if (user.history.length > 100) {
-                user.history = user.history.slice(0, 100);
-            }
-        }
+        // DO NOT auto-add to user history here - causes duplicates
+        // History should be added manually in each function for proper control
 
         // Limit history size per user or globally to prevent bloat (keep last 1000 globally)
         if (this.data.transactions.length > 1000) {

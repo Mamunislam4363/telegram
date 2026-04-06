@@ -28,26 +28,6 @@ function getAuthUrl(state) {
     return oauth2Client.generateAuthUrl(options);
 }
 
-// Generate Authentication URL for Google Drive
-function getDriveAuthUrl(state) {
-    const scopes = [
-        'https://www.googleapis.com/auth/drive.file', // Read/Write Drive files
-        'https://www.googleapis.com/auth/userinfo.email' // Identify the user
-    ];
-
-    const options = {
-        access_type: 'offline', // Critical: Get Refresh Token
-        scope: scopes,
-        prompt: 'consent' // Force user to re-consent to get refresh token
-    };
-
-    if (state) {
-        options.state = state;
-    }
-
-    return oauth2Client.generateAuthUrl(options);
-}
-
 // Exchange Code for Tokens
 async function getTokens(code) {
     try {
@@ -162,26 +142,10 @@ async function handleCallback(code, state) {
         oauth2Client.setCredentials(tokens);
 
         // Identify who this token belongs to
-        // If state is 'admin', it's for the system-wide Google Drive storage
+        // Note: state 'admin' was previously used for Google Drive backup (now removed)
         if (state === 'admin') {
-            const fs = require('fs');
-            const path = require('path');
-            const tokenPath = path.join(__dirname, 'drive-token.json');
-            fs.writeFileSync(tokenPath, JSON.stringify(tokens, null, 2));
-            console.log('✅ Admin Google Drive token saved to drive-token.json');
-
-            // Re-connect Google Drive storage module
-            const driveStorage = require('./database/google-drive-storage');
-            // We need a dummy credentials object for connect() to work or just bypass it
-            // Since we saved the file, driveStorage.connect() will find it.
-            await driveStorage.connect({
-                web: {
-                    client_id: config.GMAIL_CLIENT_ID,
-                    client_secret: config.GMAIL_CLIENT_SECRET,
-                    redirect_uris: [config.OAUTH_REDIRECT_URI]
-                }
-            });
-            return true;
+            console.log('⚠️ Admin OAuth callback received but Google Drive backup is disabled');
+            return false;
         }
 
         // Otherwise, it belongs to a specific Telegram User
@@ -211,6 +175,5 @@ module.exports = {
     getClient,
     getUserProfile,
     getLatestEmail,
-    getDriveAuthUrl,
     handleCallback
 };
