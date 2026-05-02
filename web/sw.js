@@ -41,9 +41,18 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - Network First, fallback to Cache
 self.addEventListener('fetch', (event) => {
+    // Skip caching for API requests and POST method
+    if (event.request.url.includes('/api/') || event.request.method !== 'GET') {
+        return; 
+    }
+
     event.respondWith(
         fetch(event.request)
             .then((res) => {
+                // Only cache successful GET responses
+                if (!res || res.status !== 200 || res.type !== 'basic') {
+                    return res;
+                }
                 // Clone response for caching
                 const resClone = res.clone();
                 caches.open(DYNAMIC_CACHE).then((cache) => {

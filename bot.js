@@ -1,33 +1,45 @@
 const TelegramBot = require('node-telegram-bot-api');
-process.env.NTBA_FIX_350 = 1;
-const axios = require('axios');
+process.env.NTBA_FIX_350 = "1";
 
-const config = require('./config');
-const tempMail = require('./services/tempmail-providers');
-const oauth = require('./oauth');
+// CRITICAL: Global Error Handlers to prevent crashes from network issues
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+    // Don't exit, just log. This prevents the bot from crashing on transient network errors.
+});
+
+process.on('uncaughtException', (err) => {
+    console.error('❌ Uncaught Exception:', err.message);
+    if (err.stack) console.error(err.stack);
+    // Only exit for truly critical errors, but keep it running for most
+    if (err.message.includes('EBADF') || err.message.includes('ENOMEM')) {
+        process.exit(1);
+    }
+});
+const axios = require('axios');
+const SocksProxyAgent = require('socks-proxy-agent');
+
+
+console.log('🏁 Bot script starting...');
+const config = require('./config.js');
+const tempMail = require('./services/tempmail-providers.js');
+const oauth = require('./oauth.js');
 const db = require('./db.js');
-const { languages, getText, getUserLanguage } = require('./languages');
+const { languages, getText, getUserLanguage } = require('./languages.js');
 const fs = require('fs');
 const path = require('path');
-const apiGateway = require('./services/api-gateway');
+const apiGateway = require('./services/api-gateway.js');
 
 // Store original console.log for internal logging
 const originalConsoleLog = console.log.bind(console);
 
 // Validate Config
 const token = config.TELEGRAM_BOT_TOKEN;
+const isValidToken = (t) => t && t !== 'YOUR_TELEGRAM_BOT_TOKEN_HERE' && t !== 'undefined' && t !== 'null' && t.trim() !== '';
 
-// 🟢 START WEB PANEL AUTOMATICALLY
-try {
-    const server = require('./database/server.js'); // Import Web Server
-    server.startServer();
-} catch (e) {
-    console.error('⚠️ Web Server Start Error:', e);
+if (!isValidToken(token)) {
+    console.warn('⚠️ WARNING: TELEGRAM_BOT_TOKEN is missing or invalid. Bot functionality will be disabled, but Web Panel will still run.');
 }
-if (!token || token === 'YOUR_TELEGRAM_BOT_TOKEN_HERE') {
-    console.error('❌ ERROR: Please set TELEGRAM_BOT_TOKEN in config.js');
-    process.exit(1);
-}
+
 
 // SmtpLabs Integration
 
@@ -175,19 +187,62 @@ async function getSmtpLabsOtp(email, accountId = null, mailboxId = null, provide
 }
 
 
-const bot = new TelegramBot(token, {
-    polling: false, // Wait for DB load
-    polling_timeout: 10,
-    polling_options: {
-        allowed_updates: [
-            'message',
-            'callback_query',
-            'chat_member',
-            'my_chat_member',
-            'inline_query'
-        ]
+let bot;
+if (isValidToken(token)) {
+    const botOptions = {
+        polling: false, // Wait for DB load
+        polling_timeout: 30, // Increased for better stability
+        polling_options: {
+            interval: 2000, // Wait 2s between polls to reduce network strain
+            allowed_updates: [
+                'message',
+                'callback_query',
+                'chat_member',
+                'my_chat_member',
+                'inline_query'
+            ]
+        },
+        baseApiUrl: config.TELEGRAM_API_BASE || 'https://api.telegram.org'
+    };
+
+    // Apply Proxy if enabled
+    if (config.USE_PROXY && config.PROXY_URL) {
+        console.log(`🌐 Using Proxy for Bot Connection: ${config.PROXY_URL}`);
+        if (config.PROXY_URL.startsWith('socks')) {
+            botOptions.request = {
+                agent: new SocksProxyAgent(config.PROXY_URL)
+            };
+        } else {
+            botOptions.request = {
+                proxy: config.PROXY_URL
+            };
+        }
     }
-});
+
+    bot = new TelegramBot(token, botOptions);
+
+    // Inject bot into web server early
+    try {
+        const server = require('./database/server.js');
+        server.setBot(bot);
+    } catch (e) {
+        console.error('⚠️ [ERROR] Failed to set bot in server:', e.message);
+    }
+} else {
+    // Mock bot object to prevent crashes
+    bot = {
+        on: () => {},
+        onText: () => {},
+        getMe: () => Promise.resolve({ username: 'MockBot', id: 0 }),
+        sendMessage: () => Promise.resolve({}),
+        startPolling: () => Promise.resolve(),
+        setChatMenuButton: () => Promise.resolve(),
+        getChat: () => Promise.reject(new Error('No token')),
+        getChatMember: () => Promise.reject(new Error('No token')),
+        editMessageText: () => Promise.resolve({}),
+        answerCallbackQuery: () => Promise.resolve({})
+    };
+}
 
 // Start Polling ONLY after DB is ready (Unlocks Phase 1 & 2)
 db.dbReady.then(() => {
@@ -211,27 +266,47 @@ db.dbReady.then(() => {
 
 // Suppress polling error logs with retry logic
 let retryCount = 0;
-const maxRetries = 5;
 let retryTimeout = null;
 
 bot.on('polling_error', (err) => {
-    // Only log actual errors, not conflict warnings
+    // Only log actual errors, not conflict warnings (409)
     if (err.code !== 'ETELEGRAM' || !err.message.includes('409')) {
-        console.log(`⚠️ Bot connection issue: ${err.message}`);
+        const isNetworkError = err.message.includes('ECONNRESET') || 
+                               err.message.includes('ETIMEDOUT') || 
+                               err.message.includes('ECONNREFUSED') ||
+                               err.message.includes('ENOTFOUND') ||
+                               err.message.includes('socket disconnected') ||
+                               err.message.includes('EHOSTUNREACH');
 
-        // Auto-retry on network errors
-        if (err.message.includes('ECONNRESET') || err.message.includes('ETIMEDOUT') || err.message.includes('ECONNREFUSED')) {
+        if (isNetworkError) {
             retryCount++;
-            if (retryCount <= maxRetries) {
-                const delay = Math.min(30000, retryCount * 5000);
-                console.log(`🔄 Retrying connection in ${delay / 1000}s (attempt ${retryCount}/${maxRetries})...`);
-                retryTimeout = setTimeout(() => {
-                    bot.startPolling().catch(e => console.log('⚠️ Retry failed:', e.message));
-                }, delay);
-            } else {
-                console.log('❌ Max retries reached, waiting for manual restart...');
-                retryCount = 0;
+            // Exponential backoff: 5s, 10s, 20s, 30s... max 1 minute
+            const delay = Math.min(60000, retryCount * 5000);
+            
+            console.log(`⚠️ Network issue: ${err.message}. Retrying in ${delay / 1000}s (Attempt ${retryCount})...`);
+            
+            if (err.message.includes('ENOTFOUND')) {
+                console.warn('💡 DNS Error: If this persists, Telegram might be blocked. Try setting USE_PROXY=true in config.js');
             }
+
+            if (retryTimeout) clearTimeout(retryTimeout);
+            
+            retryTimeout = setTimeout(async () => {
+                try {
+                    console.log('🔄 Attempting to reconnect bot...');
+                    if (bot.isPolling()) {
+                        await bot.stopPolling();
+                        await new Promise(r => setTimeout(r, 1000));
+                    }
+                    await bot.startPolling();
+                    console.log('✅ Bot reconnected successfully.');
+                    retryCount = 0; // Reset count on success
+                } catch (e) {
+                    console.log('⚠️ Reconnection attempt failed:', e.message);
+                }
+            }, delay);
+        } else {
+            console.log(`❌ Bot error: ${err.message}`);
         }
     }
 });
@@ -315,8 +390,21 @@ async function validateMandatoryChannels() {
 
 // Helper: Check if membership check should be skipped
 function shouldSkipMembershipCheck() {
+    // 1. Check hardcoded config (Emergency override)
     if (config.SKIP_MANDATORY_JOIN) return true;
-    if (channelsValidated && !channelsAccessible) return false; // Let it fail naturally to show error
+
+    // 2. Check dynamic database flag (Feature Flags from Admin Panel)
+    const flags = db.data?.featureFlags || {};
+    if (flags.joinRequired === false) return true;
+
+    // 3. If no channel/group configured, skip
+    const apiKeys = db.data?.apiKeys || {};
+    const settings = db.data?.settings || {};
+    const channel = apiKeys.requiredChannel || settings.requiredChannel || config.REQUIRED_CHANNEL;
+    const group = apiKeys.requiredGroup || settings.requiredGroup || config.REQUIRED_GROUP;
+    
+    if (!channel && !group) return true;
+
     return false;
 }
 
@@ -465,20 +553,21 @@ async function checkMembership(userId) {
         };
         const validStatuses = ['creator', 'administrator', 'member', 'restricted'];
 
+        // Get dynamic config from DB
+        const apiKeys = db.data?.apiKeys || {};
+        const settings = db.data?.settings || {};
+        const requiredChannel = apiKeys.requiredChannel || settings.requiredChannel || config.REQUIRED_CHANNEL;
+        const requiredGroup = apiKeys.requiredGroup || settings.requiredGroup || config.REQUIRED_GROUP;
+
         // Check channel membership
-        if (config.REQUIRED_CHANNEL) {
+        if (requiredChannel) {
             try {
-                const channelMember = await bot.getChatMember(config.REQUIRED_CHANNEL, userId);
+                const channelMember = await bot.getChatMember(requiredChannel, userId);
                 results.channel = validStatuses.includes(channelMember.status);
-                console.log(`[MEMBERSHIP] User ${userId} in channel ${config.REQUIRED_CHANNEL}: ${channelMember.status} -> ${results.channel}`);
             } catch (error) {
                 results.channelError = error.message;
-                // If bot is not admin or chat not found, treat as not a member
-                if (error.message.includes('chat not found') || error.message.includes('bot is not a member')) {
-                    console.log(`[MEMBERSHIP] Channel ${config.REQUIRED_CHANNEL} not accessible: ${error.message}`);
-                } else {
-                    console.error(`[MEMBERSHIP] Channel check error (${userId}):`, error.message);
-                }
+                // If it's a network error or API error (not membership), log and fail-open if needed
+                console.log(`[MEMBERSHIP] Channel check for ${userId} (${requiredChannel}): ${error.message}`);
                 results.channel = false;
             }
         } else {
@@ -486,19 +575,13 @@ async function checkMembership(userId) {
         }
 
         // Check group membership
-        if (config.REQUIRED_GROUP) {
+        if (requiredGroup) {
             try {
-                const groupMember = await bot.getChatMember(config.REQUIRED_GROUP, userId);
+                const groupMember = await bot.getChatMember(requiredGroup, userId);
                 results.group = validStatuses.includes(groupMember.status);
-                console.log(`[MEMBERSHIP] User ${userId} in group ${config.REQUIRED_GROUP}: ${groupMember.status} -> ${results.group}`);
             } catch (error) {
                 results.groupError = error.message;
-                // If bot is not admin or chat not found, treat as not a member
-                if (error.message.includes('chat not found') || error.message.includes('bot is not a member')) {
-                    console.log(`[MEMBERSHIP] Group ${config.REQUIRED_GROUP} not accessible: ${error.message}`);
-                } else {
-                    console.error(`[MEMBERSHIP] Group check error (${userId}):`, error.message);
-                }
+                console.log(`[MEMBERSHIP] Group check for ${userId} (${requiredGroup}): ${error.message}`);
                 results.group = false;
             }
         } else {
@@ -507,8 +590,9 @@ async function checkMembership(userId) {
 
         return results;
     } catch (error) {
-        console.error('Membership check error:', error);
-        return { channel: false, group: false, channelError: error.message, groupError: error.message };
+        console.error('Membership check fatal error:', error);
+        // Fail-open strategy: if bot is broken, let users through to prevent total outage
+        return { channel: true, group: true, skipped: true };
     }
 }
 
@@ -780,10 +864,14 @@ async function sendMainMenu(chatId, user, msgFrom) {
     const firstName = (msgFrom && msgFrom.first_name) ? msgFrom.first_name :
         (user.firstName || user.first_name || 'Friend');
 
-    // Welcome message - can be customized via admin panel in future
-    const welcomeText = `👋 *Hello, ${firstName}!*\n\n` +
+    // Welcome message - can be customized via admin panel
+    let welcomeText = apiKeys.welcomeMessage ||
+        `👋 *Hello, ${firstName}!*\n\n` +
         `Welcome to Gemini Verified! 🚀\n\n` +
         `Launch our Mini App to start earning rewards, invite friends, and manage your assets.`;
+
+    // Replace {name} placeholder if present in custom message
+    welcomeText = welcomeText.replace(/{name}/g, firstName);
 
     // Keyboard with admin-configurable links
     const keyboard = {
@@ -1148,6 +1236,48 @@ bot.on('message', async (msg) => {
         }
     }
 }); // Fix: Close the group management handler here!
+
+// ==================== CHAT JOIN REQUEST HANDLER ====================
+// Handle "Request to Join" updates for private channels/groups
+bot.on('chat_join_request', async (msg) => {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+    const firstName = msg.from.first_name || 'User';
+    
+    console.log(`[JOIN_REQUEST] Received join request from ${firstName} (${userId}) for ${msg.chat.title || chatId}`);
+
+    // Check settings
+    const settings = db.data?.adminSettings || {};
+    const autoApprove = settings.autoApproveJoinRequests !== false; // Default true
+
+    if (autoApprove) {
+        try {
+            // Approve the request
+            await bot.approveChatJoinRequest(chatId, userId);
+            console.log(`[JOIN_REQUEST] Approved ${firstName} for ${msg.chat.title}`);
+
+            // Send a welcome message directly to the user
+            const welcomeText = `✅ **Congratulations!**\n\nYour request to join **${msg.chat.title}** has been approved. \n\n🚀 Click below to start using the bot and access all features!`;
+            
+            await bot.sendMessage(userId, welcomeText, {
+                parse_mode: 'Markdown',
+                reply_markup: {
+                    inline_keyboard: [
+                        [{ text: '💎 Open Bot', url: `https://t.me/${db.data.settings?.botUsername || 'YourBot'}?start=approved` }]
+                    ]
+                }
+            }).catch(() => {
+                // User might have blocked the bot, ignore
+            });
+
+        } catch (e) {
+            console.log(`[JOIN_REQUEST] Error approving user: ${e.message}`);
+        }
+    } else {
+        console.log(`[JOIN_REQUEST] Auto-approval is OFF. Request left pending.`);
+    }
+});
+
 
 // 🚨 Auto-detect when user leaves/is kicked from required channel or group
 bot.on('chat_member', async (update) => {

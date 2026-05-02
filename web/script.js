@@ -109,6 +109,10 @@ function closeRedeemModal() {
     }
 }
 
+function openPremiumGmailDirect() {
+    openPremiumMailDirect();
+}
+
 // Fallback showToast in case it's not defined yet (prevents blank screen errors)
 if (typeof window.showToast !== 'function') {
     window.showToast = function (message, duration = 3000) {
@@ -152,15 +156,52 @@ if (typeof window.showToast !== 'function') {
 
 // Wrapper for fetch that blocks invalid userId calls
 function apiFetch(url, options = {}) {
-    const body = options.body ? JSON.parse(options.body) : {};
-    const userId = body.userId || userData.id;
+    let body = {};
+    try {
+        if (options.body) {
+            if (typeof options.body === 'string') {
+                body = JSON.parse(options.body);
+            } else {
+                body = options.body;
+                options.body = JSON.stringify(options.body);
+            }
+        }
+    } catch (e) {
+        body = {};
+    }
+    
+    // Ultimate userId discovery
+    const userId = body.userId || 
+                   userData.id || 
+                   (window.Telegram?.WebApp?.initDataUnsafe?.user?.id) || 
+                   null;
 
-    if (!isValidUserId(userId)) {
-        console.log('[CLIENT BLOCKED] Invalid userId:', userId);
-        return Promise.resolve({ json: () => Promise.resolve({ success: false, message: 'Invalid userId' }) });
+    if (!userId) {
+        console.warn('[apiFetch] Blocked: No userId discovered');
+        return Promise.resolve({ 
+            json: () => Promise.resolve({ success: false, message: 'Auth Error: No User ID' }),
+            ok: false
+        });
     }
 
-    return fetch(url, options);
+    // Auto-inject headers
+    options.headers = options.headers || {};
+    if (!options.headers['X-User-Id'] && !options.headers['x-user-id']) {
+        options.headers['X-User-Id'] = String(userId);
+    }
+
+    // Auto-inject Content-Type for requests with body
+    if (options.body && !options.headers['Content-Type'] && !options.headers['content-type']) {
+        options.headers['Content-Type'] = 'application/json';
+    }
+
+    return fetch(url, options).catch(err => {
+        console.error('Fetch error:', err);
+        return {
+            json: () => Promise.resolve({ success: false, message: 'Network error. Please check your internet connection.' }),
+            ok: false
+        };
+    });
 }
 var tg = window.Telegram?.WebApp || {
     initDataUnsafe: { user: null, start_param: '' },
@@ -179,8 +220,21 @@ var tg = window.Telegram?.WebApp || {
 tg.ready();
 tg.expand();
 
+// Global fetch override to handle network errors gracefully
+const originalFetch = window.fetch;
+window.fetch = function () {
+    return originalFetch.apply(this, arguments).catch(err => {
+        console.error('Global Fetch error:', err);
+        return {
+            json: () => Promise.resolve({ success: false, message: 'Network error. Please check your internet connection.' }),
+            ok: false
+        };
+    });
+};
+
 // Extract Telegram user from WebApp
-const _tgUser = tg.initDataUnsafe?.user || {};
+const _rawTgUser = tg.initDataUnsafe?.user || {};
+const _tgUser = _rawTgUser.id ? _rawTgUser : { id: '123', first_name: 'Test', username: 'TestUser' };
 const _startParam = tg.initDataUnsafe?.start_param || '';
 
 // APP CONFIG
@@ -207,19 +261,15 @@ var pageScrollPositions = {};
 var userStatus = 'active';
 
 // GLOBAL USER STATE - populated from Telegram + Server
-// DEMO MODE: If no Telegram user, create demo user with 5000 credits
-const isDemoMode = !_tgUser.id;
-if (isDemoMode) {
-    console.log('🎮 DEMO MODE: Creating demo user with 5000 credits');
-}
+const isDemoMode = false;
 
 var userData = {
-    id: _tgUser.id || 999999, // Numeric demo ID
-    username: _tgUser.first_name || _tgUser.username || 'Demo User',
-    firstName: _tgUser.first_name || 'Demo',
-    lastName: _tgUser.last_name || 'User',
+    id: _tgUser.id,
+    username: _tgUser.first_name || _tgUser.username || 'User',
+    firstName: _tgUser.first_name || 'User',
+    lastName: _tgUser.last_name || '',
     photo_url: _tgUser.photo_url || '',
-    tokens: isDemoMode ? 5000 : 0, // 5000 credits for demo
+    tokens: 0,
     Gems: 0,
     usd: 0.00,
     verified: true,
@@ -238,7 +288,10 @@ function applyFeatureFlagsToHome() {
         { key: 'home_mail', el: 'mailServiceCard' },
         { key: 'home_number', el: 'numberServiceCard' },
         { key: 'home_gemini', el: 'geminiServiceCard' },
-        { key: 'home_chatgpt', el: 'chatgptServiceCard' }
+        { key: 'home_chatgpt', el: 'chatgptServiceCard' },
+        { key: 'home_premiumMail', el: 'emailServiceCard' },
+        { key: 'home_hotMail', el: 'hotMailCard' },
+        { key: 'home_studentMail', el: 'studentMailCard' }
     ];
     ids.forEach(item => {
         const el = document.getElementById(item.el);
@@ -262,7 +315,7 @@ function loadFeatureFlags() {
 }
 
 function ensureFeatureFlagsLoaded() {
-    if (featureFlags) return Promise.resolve(featureFlags);
+    if (featureFlags && (Date.now() - (window._lastFeatureFlagsLoad || 0) < 60000)) return Promise.resolve(featureFlags);
     return loadFeatureFlags();
 }
 
@@ -279,8 +332,12 @@ function checkFeatureOrComingSoon(flagKey, title) {
 
 // Show profile photo immediately from Telegram data
 function applyProfilePhoto(photoUrl) {
-    const name = encodeURIComponent(userData.firstName || userData.username || 'U');
-    const fallback = `https://ui-avatars.com/api/?name=${name}&background=fbbf24&color=000&size=80&bold=true&rounded=true`;
+    const isMale = Math.random() > 0.5;
+    const boyUrl = 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?q=80&w=200&auto=format&fit=crop';
+    const girlUrl = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&auto=format&fit=crop';
+
+    // Default high-quality avatars if no photo provided
+    const fallback = isMale ? boyUrl : girlUrl;
     const src = (photoUrl && photoUrl.trim()) ? photoUrl : fallback;
 
     const selectors = ['#home-avatar', '#profile-avatar-img', '.wc-avatar', '.prof-avatar', '.pui-avatar'];
@@ -331,17 +388,43 @@ async function uploadDepositScreenshot(input, targetId) {
 }
 
 function copyText(text, btnElement) {
-    if (!btnElement) return;
-    navigator.clipboard.writeText(text);
+    if (!text) return;
+
+    // Copy with fallback
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).catch(() => fallbackCopyTextToClipboard(text));
+    } else {
+        fallbackCopyTextToClipboard(text);
+    }
+
+    function fallbackCopyTextToClipboard(text) {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "absolute";
+        ta.style.left = "-999999px";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        try { document.execCommand("copy"); } catch (err) { }
+        document.body.removeChild(ta);
+    }
+
     if (window.Telegram && Telegram.WebApp && Telegram.WebApp.HapticFeedback) {
         Telegram.WebApp.HapticFeedback.notificationOccurred('success');
     }
 
-    const icon = btnElement.querySelector('i');
-    if (icon) {
-        const originalClass = icon.className;
-        icon.className = 'fas fa-check';
-        setTimeout(() => { icon.className = originalClass; }, 2000);
+    if (btnElement) {
+        const icon = btnElement.querySelector('i');
+        if (icon) {
+            const originalClass = icon.className;
+            const originalStyle = icon.style.color;
+            icon.className = 'fas fa-check';
+            icon.style.color = '#22c55e';
+            setTimeout(() => {
+                icon.className = originalClass;
+                icon.style.color = originalStyle;
+            }, 2000);
+        }
     }
 }
 
@@ -391,7 +474,8 @@ function handleHeaderClick() {
     }, 1000);
 
     // Normal Navigation
-    const isHome = document.getElementById('homePage').style.display !== 'none';
+    const homePage = document.getElementById('homePage');
+    const isHome = homePage ? homePage.style.display !== 'none' : false;
 
     if (isHome) {
         nav('profile');
@@ -403,6 +487,9 @@ function handleHeaderClick() {
 // NAVIGATION
 function nav(p) {
     if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+
+    // --- START PROGRESS BAR ---
+    startLoading();
 
     // Feature gating (pre-check)
     // Note: if flags aren't loaded yet, we allow navigation and will re-check inside showPage.
@@ -435,7 +522,7 @@ function nav(p) {
 const PAGE_TITLES = {
     'home': 'AUTOVERIFY',
     'tasks': 'TASKS',
-    'earn': 'EARN',
+    'earn': 'EARN REWARDS',
     'earnMenu': 'EARN REWARDS',
     'invite': 'INVITE',
     'profile': 'PROFILE',
@@ -452,6 +539,8 @@ const PAGE_TITLES = {
     'admin': 'ADMIN PANEL',
     'history': 'HISTORY',
     'leaderboard': 'LEADERBOARD',
+    'earnedLeaderboard': 'LEADERBOARD',
+    'referralLeaderboard': 'LEADERBOARD',
     'daily': 'DAILY BONUS',
     'verify': 'VERIFICATION',
     'geminiVerification': 'GEMINI VERIFY',
@@ -467,6 +556,7 @@ const PAGE_TITLES = {
     'accountsStore': 'PREMIUM ACCOUNTS',
     'accountDetail': 'ACCOUNT DETAILS',
     'support': 'SUPPORT',
+    'messages': 'MESSAGES',
     'cryptoMethods': 'CRYPTO DEPOSIT',
     'cryptoPayment': 'PAYMENT DETAILS',
     'itemSell': 'SELL ITEMS',
@@ -477,11 +567,21 @@ const PAGE_TITLES = {
     'videoDownload': 'VIDEO DOWNLOADER',
     'aiPhotoGenerator': 'AI PHOTO',
     'aiVideoGenerator': 'AI VIDEO',
-    'bgRemover': 'BG REMOVER'
+    'bgRemover': 'BG REMOVER',
+    'apiKey': 'API MANAGEMENT'
 };
 
 function showPage(targetId) {
+    console.log('[DEBUG] showPage called with:', targetId);
     if (!targetId) return;
+
+    // --- TELEGRAM REQUIREMENT CHECK ---
+    const isRestrictedGuest = featureFlags?.requireTelegram === true && isDemoMode;
+    if (isRestrictedGuest && targetId !== 'home') {
+        window.showToast('🚀 Please access via Telegram to unlock all features!');
+        if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('warning');
+        return;
+    }
 
     // Ensure flags are loaded once (non-blocking)
     ensureFeatureFlagsLoaded().then(() => {
@@ -494,6 +594,7 @@ function showPage(targetId) {
     if (typeof targetId === 'string' && targetId.endsWith('Page')) {
         targetId = targetId.slice(0, -4);
     }
+    if (targetId === 'earn') targetId = 'earnMenu';
 
     // Handle back button visibility
     if (targetId === 'home') {
@@ -578,7 +679,49 @@ function showPage(targetId) {
 
     // Initialize specific page content
     if (targetId === 'quiz') loadQuiz();
+    if (targetId === 'referralLeaderboard') renderReferralLeaderboard();
+    if (targetId === 'earnedLeaderboard') renderEarnedLeaderboard();
     if (targetId === 'quizLeaderboard') renderQuizLeaderboard();
+    if (targetId === 'apiKey') loadApiKey();
+
+    if (targetId === 'profile') {
+        const apiKeyItem = document.getElementById('profileApiKeyItem');
+        if (apiKeyItem) {
+            apiKeyItem.style.display = (userData.apiStatus === 'disallow') ? 'none' : 'flex';
+        }
+    }
+
+    // Force refresh service data on navigation for better user experience
+    if (targetId === 'vpnServices') {
+        fetch('/api/admin/vpn').then(r => r.json()).then(data => {
+            if (data.success) {
+                localStorage.setItem('adminVPNs', JSON.stringify(data.vpns));
+                renderVPN();
+            }
+        });
+    }
+    if (targetId === 'vccCards') {
+        fetch('/api/admin/cards').then(r => r.json()).then(data => {
+            if (data.success) {
+                localStorage.setItem('adminCards', JSON.stringify(data.cards));
+                renderCards();
+            }
+        });
+    }
+
+    // Service button states initialization
+    if (['videoDownload', 'aiPhoto', 'aiVideo'].includes(targetId)) {
+        validateServiceInput(targetId);
+    }
+    if (['watermarkRemover', 'bgRemover'].includes(targetId)) {
+        // For file uploads, we just keep the state unless cleared manually
+        // but let's ensure the button reflects the current file input state if needed
+        const input = document.getElementById(targetId + 'File');
+        if (input && input.files && input.files.length > 0) {
+            handleServiceFileUpload(targetId);
+        }
+    }
+
     if (targetId === 'scratch') {
         // Cleanup any previous scratch handlers before reinitializing
         if (window._scratchCleanup) window._scratchCleanup();
@@ -644,6 +787,13 @@ function showPage(targetId) {
 
     // Update current page tracker
     currentPage = targetId;
+
+    // --- END PROGRESS BAR ---
+    endLoading();
+
+    // Trigger sync on navigation to ensure fresh data
+    smartSync();
+
     if (targetId === 'home') loadRecentActivity();
 
     // Auto-update mail balances and start/stop polling
@@ -671,6 +821,10 @@ function showPage(targetId) {
     if (targetId === 'accountsStore') {
         renderAccounts();
     }
+    // Load messages when entering messages page
+    if (targetId === 'messages' || targetId === 'support') {
+        loadUserMessages();
+    }
     // Update virtual number balance when entering the number service page
     if (targetId === 'numberService') {
         updateNumBalance();
@@ -679,6 +833,29 @@ function showPage(targetId) {
     if (targetId === 'mailService' || targetId === 'premiumMail' || targetId === 'accountsStore' ||
         targetId === 'vpnServices' || targetId === 'vccCards') {
         renderBalances();
+    }
+
+    // Refresh API Key UI when entering API key page
+    if (targetId === 'apiKeyPage') {
+        const pageNoKey = document.getElementById('apiKeyNoKey');
+        const pageActive = document.getElementById('apiKeyActive');
+        const pageDisplay = document.getElementById('userApiKeyDisplay');
+        
+        if (userData && userData.apiKey) {
+            if (pageActive) pageActive.style.display = 'block';
+            if (pageNoKey) pageNoKey.style.display = 'none';
+            if (pageDisplay) pageDisplay.value = userData.apiKey;
+        }
+        loadApiKey();
+    }
+
+    // Immediate render from cache for VCC and VPN
+    if (targetId === 'vccCards') renderCards();
+    if (targetId === 'vpnServices') renderVPN();
+
+    // Background sync administrative data for future visits
+    if (['vccCards', 'vpnServices', 'shop', 'services'].includes(targetId)) {
+        syncAdminData();
     }
     // Refresh History when entering history page
     if (targetId === 'history') {
@@ -713,7 +890,7 @@ function showPage(targetId) {
         'exchange', 'binancePay', 'faucetPay', 'history', 'redeem',
         'invite', 'tasks', 'earn', 'daily', 'verify', 'admin',
         'geminiVerification', 'leaderboard', 'support', 'emailMessage',
-        'cryptoMethods', 'cryptoPayment'];
+        'cryptoMethods', 'cryptoPayment', 'apiKeyPage'];
 
     if (targetId === 'home') {
         // Home style: Avatar + Auto Verify + bolt + settings
@@ -794,6 +971,25 @@ function showPage(targetId) {
 
     const activeItem = document.querySelector(`.bottom-nav [data-page="${activeNavGroup}"]`);
     if (activeItem) activeItem.classList.add('active');
+}
+
+function startLoading() {
+    const bar = document.getElementById('nav-loading-bar');
+    if (bar) {
+        bar.style.width = '30%';
+        bar.style.opacity = '1';
+    }
+}
+
+function endLoading() {
+    const bar = document.getElementById('nav-loading-bar');
+    if (bar) {
+        bar.style.width = '100%';
+        setTimeout(() => {
+            bar.style.opacity = '0';
+            setTimeout(() => { bar.style.width = '0%'; }, 300);
+        }, 300);
+    }
 }
 
 function goBack() {
@@ -937,10 +1133,10 @@ function calculateExchange(from, to, amount) {
     else if (from === 'Gems') tokensBase = GemsToTokens(amount);
     else return { success: false, message: 'Invalid source currency' };
 
-    // Restriction: Cannot convert Tokens/Gems back to USD
-    if (to === 'usd' && from !== 'usd') {
-        return { success: false, message: 'Convert back to USD is not allowed.' };
-    }
+    // Restriction: Removed Cannot convert Tokens/Gems back to USD restriction
+    // if (to === 'usd' && from !== 'usd') {
+    //    return { success: false, message: 'Convert back to USD is not allowed.' };
+    // }
 
     // Convert tokens base -> to
     if (to === 'tokens') {
@@ -988,7 +1184,7 @@ function updateExchangeBalances() {
 
 function updateExchangePreview() {
     const fromCur = document.getElementById('exFromCurrency')?.value;
-    const toCur = document.getElementById('exToCurrency')?.value;
+    let toCur = document.getElementById('exToCurrency')?.value;
     const amt = parseFloat(document.getElementById('exFromAmount')?.value || '0');
 
     const toEl = document.getElementById('exToAmount');
@@ -1115,9 +1311,8 @@ function changeQty(delta) {
 }
 
 function selectPayMethod(method) {
-    const faucetSection = document.getElementById('payViaFaucetSection');
     if (method === 'faucet') {
-        if (faucetSection) faucetSection.style.display = faucetSection.style.display === 'block' ? 'none' : 'block';
+        nav('localPayment');
     }
 }
 
@@ -1136,10 +1331,16 @@ async function fetchCryptoConfig() {
 }
 
 function renderCryptoMethods() {
-    const container = document.getElementById('cryptoMethodsList');
-    if (!container || !cryptoConfig) return;
+    window.cryptoConfig = cryptoConfig; // Export to window for inline scripts to use
 
-    container.innerHTML = '';
+    const cryptoContainer = document.getElementById('cryptoMethodsList');
+    const localContainer = document.getElementById('localPaymentMethodsGrid');
+
+    if (cryptoContainer) cryptoContainer.innerHTML = '';
+    if (localContainer) localContainer.innerHTML = '';
+
+    if (!cryptoConfig) return;
+
     const icons = {
         binance: { bg: '#FCD535', icon: '<span style="font-size:20px; font-weight:900; color:#000;">B</span>' },
         bitget: { bg: '#00f0ff', icon: '<i class="fas fa-bolt" style="color:#000;"></i>' },
@@ -1151,20 +1352,56 @@ function renderCryptoMethods() {
 
     Object.entries(cryptoConfig).forEach(([id, meta]) => {
         if (meta.status !== 'active') return;
-        const style = icons[id] || { bg: '#444', icon: '<i class="fas fa-wallet"></i>' };
 
-        const card = document.createElement('div');
-        card.className = 'pm-card';
-        card.onclick = () => openCryptoPayment(id);
-        card.innerHTML = `
-            <div class="pm-icon" style="background:${style.bg};">${style.icon}</div>
-            <div class="pm-info">
-                <div class="pm-title">${meta.name}</div>
-                <div class="pm-desc">${id === 'web3' ? 'USDT TRC20/ERC20' : 'Exchange Deposit'}</div>
-            </div>
-            <div class="pm-arrow"><i class="fas fa-chevron-right"></i></div>
-        `;
-        container.appendChild(card);
+        const isLocal = meta.type === 'local';
+
+        if (isLocal && localContainer) {
+            let color = '#22c55e';
+            let shortName = meta.name.substring(0, 1).toUpperCase();
+            const lcName = meta.name.toLowerCase();
+            if (lcName.includes('bkash')) { color = '#dc2626'; shortName = 'bKash'; }
+            if (lcName.includes('nagad')) { color = '#eab308'; shortName = 'Nagad'; }
+            if (lcName.includes('rocket')) { color = '#3b82f6'; shortName = 'Rocket'; }
+            if (lcName.includes('upay')) { color = '#a855f7'; shortName = 'Upay'; }
+
+            const card = document.createElement('button');
+            card.onclick = () => window.showPaymentDetails(id);
+            card.style.cssText = `
+                display:flex; flex-direction:column; align-items:center; gap:8px;
+                padding:20px 12px;
+                border-radius:16px;
+                border:1.5px solid ${color}4d;
+                cursor:pointer;
+                transition:all 0.22s ease;
+                background:${color}14;
+                text-align:center;
+                width:100%;
+            `;
+            card.innerHTML = `
+                <div style="width:56px; height:56px; border-radius:16px; background:${color}33; display:flex; align-items:center; justify-content:center;">
+                    <span style="color:${color}; font-size:14px; font-weight:800;">${shortName}</span>
+                </div>
+                <div style="font-size:13px; font-weight:700; color:var(--text-main,#fff);">${meta.name}</div>
+                <div style="font-size:10px; color:var(--text-sub,#888);">Send Money</div>
+            `;
+            localContainer.appendChild(card);
+
+        } else if (!isLocal && cryptoContainer) {
+            const style = icons[id] || { bg: '#444', icon: '<i class="fas fa-wallet"></i>' };
+
+            const card = document.createElement('div');
+            card.className = 'pm-card';
+            card.onclick = () => openCryptoPayment(id);
+            card.innerHTML = `
+                <div class="pm-icon" style="background:${style.bg};">${style.icon}</div>
+                <div class="pm-info">
+                    <div class="pm-title">${meta.name}</div>
+                    <div class="pm-desc">${id === 'web3' ? 'USDT TRC20/ERC20' : 'Exchange Deposit'}</div>
+                </div>
+                <div class="pm-arrow"><i class="fas fa-chevron-right"></i></div>
+            `;
+            cryptoContainer.appendChild(card);
+        }
     });
 }
 
@@ -1261,12 +1498,49 @@ async function submitCryptoDeposit() {
     }
 }
 
+let activeLocalPayMethod = 'bkash';
+
+function selectLocalMethod(method) {
+    activeLocalPayMethod = method;
+    const btnBkash = document.getElementById('btnBkash');
+    const btnNagad = document.getElementById('btnNagad');
+    const nameLabel = document.getElementById('localPaymentMethodName');
+    const numberLabel = document.getElementById('localPaymentNumber');
+    const submitBtn = document.getElementById('btnLocalSubmit');
+
+    if (method === 'bkash') {
+        btnBkash.style.background = '#e1147e';
+        btnBkash.style.opacity = '1';
+        btnBkash.style.border = 'none';
+
+        btnNagad.style.background = 'rgba(255,255,255,0.05)';
+        btnNagad.style.opacity = '0.6';
+        btnNagad.style.border = '1px solid rgba(255,255,255,0.1)';
+
+        nameLabel.innerText = 'BKASH NUMBER (PERSONAL)';
+        numberLabel.innerText = '01700000000'; // Set default or dynamic Bkash num here
+        if (submitBtn) submitBtn.style.background = 'linear-gradient(135deg,#e1147e,#f7931e)';
+    } else {
+        btnNagad.style.background = '#f7931e';
+        btnNagad.style.opacity = '1';
+        btnNagad.style.border = 'none';
+
+        btnBkash.style.background = 'rgba(255,255,255,0.05)';
+        btnBkash.style.opacity = '0.6';
+        btnBkash.style.border = '1px solid rgba(255,255,255,0.1)';
+
+        nameLabel.innerText = 'NAGAD NUMBER (PERSONAL)';
+        numberLabel.innerText = '01800000000'; // Set default or dynamic Nagad num here
+        if (submitBtn) submitBtn.style.background = 'linear-gradient(135deg,#f7931e,#e1147e)';
+    }
+}
+
 async function submitFaucetDeposit() {
     const amount = document.getElementById('fpAmountInput').value;
     const txnId = document.getElementById('fpTxnIdInput').value;
 
     if (!amount || amount <= 0) return window.showToast('Please enter a valid amount.');
-    if (!txnId) return window.showToast('Please enter your FaucetPay Transaction ID.');
+    if (!txnId) return window.showToast(`Please enter your ${activeLocalPayMethod.toUpperCase()} Transaction ID.`);
 
     try {
         const res = await fetch('/api/deposit/submit', {
@@ -1274,7 +1548,7 @@ async function submitFaucetDeposit() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 userId: userData.id,
-                method: 'faucetpay',
+                method: activeLocalPayMethod,
                 amount: amount,
                 txnId: txnId,
                 screenshot: document.getElementById('fpScreenshotUrl').value
@@ -1312,6 +1586,14 @@ async function loadUserTasks() {
     const container = document.getElementById('tasksListContainer');
     if (!container) return;
 
+    // Fast feedback: show skeleton or "Loading..." instantly
+    container.innerHTML = `
+        <div style="display:flex; flex-direction:column; gap:10px; width:100%;">
+            <div class="skeleton-task" style="height:80px; background:rgba(255,255,255,0.05); border-radius:15px; animation:pulse 1.5s infinite;"></div>
+            <div class="skeleton-task" style="height:80px; background:rgba(255,255,255,0.05); border-radius:15px; animation:pulse 1.5s infinite; animation-delay:0.2s;"></div>
+            <div class="skeleton-task" style="height:80px; background:rgba(255,255,255,0.05); border-radius:15px; animation:pulse 1.5s infinite; animation-delay:0.4s;"></div>
+        </div>`;
+
     try {
         const res = await fetch('/api/admin/tasks');
         const data = await res.json();
@@ -1326,25 +1608,32 @@ async function loadUserTasks() {
         }
 
         // Render tasks
+        const completedSet = new Set(userData.completedTasks || []);
+
         container.innerHTML = data.tasks.map(task => {
+            const isDone = completedSet.has(task.id);
             const icon = getTaskIcon(task.name, task.icon);
             const bg = getTaskBg(task.name);
             const border = getTaskBorder(task.name);
+
             return `
-            <div class="task-card-new" data-task-id="${task.id}">
+            <div class="task-card-new ${isDone ? 'task-done' : ''}" data-task-id="${task.id}" style="${isDone ? 'opacity: 0.6; pointer-events:none;' : ''}">
                 <div class="tcn-left">
                     <div class="tcn-icon" style="background:${bg}; border:1px solid ${border}; padding:0; overflow:hidden;">
-                        ${icon}
+                        ${isDone ? '<i class="fas fa-check-circle" style="color:#22c55e; font-size:24px;"></i>' : icon}
                     </div>
                     <div class="tcn-info">
-                        <h4>${task.name}</h4>
+                        <h4 style="${isDone ? 'text-decoration: line-through;' : ''}">${task.name}</h4>
                         <div class="tcn-rewards">
                             <div class="tcn-badge" style="color:#fbbf24"><i class="fas fa-coins"></i> +${task.reward || 10}</div>
                             <div class="tcn-badge" style="color:#38bdf8"><i class="fas fa-gem"></i> +${task.gems || 1}</div>
                         </div>
                     </div>
                 </div>
-                <button class="tcn-btn" onclick="startTask(this, '${task.id}', '${task.url}', ${task.reward || 10})">START</button>
+                ${isDone ?
+                    '<button class="tcn-btn" style="background:#22c55e; color:white;"><i class="fas fa-check"></i></button>' :
+                    `<button class="tcn-btn" onclick="startTask(this, '${task.id}', '${task.url}', ${task.reward || 10})">START</button>`
+                }
             </div>`;
         }).join('');
 
@@ -1391,6 +1680,9 @@ function getTaskBorder(name) {
     return '#333';
 }
 
+let activeTaskButton = null;
+let activeTaskData = null;
+
 // Start task - open URL and track
 function startTask(button, taskId, url, reward) {
     if (!url) {
@@ -1398,20 +1690,20 @@ function startTask(button, taskId, url, reward) {
         return;
     }
 
-    // Mark as in progress
-    button.textContent = 'VERIFY';
-    button.style.background = '#22c55e';
-    button.onclick = function () {
-        completeTask(taskId, reward, button);
-    };
+    activeTaskButton = button;
+    if (button) {
+        button.dataset.originalText = button.innerHTML;
+    }
+    activeTaskData = { taskId, url, reward };
 
-    // Open the task URL
-    window.open(url, '_blank');
+    // Trigger ad flow
+    showAdAndEarn('task_verification');
 }
 
 // Complete task and claim reward
 async function completeTask(taskId, reward, button) {
     try {
+        if (!button) return;
         button.disabled = true;
         button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
@@ -1431,20 +1723,45 @@ async function completeTask(taskId, reward, button) {
             button.textContent = 'DONE';
             button.style.background = '#666';
             button.disabled = true;
+
+            if (data.newBalance !== undefined) {
+                userData.tokens = data.newBalance;
+            } else {
+                userData.tokens += parseInt(reward) || 0;
+            }
+
             showToast(`✅ Task completed! +${reward} tokens`);
-            refreshBalance();
+            renderBalances();
+
+            if (!userData.completedTasks) userData.completedTasks = [];
+            if (!userData.completedTasks.includes(taskId)) {
+                userData.completedTasks.push(taskId);
+            }
+            localStorage.setItem(`userData_${userData.id}`, JSON.stringify(userData));
+
+            if (window.confetti) confetti({ particleCount: 50, spread: 60 });
+        } else if (data.message === 'Task already completed') {
+            button.textContent = 'DONE';
+            button.style.background = '#666';
+            button.disabled = true;
+            showToast('Task already completed');
+
+            if (!userData.completedTasks) userData.completedTasks = [];
+            if (!userData.completedTasks.includes(taskId)) {
+                userData.completedTasks.push(taskId);
+            }
         } else {
-            button.textContent = 'START';
-            button.style.background = '#f59e0b';
+            showToast(data.message || 'Verification failed');
             button.disabled = false;
-            showToast(data.message || 'Task already completed');
+            button.textContent = 'VERIFY';
         }
     } catch (e) {
         console.error('Error completing task:', e);
-        button.textContent = 'START';
-        button.style.background = '#f59e0b';
-        button.disabled = false;
-        showToast('Network error. Please try again.');
+        if (button) {
+            button.disabled = false;
+            button.textContent = 'VERIFY';
+        }
+        showToast('Network error verifying task');
     }
 }
 
@@ -1511,6 +1828,10 @@ function earn(buttonElement, type, amount) {
 function verifyAndComplete(type, buttonElement, amount) {
     console.log(`[DEBUG] Verifying and completing ${type}`);
 
+    // Update button to show verifying
+    buttonElement.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> VERIFYING...';
+    buttonElement.style.pointerEvents = 'none';
+
     // For Telegram tasks, verify membership first
     if (type === 'tg' || type === 'tg_ch') {
         fetch('/api/verify-membership', {
@@ -1534,7 +1855,9 @@ function verifyAndComplete(type, buttonElement, amount) {
                     buttonElement.innerHTML = 'START';
                     buttonElement.style.pointerEvents = 'auto';
                     buttonElement.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
-                    window.showToast('Please join the channel/group first, then click START again.');
+
+                    const channel = type === 'tg' ? '@AutosVerifych' : '@AutosVerify';
+                    window.showToast(`❌ Verification failed.\nPlease join ${channel} then click START again.`);
                 }
             })
             .catch(err => {
@@ -1543,55 +1866,68 @@ function verifyAndComplete(type, buttonElement, amount) {
                 buttonElement.innerHTML = 'START';
                 buttonElement.style.pointerEvents = 'auto';
                 buttonElement.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
-                window.showToast('Error verifying. Please try again.');
+                window.showToast('⚠️ Network Error. Please ensure bot connection is active.');
             });
     } else {
-        // YouTube - direct complete
+        // Other tasks (YouTube, etc) - direct complete
         completeTaskReward(type, buttonElement, amount);
     }
 }
 
 // Give reward and mark complete
 function completeTaskReward(type, buttonElement, amount) {
-    buttonElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> COMPLETING...';
+    buttonElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> CLAIMING...';
 
     fetch('/api/earn', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: userData.id, taskType: type, amount: amount })
+        body: JSON.stringify({
+            userId: userData.id,
+            type: type,
+            amount: amount
+        })
     })
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                IN_PROGRESS_TASKS[type] = 'completed';
-                buttonElement.innerHTML = '<i class="fas fa-check"></i> DONE';
+                // Success
+                buttonElement.innerHTML = '<i class="fas fa-check"></i>';
                 buttonElement.style.background = '#22c55e';
-                buttonElement.style.color = '#fff';
+                buttonElement.style.color = 'white';
                 buttonElement.style.pointerEvents = 'none';
 
-                userData.tokens = data.newBalance || (userData.tokens + amount);
-                updateBalanceUI();
+                // Add to completed set
+                if (!userData.completedTasks) userData.completedTasks = [];
+                if (!userData.completedTasks.includes(type)) {
+                    userData.completedTasks.push(type);
+                }
+
+                userData.tokens = data.newBalance;
+                renderBalances();
+
+                // Update local in-progress state for checkAllTasksCompleted
+                IN_PROGRESS_TASKS[type] = 'completed';
+
+                window.showToast(`🎉 Task Completed! +${amount} Tokens`);
 
                 if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
                 checkAllTasksCompleted();
 
-                window.showToast(`TASK COMPLETE!\n\nYou earned +${amount} Tokens!`);
-                loadRecentActivity(); // Refresh history immediately
+                // Refresh task list after a delay
+                setTimeout(loadUserTasks, 1500);
             } else {
+                window.showToast(data.message || 'Error claiming reward');
                 IN_PROGRESS_TASKS[type] = null;
                 buttonElement.innerHTML = 'START';
                 buttonElement.style.pointerEvents = 'auto';
-                buttonElement.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
-                window.showToast(data.message || 'Error completing task.');
             }
         })
         .catch(err => {
-            console.error('Complete error:', err);
+            console.error('Earn error:', err);
+            window.showToast('Network error claiming reward');
             IN_PROGRESS_TASKS[type] = null;
             buttonElement.innerHTML = 'START';
             buttonElement.style.pointerEvents = 'auto';
-            buttonElement.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
-            window.showToast('Error. Please try again.');
         });
 }
 
@@ -1641,96 +1977,309 @@ function showAdAndEarn(context = 'watch_ad') {
     currentAdContext = context;
     adRewardClaimed = false;
 
-    window.showToast("🎬 Loading Ad...");
+    // Show explicit loading state
+    if (window.showToast) {
+        window.showToast('🚀 Fetching Reward Ad...');
+    }
 
+    // Ensure ad overlay is ready and visible immediately
+    let overlay = document.getElementById('ad-watching-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'ad-watching-overlay';
+        document.body.appendChild(overlay);
+    }
+
+    // Clear and show overlay
+    overlay.style.cssText = 'display:flex; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.98); z-index:9999999; flex-direction:column; align-items:center; justify-content:center; backdrop-filter:blur(15px); color:white; font-family:sans-serif; text-align:center;';
+    overlay.innerHTML = `
+        <div id="ad-content-box" style="padding:30px; width:100%; max-width:320px; transition: all 0.3s ease; z-index: 10000000;">
+            <div class="loader-spinner" style="width:40px; height:40px; border:3px solid rgba(255,255,255,0.1); border-top-color:#f59e0b; border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 20px;"></div>
+            <h2 style="font-size:22px; font-weight:800; margin-bottom:12px;">Loading Ad...</h2>
+            <p style="color:#888; font-size:14px; line-height:1.5;">We are connecting to the best ad server to unlock your reward.</p>
+            <button onclick="document.getElementById('ad-watching-overlay').style.display='none'; resetAdButtons();" style="margin-top:30px; color:#555; background:none; border:none; font-size:13px; cursor:pointer; text-decoration:underline;">Cancel</button>
+        </div>
+    `;
+    overlay.style.display = 'flex'; // Ensure it's shown
+
+    // Safety Timeout: if nothing happens in 20s, fallback or close
+    const safetyTimeout = setTimeout(() => {
+        if (overlay.style.display !== 'none' && !adRewardClaimed) {
+            const content = document.getElementById('ad-content-box');
+            if (content && content.innerHTML.includes('Loading Ad...')) {
+                window.showToast('⚠️ Taking too long. Switching to reward...');
+                // Attempt auto-reward instead of just closing
+                overlay.style.display = 'none';
+                claimAdReward();
+            }
+        }
+    }, 20000);
+
+    // Step 1: Fetch Ad Config
     fetch('/api/ads/config')
         .then(r => r.json())
         .then(data => {
+            clearTimeout(safetyTimeout);
             const ads = data.ads || {};
-            let adInjected = false;
 
-            // Check MoneyTag with Direct Link priority
-            if (!adInjected && ads.moneytag && ads.moneytag.enabled !== false) {
-                if (ads.moneytag.directUrl) {
-                    adInjected = true;
-                    window.open(ads.moneytag.directUrl, '_blank');
-                    setTimeout(claimAdReward, 2000);
-                    return;
-                } else if (ads.moneytag.publisherId) {
-                    adInjected = true;
-                    const cfg = ads.moneytag;
-                    const zoneId = cfg.adUnitId || cfg.publisherId;
+            // Identify networks
+            const enabledAds = Object.entries(ads).filter(([k, c]) => c.enabled);
 
-                    if (window[`show_${zoneId}`]) {
-                        try { window[`show_${zoneId}`](); } catch (e) { }
-                        setTimeout(claimAdReward, 2000);
-                    } else {
-                        const script = document.createElement('script');
-                        script.src = '//libtl.com/sdk.js';
-                        script.setAttribute('data-zone', zoneId);
-                        script.setAttribute('data-sdk', `show_${zoneId}`);
+            // ONLY use Adsgram SDK if network is explicitly 'adsgram'
+            const adsgramCfg = ads['adsgram'] && ads['adsgram'].enabled ? ads['adsgram'] : null;
+            const adsgramBlockId = adsgramCfg ? (adsgramCfg.publisherId || adsgramCfg.adUnitId || '') : '';
 
-                        script.onload = () => {
-                            if (window[`show_${zoneId}`]) {
-                                try { window[`show_${zoneId}`](); } catch (e) { }
+            // Get Monetag or any other direct URL / publisher ID for link-based ads
+            const monetagCfg = (ads['moneytag'] || ads['monetag']) && (ads['moneytag'] || ads['monetag'])?.enabled
+                ? (ads['moneytag'] || ads['monetag']) : null;
+            const monetagPublisherId = monetagCfg ? (monetagCfg.publisherId || monetagCfg.adUnitId || '') : '';
+            const monetagDirectUrl = monetagCfg ? (monetagCfg.directUrl || '') : '';
+
+            // Any direct URL from any enabled network
+            let anyDirectUrl = '';
+            for (const [, cfg] of enabledAds) {
+                if (cfg.directUrl) { anyDirectUrl = cfg.directUrl; break; }
+            }
+
+            const contentBox = document.getElementById('ad-content-box');
+            if (contentBox) {
+                contentBox.innerHTML =
+                    '<div style="width:80px; height:80px; background:linear-gradient(135deg, #f59e0b, #d97706); border-radius:24px; display:flex; align-items:center; justify-content:center; margin:0 auto 24px; box-shadow:0 12px 24px rgba(245,158,11,0.4);">' +
+                    '<i class="fas fa-play text-white text-3xl"></i>' +
+                    '</div>' +
+                    '<div style="font-size:24px; font-weight:900; margin-bottom:12px;">Ad is Ready!</div>' +
+                    '<p style="font-size:15px; color:#aaa; margin-bottom:32px; line-height:1.5;">TAP the button below to watch the ad and earn your tokens instantly.</p>' +
+                    '<button id="ad-watch-btn" style="width:100%; padding:18px; background:#f59e0b; color:#000; font-weight:900; border-radius:30px; border:none; cursor:pointer; font-size:17px; box-shadow:0 8px 20px rgba(245,158,11,0.3); outline:none;">TAP TO WATCH AD</button>' +
+                    '<button onclick="document.getElementById(\'ad-watching-overlay\').style.display=\'none\'; resetAdButtons();" style="margin-top:24px; color:#666; background:none; border:none; font-size:13px; cursor:pointer;">Not now</button>';
+
+                const watchBtn = document.getElementById('ad-watch-btn');
+                if (watchBtn) {
+                    watchBtn.onclick = async () => {
+                        watchBtn.disabled = true;
+                        watchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading Ad...';
+
+                        // ============================================
+                        // OPTION 1: Adsgram SDK
+                        // ============================================
+                        if (adsgramBlockId && window.Adsgram) {
+                            try {
+                                const AdController = window.Adsgram.init({ blockId: String(adsgramBlockId) });
+                                let handled = false;
+                                await AdController.show()
+                                    .then(() => {
+                                        handled = true;
+                                        showAdCompletionScreen();
+                                    })
+                                    .catch((result) => {
+                                        handled = true;
+                                        if (result && result.done) {
+                                            showAdCompletionScreen();
+                                        } else {
+                                            watchBtn.disabled = false;
+                                            watchBtn.innerHTML = 'TAP TO WATCH AD';
+                                            window.showToast('Please watch the full ad to earn your reward.');
+                                        }
+                                    });
+                                if (handled) return;
+                            } catch (err) {
+                                console.warn('[Adsgram] SDK error:', err.message);
                             }
-                            setTimeout(claimAdReward, 2000);
-                        };
-                        document.body.appendChild(script);
-                    }
+                        }
+
+                        // ============================================
+                        // OPTION 2: Monetag
+                        // ============================================
+                        if (monetagPublisherId) {
+                            try {
+                                // User provided specific SDK format
+                                const monetagSDK = document.createElement('script');
+                                monetagSDK.src = '//libtl.com/sdk.js';
+                                monetagSDK.setAttribute('data-zone', monetagPublisherId);
+                                monetagSDK.setAttribute('data-sdk', 'show_' + monetagPublisherId);
+                                document.body.appendChild(monetagSDK);
+
+                                // Keep fallback for other formats if needed
+                                setTimeout(() => {
+                                    const inpageScript = document.createElement('script');
+                                    inpageScript.src = 'https://thubanoa.com/1?z=' + monetagPublisherId;
+                                    inpageScript.async = true;
+                                    document.body.appendChild(inpageScript);
+                                }, 500);
+                            } catch (e) {
+                                console.warn('[Monetag] Script injection failed:', e);
+                            }
+
+                            if (monetagDirectUrl) {
+                                if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
+                                    window.Telegram.WebApp.openLink(monetagDirectUrl);
+                                } else {
+                                    window.open(monetagDirectUrl, '_blank');
+                                }
+                            }
+                            showAdPlayingUI();
+                            return;
+                        }
+
+                        // ============================================
+                        // OPTION 3: Adsterra
+                        // ============================================
+                        const adsterraCfg = ads['adsterra'] && ads['adsterra'].enabled ? ads['adsterra'] : null;
+                        if (adsterraCfg) {
+                            if (adsterraCfg.directUrl) {
+                                if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
+                                    window.Telegram.WebApp.openLink(adsterraCfg.directUrl);
+                                } else {
+                                    window.open(adsterraCfg.directUrl, '_blank');
+                                }
+                            }
+                            showAdPlayingUI();
+                            return;
+                        }
+
+                        // ============================================
+                        // OPTION 4: Google AdSense
+                        // ============================================
+                        const adsenseCfg = ads['adsense'] && ads['adsense'].enabled ? ads['adsense'] : null;
+                        if (adsenseCfg && adsenseCfg.publisherId) {
+                            const s = document.createElement('script');
+                            s.async = true;
+                            s.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseCfg.publisherId}`;
+                            s.crossOrigin = "anonymous";
+                            document.head.appendChild(s);
+                            showAdPlayingUI();
+                            return;
+                        }
+
+                        // Fallback for any other network with a direct link
+                        if (anyDirectUrl) {
+                            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
+                                window.Telegram.WebApp.openLink(anyDirectUrl);
+                            } else {
+                                window.open(anyDirectUrl, '_blank');
+                            }
+                            showAdPlayingUI();
+                            return;
+                        }
+
+                        // If no ad found
+                        watchBtn.disabled = false;
+                        watchBtn.innerHTML = 'TAP TO WATCH AD';
+                        window.showToast('No ads available right now. Please try again later.');
+
+                        // ============================================
+                        // TIMER: Countdown while ad plays
+                        // 15s for Monetag (time for overlay to show), 5s otherwise
+                        // ============================================
+                        const AD_DURATION = monetagPublisherId ? 15 : (anyDirectUrl ? 10 : 5);
+
+                        contentBox.innerHTML =
+                            '<div style="width:70px; height:70px; border:4px solid rgba(245,158,11,0.15); border-top-color:#f59e0b; border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 24px;"></div>' +
+                            '<div style="font-size:20px; font-weight:800; margin-bottom:6px;">Ad is Playing...</div>' +
+                            '<p style="font-size:13px; color:#888; margin-bottom:20px; line-height:1.5;">Watch the ad appearing on screen<br>to earn your reward</p>' +
+                            '<div style="width:100%; height:8px; background:rgba(255,255,255,0.05); border-radius:4px; overflow:hidden; margin-bottom:16px;">' +
+                            '<div id="ad-timer-progress" style="height:100%; width:0%; background:linear-gradient(90deg,#f59e0b,#22c55e); border-radius:4px; transition:width 0.25s linear;"></div>' +
+                            '</div>' +
+                            '<div id="ad-timer-text" style="font-size:50px; font-weight:900; color:#f59e0b; line-height:1;">' + AD_DURATION + '</div>' +
+                            '<p style="font-size:11px; color:#444; margin-top:12px;">seconds remaining</p>';
+
+                        // Start countdown timer
+                        const adStartTime = Date.now();
+                        const adEndTime = adStartTime + AD_DURATION * 1000;
+                        let adDone = false;
+
+                        function tickAd() {
+                            if (adDone) return;
+                            const now = Date.now();
+                            const remaining = Math.max(0, adEndTime - now);
+                            const elapsed = now - adStartTime;
+                            const secsLeft = Math.ceil(remaining / 1000);
+                            const pct = Math.min(100, (elapsed / (AD_DURATION * 1000)) * 100);
+                            const progEl = document.getElementById('ad-timer-progress');
+                            const txtEl = document.getElementById('ad-timer-text');
+                            if (progEl) progEl.style.width = pct + '%';
+                            if (txtEl) txtEl.textContent = secsLeft;
+                            if (remaining <= 0) {
+                                adDone = true;
+                                showAdCompletionScreen();
+                                return;
+                            }
+                            setTimeout(tickAd, 250);
+                        }
+                        tickAd();
+                        // Safety fallback
+                        setTimeout(() => { if (!adDone) { adDone = true; showAdCompletionScreen(); } }, (AD_DURATION + 5) * 1000);
+                    }; // end watchBtn.onclick
+                } // end if (watchBtn)
+            } // end if (contentBox)
+
+            function showAdCompletionScreen() {
+                const contentBox = document.getElementById('ad-content-box');
+                const overlay = document.getElementById('ad-watching-overlay');
+                if (!contentBox) return;
+
+                if (currentAdContext === 'quiz_direct' || currentAdContext === 'scratch_ad' || currentAdContext === 'scratch_retry') {
+                    if (overlay) overlay.style.display = 'none';
+                    claimAdReward();
                     return;
                 }
-            }
 
-            // Check AdSense with Direct Link priority
-            if (!adInjected && ads.adsense && ads.adsense.enabled !== false) {
-                if (ads.adsense.directUrl) {
-                    adInjected = true;
-                    window.open(ads.adsense.directUrl, '_blank');
-                    setTimeout(claimAdReward, 2000);
-                    return;
-                } else if (ads.adsense.publisherId) {
-                    adInjected = true;
-                    setTimeout(claimAdReward, 1500);
-                    return;
+                contentBox.innerHTML =
+                    '<div style="width:80px; height:80px; background:linear-gradient(135deg, #22c55e, #16a34a); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 24px; box-shadow:0 12px 32px rgba(34,197,94,0.4);">' +
+                    '<i class="fas fa-check" style="font-size:36px; color:#fff;"></i>' +
+                    '</div>' +
+                    '<div style="font-size:22px; font-weight:900; margin-bottom:8px; color:#22c55e;">Ad Complete!</div>' +
+                    '<p style="font-size:14px; color:#aaa; margin-bottom:28px; line-height:1.5;">Your reward is ready. Tap below to claim it now!</p>' +
+                    '<button id="ad-claim-btn" style="width:100%; padding:18px; background:linear-gradient(135deg, #22c55e, #16a34a); color:#fff; font-weight:900; border-radius:30px; border:none; cursor:pointer; font-size:17px; box-shadow:0 8px 20px rgba(34,197,94,0.3);">' +
+                    '<i class="fas fa-gift" style="margin-right:8px;"></i>CLAIM REWARD' +
+                    '</button>' +
+                    '<button onclick="document.getElementById(\'ad-watching-overlay\').style.display=\'none\'; resetAdButtons();" style="margin-top:16px; color:#666; background:none; border:none; font-size:13px; cursor:pointer;">Not now</button>';
+
+                const claimBtn = document.getElementById('ad-claim-btn');
+                if (claimBtn) {
+                    claimBtn.onclick = () => {
+                        if (overlay) overlay.style.display = 'none';
+                        claimAdReward();
+                    };
                 }
-            }
-
-            // Check Adsterra with Direct Link priority
-            if (!adInjected && ads.adsterra && ads.adsterra.enabled !== false) {
-                if (ads.adsterra.directUrl) {
-                    adInjected = true;
-                    window.open(ads.adsterra.directUrl, '_blank');
-                    setTimeout(claimAdReward, 2000);
-                    return;
-                } else if (ads.adsterra.publisherId) {
-                    adInjected = true;
-                    const cfg = ads.adsterra;
-                    const atScript = document.createElement('script');
-                    atScript.async = true;
-                    atScript.setAttribute('data-cfasync', 'false');
-                    atScript.src = `//pl${cfg.adUnitId}.profitableratecpm.com/${cfg.publisherId}/invoke.js`;
-                    document.body.appendChild(atScript);
-                    setTimeout(claimAdReward, 2000);
-                    return;
-                }
-            }
-
-            if (!adInjected) {
-                console.log('Ad: No provider ads injected, using fallback claim');
-                setTimeout(claimAdReward, 1500);
             }
         })
-        .catch((err) => {
-            console.error('Ad Config Fetch Error:', err);
-            window.showToast("Processing reward...");
-            setTimeout(claimAdReward, 2000);
+        .catch(err => {
+            clearTimeout(safetyTimeout);
+            console.error('Ad config fetch failed:', err);
+            // Show timer anyway so user isn't stuck
+            const box = document.getElementById('ad-content-box');
+            if (box) {
+                box.innerHTML = '<div style="font-size:16px; color:#aaa; margin-bottom:20px;">Loading ad...</div>' +
+                    '<div style="width:50px; height:50px; border:4px solid rgba(255,255,255,0.1); border-top-color:#f59e0b; border-radius:50%; animation:spin 1s linear infinite; margin:0 auto;"></div>';
+                setTimeout(() => {
+                    if (overlay) overlay.style.display = 'none';
+                    claimAdReward();
+                }, 5000);
+            }
         });
+}
+
+
+
+
+function resetAdButtons() {
+    const dailyBtn = document.getElementById('claimDailyBtn');
+    if (dailyBtn && dailyBtn.innerHTML.includes('AD LOADING...')) {
+        dailyBtn.innerHTML = '<i class="fas fa-gift"></i> CLAIM DAILY REWARD';
+        dailyBtn.style.opacity = '1';
+    }
+
+    if (activeTaskButton && activeTaskButton.innerHTML.includes('fa-spinner')) {
+        activeTaskButton.disabled = false;
+        activeTaskButton.innerHTML = activeTaskButton.dataset.originalText || 'START';
+    }
 }
 
 function closeAdModal() { }
 
 async function claimAdReward() {
+    // Reset buttons first
+    resetAdButtons();
     if (adRewardClaimed) return;
     adRewardClaimed = true;
 
@@ -1748,9 +2297,11 @@ async function claimAdReward() {
             }
 
             let msg = `🎉 Reward claimed!`;
-            if (currentAdContext === 'watch_ad') msg = `📺 +5 Tokens rewarded for Watching Ad!`;
+            if (currentAdContext === 'watch_ad' || currentAdContext === 'zero_balance_trigger') msg = `📺 +${data.reward || parseInt(window.appCostConfig?.zeroBalanceAdReward) || 5} Tokens rewarded for Watching Ad!`;
             else if (currentAdContext === 'quiz_direct') msg = `🧠 Quiz unlocked! Good luck.`;
             else if (currentAdContext === 'scratch_ad' || currentAdContext === 'scratch_retry') msg = `✨ Scratch card unlocked!`;
+            else if (currentAdContext === 'task_verification') msg = `✅ Ad verification complete. Please Verify the task.`;
+            else if (currentAdContext === 'gift_claim') msg = `🎁 Gift ad verified! Claiming your gift...`;
 
             window.showToast(msg);
 
@@ -1767,6 +2318,19 @@ async function claimAdReward() {
             } else if (currentAdContext === 'scratch_ad' || currentAdContext === 'scratch_retry') {
                 showPage('scratch');
                 initScratchCard();
+            } else if (currentAdContext === 'task_verification' && activeTaskButton) {
+                // Task Ad Completed - Now show VERIFY button
+                activeTaskButton.textContent = 'VERIFY';
+                activeTaskButton.style.background = '#22c55e';
+                activeTaskButton.style.display = 'block';
+                activeTaskButton.disabled = false;
+                activeTaskButton.onclick = function () {
+                    completeTask(activeTaskData.taskId, activeTaskData.reward, activeTaskButton);
+                    window.open(activeTaskData.url, '_blank');
+                };
+            } else if (currentAdContext === 'gift_claim' && pendingGiftId) {
+                // Gift Ad Completed - Now claim the gift
+                claimGiftReward(pendingGiftId);
             }
         } else {
             window.showToast(data.message || 'Error claiming ad reward');
@@ -1777,6 +2341,109 @@ async function claimAdReward() {
         adRewardClaimed = false;
     }
 }
+
+// ==========================================
+// GIFT POPUP SYSTEM
+// ==========================================
+let pendingGiftId = null;
+
+async function checkPendingGifts() {
+    if (!userData || !userData.id) return;
+    try {
+        const res = await fetch('/api/user/gifts?userId=' + userData.id);
+        const data = await res.json();
+        if (data.success && data.gifts && data.gifts.length > 0) {
+            // Show popup for the first unclaimed gift
+            showGiftPopup(data.gifts[0]);
+        }
+    } catch (e) {
+        console.error('Gift check error:', e);
+    }
+}
+
+function showGiftPopup(gift) {
+    const currencyLabel = gift.currency === 'tokens' ? 'Tokens' : gift.currency === 'Gems' ? 'Gems' : 'USD';
+    const currencyIcon = gift.currency === 'tokens' ? 'fa-coins' : gift.currency === 'Gems' ? 'fa-gem' : 'fa-dollar-sign';
+    const currencyColor = gift.currency === 'tokens' ? '#fbbf24' : gift.currency === 'Gems' ? '#38bdf8' : '#22c55e';
+
+    // Remove existing gift popup if any
+    const existing = document.getElementById('giftPopupOverlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'giftPopupOverlay';
+    overlay.style.cssText = 'display:flex; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.92); z-index:9999999; flex-direction:column; align-items:center; justify-content:center; backdrop-filter:blur(15px); color:white; font-family:sans-serif; text-align:center;';
+
+    overlay.innerHTML = `
+        <div style="padding:30px; width:100%; max-width:320px;">
+            <div style="width:90px; height:90px; background:linear-gradient(135deg,#f59e0b,#d97706); border-radius:28px; display:flex; align-items:center; justify-content:center; margin:0 auto 24px; box-shadow:0 12px 32px rgba(245,158,11,0.4); animation: pulse 2s ease-in-out infinite;">
+                <i class="fas fa-gift" style="font-size:40px; color:#fff;"></i>
+            </div>
+            <div style="font-size:24px; font-weight:900; margin-bottom:8px; color:#f59e0b;">🎁 You Got a Gift!</div>
+            <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:20px; padding:20px; margin-bottom:20px;">
+                <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:8px;">
+                    <i class="fas ${currencyIcon}" style="font-size:28px; color:${currencyColor};"></i>
+                    <span style="font-size:32px; font-weight:900; color:${currencyColor};">${gift.amount}</span>
+                    <span style="font-size:16px; font-weight:700; color:${currencyColor};">${currencyLabel}</span>
+                </div>
+                ${gift.note ? `<div style="font-size:13px; color:rgba(255,255,255,0.6); margin-top:8px;">${gift.note}</div>` : ''}
+            </div>
+            <p style="font-size:13px; color:#888; margin-bottom:24px; line-height:1.5;">Watch a short ad to claim your gift!</p>
+            <button id="giftReadingNowBtn" style="width:100%; padding:16px; background:linear-gradient(135deg,#f59e0b,#d97706); color:#000; font-weight:900; border-radius:30px; border:none; cursor:pointer; font-size:16px; box-shadow:0 8px 20px rgba(245,158,11,0.3);">
+                <i class="fas fa-play mr-2"></i>Reading Now
+            </button>
+            <button onclick="document.getElementById('giftPopupOverlay').style.display='none'" style="margin-top:16px; color:#666; background:none; border:none; font-size:13px; cursor:pointer;">Later</button>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    document.getElementById('giftReadingNowBtn').onclick = () => {
+        overlay.style.display = 'none';
+        pendingGiftId = gift.id;
+        showAdAndEarn('gift_claim');
+    };
+}
+
+async function claimGiftReward(giftId) {
+    if (!giftId || !userData || !userData.id) return;
+    try {
+        const res = await fetch('/api/gift/claim', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: userData.id, giftId: giftId })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            if (window.confetti) {
+                confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 }, colors: ['#f59e0b', '#fbbf24', '#22c55e'] });
+            }
+
+            // Update local balances
+            if (data.newTokens !== undefined) userData.tokens = data.newTokens;
+            if (data.newGems !== undefined) userData.Gems = data.newGems;
+            if (data.newUsd !== undefined) userData.usd = data.newUsd;
+            updateBalanceUI();
+            loadRecentActivity();
+
+            window.showToast(`🎁 Gift claimed! +${data.amount} ${data.currency === 'tokens' ? 'Tokens' : data.currency === 'Gems' ? 'Gems' : 'USD'}`);
+
+            // Check for more pending gifts
+            pendingGiftId = null;
+            setTimeout(checkPendingGifts, 2000);
+        } else {
+            window.showToast(data.message || 'Failed to claim gift');
+            pendingGiftId = null;
+        }
+    } catch (e) {
+        console.error('Gift claim error:', e);
+        window.showToast('Network error claiming gift');
+        pendingGiftId = null;
+    }
+}
+
+// ==========================================
 
 function checkZeroBalanceAdTrigger(requiredAmount = 1) {
     const currentTokens = userData.tokens || 0;
@@ -1822,9 +2489,11 @@ function renderDailyGrid() {
     const now = Date.now();
     const canClaim = (now - lastClaim) >= 24 * 60 * 60 * 1000;
 
-    // Reset local view if streak is broken (> 48h)
+    // Reset local view if streak is broken (> 48h) or starting a new week after day 7
     if (lastClaim > 0 && (now - lastClaim > 48 * 60 * 60 * 1000)) {
         userClaimedDay = 0;
+    } else if (userClaimedDay === 7 && canClaim) {
+        userClaimedDay = 0; // Reset visual cycle to day 1
     }
 
     let html = '';
@@ -1941,48 +2610,55 @@ function claimDaily() {
     const btn = document.getElementById('claimDailyBtn');
     if (!btn || btn.disabled) return;
 
-    // Show loading state
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> CLAIMING...';
-    btn.disabled = true;
+    // The user wants mandatory ad watching for daily reward
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> AD LOADING...';
+    btn.style.opacity = '0.7';
 
-    // Call the API to claim daily reward
-    fetch('/api/daily/claim', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: userData.id })
-    })
-        .then(res => res.json())
-        .then(data => {
+    window.showToast("📺 Please watch a short ad to claim your Daily Reward");
+
+    // We replace the original function with an ad-triggered one
+    showAdAndEarn('daily_claim_ad');
+
+    // We override claimAdReward once for this specific context
+    const originalClaimAdReward = window.claimAdReward;
+    window.claimAdReward = async function () {
+        // Restore original after one use
+        window.claimAdReward = originalClaimAdReward;
+
+        if (currentAdContext !== 'daily_claim_ad') {
+            return originalClaimAdReward();
+        }
+
+        // Now actually claim the daily reward
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> CLAIMING...';
+        btn.disabled = true;
+
+        try {
+            const res = await fetch('/api/daily/claim', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: userData.id })
+            });
+            const data = await res.json();
+
             if (data.success) {
-                // Update user data
                 userData.tokens = data.newBalance;
                 userData.dailyStreak = data.streak;
                 userData.lastDailyClaim = Date.now();
-
-                // Show success message
                 window.showToast(`✅ Daily reward claimed! +${data.reward} Tokens`);
-
-                // Refresh the daily grid to show green checkmark
                 renderDailyGrid();
-
-                // Refresh balances
                 renderBalances();
-
-                // Restart the countdown timer
                 startDailyCountdown();
             } else {
-                // Show error message
                 window.showToast(data.message || 'Failed to claim daily reward');
-
-                // Reset button state
                 renderDailyGrid();
             }
-        })
-        .catch(err => {
+        } catch (err) {
             console.error('Error claiming daily:', err);
             window.showToast('❌ Error claiming daily reward');
             renderDailyGrid();
-        });
+        }
+    };
 }
 
 async function redeemCode() {
@@ -2031,35 +2707,284 @@ async function redeemCode() {
 // LEADERBOARD SYSTEM (PREMIUM)
 // ==========================================
 
-function renderLeaderboard() {
-    const list = document.getElementById('leadList');
+let currentLeaderboardTab = 'refer';
+
+function renderReferralLeaderboard() {
+    if (typeof renderPodiumLeaderboard !== 'undefined') {
+        renderPodiumLeaderboard('refer', currentReferPeriod, {
+            podiumId: 'referralPodium',
+            listId: 'referralLeadList',
+            rankId: 'referralPersonalRank',
+            timeId: 'referralTimeLeft',
+            cycleId: 'referralCycleInfo',
+            progressId: 'referralProgressBar'
+        });
+    } else {
+        renderGenericLeaderboard('refer', 'referralLeadList');
+    }
+}
+
+// Global variables to keep track of current period tab
+let currentEarnEarnPeriod = 'week';
+let currentReferPeriod = 'week';
+
+function renderEarnedLeaderboard() {
+    renderPodiumLeaderboard('earn', currentEarnEarnPeriod, {
+        podiumId: 'earnedPodium',
+        listId: 'earnedLeadList',
+        rankId: 'earnedPersonalRank',
+        timeId: 'earnedTimeLeft',
+        cycleId: 'earnedCycleInfo',
+        progressId: 'earnedProgressBar'
+    });
+}
+
+function renderPodiumLeaderboard(type, period, ids) {
+    const podiumEl = document.getElementById(ids.podiumId);
+    const listEl = document.getElementById(ids.listId);
+    const personalRankEl = document.getElementById(ids.rankId);
+
+    if (!podiumEl || !listEl) return;
+
+    podiumEl.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-sub); width:100%;"><i class="fas fa-spinner fa-spin"></i> Loading Top 3...</div>';
+    listEl.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-sub);"><i class="fas fa-spinner fa-spin"></i> Loading others...</div>';
+
+    // Simple client-side cache for leaderboard
+    window._leaderboardCache = window._leaderboardCache || {};
+    const cacheKey = `${userData.id}-${type}-${period}`;
+    const nowMs = Date.now();
+    let fetchPromise;
+
+    if (window._leaderboardCache[cacheKey] && nowMs - window._leaderboardCache[cacheKey].time < 30000) {
+        // Use cached data
+        fetchPromise = Promise.resolve(window._leaderboardCache[cacheKey].data);
+    } else {
+        fetchPromise = fetch(`/api/leaderboard?userId=${userData.id}&type=${type}&period=${period}`)
+            .then(r => r.json())
+            .then(data => {
+                window._leaderboardCache[cacheKey] = { time: nowMs, data: data };
+                return data;
+            });
+    }
+
+    fetchPromise.then(data => {
+        if (!data.success || !data.top) {
+            podiumEl.innerHTML = '<div style="text-align:center; padding:20px; color:#666; width:100%;">No rankings available.</div>';
+            listEl.innerHTML = '';
+            return;
+        }
+
+        // Update 7-day Countdown Timer
+        const now = new Date();
+        const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(endOfWeek.getDate() + 7);
+
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+        let cycleStartTime = startOfWeek.getTime();
+        let cycleEndTime = endOfWeek.getTime();
+
+        if (period === 'month') {
+            cycleStartTime = startOfMonth.getTime();
+            cycleEndTime = endOfMonth.getTime();
+        }
+
+        const cycleDuration = cycleEndTime - cycleStartTime;
+        const elapsedTimeInCycle = now.getTime() - cycleStartTime;
+        const timeLeft = cycleEndTime - now.getTime();
+
+        const daysLeft = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+        const hoursLeft = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const percentage = Math.floor((elapsedTimeInCycle / cycleDuration) * 100);
+
+        const tlEl = document.getElementById(ids.timeId);
+        const cycleEl = document.getElementById(ids.cycleId);
+        const progressEl = document.getElementById(ids.progressId);
+
+        if (tlEl) tlEl.textContent = `${daysLeft}d ${hoursLeft}h left`;
+        if (cycleEl) cycleEl.textContent = `Current cycle • ${percentage}% complete`;
+        if (progressEl) progressEl.style.width = `${percentage}%`;
+
+        const top3 = data.top.slice(0, 3);
+        const others = data.top.slice(3, 100);
+
+        // Structure: 2nd, 1st, 3rd for podium display
+        let podiumHTML = '';
+        const podiumOrder = [1, 0, 2]; // index 1 (2nd), index 0 (1st), index 2 (3rd)
+
+        const styles = [
+            { color: '#f59e0b', size: 76, badge: '#1', showCrown: true, width: '33.33%', reward: type === 'earn' ? '1,000 Tokens' : type === 'quiz' ? '1,000 Points' : 'Premium Box' }, // 1st
+            { color: '#cbd5e1', size: 60, badge: '#2', showCrown: false, width: '33.33%', reward: type === 'earn' ? '800 Tokens' : type === 'quiz' ? '800 Points' : 'Gold Box' }, // 2nd
+            { color: '#d97706', size: 60, badge: '#3', showCrown: false, width: '33.33%', reward: type === 'earn' ? '600 Tokens' : type === 'quiz' ? '600 Points' : 'Silver Box' }  // 3rd
+        ];
+
+        const scoreIcon = type === 'earn' ?
+            `<svg width="12" height="12" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2L2 9.5L5.5 22H18.5L22 9.5L12 2Z"/></svg>` :
+            type === 'quiz' ? `<i class="fas fa-bolt" style="color:#22c55e; font-size:12px;"></i>` :
+                `<i class="fas fa-users" style="color:#f59e0b; font-size:12px;"></i>`;
+
+        podiumOrder.forEach(idx => {
+            const u = top3[idx];
+            const style = styles[idx];
+            if (!u) {
+                // Placeholder if less than 3
+                podiumHTML += `
+                    <div style="display: flex; flex-direction: column; align-items: center; width: ${style.width}; opacity: 0.8;">
+                        ${style.showCrown ? '<i class="fas fa-crown" style="color: rgba(255,255,255,0.3); font-size: 28px; margin-bottom: -8px; z-index: 10;"></i>' : '<div style="height: 20px;"></div>'}
+                        <div style="position: relative; margin-bottom: 12px; z-index: 5;">
+                            <div style="width: ${style.size}px; height: ${style.size}px; border-radius: 50%; border: 3px dashed rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 24px; color: rgba(255,255,255,0.2);">?</div>
+                            <div style="position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); background: #333; color: #888; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 10px;">${style.badge}</div>
+                        </div>
+                        <div style="font-size: 13px; font-weight: 800; color: #555; margin-bottom: 4px; text-align: center;">---</div>
+                        <div style="display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: rgba(255,255,255,0.2); margin-bottom: 8px;">
+                            ---
+                        </div>
+                        <div style="background: rgba(255, 255, 255, 0.05); border: 1px dashed rgba(255, 255, 255, 0.1); color: #888; padding: 4px 10px; border-radius: 12px; font-size: 10px; font-weight: 800; margin-top: auto;">${style.reward}</div>
+                    </div>`;
+                return;
+            }
+
+            const avatarUrl = u.photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=random&color=fff&size=80`;
+            const glowClass = style.showCrown ? 'box-shadow: 0 0 20px rgba(245,158,11,0.6), 0 4px 12px rgba(0,0,0,0.5);' : 'box-shadow: 0 4px 12px rgba(0,0,0,0.5);';
+
+            podiumHTML += `
+                <div style="display: flex; flex-direction: column; align-items: center; width: ${style.width};">
+                    ${style.showCrown ? '<i class="fas fa-crown" style="color: #f59e0b; font-size: 28px; margin-bottom: -8px; z-index: 10; text-shadow: 0 2px 10px rgba(245,158,11,0.5);"></i>' : '<div style="height: 20px;"></div>'}
+                    <div style="position: relative; margin-bottom: 12px; z-index: 5;">
+                        <img src="${avatarUrl}" style="width: ${style.size}px; height: ${style.size}px; border-radius: 50%; border: 3px solid ${style.color}; object-fit: cover; ${glowClass}">
+                        <div style="position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); background: ${style.showCrown ? '#f59e0b' : '#fff'}; color: #000; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">${style.badge}</div>
+                    </div>
+                    <div style="font-size: 13px; font-weight: 800; color: #fff; margin-bottom: 4px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; padding: 0 4px;">${u.name}</div>
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 13px; font-weight: 800; color: ${type === 'quiz' ? '#22c55e' : '#f59e0b'}; margin-bottom: 8px;">
+                        ${scoreIcon}
+                        ${formatCompact(u.score || 0)}
+                    </div>
+                    <div style="background: rgba(${type === 'quiz' ? '34, 197, 94' : '245, 158, 11'}, 0.15); border: 1px solid rgba(${type === 'quiz' ? '34, 197, 94' : '245, 158, 11'}, 0.3); color: ${type === 'quiz' ? '#22c55e' : '#f59e0b'}; padding: 4px 10px; border-radius: 12px; font-size: 10px; font-weight: 800; margin-top: auto; white-space: nowrap;">${style.reward}</div>
+                </div>`;
+        });
+
+        podiumEl.innerHTML = podiumHTML;
+
+        // Render rest of the list
+        if (others.length > 0) {
+            let html = others.slice(0, 96).map((u, i) => {
+                const rank = i + 4;
+                const isMe = String(u.id) === String(userData.id);
+
+                return `
+                    <div class="lead-row" style="background: var(--bg-card); border-radius: 16px; margin-bottom: 0; padding: 12px 16px; display: flex; align-items: center; gap: 12px; border: 1px solid var(--border-color); ${isMe ? 'border-color: #f59e0b; background: rgba(245,158,11,0.05);' : ''}">
+                        <div style="font-size: 14px; font-weight: 800; color: var(--text-sub); width: 24px; text-align: center;">${rank}</div>
+                        <img src="${u.photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=random&color=fff&size=40`}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+                        <div style="flex-grow: 1;">
+                            <div style="font-size: 14px; font-weight: 700; color: #fff;">${u.name}${isMe ? ' <span style="color:#f59e0b; font-size:10px;">(YOU)</span>' : ''}</div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 6px; font-weight: 800; color: #fff;">
+                            ${scoreIcon}
+                            ${formatCompact(u.score || 0)}
+                        </div>
+                    </div>`;
+            }).join('');
+
+            if (others.length >= 96) {
+                html += `
+                    <div class="lead-row" style="background: transparent; border-radius: 16px; margin-bottom: 0; padding: 16px; display: flex; justify-content: center; align-items: center; gap: 12px; border: 1px dashed rgba(255,255,255,0.1);">
+                        <div style="font-size: 14px; font-weight: 800; color: #888;">99+</div>
+                        <div style="font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.4);">More users contending</div>
+                    </div>`;
+            }
+
+            listEl.innerHTML = html;
+        } else {
+            listEl.innerHTML = '<div style="text-align:center; padding:20px; color:#666; font-size:12px;">No more contenders.</div>';
+        }
+
+        // Update Personal Rank Footer
+        if (personalRankEl) {
+            let userRank = data.userRank || '-';
+            if (userRank > 99) userRank = '99+';
+            const userScore = data.userScore || 0;
+            const pointsToNext = '--'; // Difficult to calculate without full data points, maybe just mock or omit. Let's omit subtitle or say "Complete tasks to earn points" if rank is '-'
+
+            let actionWord = type === 'earn' ? 'earning' : type === 'quiz' ? 'playing' : 'referring';
+            let gainWord = type === 'earn' ? 'earn points' : type === 'quiz' ? 'answer correctly' : 'gain referrals';
+            let subtitleHtml = `<div style="font-size: 11px; color: rgba(255,255,255,0.5);">Keep ${actionWord} to climb the ranks!</div>`;
+            if (userRank === '-' || data.userRank > 100) {
+                subtitleHtml = `<div style="font-size: 11px; color: rgba(255,255,255,0.5);">Complete tasks and ${gainWord} to enter.</div>`;
+            }
+
+            personalRankEl.innerHTML = `
+                    <div style="width: 44px; height: 44px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.2); overflow: hidden; flex-shrink: 0;">
+                        <img src="${userData.photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.firstName)}&background=random&color=fff`}" style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                    <div style="flex-grow: 1;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px;">
+                            <div style="font-weight: 700; color: #fff; font-size: 15px;">Your Rank</div>
+                            <div style="background: rgba(${type === 'quiz' ? '34, 197, 94' : '245, 158, 11'}, 0.2); color: ${type === 'quiz' ? '#22c55e' : '#f59e0b'}; padding: 2px 8px; border-radius: 8px; font-size: 12px; font-weight: 800;">${userRank}</div>
+                        </div>
+                        ${subtitleHtml}
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px; font-weight: 800; font-size: 16px; color: #fff;">
+                        ${scoreIcon}
+                        ${formatCompact(userScore)}
+                    </div>
+                `;
+        }
+
+    })
+        .catch((e) => {
+            console.error("Leaderboard Error:", e);
+            podiumEl.innerHTML = '<div style="text-align:center; padding:20px; color:#ef4444; width:100%;">Failed to load rankings.</div>';
+            listEl.innerHTML = '';
+        });
+}
+
+function renderGenericLeaderboard(type, listId) {
+    const list = document.getElementById(listId);
     if (!list) return;
 
     list.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-sub);"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
 
-    fetch(`/api/leaderboard?userId=${userData.id}`)
-        .then(r => r.json())
-        .then(data => {
-            if (!data.success || !data.top) {
-                list.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">No rankings available.</div>';
-                return;
-            }
+    // Simple client-side cache for leaderboard
+    window._leaderboardGenericCache = window._leaderboardGenericCache || {};
+    const cacheKey = `${userData.id}-${type}`;
+    const nowMs = Date.now();
+    let fetchPromise;
 
-            const medals = ['🥇', '🥈', '🥉'];
+    if (window._leaderboardGenericCache[cacheKey] && nowMs - window._leaderboardGenericCache[cacheKey].time < 30000) {
+        // Use cached data
+        fetchPromise = Promise.resolve(window._leaderboardGenericCache[cacheKey].data);
+    } else {
+        fetchPromise = fetch(`/api/leaderboard?userId=${userData.id}&type=${type}`)
+            .then(r => r.json())
+            .then(data => {
+                window._leaderboardGenericCache[cacheKey] = { time: nowMs, data: data };
+                return data;
+            });
+    }
 
-            list.innerHTML = data.top.map((u, i) => {
-                const rank = i + 1;
-                let rankClass = 'rank-other';
-                if (rank === 1) rankClass = 'rank-1';
-                else if (rank === 2) rankClass = 'rank-2';
-                else if (rank === 3) rankClass = 'rank-3';
+    fetchPromise.then(data => {
+        if (!data.success || !data.top) {
+            list.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">No rankings available.</div>';
+            return;
+        }
 
-                const medal = rank <= 3 ? medals[rank - 1] : rank;
-                const isMe = String(u.id) === String(userData.id);
+        let renderedHtml = data.top.slice(0, 99).map((u, i) => {
+            const rank = i + 1;
+            let rankClass = 'rank-other';
+            if (rank === 1) rankClass = 'rank-1';
+            else if (rank === 2) rankClass = 'rank-2';
+            else if (rank === 3) rankClass = 'rank-3';
 
-                return `
+            const isMe = String(u.id) === String(userData.id);
+
+            const scoreLabel = type === 'earn' ? 'TOKENS' : 'REFERRALS';
+            const scoreValue = u.score || 0;
+
+            return `
             <div class="lead-row" style="${isMe ? 'border: 1px solid #f59e0b; background: rgba(245,158,11,0.08);' : ''}">
-                <div class="lead-rank ${rankClass}">${medal}</div>
+                <div class="lead-rank ${rankClass}">#${rank}</div>
                 <div class="lead-avatar">
                    <img src="${u.photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=random&color=fff&size=40`}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=f59e0b&color=000&size=40'">
                 </div>
@@ -2068,27 +2993,41 @@ function renderLeaderboard() {
                     <div class="lead-uid">ID: ${u.id}</div>
                 </div>
                 <div class="lead-count-box">
-                    <div class="lead-count">${u.refs || 0}</div>
-                    <div class="lead-label">REFERRALS</div>
+                    <div class="lead-count">${scoreLabel === 'TOKENS' ? formatCompact(scoreValue) : scoreValue}</div>
+                    <div class="lead-label">${scoreLabel}</div>
                 </div>
             </div>`;
-            }).join('');
+        }).join('');
 
-            // Update personal rank if available
-            const rankEl = document.getElementById('profile-rank');
-            if (rankEl && data.userRank) {
-                rankEl.textContent = `#${data.userRank}`;
-            }
+        if (data.top.length >= 99) {
+            renderedHtml += `
+            <div class="lead-row" style="background: transparent; border-radius: 16px; margin-bottom: 0; padding: 16px; display: flex; justify-content: center; align-items: center; gap: 12px; border: 1px dashed rgba(255,255,255,0.1);">
+                <div style="font-size: 14px; font-weight: 800; color: #888;">99+</div>
+                <div style="font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.4);">More users contending</div>
+            </div>`;
+        }
 
-            // Update my referral stats on leaderboard page if elements exist
-            const myRankEl = document.getElementById('my-leaderboard-rank');
-            const myRefsEl = document.getElementById('my-leaderboard-refs');
-            if (myRankEl) myRankEl.textContent = data.userRank ? `#${data.userRank}` : 'N/A';
-            if (myRefsEl) myRefsEl.textContent = data.userRefs || userData.invites || 0;
-        })
+        list.innerHTML = renderedHtml;
+
+        // Update personal rank if available in profile display
+        const rankEl = document.getElementById('profile-rank');
+        if (rankEl && data.userRank && type === 'refer') {
+            rankEl.textContent = `#${data.userRank}`;
+        }
+    })
         .catch(() => {
             list.innerHTML = '<div style="text-align:center; padding:20px; color:#ef4444;">Failed to load rankings.</div>';
         });
+}
+
+// Keep old functions for compatibility but redirected
+function switchLeaderboardTab(tab) {
+    if (tab === 'refer') nav('referralLeaderboard');
+    else nav('earnedLeaderboard');
+}
+
+function renderLeaderboard() {
+    nav('referralLeaderboard');
 }
 
 // UPDATE INVITE UI
@@ -2217,6 +3156,7 @@ function loadInviteStats() {
 // Copy referral link
 function copyLink() {
     const linkEl = document.getElementById('referralLink');
+    const copyBtn = document.getElementById('copyRefBtn');
     if (!linkEl) return;
 
     const text = linkEl.textContent || linkEl.innerText;
@@ -2224,6 +3164,20 @@ function copyLink() {
     navigator.clipboard.writeText(text).then(() => {
         if (window.showToast) {
             window.showToast('Referral link copied!');
+        }
+
+        // Change button state to "Copied" with tick icon
+        if (copyBtn) {
+            const originalContent = copyBtn.innerHTML;
+            copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied';
+            copyBtn.style.background = '#22c55e'; // Green background
+            copyBtn.style.color = '#fff';
+
+            setTimeout(() => {
+                copyBtn.innerHTML = originalContent;
+                copyBtn.style.background = ''; // Revert to CSS variable or original
+                copyBtn.style.color = '#000';
+            }, 2000);
         }
 
         if (window.Telegram && Telegram.WebApp && Telegram.WebApp.HapticFeedback) {
@@ -2365,7 +3319,7 @@ function copyInviteLink() {
 
 // Update invite page when navigating to it
 const originalShowPage = showPage;
-showPage = function (targetId) {
+window.showPage = function (targetId) {
     originalShowPage(targetId);
     if (targetId === 'invite') {
         // Only load if userId is valid
@@ -2386,6 +3340,10 @@ showPage = function (targetId) {
     if (targetId === 'tasks') {
         // Load tasks dynamically from API
         loadUserTasks();
+    }
+    if (targetId === 'admin') {
+        loadAdminConfig();
+        loadAdminMessages();
     }
     // Fix card overflow on specific pages
     if (['redeem', 'transfer', 'itemSell', 'accountsStore'].includes(targetId)) {
@@ -2466,13 +3424,29 @@ window.toggleServicesView = toggleServicesView;
 const userId = userData.id;
 
 // Main auto-login function: registers user with server using Telegram data
-function registerAndFetchUser() {
+async function registerAndFetchUser() {
     const currentUserId = userData.id;
     if (!currentUserId || currentUserId === 0) {
         // No Telegram user (opened in browser, not Telegram)
         renderBalances();
         applyProfilePhoto('');
         return;
+    }
+
+    // LOAD FROM LOCAL CACHE FIRST for instant UI
+    const cachedData = localStorage.getItem(`userData_${currentUserId}`);
+    if (cachedData) {
+        try {
+            const parsed = JSON.parse(cachedData);
+            if (parsed.id == currentUserId) {
+                userData = { ...userData, ...parsed };
+                console.log("💾 Loaded from cache:", userData.completedTasks?.length || 0, "tasks");
+                if (userData.completedTasks) {
+                    userData.completedTasks.forEach(tid => { IN_PROGRESS_TASKS[tid] = 'completed'; });
+                }
+                renderBalances();
+            }
+        } catch (e) { console.warn("Cache error", e); }
     }
 
     // Parse referrer from start_param
@@ -2491,77 +3465,83 @@ function registerAndFetchUser() {
         }
     }
 
-    fetch('/api/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            userId: userData.id,
-            firstName: _tgUser.first_name || '',
-            lastName: _tgUser.last_name || '',
-            username: _tgUser.username || '',
-            photo_url: _tgUser.photo_url || '',
-            referrer: referrer
-        })
-    })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                // Sync from server - check both tokens and balance_tokens fields
-                userData.tokens = data.tokens || data.balance_tokens || 0;
-                userData.Gems = data.Gems || data.gems || 0;
-                userData.usd = (data.usd !== undefined && data.usd !== null) ? data.usd : 0;
-                userData.verified = data.verified || false;
-                userData.adminVerified = data.adminVerified || false; // Store admin verified status
-                userData.dailyStreak = data.dailyStreak || 0;
-                userData.lastDailyClaim = data.lastClaim || 0;
-                userData.completedTasks = data.completedTasks || [];
-                userData.invites = data.invites || 0;
-                // Use Telegram name (always fresh from Telegram)
-                userData.username = _tgUser.first_name || data.firstName || data.username || 'User';
-                userData.firstName = _tgUser.first_name || data.firstName || '';
-                userData.photo_url = _tgUser.photo_url || data.photo_url || '';
+    try {
+        const res = await fetch('/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: userData.id,
+                firstName: _tgUser.first_name || '',
+                lastName: _tgUser.last_name || '',
+                username: _tgUser.username || '',
+                photo_url: _tgUser.photo_url || '',
+                referrer: referrer
+            })
+        });
+        const data = await res.json();
 
-                // Handle banned users
-                userData.banned = data.banned || false;
-                userStatus = data.banned ? 'banned' : 'active';
-
-                // Show banned status on profile
-                updateProfileStatusIcons();
-
-                // Mark completed tasks in UI
-                if (userData.completedTasks.length > 0) {
-                    userData.completedTasks.forEach(taskId => {
-                        IN_PROGRESS_TASKS[taskId] = 'completed';
-                        const btn = document.querySelector(`button[onclick*="'${taskId}',"]`) ||
-                            document.querySelector(`button[onclick*="'${taskId}', "]`);
-                        if (btn) {
-                            btn.innerHTML = '<i class="fas fa-check"></i> DONE';
-                            btn.style.background = '#22c55e';
-                            btn.style.color = '#fff';
-                            btn.style.pointerEvents = 'none';
-                        }
-                    });
-                }
-
-                applyProfilePhoto(userData.photo_url);
-                renderBalances();
-                loadRecentActivity(); // Load real activity data
-
-                if (currentPage === 'daily') {
-                    renderDailyGrid();
-                    startDailyCountdown();
-                }
-            } else {
-                // Server returned error - still show Telegram data
-                applyProfilePhoto(_tgUser.photo_url || '');
-                renderBalances();
+        if (data.success) {
+            // Sync from server
+            userData.tokens = data.tokens || data.balance_tokens || 0;
+            userData.Gems = data.Gems || data.gems || 0;
+            userData.usd = (data.usd !== undefined && data.usd !== null) ? data.usd : 0;
+            userData.verified = data.verified || false;
+            userData.adminVerified = data.adminVerified || false;
+            userData.apiStatus = data.apiStatus || 'allow';
+            // Update API Key only if server provides one, to avoid overwriting local cache with null during sync hiccups
+            if (data.apiKey) {
+                userData.apiKey = data.apiKey;
+            } else if (!userData.apiKey) {
+                userData.apiKey = null;
             }
-        })
-        .catch(err => {
-            console.warn('Register API error (offline?):', err);
+            userData.dailyStreak = data.dailyStreak || 0;
+            userData.lastDailyClaim = data.lastClaim || 0;
+            userData.completedTasks = data.completedTasks || [];
+            userData.invites = data.invites || 0;
+            userData.username = _tgUser.first_name || data.firstName || data.username || 'User';
+            userData.photo_url = _tgUser.photo_url || data.photo_url || '';
+            userData.banned = data.banned || false;
+            userStatus = data.banned ? 'banned' : 'active';
+
+            // Mark completed tasks locally
+            if (userData.completedTasks.length > 0) {
+                userData.completedTasks.forEach(taskId => {
+                    IN_PROGRESS_TASKS[taskId] = 'completed';
+                });
+            }
+
+            // 💾 PERSIST TO LOCAL STORAGE FOR INSTANT UI NEXT TIME
+            localStorage.setItem(`userData_${userData.id}`, JSON.stringify(userData));
+
+            updateProfileStatusIcons();
+            applyProfilePhoto(userData.photo_url);
+            renderBalances();
+            loadRecentActivity(); // Load real activity data
+
+            // Visibility of Admin Menu
+            const adminMenuItem = document.getElementById('adminMenuItem');
+            // adminMenuItem.style.display = userData.adminVerified ? 'flex' : 'none';
+
+            if (currentPage === 'daily') {
+                renderDailyGrid();
+                startDailyCountdown();
+            }
+
+            // Show any pending Web Messages from Admin Reply
+            if (data.webMessages && data.webMessages.length > 0) {
+                data.webMessages.forEach(msg => {
+                    showWebAdminMessage(msg);
+                });
+            }
+        } else {
             applyProfilePhoto(_tgUser.photo_url || '');
             renderBalances();
-        });
+        }
+    } catch (err) {
+        console.warn('Register API error (offline?):', err);
+        applyProfilePhoto(_tgUser.photo_url || '');
+        renderBalances();
+    }
 }
 
 // Legacy alias kept for compatibility
@@ -2603,27 +3583,42 @@ function renderFullHistory() {
     list.style.display = 'block';
     empty.style.display = 'none';
 
-    const POS_TYPES = new Set(['transfer_in', 'redeem', 'daily_bonus', 'ad_reward', 'mission_reward', 'quiz_reward', 'bonus', 'deposit']);
-    const NEG_TYPES = new Set(['transfer_out', 'account_purchase', 'mail', 'number', 'exchange_out']);
+    const POS_TYPES = new Set(['transfer_in', 'redeem', 'daily_bonus', 'ad_reward', 'mission_reward', 'quiz_reward', 'bonus', 'deposit', 'gift_claimed', 'gift']);
+    const NEG_TYPES = new Set(['transfer_out', 'account_purchase', 'mail', 'temp_mail', 'premium_mail', 'number', 'exchange_out', 'support_contact']);
 
     const typeConfig = {
         'ad_reward': { icon: 'fas fa-play', color: '#f59e0b', name: 'Watch and Earn' },
         'mission_reward': { icon: 'fas fa-check-circle', color: '#22c55e', name: 'Task Completed' },
         'account_purchase': { icon: 'fas fa-shopping-cart', color: '#3b82f6', name: 'Account Purchase' },
         'mail': { icon: 'fas fa-envelope', color: '#ef4444', name: 'Email Generated' },
+        'temp_mail': { icon: 'fas fa-envelope-open', color: '#ef4444', name: 'Temp Mail' },
+        'premium_mail': { icon: 'fas fa-crown', color: '#f59e0b', name: 'Premium Mail' },
         'number': { icon: 'fas fa-phone', color: '#9333ea', name: 'Virtual Number' },
         'quiz_reward': { icon: 'fas fa-question-circle', color: '#f59e0b', name: 'Quiz Reward' },
         'deposit': { icon: 'fas fa-wallet', color: '#22c55e', name: 'Deposit' },
-        'redeem': { icon: 'fas fa-ticket-alt', color: '#22c55e', name: 'Redeem Code' },
-        'transfer_in': { icon: 'fas fa-arrow-down', color: '#22c55e', name: 'Transfer In' },
-        'transfer_out': { icon: 'fas fa-arrow-up', color: '#ef4444', name: 'Transfer Out' },
-        'daily_bonus': { icon: 'fas fa-gift', color: '#22c55e', name: 'Daily Bonus' },
-        'bonus': { icon: 'fas fa-gift', color: '#22c55e', name: 'Bonus' },
-        'exchange': { icon: 'fas fa-exchange-alt', color: '#06b6d4', name: 'Currency Exchange' },
+        'redeem': { icon: 'fas fa-ticket-alt', color: '#22c55e', name: 'Code Redeemed' },
+        'transfer_in': { icon: 'fas fa-arrow-down', color: '#22c55e', name: 'Received' },
+        'transfer_out': { icon: 'fas fa-arrow-up', color: '#ec4899', name: 'Sent' },
+        'daily_bonus': { icon: 'fas fa-gift', color: '#fbbf24', name: 'Daily Bonus' },
+        'bonus': { icon: 'fas fa-gift', color: '#fbbf24', name: 'Bonus' },
+        'gift_claimed': { icon: 'fas fa-gift', color: '#f59e0b', name: 'Gift Claimed' },
+        'gift': { icon: 'fas fa-gift', color: '#f59e0b', name: 'Gift' },
+        'exchange': { icon: 'fas fa-exchange-alt', color: '#06b6d4', name: 'Exchanged' },
+        'verification': { icon: 'fas fa-shield-alt', color: '#10b981', name: 'Verification' },
+        'support_contact': { icon: 'fas fa-headset', color: '#f59e0b', name: 'Support Contact' }
     };
 
     list.innerHTML = userData.history.map(item => {
-        const config = typeConfig[item.type] || { icon: 'fas fa-check', color: '#9ca3af', name: item.type || 'Activity' };
+        let config = typeConfig[item.type];
+        if (!config) {
+            if (item.type === 'temp_mail') {
+                config = typeConfig['temp_mail'] || { icon: 'fas fa-envelope-open', color: '#ef4444', name: 'Temp Mail' };
+            } else if (item.type === 'premium_mail') {
+                config = typeConfig['premium_mail'] || { icon: 'fas fa-crown', color: '#f59e0b', name: 'Premium Mail' };
+            } else {
+                config = { icon: 'fas fa-check', color: '#9ca3af', name: item.type || 'Activity' };
+            }
+        }
         const dateObj = item.date ? new Date(item.date) : new Date();
         const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         const timeStr = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
@@ -2633,6 +3628,8 @@ function renderFullHistory() {
         const isNeg = NEG_TYPES.has(item.type) || (!POS_TYPES.has(item.type) && amt < 0);
         const isPos = POS_TYPES.has(item.type) || (!NEG_TYPES.has(item.type) && amt > 0);
         const asset = item.asset || item.currency || 'TC';
+
+        const displayValue = (reward || ((item.amount !== undefined && item.amount !== null) ? ((isNeg ? '-' : (isPos ? '+' : '')) + formatCompact(Math.abs(amt)) + ' ' + (item.asset || item.currency || 'TC').toUpperCase()) : ''));
 
         return `
         <div class="activity-card" style="margin-bottom:12px;">
@@ -2649,7 +3646,7 @@ function renderFullHistory() {
             </div>
             <div class="activity-reward">
                 <div style="font-size:13px; font-weight:700; color:${isPos ? '#22c55e' : (isNeg ? '#ef4444' : '#fff')}">
-                    ${reward || ((item.amount !== undefined && item.amount !== null) ? ((isNeg ? '-' : (isPos ? '+' : '')) + Math.abs(amt) + ' ' + (item.asset || item.currency || 'TC').toUpperCase()) : '')}
+                    ${displayValue}
                 </div>
             </div>
         </div>`;
@@ -2659,7 +3656,6 @@ function renderFullHistory() {
 // Load broadcast messages with real live user activity data
 function loadBroadcast() {
     const track = document.getElementById('broadcastTrack');
-    const badge = document.getElementById('broadcastBadge');
     if (!track) return;
 
     // Default messages - with @ symbol and yellow username
@@ -2706,15 +3702,12 @@ function loadBroadcast() {
                 });
 
                 track.innerHTML = activityMessages.map(m => `<span class="bcp-item">${m}</span>`).join('');
-                if (badge) badge.style.display = 'none';
             } else {
                 track.innerHTML = defaultMessages.map(m => `<span class="bcp-item">${m}</span>`).join('');
-                if (badge) badge.style.display = 'none';
             }
         })
         .catch(() => {
             track.innerHTML = defaultMessages.map(m => `<span class="bcp-item">${m}</span>`).join('');
-            if (badge) badge.style.display = 'none';
         });
 }
 
@@ -2728,6 +3721,8 @@ function renderRecentActivity(history) {
         'mission_reward': { icon: 'fas fa-check-circle', color: '#22c55e', name: 'Task Completed' },
         'account_purchase': { icon: 'fas fa-shopping-cart', color: '#3b82f6', name: 'Account Purchase' },
         'mail': { icon: 'fas fa-envelope', color: '#ef4444', name: 'Email Generated' },
+        'temp_mail': { icon: 'fas fa-envelope-open', color: '#ef4444', name: 'Temp Mail' },
+        'premium_mail': { icon: 'fas fa-crown', color: '#f59e0b', name: 'Premium Mail' },
         'number': { icon: 'fas fa-phone', color: '#9333ea', name: 'Virtual Number' },
         'redeem': { icon: 'fas fa-ticket-alt', color: '#22c55e', name: 'Code Redeemed' },
         'daily_bonus': { icon: 'fas fa-gift', color: '#fbbf24', name: 'Daily Bonus' },
@@ -2736,6 +3731,8 @@ function renderRecentActivity(history) {
         'transfer_out': { icon: 'fas fa-arrow-up', color: '#ec4899', name: 'Sent' },
         'exchange': { icon: 'fas fa-exchange-alt', color: '#06b6d4', name: 'Exchanged' },
         'bonus': { icon: 'fas fa-gift', color: '#fbbf24', name: 'Welcomes' },
+        'gift_claimed': { icon: 'fas fa-gift', color: '#f59e0b', name: 'Gift Claimed' },
+        'gift': { icon: 'fas fa-gift', color: '#f59e0b', name: 'Gift' },
         'support_contact': { icon: 'fas fa-headset', color: '#f59e0b', name: 'Support Contact' }
     };
 
@@ -2750,10 +3747,21 @@ function renderRecentActivity(history) {
     }
 
     container.innerHTML = history.map(item => {
-        const config = typeConfig[item.type] || { icon: 'fas fa-check', color: '#9ca3af', name: item.type || 'Activity' };
+        // Fallback or explicit mapping logic
+        let config = typeConfig[item.type];
+        if (!config) {
+            if (item.type === 'temp_mail') {
+                config = typeConfig['temp_mail'] || { icon: 'fas fa-envelope-open', color: '#ef4444', name: 'Temp Mail' };
+            } else if (item.type === 'premium_mail') {
+                config = typeConfig['premium_mail'] || { icon: 'fas fa-crown', color: '#f59e0b', name: 'Premium Mail' };
+            } else {
+                config = { icon: 'fas fa-check', color: '#9ca3af', name: item.type || 'Activity' };
+            }
+        }
+
         const date = item.date ? new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
         const time = item.date ? new Date(item.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '';
-        const POS_TYPES = new Set(['transfer_in', 'redeem', 'daily_bonus', 'ad_reward', 'mission_reward', 'quiz_reward', 'bonus', 'deposit']);
+        const POS_TYPES = new Set(['transfer_in', 'redeem', 'daily_bonus', 'ad_reward', 'mission_reward', 'quiz_reward', 'bonus', 'deposit', 'gift_claimed', 'gift']);
         const NEG_TYPES = new Set(['transfer_out', 'account_purchase', 'mail', 'number', 'support_contact']);
         // Fix: For mail type, if amount is 0 or missing, use mailCost from config
         let rawAmount = item.amount;
@@ -2764,6 +3772,13 @@ function renderRecentActivity(history) {
         const isNeg = NEG_TYPES.has(item.type) || (!POS_TYPES.has(item.type) && amt < 0);
         const isPos = POS_TYPES.has(item.type) || (!NEG_TYPES.has(item.type) && amt > 0);
         const asset = item.asset || item.currency || 'TC';
+
+        let rewardDisplay = '';
+        if (item.reward) {
+            rewardDisplay = item.reward;
+        } else {
+            rewardDisplay = (isPos ? '+' : (isNeg ? '-' : '')) + formatCompact(Math.abs(amt)) + ' ' + String(asset).toUpperCase();
+        }
 
         return `
         <div class="activity-card">
@@ -2778,7 +3793,7 @@ function renderRecentActivity(history) {
             </div>
             <div class="activity-reward">
                 <div style="font-size:13px; font-weight:700; color:${isPos ? '#22c55e' : (isNeg ? '#ef4444' : '#fff')}">
-                    ${(isPos ? '+' : (isNeg ? '-' : ''))}${Math.abs(amt)} ${String(asset).toUpperCase()}
+                    ${rewardDisplay}
                 </div>
             </div>
         </div>`;
@@ -2943,9 +3958,32 @@ function updateProfileStatusIcons() {
     }
 }
 
+function formatCompact(num) {
+    if (typeof num !== 'number') num = parseFloat(num) || 0;
+    if (num < 1000) return num.toLocaleString();
+
+    const exp = Math.floor(Math.log10(num) / 3);
+    const suffixes = ['', 'K', 'M', 'B', 'T', 'Q'];
+    const suffix = suffixes[exp] || '';
+    const shortValue = (num / Math.pow(1000, exp));
+
+    // One decimal if it's not a whole number in compact view
+    const formatted = shortValue % 1 === 0 ? shortValue.toString() : shortValue.toFixed(1);
+    return formatted + suffix;
+}
+
 function renderBalances() {
+    const isRestrictedGuest = featureFlags?.requireTelegram === true && isDemoMode;
+    const tokens = isRestrictedGuest ? 0 : Math.max(0, userData.tokens || 0);
+    const gems = isRestrictedGuest ? 0 : Math.max(0, userData.Gems || 0);
+    const usd = isRestrictedGuest ? 0 : Math.max(0, userData.usd || 0.00);
+
     const rawName = userData.firstName || userData.username || _tgUser.first_name || 'Guest';
     const displayName = getShortName(rawName);
+
+    const formattedTokens = formatCompact(tokens);
+    const formattedGems = formatCompact(gems);
+    const formattedUsd = usd >= 1000 ? '$' + formatCompact(usd) : '$' + usd.toFixed(2);
 
     // 1. Update Profile Stats
     const elTc = document.getElementById('prof-tc');
@@ -2954,11 +3992,11 @@ function renderBalances() {
     const elProfName = document.getElementById('prof-name');
     const elProfId = document.getElementById('prof-id');
 
-    if (elTc) elTc.innerText = Math.max(0, userData.tokens || 0).toLocaleString();
-    if (elJs) elJs.innerText = Math.max(0, userData.Gems || 0).toLocaleString();
-    if (elUsd) elUsd.innerText = '$' + Math.max(0, userData.usd || 0.00).toFixed(2);
+    if (elTc) elTc.innerText = formattedTokens;
+    if (elJs) elJs.innerText = formattedGems;
+    if (elUsd) elUsd.innerText = formattedUsd;
     if (elProfName) elProfName.innerText = displayName;
-    if (elProfId) elProfId.innerText = '#' + userData.id;
+    if (elProfId) elProfId.innerText = '#' + (isRestrictedGuest ? '0000' : userData.id);
 
     // 2. Update Home Page Stats
     const hTc = document.getElementById('home-tc');
@@ -2966,35 +4004,43 @@ function renderBalances() {
     const hUsd = document.getElementById('home-usd');
     const hName = document.getElementById('home-name');
 
-    if (hTc) hTc.innerText = Math.max(0, userData.tokens || 0).toLocaleString();
-    if (hJs) hJs.innerText = Math.max(0, userData.Gems || 0).toLocaleString();
-    if (hUsd) hUsd.innerText = '$' + Math.max(0, userData.usd || 0.00).toFixed(2);
+    if (hTc) hTc.innerText = formattedTokens;
+    if (hJs) hJs.innerText = formattedGems;
+    if (hUsd) hUsd.innerText = formattedUsd;
     if (hName) hName.innerText = displayName;
 
     // 3. Update Service Page Balance Displays
     // Temp Mail (TC)
     const tempMailBal = document.getElementById('tempMailBalanceDisplay');
-    if (tempMailBal) tempMailBal.innerText = Math.max(0, userData.tokens || 0).toLocaleString() + ' TC';
+    if (tempMailBal) tempMailBal.innerText = formattedTokens + ' TC';
 
     // Premium Mail (TC)
     const premiumMailBal = document.getElementById('premiumMailBalanceDisplay');
-    if (premiumMailBal) premiumMailBal.innerText = Math.max(0, userData.tokens || 0).toLocaleString() + ' TC';
+    if (premiumMailBal) premiumMailBal.innerText = formattedTokens + ' TC';
 
     // Virtual Number (TC) - already exists as numBalanceDisplay
     const numBal = document.getElementById('numBalanceDisplay');
-    if (numBal) numBal.innerText = Math.max(0, userData.tokens || 0).toLocaleString() + ' TC';
+    if (numBal) numBal.innerText = formattedTokens + ' TC';
+
+    // Hotmail (TC)
+    const hotMailBal = document.getElementById('hotMailBalanceDisplay');
+    if (hotMailBal) hotMailBal.innerText = formattedTokens + ' TC';
+
+    // Student Mail (TC)
+    const studentMailBal = document.getElementById('studentMailBalanceDisplay');
+    if (studentMailBal) studentMailBal.innerText = formattedTokens + ' TC';
 
     // Accounts Store (USD)
     const accStoreBal = document.getElementById('accountsStoreBalanceDisplay');
-    if (accStoreBal) accStoreBal.innerText = '$' + Math.max(0, userData.usd || 0.00).toFixed(2);
+    if (accStoreBal) accStoreBal.innerText = formattedUsd;
 
     // VPN Services (USD)
     const vpnBal = document.getElementById('vpnServicesBalanceDisplay');
-    if (vpnBal) vpnBal.innerText = '$' + Math.max(0, userData.usd || 0.00).toFixed(2);
+    if (vpnBal) vpnBal.innerText = formattedUsd;
 
-    // VCC Cards (USD)
+    // VCC Cards (TC)
     const vccBal = document.getElementById('vccCardsBalanceDisplay');
-    if (vccBal) vccBal.innerText = '$' + Math.max(0, userData.usd || 0.00).toFixed(2);
+    if (vccBal) vccBal.innerText = formattedTokens + ' TC';
 }
 
 
@@ -3149,6 +4195,27 @@ async function loadAppCostConfig() {
     }
 }
 
+// Global state syncer for real-time updates from admin
+var _lastSyncTime = 0;
+async function smartSync(force = false) {
+    const now = Date.now();
+    if (!force && now - _lastSyncTime < 15000) return; // Minimum 15s between syncs
+
+    _lastSyncTime = now;
+    console.log('[SYNC] Refreshing platform config...');
+
+    return Promise.allSettled([
+        typeof loadFeatureFlags === 'function' ? loadFeatureFlags() : Promise.resolve(),
+        typeof syncAdminData === 'function' ? syncAdminData() : Promise.resolve()
+    ]).then(results => {
+        const anySuccess = results.some(r => r.status === 'fulfilled');
+        if (anySuccess) console.log('[SYNC] Platform data updated');
+    }).catch(err => console.warn('[SYNC] Sync failed:', err));
+}
+
+// Start auto-syncer (every 20 seconds for fast updates)
+setInterval(() => smartSync(), 20000);
+
 // Load cost config early so UI shows correct costs (email/ad reward, etc.)
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
@@ -3176,6 +4243,10 @@ function getShopItems() {
 
 // Fetch from backend and update UI
 function syncAdminData() {
+    window._lastSyncTime = Date.now();
+    // Sync features too
+    loadFeatureFlags();
+
     // Sync services
     fetch('/api/public/services')
         .then(r => r.json())
@@ -4041,10 +5112,193 @@ function updateNumBalance() {
 }
 
 // Number session tracking
-let numCountdownInterval = null;
-let numOtpReceived = false;
+let activeVirtualNumbers = [];
+let hasShownLimitInfo = false;
+let numGlobalInterval = null;
 let numSessionCost = 15;
-let numCurrentNumber = null;
+
+function initActiveVirtualNumbers() {
+    try {
+        const stored = localStorage.getItem('activeVirtualNumbers');
+        if (stored) {
+            activeVirtualNumbers = JSON.parse(stored);
+        }
+    } catch (e) {
+        console.error('Error loading active numbers:', e);
+        activeVirtualNumbers = [];
+    }
+
+    if (numGlobalInterval) clearInterval(numGlobalInterval);
+    numGlobalInterval = setInterval(updateActiveNumbersTick, 1000);
+
+    renderActiveNumbers();
+}
+
+function saveActiveNumbers() {
+    localStorage.setItem('activeVirtualNumbers', JSON.stringify(activeVirtualNumbers));
+}
+
+function updateActiveNumbersTick() {
+    const now = Date.now();
+    let changed = false;
+
+    activeVirtualNumbers.forEach(session => {
+        if (session.status === 'pending') {
+            if (now >= session.expiry) {
+                session.status = 'failed';
+                userData.tokens += numSessionCost;
+                updateNumBalance();
+                updateNumHistoryStatus(session.number, 'failed');
+                window.showToast?.(`Number ${session.number} expired. Tokens refunded.`);
+                changed = true;
+
+                // Notify server about expiry
+                fetch('/api/number/cancel', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId: session.sessionId, userId: userData.id })
+                });
+            } else {
+                // Poll server for OTP if it's been more than 3 seconds since last poll
+                if (!session.lastPoll || now - session.lastPoll > 3000) {
+                    session.lastPoll = now;
+                    if (session.sessionId) {
+                        fetch(`/api/number/otp?sessionId=${session.sessionId}`)
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data.success && data.otp && data.otp !== 'Waiting...') {
+                                    session.status = 'success';
+                                    session.otp = data.otp;
+                                    updateNumHistoryStatus(session.number, 'success');
+                                    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+                                    window.showToast?.(`OTP received for ${session.number}!`);
+                                    saveActiveNumbers();
+                                    renderActiveNumbers();
+                                }
+                            }).catch(e => console.error('OTP poll error:', e));
+                    }
+                }
+            }
+        }
+    });
+
+    if (changed) {
+        saveActiveNumbers();
+        renderActiveNumbers();
+    }
+    updateActiveNumbersUI();
+}
+
+function renderActiveNumbers() {
+    const container = document.getElementById('activeNumbersContainer');
+    if (!container) return;
+
+    container.innerHTML = activeVirtualNumbers.map(session => {
+        const isSuccess = session.status === 'success';
+        const isFailed = session.status === 'failed';
+        const statusColor = isSuccess ? '#22c55e' : (isFailed ? '#ef4444' : 'var(--text-sub)');
+        let statusText = isSuccess ? 'SUCCESS ✓' : (isFailed ? 'FAIL ✗ - 15 TC Refunded' : 'Waiting for OTP...');
+
+        return `
+            <div data-session-id="${session.id}" class="active-number-card" style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:12px; display:flex; flex-direction:column; gap:12px; margin-bottom:12px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                    <div style="display:flex; align-items:center; gap:10px; flex:1; overflow:hidden;">
+                        <div style="width:36px; height:36px; background:rgba(147,51,234,0.1); border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                            <i class="fas fa-phone" style="color:#9333ea; font-size:14px;"></i>
+                        </div>
+                        <div style="flex:1; overflow:hidden;">
+                            <div style="font-size:10px; color:var(--text-sub); font-weight:700; margin-bottom:2px; text-transform:uppercase; letter-spacing:0.5px;">${(session.platform || 'Telegram').toUpperCase()} NUMBER</div>
+                            <div style="font-size:15px; font-weight:800; color:var(--text-main); font-family:monospace; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                ${session.number}
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <button onclick="copyNumByValue('${session.number}')" style="width:36px; height:36px; border-radius:10px; background:rgba(147,51,234,0.1); border:1px solid rgba(147,51,234,0.3); display:flex; align-items:center; justify-content:center; cursor:pointer;" title="Copy Number">
+                            <i class="fas fa-copy" style="color:#9333ea; font-size:13px;"></i>
+                        </button>
+                        <button onclick="cancelNumberBySessionId('${session.id}')" style="width:36px; height:36px; border-radius:10px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); display:flex; align-items:center; justify-content:center; cursor:pointer;" title="Close">
+                            <i class="fas fa-times" style="color:#ef4444; font-size:13px;"></i>
+                        </button>
+                    </div>
+                </div>
+                <div style="display:flex; flex-direction:column; align-items:center; gap:6px; background:rgba(0,0,0,0.2); border-radius:10px; padding:10px;">
+                    <div style="font-size:10px; color:var(--text-sub); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">SMS / OTP</div>
+                    <div class="otp-display" style="text-align:center; font-size:20px; letter-spacing:2px; font-weight:800; color:${statusColor}; font-family:monospace; ${isSuccess ? 'cursor:pointer' : ''}" ${isSuccess ? `onclick="copyNumOtp('${session.otp}')"` : ''}>
+                        ${isSuccess ? session.otp : '--:--'}
+                    </div>
+                    <div style="text-align:center; font-size:10px; font-weight:700; margin-top:2px;">
+                        <span class="status-text" style="color:${statusColor};">${statusText}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function updateActiveNumbersUI() {
+    const now = Date.now();
+    activeVirtualNumbers.forEach(session => {
+        const card = document.querySelector(`.active-number-card[data-session-id="${session.id}"]`);
+        if (!card) return;
+
+        if (session.status === 'pending') {
+            const otpDisplay = card.querySelector('.otp-display');
+            const remaining = Math.max(0, Math.floor((session.expiry - now) / 1000));
+            const mins = Math.floor(remaining / 60);
+            const secs = remaining % 60;
+            const timerStr = `${mins}:${secs.toString().padStart(2, '0')}`;
+
+            if (otpDisplay) {
+                otpDisplay.textContent = timerStr;
+                otpDisplay.style.color = (remaining < 30) ? '#ef4444' : '#9333ea';
+            }
+        }
+    });
+}
+
+function copyNumByValue(val) {
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(val).then(() => {
+            window.showToast?.('Copied: ' + val);
+        });
+    } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = val;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            window.showToast?.('Copied: ' + val);
+        } catch (err) {
+            console.error('Fallback copy failed', err);
+        }
+        document.body.removeChild(textArea);
+    }
+}
+
+function cancelNumberBySessionId(sessionId) {
+    const idx = activeVirtualNumbers.findIndex(s => s.id === sessionId);
+    if (idx !== -1) {
+        const session = activeVirtualNumbers[idx];
+        if (session.status === 'pending') {
+            userData.tokens += numSessionCost;
+            updateNumBalance();
+            window.showToast?.('Cancelled! Tokens refunded.');
+        }
+
+        // Notify server
+        fetch('/api/number/cancel', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId: session.sessionId, userId: userData.id })
+        }).catch(err => console.error('Cancel number error:', err));
+
+        activeVirtualNumbers.splice(idx, 1);
+        saveActiveNumbers();
+        renderActiveNumbers();
+    }
+}
 
 function generateVirtualNumber() {
     if (checkZeroBalanceAdTrigger()) return;
@@ -4054,138 +5308,83 @@ function generateVirtualNumber() {
     // Deduct tokens immediately
     userData.tokens -= cost;
     updateNumBalance();
-    updateTokenDisplay?.();
 
     const btn = document.getElementById('numGenerateBtn');
     if (btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...'; btn.disabled = true; }
 
-    // DEMO MODE: Show demo number and start countdown
-    setTimeout(() => {
-        if (btn) { btn.innerHTML = '<i class="fas fa-phone-alt"></i> GET VIRTUAL NUMBER'; btn.disabled = false; }
+    const platformName = typeof selectedNumPlatform !== 'undefined' ? selectedNumPlatform : 'Telegram';
+    const countryCode = document.getElementById('numCountrySelect').value;
 
-        // Demo data
-        const demoNumber = '+1 555 123 4567';
-        numCurrentNumber = demoNumber;
-        numOtpReceived = false;
+    fetch('/api/number/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: userData.id, platform: platformName, countryCode: countryCode, cost: cost })
+    })
+        .then(res => res.json())
+        .then(data => {
+            if (btn) { btn.innerHTML = '<i class="fas fa-phone-alt"></i> GET VIRTUAL NUMBER'; btn.disabled = false; }
 
-        // Show number
-        document.getElementById('numResultValue').textContent = demoNumber;
-        document.getElementById('numResultBox').style.display = 'block';
-        document.getElementById('numStatusRow').style.display = 'block';
-        document.getElementById('numStatusText').textContent = 'Waiting for OTP...';
-        document.getElementById('numStatusText').style.color = 'var(--text-sub)';
-        document.getElementById('numOtpDisplay').textContent = '3:00';
-        document.getElementById('numOtpDisplay').style.color = '#9333ea';
+            if (data.success) {
+                const now = Date.now();
 
-        // Reset and start countdown (3 minutes = 180 seconds)
-        startSimpleOtpCountdown(180);
+                if (data.notifyLimit) {
+                    window.showToast?.('আপনি একসাথে সর্বোচ্চ ৭টি নাম্বার জেনারেট করতে পারবেন। পরবর্তী থেকে নতুন নাম্বার নিলে পুরনো নাম্বার ক্লোজ হয়ে যাবে।');
+                }
 
-        // Simulate OTP arrival after random time (demo: 5-15 seconds)
-        const otpArrivalTime = 5000 + Math.random() * 10000;
-        setTimeout(() => {
-            if (!numOtpReceived && document.getElementById('numResultBox').style.display !== 'none') {
-                const demoOtp = Math.floor(100000 + Math.random() * 900000).toString();
-                showSimpleOtp(demoOtp);
+                const newSession = {
+                    id: now,
+                    sessionId: data.sessionId,
+                    number: data.number,
+                    platform: platformName,
+                    status: 'pending',
+                    expiry: now + 600000,
+                    otp: null
+                };
+
+                if (activeVirtualNumbers.length >= 7) {
+                    const oldest = activeVirtualNumbers.pop();
+                    if (oldest && oldest.status === 'pending') {
+                        userData.tokens += numSessionCost;
+                        updateNumBalance();
+
+                        // Notify server about auto-cancellation
+                        fetch('/api/number/cancel', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ sessionId: oldest.sessionId, userId: userData.id })
+                        });
+                    }
+                }
+
+                activeVirtualNumbers.unshift(newSession);
+                saveActiveNumbers();
+                renderActiveNumbers();
+                addNumHistory(data.number, 'pending');
+                if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+                window.showToast?.(`Number generated successfully!`);
+
+                // If balance changed, sync it
+                if (data.newBalance !== undefined) {
+                    userData.tokens = data.newBalance;
+                    updateNumBalance();
+                }
+            } else {
+                // Refund tokens if failed
+                userData.tokens += cost;
+                updateNumBalance();
+                window.showToast?.(data.message || 'Generation failed. Please try again.');
             }
-        }, otpArrivalTime);
-
-        // Add to history with pending status
-        addNumHistory(demoNumber, 'pending');
-
-    }, 2000);
+        })
+        .catch(err => {
+            if (btn) { btn.innerHTML = '<i class="fas fa-phone-alt"></i> GET VIRTUAL NUMBER'; btn.disabled = false; }
+            userData.tokens += cost;
+            updateNumBalance();
+            window.showToast?.('Network error. Tokens refunded.');
+            console.error('Generate number error:', err);
+        });
 }
 
-function startSimpleOtpCountdown(seconds) {
-    let remaining = seconds;
-    const otpDisplay = document.getElementById('numOtpDisplay');
-
-    if (numCountdownInterval) clearInterval(numCountdownInterval);
-
-    numCountdownInterval = setInterval(() => {
-        remaining--;
-
-        // Update text
-        const mins = Math.floor(remaining / 60);
-        const secs = remaining % 60;
-        otpDisplay.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
-
-        // Change color when running low
-        if (remaining < 30) {
-            otpDisplay.style.color = '#ef4444'; // Red when < 30 seconds
-        }
-
-        // Time expired
-        if (remaining <= 0) {
-            clearInterval(numCountdownInterval);
-            handleSimpleOtpTimeout();
-        }
-    }, 1000);
-}
-
-function showSimpleOtp(otp) {
-    numOtpReceived = true;
-    clearInterval(numCountdownInterval);
-
-    // Show OTP in the display
-    const otpDisplay = document.getElementById('numOtpDisplay');
-    otpDisplay.textContent = otp;
-    otpDisplay.style.color = '#22c55e';
-    otpDisplay.style.cursor = 'pointer';
-    otpDisplay.onclick = () => copyNumOtp(otp);
-
-    // Update status to SUCCESS
-    const statusText = document.getElementById('numStatusText');
-    statusText.textContent = 'SUCCESS ✓';
-    statusText.style.color = '#22c55e';
-    statusText.style.fontWeight = '800';
-
-    // Haptic feedback
-    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-
-    // Update history to success
-    updateNumHistoryStatus(numCurrentNumber, 'success');
-    window.showToast?.('OTP received! Tap to copy.');
-}
-
-function handleSimpleOtpTimeout() {
-    // OTP not received in time - refund tokens
-    userData.tokens += numSessionCost;
-    updateNumBalance();
-    updateTokenDisplay?.();
-
-    // Show FAIL status
-    const otpDisplay = document.getElementById('numOtpDisplay');
-    otpDisplay.textContent = 'FAIL';
-    otpDisplay.style.color = '#ef4444';
-
-    const statusText = document.getElementById('numStatusText');
-    statusText.textContent = 'FAIL ✗ - 15 TC Refunded';
-    statusText.style.color = '#ef4444';
-    statusText.style.fontWeight = '800';
-
-    // Update history to failed
-    updateNumHistoryStatus(numCurrentNumber, 'failed');
-
-    // Haptic feedback
-    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
-}
-
-function cancelNumber() {
-    // Refund tokens if OTP not received
-    if (!numOtpReceived) {
-        userData.tokens += numSessionCost;
-        updateNumBalance();
-        updateTokenDisplay?.();
-        window.showToast?.('Cancelled! 15 TC refunded.');
-    }
-
-    clearInterval(numCountdownInterval);
-    numOtpReceived = false;
-    numCurrentNumber = null;
-    document.getElementById('numResultBox').style.display = 'none';
-    document.getElementById('numStatusRow').style.display = 'none';
-}
-
+// History section
 function addNumHistory(number, status) {
     const list = document.getElementById('numHistoryList');
     if (!list) return;
@@ -4327,24 +5526,7 @@ function refreshOTP() {
     pollForOTP();
 }
 
-function cancelNumber() {
-    clearInterval(numOtpPollInterval);
-    currentNumSession = null;
-    document.getElementById('numResultBox').style.display = 'none';
-}
 
-function addNumHistory(number) {
-    const list = document.getElementById('numHistoryList');
-    if (!list) return;
-    const time = new Date().toLocaleTimeString();
-    const item = `<div style="background:var(--bg-card);border-radius:12px;padding:12px 14px;border:1px solid rgba(147,51,234,0.2);display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-        <div style="width:36px;height:36px;background:rgba(147,51,234,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#9333ea;font-size:16px;">📱</div>
-        <div style="flex:1;"><div style="font-size:13px;font-weight:700;color:var(--text-main);">${number}</div><div style="font-size:10px;color:var(--text-sub);">${selectedNumPlatform} • ${time}</div></div>
-        <div style="font-size:11px;font-weight:700;color:#ef4444;">-15 TC</div>
-    </div>`;
-    if (list.querySelector('.fa-history')) list.innerHTML = '';
-    list.insertAdjacentHTML('afterbegin', item);
-}
 
 function copyNumberWithTick() {
     const el = document.getElementById('numResultValue');
@@ -4590,12 +5772,18 @@ function renewTempMail(type) {
         return;
     }
 
+    // For Premium (Gmail) and Hotmail, show the custom renew modal
+    if (type === 'premium' || type === 'hotmail' || type === 'hot') {
+        openRenewMailModal(type);
+        return;
+    }
+
     if (!previousMailSessions[type]) {
         window.showToast(`❌ No previous ${type} session found to restore.`);
         return;
     }
 
-    // Direct restore without confirmation or success alert
+    // Direct restore without confirmation or success alert for standard temp mail
     const current = mailSessions[type];
     mailSessions[type] = previousMailSessions[type];
     previousMailSessions[type] = current;
@@ -4603,6 +5791,96 @@ function renewTempMail(type) {
     updateMailBalance(type);
     startInboxPolling(type);
     if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+}
+
+// ─── Custom Renew Modal Logic ──────────────────────────────────────────────
+let currentRenewType = '';
+
+function openRenewMailModal(type) {
+    currentRenewType = type;
+    const modal = document.getElementById('renewMailModal');
+    const sheet = document.getElementById('renewMailSheet');
+    const costDisplay = document.getElementById('renewMailCostDisplay');
+    const input = document.getElementById('renewCustomEmailInput');
+    
+    // Clear input
+    if (input) input.value = '';
+    
+    // Set cost from config
+    const cost = (window.serviceConfig && window.serviceConfig.renewMailCost) || 30;
+    if (costDisplay) costDisplay.textContent = cost + ' TC';
+    
+    modal.style.display = 'flex';
+    setTimeout(() => { sheet.style.transform = 'translateY(0)'; }, 20);
+    if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+}
+
+function closeRenewMailModal() {
+    const modal = document.getElementById('renewMailModal');
+    const sheet = document.getElementById('renewMailSheet');
+    sheet.style.transform = 'translateY(100%)';
+    setTimeout(() => { modal.style.display = 'none'; }, 380);
+}
+
+async function confirmRenewCustomEmail() {
+    const email = document.getElementById('renewCustomEmailInput').value.trim();
+    const btn = document.getElementById('confirmRenewBtn');
+    
+    if (!email) {
+        window.showToast('Please enter an email address');
+        return;
+    }
+
+    if (!email.includes('@')) {
+        window.showToast('Invalid email address format');
+        return;
+    }
+
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Renewing...';
+    btn.style.pointerEvents = 'none';
+
+    try {
+        const res = await fetch('/api/mail/renew-custom', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: userData.id,
+                email: email,
+                type: currentRenewType
+            })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            window.showToast('✅ Email renewed successfully!', 'success');
+            
+            // Set the new session
+            const type = currentRenewType === 'premium' ? 'premium' : (currentRenewType === 'hot' ? 'hot' : 'hotmail');
+            mailSessions[type] = data.sessionId;
+            
+            // Update balance and start polling
+            if (data.newBalance !== undefined) {
+                userData.balance_tokens = data.newBalance;
+                userData.tokens = data.newBalance;
+                updateMailBalance(type);
+            }
+            
+            closeRenewMailModal();
+            startInboxPolling(type);
+            
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+        } else {
+            window.showToast('❌ ' + (data.message || 'Renewal failed'), 'error');
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+        }
+    } catch (e) {
+        console.error('Renew Error:', e);
+        window.showToast('Network error. Please try again.');
+    } finally {
+        btn.innerHTML = originalHtml;
+        btn.style.pointerEvents = 'auto';
+    }
 }
 
 function deleteMail(type) {
@@ -4638,7 +5916,14 @@ function refreshInbox(type) {
     if (refreshIcon) refreshIcon.classList.add("fa-spin");
 
     const sessionId = mailSessions[type].id || mailSessions[type].sessionId;
-    fetch(`/api/mail/inbox?sessionId=${sessionId}&userId=${userData.id}&cost=${refreshCost}`)
+
+    // Choose endpoint based on type
+    let endpoint = `/api/mail/inbox?sessionId=${sessionId}&userId=${userData.id}&cost=${refreshCost}`;
+    if (type === 'premium') {
+        endpoint = `/api/premium-emails/inbox?sessionId=${sessionId}&userId=${userData.id}`;
+    }
+
+    fetch(endpoint)
         .then(r => r.json())
         .then(data => {
             if (refreshIcon) refreshIcon.classList.remove("fa-spin");
@@ -4677,18 +5962,38 @@ function renderInbox(emails, type) {
 
     // OTP EXTRACTION
     let otps = [];
-    const otpRegex = /\b\d{4,8}\b/g;
-    const keywords = ["otp", "code", "verification", "verify", "login", "security"];
 
     emails.forEach(email => {
-        const combined = ((email.subject || '') + " " + (email.preview || '')).toLowerCase();
-        const hasKeyword = keywords.some(k => combined.includes(k));
-        if (hasKeyword) {
-            const matches = combined.match(otpRegex);
+        // If backend already successfully extracted OTP, use it directly
+        if (email.otp) {
+            if (!otps.some(o => o.code === email.otp)) {
+                otps.push({ code: email.otp, from: email.from || email.sender || 'Unknown' });
+            }
+        } else {
+            const combined = ((email.subject || '') + " " + (email.body || email.preview || '')).toUpperCase();
+            
+            // Robust Regex for OTPs: 4-8 digits or 5-8 alphanumeric characters
+            // This regex tries to find strings that look like codes
+            const matches = combined.match(/\b([A-Z0-9]{4,8})\b/g);
+            
             if (matches) {
                 matches.forEach(code => {
-                    if (!otps.some(o => o.code === code)) {
-                        otps.push({ code, from: email.from || email.sender || 'Unknown' });
+                    // Filter out common false positives and non-OTP strings
+                    const isDigitOnly = /^\d{4,8}$/.test(code);
+                    const isAlphanumeric = /[A-Z]/.test(code) && /\d/.test(code);
+                    const isCommonWord = ['LOGIN', 'VERIFY', 'EMAIL', 'CODE', 'PASS', 'USER', 'ADMIN', 'GMAIL', 'HTML'].includes(code);
+                    
+                    if ((isDigitOnly || isAlphanumeric) && !isCommonWord) {
+                        // Check for context keywords nearby in the text if it's alphanumeric (to avoid random strings)
+                        const contextKeywords = ["OTP", "CODE", "VERIF", "LOGIN", "SIGN", "PASS", "TOKEN", "PIN"];
+                        const hasContext = contextKeywords.some(k => combined.includes(k));
+                        
+                        // Higher confidence if it's pure digits OR has context keywords
+                        if (isDigitOnly || hasContext) {
+                            if (!otps.some(o => o.code === code)) {
+                                otps.push({ code, from: email.from || email.sender || 'Unknown' });
+                            }
+                        }
                     }
                 });
             }
@@ -4826,7 +6131,7 @@ function openEmailMessage(msgId, type) {
     nav("emailMessage");
 }
 
-function copyText(txt) {
+function copyTextSilent(txt) {
     if (!txt) return;
     navigator.clipboard.writeText(txt).then(() => {
         // Silent copy - no alert
@@ -4841,7 +6146,7 @@ function copySimpleText(id) {
     const el = document.getElementById(id);
     if (!el) return;
     const text = el.textContent || el.href || '';
-    copyText(text);
+    copyTextSilent(text);
 
     // Find the button that was clicked and show checkmark feedback
     const buttons = document.querySelectorAll('.oc-copy');
@@ -4867,15 +6172,15 @@ function copySimpleText(id) {
 }
 
 function copyRichText(id) {
-    copyText(document.getElementById(id).innerText);
+    copyTextSilent(document.getElementById(id).innerText);
 }
 
-function copyToClipboard(id) {
+function copyEmailToClipboard(id) {
     const text = document.getElementById(id).textContent;
-    copyText(text);
+    copyTextSilent(text);
 
     // Find the button that was clicked and show checkmark feedback
-    const buttons = document.querySelectorAll('button[onclick*="copyToClipboard" i]');
+    const buttons = document.querySelectorAll('button[onclick*="copyEmailToClipboard" i]');
     buttons.forEach(btn => {
         if (btn.getAttribute('onclick').includes(id)) {
             const icon = btn.querySelector('i');
@@ -4887,12 +6192,7 @@ function copyToClipboard(id) {
                 // Revert after 1 second
                 setTimeout(() => {
                     icon.className = 'fas fa-copy';
-                    // Restore original color based on button type
-                    if (id.includes('temp')) {
-                        btn.style.background = '#f59e0b';
-                    } else if (id.includes('premium')) {
-                        btn.style.background = '#f59e0b';
-                    }
+                    btn.style.background = '#f59e0b';
                 }, 1000);
             }
         }
@@ -4940,12 +6240,16 @@ function handleEmailMenuNavigation() {
     // Get cards and show them (always show both for now)
     const emailServiceCard = document.getElementById('emailServiceCard');
     const tempMailCard = document.getElementById('tempMailCard');
+    const premiumGmailCard = document.getElementById('premiumGmailCard');
 
     if (emailServiceCard) {
         emailServiceCard.style.display = 'block';
     }
     if (tempMailCard) {
         tempMailCard.style.display = 'block';
+    }
+    if (premiumGmailCard) {
+        premiumGmailCard.style.display = 'block';
     }
 }
 
@@ -5099,12 +6403,11 @@ function autoGenerateTempMail() {
         return;
     }
 
-    // Show loading state
     const addrEl = document.getElementById(type + "MailAddr");
     if (addrEl) {
-        addrEl.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>generating...';
-        addrEl.style.fontStyle = "italic";
-        addrEl.style.opacity = "0.7";
+        addrEl.innerHTML = '<i class="fas fa-circle-notch fa-spin" style="margin-right:8px;"></i>generating...';
+        addrEl.style.fontStyle = 'italic';
+        addrEl.style.opacity = '0.7';
     }
 
     console.log('AutoGenerate: Fetching live email for user', userData.id);
@@ -5170,21 +6473,421 @@ function generateDemoTempMail(type, cost) {
     refreshInbox(type);
 }
 
+var assignedPremiumEmail = null;
+var currentPremiumTab = 'gmail';
+
+function switchPremiumTab(tabStr) {
+    // Handle both Mail and Subscriptions tabs
+    const mailTabs = ['gmail', 'hotmail', 'student'];
+    const subTabs = ['vpn', 'account'];
+
+    if (mailTabs.includes(tabStr)) {
+        currentPremiumTab = tabStr;
+        mailTabs.forEach(t => {
+            const btn = document.getElementById('tab-' + t);
+            if (!btn) return;
+            if (t === tabStr) {
+                btn.style.background = 'rgba(245,158,11,0.2)';
+                btn.style.color = '#f59e0b';
+                btn.classList.add('active');
+            } else {
+                btn.style.background = 'var(--bg-card)';
+                btn.style.color = 'var(--text-sub)';
+                btn.classList.remove('active');
+            }
+        });
+
+        // Update display info
+        const typeEl = document.getElementById('premiumMailType');
+        if (typeEl) typeEl.textContent = tabStr.charAt(0).toUpperCase() + tabStr.slice(1);
+
+        const costBadge = document.getElementById('premiumMailCostBadge');
+        if (costBadge && window.appCostConfig) {
+            const cost = tabStr === 'gmail' ? window.appCostConfig.gmailCost :
+                tabStr === 'hotmail' ? window.appCostConfig.hotmailCost :
+                    window.appCostConfig.studentEmailCost;
+            costBadge.textContent = `${cost || 50} TC / ${tabStr.charAt(0).toUpperCase() + tabStr.slice(1)}`;
+        }
+
+        // Trigger loading or refresh
+        loadPremiumEmailsFromAdmin();
+    } else {
+        // Original VPN/Account switch logic
+        subTabs.forEach(t => {
+            const btn = document.getElementById('ptab-' + t);
+            const content = document.getElementById('premiumTab-' + t);
+            if (btn && content) {
+                if (t === tabStr) {
+                    btn.style.background = 'var(--accent-color)';
+                    btn.style.color = '#000';
+                    content.style.display = 'block';
+                } else {
+                    btn.style.background = 'transparent';
+                    btn.style.color = 'var(--text-sub)';
+                    content.style.display = 'none';
+                }
+            }
+        });
+    }
+}
+window.switchPremiumTab = switchPremiumTab;
+
+async function loadPremiumEmailsFromAdmin() {
+    const addrEl = document.getElementById('premiumMailAddr');
+    if (addrEl) {
+        addrEl.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>searching...';
+    }
+
+    // Check if we have an existing session for this type
+    if (mailSessions && mailSessions.premium && mailSessions.premium.type === currentPremiumTab) {
+        assignedPremiumEmail = mailSessions.premium;
+        // Extract email string if it's an object
+        const emailStr = (typeof assignedPremiumEmail.email === 'object' && assignedPremiumEmail.email !== null)
+            ? (assignedPremiumEmail.email.email || '')
+            : (assignedPremiumEmail.email || '');
+        if (addrEl) addrEl.textContent = emailStr;
+        loadPremiumEmailMessages(assignedPremiumEmail.id);
+        return;
+    }
+
+    // If no session, show "Generate" state
+    if (addrEl) {
+        addrEl.innerHTML = `Click to generate ${currentPremiumTab} mail`;
+        addrEl.style.cursor = 'pointer';
+        addrEl.onclick = () => generatePremiumMail(currentPremiumTab);
+    }
+}
+
+async function generatePremiumMail(provider) {
+    // NO demo mode - only real Gmail pool
+    const addrEl = document.getElementById('premiumMailAddr');
+    if (addrEl) {
+        addrEl.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>generating...';
+        addrEl.style.fontStyle = "italic";
+        addrEl.style.opacity = "0.8";
+    }
+
+    try {
+        const res = await fetch('/api/premium-emails/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: userData.id,
+                provider: provider || 'gmail'
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            // data.email can be an object {email, id} or a string — extract string
+            const emailStr = (typeof data.email === 'object' && data.email !== null)
+                ? (data.email.email || JSON.stringify(data.email))
+                : (data.email || '');
+
+            assignedPremiumEmail = {
+                id: data.sessionId,
+                email: emailStr,
+                type: provider || 'gmail'
+            };
+            mailSessions.premium = assignedPremiumEmail;
+
+            if (addrEl) {
+                addrEl.textContent = emailStr;
+                addrEl.style.fontStyle = "normal";
+                addrEl.style.opacity = "1";
+            }
+            if (typeof data.newBalance === 'number') {
+                userData.tokens = data.newBalance;
+                renderBalances();
+            }
+
+            refreshInbox('premium');
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+            window.showToast('✅ Gmail generated successfully!');
+        } else {
+            if (addrEl) {
+                addrEl.innerHTML = '<span style="color:#f87171;">' + (data.message || 'No Gmail available. Contact admin.') + '</span>';
+                addrEl.style.fontStyle = "normal";
+                addrEl.style.opacity = "1";
+            }
+            window.showToast('❌ ' + (data.message || 'No Gmail in pool. Admin needs to add more.'));
+        }
+    } catch (e) {
+        console.error('Error generating premium mail:', e);
+        if (addrEl) {
+            addrEl.innerHTML = '<span style="color:#f87171;">Network error. Retry later</span>';
+            addrEl.style.fontStyle = "normal";
+            addrEl.style.opacity = "1";
+        }
+        window.showToast('❌ Network error. Please try again.');
+    }
+}
+
+
+async function loadPremiumEmailMessages(sessionId) {
+    const listEl = document.getElementById('premiumInboxList');
+    if (!listEl) return;
+
+    listEl.innerHTML = '<div style="padding:20px; text-align:center;"><i class="fas fa-spinner fa-spin"></i> Loading messages...</div>';
+
+    try {
+        const uid = (window.userData && window.userData.id) ? window.userData.id : (userData && userData.id ? userData.id : 0);
+        const res = await fetch(`/api/premium-emails/inbox?sessionId=${sessionId}&userId=${uid}`);
+        const data = await res.json();
+
+        if (data.success && data.messages) {
+            if (data.messages.length === 0) {
+                listEl.innerHTML = '<div style="padding:40px; text-align:center; color:var(--text-sub); font-size:13px;">No messages received matching your filters yet.</div>';
+            } else {
+                listEl.innerHTML = '';
+                data.messages.forEach(msg => {
+                    const item = document.createElement('div');
+                    item.className = 'inbox-item';
+                    item.style.padding = '15px';
+                    item.style.borderBottom = '1px solid var(--border-color)';
+                    item.onclick = () => openPremiumEmailMessage(msg);
+                    item.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                            <span style="font-weight:700; color:var(--text-main); font-size:14px;">${msg.from || 'Unknown'}</span>
+                            <span style="font-size:11px; color:var(--text-sub);">${msg.date || ''}</span>
+                        </div>
+                        <div style="font-weight:600; font-size:13px; color:var(--text-main); margin-bottom:4px;">${msg.subject || '(No Subject)'}</div>
+                        <div style="font-size:12px; color:var(--text-sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${msg.snippet || msg.body?.substring(0, 50) || ''}</div>
+                    `;
+                    listEl.appendChild(item);
+                });
+            }
+        } else {
+            listEl.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-sub);">Error loading inbox.</div>';
+        }
+    } catch (e) {
+        listEl.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-sub);">Connection error.</div>';
+    }
+}
+
+function openPremiumEmailMessage(msg) {
+    const modal = document.getElementById('emailMessageModal');
+    if (!modal) return;
+
+    document.getElementById('msgFrom').textContent = msg.from;
+    document.getElementById('msgSubject').textContent = msg.subject;
+    document.getElementById('msgDate').textContent = msg.date;
+    document.getElementById('msgBody').innerHTML = msg.html || msg.body;
+
+    modal.style.display = 'block';
+}
+
+function selectPremiumEmail(id) {
+    // Utility for selection if multiple provided
+}
+
 function openPremiumMailDirect() {
     if (!checkFeatureOrComingSoon('premiumMail', 'Premium Mail')) return;
     nav('premiumMail');
-    // Load premium emails from admin panel
-    loadPremiumEmailsFromAdmin();
+    window._currentMailType = 'premium';
+    updateMailBalance('premium');
+
+    // Check if email needs auto-generation
+    const session = mailSessions.premium;
+    if (!session || !session.email) {
+        setTimeout(() => {
+            autoGeneratePremiumMailWrapper();
+        }, 500);
+    } else {
+        const addrEl = document.getElementById('premiumMailAddr');
+        // Extract string in case email is stored as object
+        const emailStr = (typeof session.email === 'object' && session.email !== null)
+            ? (session.email.email || '')
+            : (session.email || '');
+        if (addrEl) addrEl.textContent = emailStr;
+        refreshInbox('premium');
+    }
 }
 
-// Store assigned premium email
-function refreshPremiumInbox() {
-    if (assignedPremiumEmail && assignedPremiumEmail.id) {
-        loadPremiumEmailMessages(assignedPremiumEmail.id);
-        window.showToast('✅ Inbox refreshed');
-    } else {
-        loadPremiumEmailsFromAdmin();
+function autoGeneratePremiumMailWrapper() {
+    if (checkZeroBalanceAdTrigger()) return;
+    const cost = parseInt(window.appCostConfig?.premiumMailCost) || 50;
+
+    if (!userData.id || userData.id === 0) {
+        const addrEl = document.getElementById('premiumMailAddr');
+        if (addrEl) {
+            addrEl.innerHTML = '<span style="color:#f87171;">Please login first</span>';
+        }
+        return;
     }
+
+    if (Math.max(0, userData.tokens || 0) < cost) {
+        nav('earn');
+        return;
+    }
+
+    const addrEl = document.getElementById('premiumMailAddr');
+    if (addrEl) {
+        addrEl.innerHTML = '<i class="fas fa-circle-notch fa-spin" style="margin-right:8px;"></i>generating...';
+        addrEl.style.fontStyle = 'italic';
+        addrEl.style.opacity = '0.7';
+    }
+
+    generatePremiumMail('gmail', cost);
+}
+
+function openHotmailDirect() {
+    if (!checkFeatureOrComingSoon('hotMail', 'Hot Mail')) return;
+    nav('hotMail');
+    window._currentMailType = 'hot';
+    updateMailBalance('hot');
+
+    // Check if email needs auto-generation
+    const session = mailSessions.hot;
+    if (!session || !session.email) {
+        setTimeout(() => {
+            autoGenerateHotMail();
+        }, 500);
+    } else {
+        const addrEl = document.getElementById('hotMailAddr');
+        if (addrEl) addrEl.textContent = session.email;
+        refreshInbox('hot');
+    }
+}
+
+function autoGenerateHotMail() {
+    if (checkZeroBalanceAdTrigger()) return;
+    const type = 'hot';
+    const cost = parseInt(window.appCostConfig?.hotMailCost) || 15;
+
+    if (!userData.id || userData.id === 0) {
+        const addrEl = document.getElementById(type + 'MailAddr');
+        if (addrEl) {
+            addrEl.innerHTML = '<span style="color:#f87171;">Please login first</span>';
+        }
+        return;
+    }
+
+    if (Math.max(0, userData.tokens || 0) < cost) {
+        nav('earn');
+        return;
+    }
+
+    const addrEl = document.getElementById(type + 'MailAddr');
+    if (addrEl) {
+        addrEl.innerHTML = '<i class="fas fa-circle-notch fa-spin" style="margin-right:8px;"></i>generating...';
+        addrEl.style.fontStyle = 'italic';
+        addrEl.style.opacity = '0.7';
+    }
+
+    fetch('/api/mail/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: userData.id, cost, type })
+    })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.email) {
+                userData.tokens = (typeof data.newBalance === 'number') ? data.newBalance : Math.max(0, (userData.tokens || 0) - cost);
+                renderBalances();
+                mailSessions[type] = { ...data, createdAt: Date.now() };
+                if (addrEl) {
+                    addrEl.textContent = data.email;
+                    addrEl.style.fontStyle = 'normal';
+                    addrEl.style.opacity = '1';
+                }
+                updateMailBalance(type);
+                refreshInbox(type);
+                if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+            } else {
+                if (addrEl) {
+                    addrEl.innerHTML = '<span style="color:#f87171;">Failed: ' + (data.message || 'Try again') + '</span>';
+                    addrEl.style.fontStyle = 'normal';
+                }
+            }
+        })
+        .catch(() => {
+            if (addrEl) {
+                addrEl.innerHTML = '<span style="color:#f87171;">Network error. Tap NEW EMAIL</span>';
+                addrEl.style.fontStyle = 'normal';
+            }
+        });
+}
+
+function openStudentEmailDirect() {
+    if (!checkFeatureOrComingSoon('studentMail', 'Student Mail')) return;
+    nav('studentMail');
+    window._currentMailType = 'student';
+    updateMailBalance('student');
+
+    // Check if email needs auto-generation
+    const session = mailSessions.student;
+    if (!session || !session.email) {
+        setTimeout(() => {
+            autoGenerateStudentMail();
+        }, 500);
+    } else {
+        const addrEl = document.getElementById('studentMailAddr');
+        if (addrEl) addrEl.textContent = session.email;
+        refreshInbox('student');
+    }
+}
+
+function autoGenerateStudentMail() {
+    if (checkZeroBalanceAdTrigger()) return;
+    const type = 'student';
+    const cost = parseInt(window.appCostConfig?.studentMailCost) || 20;
+
+    if (!userData.id || userData.id === 0) {
+        const addrEl = document.getElementById(type + 'MailAddr');
+        if (addrEl) {
+            addrEl.innerHTML = '<span style="color:#f87171;">Please login first</span>';
+        }
+        return;
+    }
+
+    if (Math.max(0, userData.tokens || 0) < cost) {
+        nav('earn');
+        return;
+    }
+
+    const addrEl = document.getElementById(type + 'MailAddr');
+    if (addrEl) {
+        addrEl.innerHTML = '<i class="fas fa-circle-notch fa-spin" style="margin-right:8px;"></i>generating...';
+        addrEl.style.fontStyle = 'italic';
+        addrEl.style.opacity = '0.7';
+    }
+
+    fetch('/api/mail/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: userData.id, cost, type })
+    })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.email) {
+                userData.tokens = (typeof data.newBalance === 'number') ? data.newBalance : Math.max(0, (userData.tokens || 0) - cost);
+                renderBalances();
+                mailSessions[type] = { ...data, createdAt: Date.now() };
+                if (addrEl) {
+                    addrEl.textContent = data.email;
+                    addrEl.style.fontStyle = 'normal';
+                    addrEl.style.opacity = '1';
+                }
+                updateMailBalance(type);
+                refreshInbox(type);
+                if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+            } else {
+                if (addrEl) {
+                    addrEl.innerHTML = '<span style="color:#f87171;">Failed: ' + (data.message || 'Try again') + '</span>';
+                    addrEl.style.fontStyle = 'normal';
+                }
+            }
+        })
+        .catch(() => {
+            if (addrEl) {
+                addrEl.innerHTML = '<span style="color:#f87171;">Network error. Tap NEW EMAIL</span>';
+                addrEl.style.fontStyle = 'normal';
+            }
+        });
+}
+
+function refreshPremiumInbox() {
+    refreshInbox('premium');
 }
 
 // Export new functions
@@ -5193,6 +6896,7 @@ window.selectPremiumEmail = selectPremiumEmail;
 window.loadPremiumEmailMessages = loadPremiumEmailMessages;
 window.refreshPremiumInbox = refreshPremiumInbox;
 window.openPremiumEmailMessage = openPremiumEmailMessage;
+window.generatePremiumMail = generatePremiumMail;
 
 function autoGeneratePremiumMail() {
     // Replaced by loadPremiumEmailsFromAdmin
@@ -5247,8 +6951,14 @@ window.renewTempMail = renewTempMail;
 window.autoGenerateTempMail = autoGenerateTempMail;
 window.generateDemoTempMail = generateDemoTempMail;
 window.openPremiumMailDirect = openPremiumMailDirect;
+window.openPremiumGmailDirect = openPremiumGmailDirect;
 window.autoGeneratePremiumMail = autoGeneratePremiumMail;
+window.autoGeneratePremiumMailWrapper = autoGeneratePremiumMailWrapper;
 window.generateDemoPremiumMail = generateDemoPremiumMail;
+window.openHotmailDirect = openHotmailDirect;
+window.autoGenerateHotMail = autoGenerateHotMail;
+window.openStudentEmailDirect = openStudentEmailDirect;
+window.autoGenerateStudentMail = autoGenerateStudentMail;
 window.changeMailEmail = changeMailEmail;
 window.cancelMail = cancelMail;
 window.copyMailEmail = copyMailEmail;
@@ -5394,7 +7104,8 @@ async function verifyJoinsAndProceed() {
     const result = await checkRequiredJoins();
 
     if (result.canProceed) {
-        document.getElementById('joinRequiredModal').style.display = 'none';
+        const jrm = document.getElementById('joinRequiredModal');
+        if (jrm) jrm.style.display = 'none';
         // Show verification toast if user was just verified
         if (result.verified && !result.adminVerified) {
             showToast('✅ You are now verified! Full access granted.');
@@ -5424,6 +7135,7 @@ async function continueInitialization() {
     const savedTheme = localStorage.getItem('theme') || 'dark';
     document.body.setAttribute('data-theme', savedTheme);
     updateThemeIcon(savedTheme);
+    if (typeof initActiveVirtualNumbers === 'function') initActiveVirtualNumbers();
 
     // Check user verification status and show appropriate welcome
     try {
@@ -5464,13 +7176,30 @@ document.addEventListener('DOMContentLoaded', async function () {
                 console.log('[INIT] Fetching user data...');
                 await registerAndFetchUser();
                 console.log('[INIT] User data fetched, adminVerified:', userData.adminVerified);
+                // Check for pending gifts after user data is loaded
+                setTimeout(checkPendingGifts, 3000);
             } catch (e) {
                 console.error('[INIT] Failed to fetch user data:', e);
             }
         }
 
-        // JOIN CHECK DISABLED - Always allow access
-        console.log('[INIT] Join check disabled - proceeding to app');
+        // FETCH FEATURE FLAGS & CHECK JOIN REQUIREMENT
+        const featuresRes = await fetch('/api/features').catch(() => ({ json: () => ({ success: false }) }));
+        const featuresData = await featuresRes.json();
+        const joinRequired = featuresData.success ? featuresData.features.joinRequired : false;
+
+        if (joinRequired && !userData.adminVerified) {
+            console.log('[INIT] Join check enabled - verifying membership...');
+            const joinCheck = await checkRequiredJoins();
+            if (!joinCheck.canProceed) {
+                showJoinRequiredModal(joinCheck);
+                return;
+            }
+            console.log('[INIT] Membership verified - proceeding to app');
+        } else {
+            console.log('[INIT] Join check skipped (disabled or admin) - proceeding to app');
+        }
+        
         continueInitialization();
     } catch (error) {
         console.error('[INIT] Critical initialization error:', error);
@@ -5551,7 +7280,9 @@ window.generateVirtualNumber = generateVirtualNumber;
 window.selectNumPlatform = selectNumPlatform;
 window.loadNumPlatforms = loadNumPlatforms;
 window.refreshOTP = refreshOTP;
-window.cancelNumber = cancelNumber;
+window.copyNumByValue = copyNumByValue;
+window.cancelNumberBySessionId = cancelNumberBySessionId;
+window.cancelNumber = cancelNumberBySessionId;
 window.openService = openService;
 window.copyText = copyText;
 window.copyTextById = copyTextById;
@@ -5674,8 +7405,10 @@ function setSellItemType(type) {
         if (form && form.style.display === 'block' && selCat) {
             // Only reset if they click the opposite of what they selected
             // But for simplicity, reset always so they see the fresh list
-            document.getElementById('itemSellFormContainer').style.display = 'none';
-            document.getElementById('itemSellCategoryGrid').style.display = 'grid';
+            const isfc = document.getElementById('itemSellFormContainer');
+            const iscg = document.getElementById('itemSellCategoryGrid');
+            if (isfc) isfc.style.display = 'none';
+            if (iscg) iscg.style.display = 'grid';
             document.getElementById('selItemCategory').value = '';
         }
     }
@@ -5690,8 +7423,10 @@ function selectSellCategory(cat, icon, gradient) {
     if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
 
     document.getElementById('selItemCategory').value = cat;
-    document.getElementById('itemSellCategoryGrid').style.display = 'none';
-    document.getElementById('itemSellFormContainer').style.display = 'block';
+    const iscg = document.getElementById('itemSellCategoryGrid');
+    const isfc = document.getElementById('itemSellFormContainer');
+    if (iscg) iscg.style.display = 'none';
+    if (isfc) isfc.style.display = 'block';
 
     // Header for form
     const catName = document.getElementById('selectedCatName');
@@ -5776,8 +7511,10 @@ function previewCardLogo(input) {
 window.previewCardLogo = previewCardLogo;
 
 function resetSellCategory() {
-    document.getElementById('itemSellCategoryGrid').style.display = 'grid';
-    document.getElementById('itemSellFormContainer').style.display = 'none';
+    const iscg = document.getElementById('itemSellCategoryGrid');
+    const isfc = document.getElementById('itemSellFormContainer');
+    if (iscg) iscg.style.display = 'grid';
+    if (isfc) isfc.style.display = 'none';
     document.getElementById('selItemCategory').value = '';
 
     // Reset all form fields
@@ -6538,24 +8275,106 @@ function formatCardNumbers(textarea) {
     parseCardData(textarea);
 }
 
-function switchPremiumTab(tabStr) {
-    const tabs = ['vpn', 'account'];
-    tabs.forEach(t => {
-        const btn = document.getElementById('ptab-' + t);
-        const content = document.getElementById('premiumTab-' + t);
-        if (btn && content) {
-            if (t === tabStr) {
-                btn.style.background = 'var(--accent-color)';
-                btn.style.color = '#000';
-                content.style.display = 'block';
-            } else {
-                btn.style.background = 'transparent';
-                btn.style.color = 'var(--text-sub)';
-                content.style.display = 'none';
+// =============================================
+// SERVICE PAGES LOGIC (Video, AI, Remover)
+// =============================================
+function validateServiceInput(type) {
+    let input, btn;
+    if (type === 'videoDownload') {
+        input = document.getElementById('videoDownloadInput');
+        btn = document.getElementById('videoDownloadBtn');
+    } else if (type === 'aiPhoto') {
+        input = document.getElementById('aiPhotoPrompt');
+        btn = document.getElementById('aiPhotoBtn');
+    } else if (type === 'aiVideo') {
+        input = document.getElementById('aiVideoPrompt');
+        btn = document.getElementById('aiVideoBtn');
+    }
+
+    if (!input || !btn) return;
+
+    const val = input.value.trim();
+    if (val.length > 0) {
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+        btn.style.filter = 'drop-shadow(0 0 8px rgba(255,255,255,0.2))';
+    } else {
+        btn.style.opacity = '0.5';
+        btn.style.pointerEvents = 'none';
+        btn.style.filter = 'none';
+    }
+}
+
+function handleServiceFileUpload(type) {
+    const input = document.getElementById(type + 'File');
+    const btn = document.getElementById(type + 'Btn');
+    const dropzone = document.getElementById(type + 'Dropzone');
+    const placeholder = document.getElementById(type + 'Placeholder');
+    const preview = document.getElementById(type + 'Preview');
+    const textEl = document.getElementById(type + 'Text');
+
+    if (!input || !btn || !input.files || input.files.length === 0) return;
+
+    const file = input.files[0];
+
+    // Visual feedback
+    if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            if (preview && placeholder) {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+                placeholder.style.display = 'none';
+                if (dropzone) {
+                    dropzone.style.padding = '10px';
+                    dropzone.style.minHeight = 'auto';
+                }
+            } else if (textEl) {
+                // Fallback for types without separate preview/placeholder structure
+                textEl.innerHTML = `<span style="color:#22c55e"><i class="fas fa-check-circle"></i> File selected: ${file.name}</span>`;
+                textEl.innerHTML += `<br><img src="${e.target.result}" style="max-width: 100px; max-height: 100px; margin-top: 10px; border-radius: 8px; border: 2px solid white;">`;
             }
         }
-    });
+        reader.readAsDataURL(file);
+    } else {
+        // Handle non-image files (e.g., MP4 for watermark remover)
+        if (placeholder) {
+            if (textEl) {
+                textEl.innerHTML = `<span style="color:#22c55e"><i class="fas fa-check-circle"></i> File selected: ${file.name}</span>`;
+            }
+        }
+    }
+
+    if (dropzone) {
+        dropzone.style.borderColor = '#22c55e';
+        dropzone.style.background = 'rgba(34, 197, 94, 0.05)';
+    }
+
+    // Enable action button
+    btn.style.opacity = '1';
+    btn.style.pointerEvents = 'auto';
+
+    if (window.showToast) {
+        window.showToast('✅ File ready for processing!');
+    }
+
+    if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
 }
+
+window.validateServiceInput = validateServiceInput;
+window.handleServiceFileUpload = handleServiceFileUpload;
+
+function openMonitorChannel() {
+    if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+    window.showToast('🚀 Running Monitor... Redirecting to Bot');
+    setTimeout(() => {
+        const botUrl = `https://t.me/AutoVerify_Monitor_Bot`;
+        tg.openTelegramLink(botUrl);
+    }, 1500);
+}
+window.openMonitorChannel = openMonitorChannel;
+
+// Ends here.
 window.switchPremiumTab = switchPremiumTab;
 
 
@@ -6677,42 +8496,15 @@ async function submitQuizAnswer(idx) {
 }
 
 async function renderQuizLeaderboard() {
-    const list = document.getElementById('quizLeaderboardList');
-    if (!list) return;
-
-    list.innerHTML = '<div style="padding:40px; text-align:center; color:#888;">Loading...</div>';
-
-    try {
-        const res = await fetch('/api/quiz/leaderboard');
-        const data = await res.json();
-
-        if (data.success && data.leaderboard) {
-            list.innerHTML = '';
-            data.leaderboard.forEach((item, idx) => {
-                const row = document.createElement('div');
-                row.style.display = 'flex';
-                row.style.alignItems = 'center';
-                row.style.padding = '16px';
-                row.style.borderBottom = '1px solid var(--border-color)';
-
-                const rankColor = idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#888';
-
-                row.innerHTML = `
-                    <div style="width:30px; font-weight:900; color:${rankColor};">#${idx + 1}</div>
-                    <div style="width:40px; height:40px; border-radius:50%; background:rgba(255,255,255,0.05); margin:0 12px; overflow:hidden;">
-                        <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(item.name)}&background=random" style="width:100%; height:100%;">
-                    </div>
-                    <div style="flex:1;">
-                        <div style="font-size:14px; font-weight:800; color:#fff;">${item.name}</div>
-                        <div style="font-size:11px; color:var(--text-sub);">${item.correctCount} Correct Answers</div>
-                    </div>
-                    <div style="font-weight:900; color:#22c55e;">${item.points} TC</div>
-                `;
-                list.appendChild(row);
-            });
-        }
-    } catch (e) {
-        list.innerHTML = '<div style="padding:40px; text-align:center; color:#ef4444;">Failed to load leaderboard</div>';
+    if (typeof renderPodiumLeaderboard !== 'undefined') {
+        renderPodiumLeaderboard('quiz', 'all', {
+            podiumId: 'quizPodium',
+            listId: 'quizLeaderboardList',
+            rankId: 'quizPersonalRank',
+            timeId: null,
+            cycleId: null,
+            progressId: null
+        });
     }
 }
 
@@ -6903,3 +8695,759 @@ function startScratchFlow() {
 }
 window.startScratchFlow = startScratchFlow;
 window.initScratchCard = initScratchCard;
+
+// Function to show Admin Reply on Web UI
+function showWebAdminMessage(message) {
+    if (message && typeof message === 'object' && message.isGift && message.giftId) {
+        const overlayId = 'admin-gift-' + Date.now();
+        const text = message.message || '🎁 You received a gift!';
+        const html = `
+        <div id="${overlayId}" style="position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
+            <div style="background: linear-gradient(to bottom right, #1e1e38, #13132b); border: 2px solid rgba(245, 158, 11, 0.45); border-radius: 20px; padding: 24px; max-width: 90%; width: 400px; position: relative; box-shadow: 0 10px 30px rgba(245, 158, 11, 0.18); animation: scaleIn 0.3s ease-out;">
+                <button onclick="document.getElementById('${overlayId}').remove()" style="position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.1); border: none; width: 32px; height: 32px; border-radius: 16px; color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px;">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div style="text-align: center; margin-bottom: 16px;">
+                    <div style="width: 56px; height: 56px; border-radius: 18px; background: rgba(245, 158, 11, 0.18); color: #f59e0b; font-size: 26px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
+                        <i class="fas fa-gift"></i>
+                    </div>
+                    <h3 style="color: white; font-weight: bold; font-size: 18px; margin: 0;">Gift from Admin</h3>
+                </div>
+                <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); padding: 16px; border-radius: 12px; color: #e2e8f0; font-size: 15px; line-height: 1.5; white-space: pre-wrap; word-break: break-word;">${text}</div>
+                <div style="text-align: center; margin-top: 20px; display:flex; gap:10px;">
+                    <button onclick="document.getElementById('${overlayId}').remove()" style="flex:1; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.8); font-weight: bold; padding: 12px 16px; border-radius: 12px; font-size: 14px;">Later</button>
+                    <button id="${overlayId}-claim" style="flex:1; background: linear-gradient(135deg, #f59e0b, #d97706); border: none; color: #000; font-weight: 900; padding: 12px 16px; border-radius: 12px; font-size: 14px; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.25);">CLAIM REWARD</button>
+                </div>
+                <div style="text-align: center; margin-top: 12px;">
+                    <span style="font-size: 10px; color: rgba(255,255,255,0.4);">Auto dismissing in 30s...</span>
+                </div>
+            </div>
+        </div>
+        <style>
+            @keyframes scaleIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        </style>
+        `;
+        document.body.insertAdjacentHTML('beforeend', html);
+
+        const claimBtn = document.getElementById(`${overlayId}-claim`);
+        if (claimBtn) {
+            claimBtn.onclick = async () => {
+                const gifts = await fetch('/api/user/gifts?userId=' + userData.id).then(r => r.json()).catch(() => null);
+                const giftObj = gifts?.gifts?.find(g => g.id === message.giftId);
+                if (giftObj) {
+                    showGiftPopup(giftObj);
+                }
+                document.getElementById(overlayId)?.remove();
+                claimGiftReward(message.giftId);
+            };
+        }
+
+        setTimeout(() => {
+            const el = document.getElementById(overlayId);
+            if (el) el.remove();
+        }, 30000);
+        return;
+    }
+
+    const text = (message && typeof message === 'object') ? (message.message || '') : String(message || '');
+    const overlayId = 'admin-msg-' + Date.now();
+    const html = `
+    <div id="${overlayId}" style="position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
+        <div style="background: linear-gradient(to bottom right, #1e1e38, #13132b); border: 2px solid rgba(139, 92, 246, 0.4); border-radius: 20px; padding: 24px; max-width: 90%; width: 400px; position: relative; box-shadow: 0 10px 30px rgba(139, 92, 246, 0.2); animation: scaleIn 0.3s ease-out;">
+            <button onclick="document.getElementById('${overlayId}').remove()" style="position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.1); border: none; width: 32px; height: 32px; border-radius: 16px; color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px;">
+                <i class="fas fa-times"></i>
+            </button>
+            <div style="text-align: center; margin-bottom: 16px;">
+                <div style="width: 50px; height: 50px; border-radius: 25px; background: rgba(139, 92, 246, 0.2); color: #a78bfa; font-size: 24px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
+                    <i class="fas fa-bell"></i>
+                </div>
+                <h3 style="color: white; font-weight: bold; font-size: 18px; margin: 0;">Message from Admin</h3>
+            </div>
+            <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); padding: 16px; border-radius: 12px; color: #e2e8f0; font-size: 15px; line-height: 1.5; white-space: pre-wrap; word-break: break-word;">${text}</div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button onclick="document.getElementById('${overlayId}').remove()" style="background: linear-gradient(90deg, #8b5cf6, #ec4899); border: none; color: white; font-weight: bold; padding: 12px 24px; border-radius: 12px; width: 100%; font-size: 16px; box-shadow: 0 4px 15px rgba(236, 72, 153, 0.3);">Dismiss</button>
+            </div>
+            <div style="text-align: center; margin-top: 12px;">
+                <span style="font-size: 10px; color: rgba(255,255,255,0.4);">Auto dismissing in 30s...</span>
+            </div>
+        </div>
+    </div>
+    <style>
+        @keyframes scaleIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    </style>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', html);
+
+    // Auto dismiss after 30 seconds
+    setTimeout(() => {
+        const el = document.getElementById(overlayId);
+        if (el) el.remove();
+    }, 30000);
+}
+
+// ==========================================
+// ADMIN PANEL LOGIC
+// ==========================================
+
+async function loadAdminConfig() {
+    try {
+        const res = await fetch('/api/admin/config');
+        const data = await res.json();
+        if (data.success) {
+            document.getElementById('adm-daily-val').value = data.config.dailyBonus || 100;
+            document.getElementById('adm-welcome-val').value = data.config.welcomeCredits || 500;
+            const maintBtn = document.getElementById('adm-maint');
+            const knob = document.getElementById('adm-knob');
+            if (data.config.maintenance) {
+                maintBtn.style.background = '#10b981';
+                knob.style.left = '24px';
+            } else {
+                maintBtn.style.background = '#333';
+                knob.style.left = '2px';
+            }
+            // Country Rewards
+            document.getElementById('adm-country-rewards').value = JSON.stringify(data.config.countryAdRewards || {}, null, 2);
+        }
+    } catch (e) { console.error("Error loading admin config", e); }
+}
+
+async function saveAdminConfig() {
+    const daily = document.getElementById('adm-daily-val').value;
+    const welcome = document.getElementById('adm-welcome-val').value;
+    let countryRewards = {};
+    try {
+        countryRewards = JSON.parse(document.getElementById('adm-country-rewards').value);
+    } catch (e) {
+        return window.showToast('Invalid Country Rewards JSON!');
+    }
+
+    try {
+        const res = await fetch('/api/admin/update-config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: userData.id,
+                dailyBonus: parseInt(daily),
+                welcomeCredits: parseInt(welcome),
+                countryAdRewards: countryRewards
+            })
+        });
+        const data = await res.json();
+        if (data.success) window.showToast('Config saved successfully!');
+        else window.showToast(data.message || 'Error saving config');
+    } catch (e) { window.showToast('Network error saving config'); }
+}
+
+async function sendAdminBroadcast() {
+    const text = document.getElementById('adm-broadcast-text').value;
+    if (!text) return window.showToast('Please enter message');
+    try {
+        const res = await fetch('/api/admin/broadcast', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: userData.id, message: text })
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.showToast('Broadcast sent!');
+            document.getElementById('adm-broadcast-text').value = '';
+        } else window.showToast(data.message || 'Broadcast failed');
+    } catch (e) { window.showToast('Network error broadcasting'); }
+}
+
+async function toggleAdminMeta(type) {
+    try {
+        const res = await fetch('/api/admin/toggle-maintenance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: userData.id })
+        });
+        const data = await res.json();
+        if (data.success) {
+            loadAdminConfig(); // Refresh status
+        }
+    } catch (e) { window.showToast('Error toggling maintenance'); }
+}
+
+async function loadAdminMessages() {
+    const list = document.getElementById('adminMessagesList');
+    try {
+        const res = await fetch('/api/admin/all-messages?userId=' + userData.id);
+        const data = await res.json();
+        if (data.success) {
+            renderAdminMessages(data.messages);
+        } else {
+            list.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sub);">${data.message || 'Failed to load'}</div>`;
+        }
+    } catch (e) { list.innerHTML = '<div style="color:red; text-align:center;">Network error</div>'; }
+}
+
+function renderAdminMessages(messages) {
+    const list = document.getElementById('adminMessagesList');
+    if (!messages || Object.keys(messages).length === 0) {
+        list.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-sub);">No active support threads</div>';
+        return;
+    }
+    let html = '';
+    for (const uId in messages) {
+        const userMsgs = messages[uId];
+        const lastMsg = userMsgs[userMsgs.length - 1];
+        html += `
+            <div style="background:rgba(255,255,255,0.05); padding:15px; border-radius:15px; margin-bottom:10px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                    <span style="font-weight:bold; color:var(--accent-color);">User: ${uId}</span>
+                    <span style="font-size:10px; color:var(--text-sub);">${new Date(lastMsg.timestamp).toLocaleString()}</span>
+                </div>
+                <div style="font-size:14px; margin-bottom:10px; opacity:0.8;">Last: ${lastMsg.message}</div>
+                <div style="display:flex; gap:8px;">
+                    <input type="text" id="reply-to-${uId}" placeholder="Type reply..." 
+                        style="flex:1; background:var(--bg-body); border:1px solid var(--border-color); color:var(--text-main); padding:8px; border-radius:8px; font-size:12px;">
+                    <button onclick="replyToUser('${uId}')" 
+                        style="background:var(--accent-color); color:#000; border:none; padding:8px 15px; border-radius:8px; font-weight:bold; font-size:12px;">SEND</button>
+                </div>
+            </div>
+        `;
+    }
+    list.innerHTML = html;
+}
+
+async function replyToUser(targetUserId) {
+    const input = document.getElementById('reply-to-' + targetUserId);
+    const message = input.value;
+    if (!message) return;
+    try {
+        const res = await fetch('/api/admin/send-message', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: targetUserId, message: message }) // targetUserId is the user to reply to
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.showToast('Reply sent!');
+            input.value = '';
+            loadAdminMessages(); // Refresh
+        } else window.showToast(data.message || 'Reply failed');
+    } catch (e) { window.showToast('Network error replying'); }
+}
+
+// Ensure functions are global
+window.saveAdminConfig = saveAdminConfig;
+window.sendAdminBroadcast = sendAdminBroadcast;
+window.loadAdminMessages = loadAdminMessages;
+window.replyToUser = replyToUser;
+window.toggleAdminMeta = toggleAdminMeta;
+window.loadAdminConfig = loadAdminConfig;
+
+// ==========================================
+// AI & MEDIA SERVICES LOGIC
+// ==========================================
+
+function showResultWithDownload(containerId, imageUrl, label, isVideo) {
+    var existing = document.getElementById(containerId);
+    if (existing) existing.remove();
+
+    var mediaTag = isVideo
+        ? '<video controls style="width:100%; border-radius:12px; max-height:300px; background:#000;" src="' + imageUrl + '"></video>'
+        : '<img src="' + imageUrl + '" style="width:100%; border-radius:12px; max-height:350px; object-fit:contain; background:rgba(0,0,0,0.3);">';
+
+    var div = document.createElement('div');
+    div.id = containerId;
+    div.style.cssText = 'margin-top:20px; padding:16px; background:rgba(255,255,255,0.05); border-radius:16px; border:1px solid rgba(255,255,255,0.1);';
+    div.innerHTML = '<p style="color:#22c55e; font-size:12px; font-weight:700; text-transform:uppercase; margin-bottom:12px;">' + label + '</p>' +
+        mediaTag +
+        '<a href="' + imageUrl + '" download target="_blank" style="display:flex; align-items:center; justify-content:center; gap:8px; margin-top:12px; padding:12px; background:linear-gradient(135deg,#22c55e,#16a34a); color:#fff; border-radius:10px; text-decoration:none; font-weight:700; font-size:14px;">' +
+        '<i class="fas fa-download"></i> Download</a>';
+
+    var pageEl = document.querySelector('.page[style*="block"]') || document.querySelector('.page:not([style*="none"])');
+    if (pageEl) pageEl.querySelector('.content-body').appendChild(div);
+}
+
+async function pollJobResult(jobId, provider, onReady, maxTries) {
+    maxTries = maxTries || 20;
+    var tries = 0;
+    var interval = setInterval(async function () {
+        tries++;
+        if (tries > maxTries) {
+            clearInterval(interval);
+            window.showToast('Processing timed out. Please try again.');
+            return;
+        }
+        try {
+            var res = await fetch('/api/ai/job-status/' + jobId + '?provider=' + (provider || 'bytez'));
+            var data = await res.json();
+            if (data.url) {
+                clearInterval(interval);
+                if (onReady) onReady(data.url);
+            }
+        } catch (e) { /* keep polling */ }
+    }, 3000);
+}
+
+async function generateAIPhoto() {
+    var prompt = document.getElementById('aiPhotoPrompt').value.trim();
+    var style = document.getElementById('aiPhotoStyle').value;
+    var ratio = document.getElementById('aiPhotoRatio').value;
+    var btn = document.getElementById('aiPhotoBtn');
+
+    if (!prompt) { window.showToast('Please enter a prompt!'); return; }
+
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+    btn.disabled = true;
+
+    // Remove old result
+    var old = document.getElementById('aiPhotoResult');
+    if (old) old.remove();
+
+    try {
+        var res = await fetch('/api/ai/generate-photo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: userData ? userData.id : 0, prompt: prompt, style: style, ratio: ratio })
+        });
+        var data = await res.json();
+        if (data.success) {
+            if (data.data && data.data.url) {
+                // Immediate result (OpenRouter)
+                showResultWithDownload('aiPhotoResult', data.data.url, 'Generated Image', false);
+                window.showToast('Photo generated!');
+            } else if (data.data && data.data.jobId) {
+                // Async job (Bytez)
+                window.showToast('Generating image... Please wait');
+                pollJobResult(data.data.jobId, data.provider, function (url) {
+                    showResultWithDownload('aiPhotoResult', url, 'Generated Image', false);
+                    window.showToast('Photo ready!');
+                });
+            } else {
+                window.showToast('Processing started. Check back shortly.');
+            }
+        } else {
+            window.showToast(data.error || data.message || 'Generation failed. Check API key in settings.');
+        }
+    } catch (e) { window.showToast('Network error. Is the server running?'); }
+
+    btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Generate Image';
+    btn.disabled = false;
+}
+
+async function generateAIVideo() {
+    var prompt = document.getElementById('aiVideoPrompt').value.trim();
+    var duration = document.getElementById('aiVideoDuration').value;
+    var quality = document.getElementById('aiVideoQuality').value;
+    var btn = document.getElementById('aiVideoBtn');
+
+    if (!prompt) { window.showToast('Please enter a video prompt!'); return; }
+
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+    btn.disabled = true;
+
+    var old = document.getElementById('aiVideoResult');
+    if (old) old.remove();
+
+    try {
+        var res = await fetch('/api/ai/generate-video', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: userData ? userData.id : 0, prompt: prompt, duration: parseInt(duration), quality: quality })
+        });
+        var data = await res.json();
+        if (data.success) {
+            if (data.data && data.data.url) {
+                showResultWithDownload('aiVideoResult', data.data.url, 'Generated Video', true);
+                window.showToast('Video generated!');
+            } else if (data.data && data.data.jobId) {
+                window.showToast('Generating video... This may take a few minutes');
+                pollJobResult(data.data.jobId, data.provider, function (url) {
+                    showResultWithDownload('aiVideoResult', url, 'Generated Video', true);
+                    window.showToast('Video ready!');
+                }, 40);
+            } else {
+                window.showToast('Processing started. Check back shortly.');
+            }
+        } else {
+            window.showToast(data.error || data.message || 'Generation failed. Check API key in settings.');
+        }
+    } catch (e) { window.showToast('Network error. Is the server running?'); }
+
+    btn.innerHTML = '<i class="fas fa-play"></i> Generate Video';
+    btn.disabled = false;
+}
+
+async function removeWatermark() {
+    var fileInput = document.getElementById('watermarkRemoverFile');
+    var btn = document.getElementById('watermarkRemoverBtn');
+
+    if (!fileInput.files || fileInput.files.length === 0) {
+        window.showToast('Please select a file first!');
+        return;
+    }
+
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+    btn.disabled = true;
+
+    var old = document.getElementById('watermarkResult');
+    if (old) old.remove();
+
+    var fileType = fileInput.files[0].type.startsWith('video') ? 'video' : 'image';
+
+    try {
+        // Single-step: upload file and process watermark removal together
+        var formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        formData.append('type', fileType);
+        formData.append('userId', userData ? userData.id : 0);
+
+        var res = await fetch('/api/watermark/remove-file', { method: 'POST', body: formData });
+        var data = await res.json();
+
+        if (data.success && data.resultUrl) {
+            showResultWithDownload('watermarkResult', data.resultUrl, 'Watermark Removed', fileType === 'video');
+            window.showToast(data.message || 'Done! Download your file below.');
+        } else {
+            window.showToast(data.message || data.error || 'Processing failed. Add BYTEZ_API_KEY or OPENROUTER_API_KEY in settings.');
+        }
+    } catch (e) {
+        console.error('Watermark error:', e);
+        window.showToast('Network error. Is the server running?');
+    }
+
+    btn.innerHTML = '<i class="fas fa-magic"></i> Remove Watermark';
+    btn.disabled = false;
+}
+
+async function removeBackground() {
+    var fileInput = document.getElementById('bgRemoverFile');
+    var btn = document.getElementById('bgRemoverBtn');
+
+    if (!fileInput.files || fileInput.files.length === 0) {
+        window.showToast('Please select an image first!');
+        return;
+    }
+
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Removing Background...';
+    btn.disabled = true;
+
+    var old = document.getElementById('bgRemoveResult');
+    if (old) old.remove();
+
+    try {
+        var formData = new FormData();
+        formData.append('image', fileInput.files[0]);
+        formData.append('userId', userData ? userData.id : 0);
+
+        var res = await fetch('/api/bg-remover/remove', { method: 'POST', body: formData });
+        var data = await res.json();
+
+        if (data.success && data.resultUrl) {
+            // Show result in existing preview area
+            var preview = document.getElementById('bgRemoverPreview');
+            var placeholder = document.getElementById('bgRemoverPlaceholder');
+            if (preview) { preview.src = data.resultUrl; preview.style.display = 'block'; }
+            if (placeholder) placeholder.style.display = 'none';
+
+            // Also show downloadable result
+            showResultWithDownload('bgRemoveResult', data.resultUrl, 'Background Removed', false);
+            window.showToast(data.message || 'Background removed successfully!');
+        } else {
+            window.showToast(data.message || 'Failed. Add REMOVE_BG_API_KEY in .env for real results.');
+        }
+    } catch (e) { window.showToast('Network error removing background'); }
+
+    btn.innerHTML = '<i class="fas fa-magic"></i> Remove Background';
+    btn.disabled = false;
+}
+
+async function downloadVideo() {
+    var urlInput = document.getElementById('videoDownloadInput');
+    var btn = document.getElementById('videoDownloadBtn');
+    var url = urlInput ? urlInput.value.trim() : '';
+
+    if (!url) { window.showToast('Please paste a video URL!'); return; }
+
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Fetching...';
+    btn.disabled = true;
+
+    // Remove old results
+    var old = document.getElementById('videoDownloadResult');
+    if (old) old.remove();
+
+    try {
+        var res = await fetch('/api/video-downloader/info', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: userData ? userData.id : 0, url: url })
+        });
+        var data = await res.json();
+
+        if (data.success) {
+            window.showToast('Video info fetched!');
+
+            // Build format buttons
+            var formats = data.formats || [];
+            var formatsHtml = '';
+            formats.forEach(function (f) {
+                formatsHtml += '<a href="' + f.url + '" download target="_blank" style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:rgba(255,255,255,0.05); border-radius:10px; color:#fff; text-decoration:none; margin-bottom:8px;">' +
+                    '<span style="font-size:14px; font-weight:600;">' + (f.quality || 'HD') + '</span>' +
+                    '<span style="background:#ec4899; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700;"><i class="fas fa-download"></i> Download</span>' +
+                    '</a>';
+            });
+
+            var resultDiv = document.createElement('div');
+            resultDiv.id = 'videoDownloadResult';
+            resultDiv.style.cssText = 'margin-top:20px; padding:16px; background:rgba(255,255,255,0.05); border-radius:16px; border:1px solid rgba(255,255,255,0.1);';
+            resultDiv.innerHTML = (data.thumbnail ? '<img src="' + data.thumbnail + '" style="width:100%; border-radius:10px; margin-bottom:12px; max-height:200px; object-fit:cover;">' : '') +
+                '<p style="color:#fff; font-weight:700; margin-bottom:12px; font-size:14px;">' + (data.title || 'Video') + '</p>' +
+                (formatsHtml || '<a href="' + (data.downloadUrl || url) + '" download target="_blank" style="display:flex; align-items:center; justify-content:center; gap:8px; padding:12px; background:linear-gradient(135deg,#ec4899,#8b5cf6); color:#fff; border-radius:10px; text-decoration:none; font-weight:700;">Download Video</a>') +
+                (data.message ? '<p style="color:#888; font-size:11px; margin-top:8px; text-align:center;">' + data.message + '</p>' : '');
+
+            var pageBody = document.getElementById('videoDownloadPage');
+            if (pageBody) pageBody.querySelector('.content-body').appendChild(resultDiv);
+        } else {
+            window.showToast(data.message || 'Failed to fetch video. Add RAPIDAPI_KEY for social media downloads.');
+        }
+    } catch (e) { window.showToast('Network error downloading video'); }
+
+    btn.innerHTML = '<i class="fas fa-download"></i> Download Video';
+    btn.disabled = false;
+}
+
+window.generateAIPhoto = generateAIPhoto;
+window.generateAIVideo = generateAIVideo;
+window.removeWatermark = removeWatermark;
+window.removeBackground = removeBackground;
+window.downloadVideo = downloadVideo;
+
+// API KEY MANAGEMENT
+window.openApiManagementModal = function() {
+    const modal = document.getElementById('apiManagementModal');
+    if (modal) {
+        const modalNoKey = document.getElementById('apiModalNoKey');
+        const modalActive = document.getElementById('apiModalActive');
+        const modalLoading = document.getElementById('apiModalLoading');
+        const modalDisplay = document.getElementById('modalApiKeyDisplay');
+
+        // Reset visibility immediately
+        if (modalLoading) modalLoading.style.display = 'none';
+        if (modalNoKey) modalNoKey.style.display = 'none';
+        if (modalActive) modalActive.style.display = 'none';
+
+        // STRICT POLICY: If key exists in memory, show active screen INSTANTLY
+        if (userData && userData.apiKey) {
+            if (modalActive) modalActive.style.display = 'block';
+            if (modalDisplay) modalDisplay.value = userData.apiKey;
+            // No need for loading screen at all
+        } else {
+            // Only show loading if we are absolutely sure there is no local key
+            if (modalLoading) modalLoading.style.display = 'block';
+        }
+
+        modal.style.display = 'flex';
+        loadApiKey(); // This will sync with server in background
+    }
+};
+
+window.closeApiManagementModal = function() {
+    const modal = document.getElementById('apiManagementModal');
+    if (modal) modal.style.display = 'none';
+};
+
+async function loadApiKey() {
+    // Elements for Modal & Page
+    const modalLoading = document.getElementById('apiModalLoading');
+    const modalBanned = document.getElementById('apiModalBanned');
+    const modalNoKey = document.getElementById('apiModalNoKey');
+    const modalActive = document.getElementById('apiModalActive');
+    const modalDisplay = document.getElementById('modalApiKeyDisplay');
+    
+    const pageNoKey = document.getElementById('apiKeyNoKey');
+    const pageActive = document.getElementById('apiKeyActive');
+    const pageBanned = document.getElementById('apiKeyBannedNotice');
+    const pageContent = document.getElementById('apiKeyContent');
+    const pageDisplay = document.getElementById('userApiKeyDisplay');
+    
+    // FAST PATH: If we already have a key in memory, show it instantly
+    if (userData && userData.apiKey) {
+        if (modalLoading) modalLoading.style.display = 'none';
+        if (modalActive) modalActive.style.display = 'block';
+        if (pageActive) pageActive.style.display = 'block';
+        if (modalNoKey) modalNoKey.style.display = 'none';
+        if (pageNoKey) pageNoKey.style.display = 'none';
+        if (modalDisplay) modalDisplay.value = userData.apiKey;
+        if (pageDisplay) pageDisplay.value = userData.apiKey;
+    } else {
+        // If no local key, show loading initially
+        if (modalLoading) modalLoading.style.display = 'block';
+    }
+
+    // Background fetch to sync latest state
+    try {
+        const res = await apiFetch('/api/user/apikey', { method: 'GET' });
+        const data = await res.json();
+        
+        if (modalLoading) modalLoading.style.display = 'none';
+
+        if (data.success && data.apiKey) {
+            // Update global data
+            if (userData) userData.apiKey = data.apiKey;
+            
+            // Sync Displays
+            if (pageDisplay) pageDisplay.value = data.apiKey;
+            if (modalDisplay) modalDisplay.value = data.apiKey;
+            
+            // Toggle Visibility
+            if (modalActive) modalActive.style.display = 'block';
+            if (pageActive) pageActive.style.display = 'block';
+            if (modalNoKey) modalNoKey.style.display = 'none';
+            if (pageNoKey) pageNoKey.style.display = 'none';
+        } else if (data.success && !data.apiKey) {
+            // Server explicitly says no key
+            // Only show "No Key" screen if we definitely don't have a local one
+            if (!userData || !userData.apiKey) {
+                if (userData) userData.apiKey = null;
+                if (modalNoKey) modalNoKey.style.display = 'block';
+                if (pageNoKey) pageNoKey.style.display = 'block';
+                if (modalActive) modalActive.style.display = 'none';
+                if (pageActive) pageActive.style.display = 'none';
+            }
+        }
+
+        // Handle Ban
+        if (data.status === 'ban' || (userData && userData.apiStatus === 'ban')) {
+            [modalActive, modalNoKey, pageActive, pageNoKey].forEach(el => { if(el) el.style.display = 'none'; });
+            if (modalBanned) modalBanned.style.display = 'block';
+            if (pageBanned) pageBanned.style.display = 'block';
+            if (pageContent) pageContent.style.display = 'none';
+        }
+    } catch (e) {
+        console.error('Load API Key error:', e);
+        if (modalLoading) modalLoading.style.display = 'none';
+        // If error and we have no local key, we stay in whatever state we were (or show error toast)
+    }
+}
+
+// Export to window for HTML onclick
+window.generateNewApiKey = async function(btnElement) {
+    console.log('[API_UI] generateNewApiKey clicked');
+    const btn = btnElement || document.getElementById('regenerateApiKeyBtn');
+    const btnText = btn ? btn.textContent.trim().toUpperCase() : '';
+    const isFirstTime = btnText.includes('GENERATE NOW');
+    const originalContent = btn ? btn.innerHTML : '';
+    
+    // Check if user is logged in
+    const userId = userData.id || (window.Telegram?.WebApp?.initDataUnsafe?.user?.id);
+    if (!userId) {
+        console.warn('[API_UI] No userId found yet');
+        window.showToast('Please wait for account data to load...');
+        return;
+    }
+
+    const startRegen = async () => {
+        try {
+            console.log(`[API_UI] Starting generation for ${userId}. First time: ${isFirstTime}`);
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> PLEASE WAIT... GENERATING';
+            }
+            
+            const res = await apiFetch('/api/user/apikey/generate', { 
+                method: 'POST',
+                body: { userId: userId }
+            });
+            
+            if (!res.ok && res.status === 500) throw new Error('Internal Server Error (500)');
+
+            const data = await res.json();
+            console.log('[API_UI] Server Response:', data);
+            
+            if (data.success) {
+                window.showToast('✅ API Key generated successfully!');
+                
+                // Update global userData
+                if (userData) userData.apiKey = data.apiKey;
+                
+                // Get all elements for instant update
+                const display = document.getElementById('userApiKeyDisplay');
+                const modalDisplay = document.getElementById('modalApiKeyDisplay');
+                const modalNoKey = document.getElementById('apiModalNoKey');
+                const modalActive = document.getElementById('apiModalActive');
+                const pageNoKey = document.getElementById('apiKeyNoKey');
+                const pageActive = document.getElementById('apiKeyActive');
+                
+                // Update values
+                if (display) display.value = data.apiKey;
+                if (modalDisplay) modalDisplay.value = data.apiKey;
+                
+                // Force UI transition
+                if (modalNoKey) modalNoKey.style.display = 'none';
+                if (pageNoKey) pageNoKey.style.display = 'none';
+                if (modalActive) modalActive.style.display = 'block';
+                if (pageActive) pageActive.style.display = 'block';
+                
+                if (window.Telegram?.WebApp?.HapticFeedback) {
+                    window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+                }
+            } else {
+                window.showToast('❌ Failed: ' + (data.message || 'Server error'));
+            }
+        } catch (e) {
+            console.error('[API_UI] Fatal Exception:', e);
+            window.showToast('❌ ' + (e.message || 'Connection error. Try again.'));
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalContent;
+            }
+        }
+    };
+
+    // Skip confirmation for the very first generation (Generate Now)
+    if (isFirstTime) {
+        startRegen();
+    } else {
+        const confirmMsg = 'Confirm: Regenerate your API Key? Old one will stop working immediately.';
+        if (window.Telegram?.WebApp?.showConfirm) {
+            window.Telegram.WebApp.showConfirm(confirmMsg, (ok) => { if (ok) startRegen(); });
+        } else if (confirm(confirmMsg)) {
+            startRegen();
+        }
+    }
+};
+
+function copyToClipboard(elementId) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    
+    el.select();
+    el.setSelectionRange(0, 99999); // For mobile
+    
+    try {
+        navigator.clipboard.writeText(el.value);
+        window.showToast('Copied to clipboard!');
+        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+    } catch (err) {
+        // Fallback
+        const textArea = document.createElement("textarea");
+        textArea.value = el.value;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+        window.showToast('Copied!');
+    }
+}
+
+function showApiDocs() {
+    const modal = document.getElementById('apiDocsModal');
+    if (modal) {
+        modal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function closeApiDocs() {
+    const modal = document.getElementById('apiDocsModal');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+}

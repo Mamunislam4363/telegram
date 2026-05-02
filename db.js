@@ -13,15 +13,35 @@ const defaultData = {
         dailyBonus: 50,
         refBonus: 50, // Updated to 50
         taskReward: 10,
+        adReward: 5,
+        zeroBalanceAdReward: 5,
+        countryAdRewards: {
+            "USA": 15,
+            "GBR": 12,
+            "CAN": 12,
+            "AUS": 12,
+            "DEU": 10,
+            "FRA": 10,
+            "IND": 5,
+            "BGD": 4,
+            "PAK": 4
+        },
         costs: {
             spotify: 50,
             youtube: 50,
             teacher: 100, // Bolt.new
             gpt: 100,
             military: 100,
-            gemini: 50
+            gemini: 50,
+            gmail: 20,
+            hotmail: 25,
+            tempmail: 10,
+            student: 50,
+            number: 15,
+            renewmail: 30
         },
-        transferCost: 5 // Default transfer fee
+        transferCost: 5, // Default transfer fee
+        supportCost: 10
     },
     tasks: {
         "task_youtube": {
@@ -58,6 +78,7 @@ const defaultData = {
     tickets: [],
     payments: [],
     transactions: [], // NEW: Transaction history
+    serverLogs: [], // NEW: Log for server problems
     vpnAccounts: {
         "nordvpn": [],
         "expressvpn": [],
@@ -78,6 +99,23 @@ const defaultData = {
         "surfshark": "🦈 Surfshark",
         "cyberghost": "👻 CyberGhost",
         "protonvpn": "🔒 ProtonVPN"
+    },
+    // Email Pool for Premium Services
+    emailPool: {
+        gmail: [],   // Array of { email, password, note, addedAt, assignedTo, assignedAt }
+        hotmail: []
+    },
+    // Manual Numbers Pool
+    manualNumbers: [], // Array of { id, platform, number, otp, status, addedAt }
+    // API Keys and Configuration
+    apiKeys: {
+        openRouterKey: '',
+        bytezKey: '',
+        miniAppUrl: '',
+        backupBotToken: '',
+        smtpLabsKey: '',
+        gmailClientId: '',
+        gmailClientSecret: ''
     },
     // Service Categories for new Services Management system
     serviceCategories: [
@@ -118,6 +156,8 @@ const defaultData = {
         tempMailCost: 10, // Default Temp Mail Cost
         hotmailCost: 25, // Default Hotmail Cost
         studentEmailCost: 50, // Default Student Email Cost
+        renewMailCost: 30, // Default Custom Renew Cost
+        numberCost: 15, // Default Number Cost
         creditRates: {
             crypto: 0.01,
             bkash: 1,
@@ -125,6 +165,13 @@ const defaultData = {
         },
         // Welcome credits for new users
         welcomeCredits: 50,
+        requireTelegram: false, // NEW: Requirement to access via Telegram only
+        autoApproveJoinRequests: true, // NEW: Auto-approve join requests to groups/channels
+        // Mother Email (IMAP) Configurations
+        motherEmailConfigs: {
+            gmail: { email: '', password: '', host: 'imap.gmail.com', port: 993 },
+            hotmail: { email: '', password: '', host: 'imap-mail.outlook.com', port: 993 }
+        },
         // Group Management Settings
         groupManagement: {
             autoDeleteSystemMessages: true, // Auto-delete join/leave messages
@@ -259,7 +306,9 @@ const defaultData = {
         tasks: true,
         transfer: true,
         redeem_code: true,
-        number_services: true
+        number_services: true,
+        premiumMail: true,
+        home_premiumMail: true
     },
     // Legit SMS Providers (Number Service Module)
     numberServices: {},
@@ -343,11 +392,22 @@ class Database {
 
 
     async init() {
+        console.log("🛠️ Starting Database Initialization...");
         // 1. Connect to Firebase
+        console.log("🔥 Connecting to Firebase...");
         await firebaseManager.connect();
+        console.log("✅ Firebase connection step completed.");
 
         // 2. Check Remote Data
-        const remoteData = await firebaseManager.getData();
+        let remoteData = null;
+        let remoteError = false;
+        try {
+            remoteData = await firebaseManager.getData();
+        } catch (e) {
+            remoteError = true;
+            console.error("⚠️ [CRITICAL] Failed to fetch remote data:", e.message);
+        }
+
         let localData = null;
 
         // 3. Check Local Data (Migration Source)
@@ -373,13 +433,17 @@ class Database {
                 console.log("🛒 Initialized itemSales in database.");
             }
             console.log("✅ Database loaded from Firebase.");
-        } else if (localData) {
-            // Remote empty but Local exists -> MIGRATE
+        } else if (!remoteError && localData) {
+            // Remote empty (and no error) but Local exists -> MIGRATE
             console.log("📤 Migrating Local Data to Firebase...");
             this.data = { ...defaultData, ...localData };
             // Upload immediately
             await firebaseManager.setData(this.data);
             console.log("✅ Migration Complete.");
+        } else if (localData) {
+            // Use local data as fallback due to remote error
+            this.data = { ...defaultData, ...localData };
+            console.warn("⚠️ Using Local Data fallback (Remote Error). Syncing disabled until reconnection.");
         } else {
             console.warn("⚠️ No Data Found (Local or Remote). Starting Fresh.");
         }
@@ -444,11 +508,57 @@ class Database {
         }
     }
 
+    // SERVER LOGGING SYSTEM
+    logError(type, message, context = {}) {
+        if (!this.ready) return;
+        const logEntry = {
+            id: Date.now() + Math.random().toString(36).substr(2, 5),
+            timestamp: new Date().toLocaleString(),
+            type: type || 'error',
+            message: message || 'Unknown error',
+            context: context,
+            status: 'unsolved'
+        };
+        if (!this.data.serverLogs) this.data.serverLogs = [];
+        this.data.serverLogs.unshift(logEntry);
+        // Keep only last 100 logs
+        if (this.data.serverLogs.length > 100) {
+            this.data.serverLogs = this.data.serverLogs.slice(0, 100);
+        }
+        this.save();
+        console.warn(`⚠️ [LOGGED] ${type}: ${message}`);
+    }
+
+    clearLogs() {
+        if (!this.ready) return;
+        this.data.serverLogs = [];
+        this.save();
+    }
+
+    solveLog(logId) {
+        if (!this.ready) return;
+        const log = this.data.serverLogs.find(l => l.id === logId);
+        if (log) {
+            log.status = 'solved';
+            this.save();
+        }
+    }
+
     getUser(userId) {
-        // Validate userId - must be a number or numeric string
+        if (!userId) return null;
+        
+        // Handle common non-numeric strings silently
+        const stringId = String(userId).trim();
+        if (stringId === 'gifts' || stringId === 'undefined' || stringId === 'null') {
+            return null;
+        }
+
         const numericId = typeof userId === 'number' ? userId : parseInt(userId);
         if (isNaN(numericId) || numericId <= 0) {
-            console.error(`[DB] Invalid userId rejected: ${userId}`);
+            // Only log if it's not a common expected non-numeric string
+            if (!/^[a-zA-Z_]+$/.test(stringId)) {
+                console.error(`[DB] Invalid userId rejected: ${userId}`);
+            }
             return null;
         }
 
@@ -478,6 +588,7 @@ class Database {
                 dailyStreak: 0,
                 lastDaily: 0,
                 usd: 0.00, // New: Dollar balance
+                apiStatus: 'allow', // Default API status
                 history: [
                     {
                         type: 'bonus',
@@ -1101,7 +1212,17 @@ class Database {
         if (this.data.serviceNames && this.data.serviceNames[id]) delete this.data.serviceNames[id];
         if (this.data.cardPrices && this.data.cardPrices[id]) delete this.data.cardPrices[id];
         if (this.data.serviceSections && this.data.serviceSections[id]) delete this.data.serviceSections[id];
+        if (this.data.vpnPrices && this.data.vpnPrices[id]) delete this.data.vpnPrices[id];
+        if (this.data.vpnAccounts && this.data.vpnAccounts[id]) delete this.data.vpnAccounts[id];
+        if (this.data.vpnServiceNames && this.data.vpnServiceNames[id]) delete this.data.vpnServiceNames[id];
+        if (this.data.services && this.data.services[id]) delete this.data.services[id];
+        if (this.data.shopItems && this.data.shopItems[id]) delete this.data.shopItems[id];
+        if (this.data.serviceItems && this.data.serviceItems[id]) delete this.data.serviceItems[id];
+        if (this.data.settings && this.data.settings.costs && this.data.settings.costs[id]) {
+            delete this.data.settings.costs[id];
+        }
         this.save();
+        return true;
     }
 
     getServiceSection(id) {
@@ -1156,6 +1277,16 @@ class Database {
         const index = this.data.serviceCategories.findIndex(c => c.id === categoryId);
         if (index === -1) return false;
         this.data.serviceCategories.splice(index, 1);
+
+        // Also delete all items in this category
+        if (this.data.serviceItems) {
+            Object.keys(this.data.serviceItems).forEach(itemId => {
+                if (this.data.serviceItems[itemId].categoryId === categoryId) {
+                    this.deleteService(itemId);
+                }
+            });
+        }
+
         this.save();
         return true;
     }
@@ -1812,22 +1943,21 @@ class Database {
     // ==================== GROUP CONTROLLER SYSTEM ====================
 
     getGroupSettings() {
-        if (!this.data.settings.groupRules) {
-            this.data.settings.groupRules = {
-                welcome: true,          // Welcome new members
-                cleanService: true,     // Delete joined/left messages
-                allowLinks: false,      // Block links/mentions
-                allowPhotos: true,      // Allow photos
-                allowFiles: true,       // Allow files/documents
-                allowVoice: true,       // Allow voice notes
-                allowForward: true,      // Allow forwards
-                blockEmails: true,      // Block Email addresses
-                blockCC: true,          // Block Card numbers
-                blockBusiness: true     // Block Buying/Selling keywords
+        if (!this.data.adminSettings) this.data.adminSettings = {};
+        if (!this.data.adminSettings.groupManagement) {
+            this.data.adminSettings.groupManagement = {
+                autoDeleteSystemMessages: true,
+                deleteJoinMessages: true,
+                deleteLeaveMessages: true,
+                deletePinMessages: false,
+                welcomeMessage: true,
+                welcomeMessageText: "👋 Welcome {name} to {title}!",
+                deleteTitleChanged: false,
+                deleteGroupPhotoChanged: false
             };
             this.save();
         }
-        return this.data.settings.groupRules;
+        return this.data.adminSettings.groupManagement;
     }
 
     toggleGroupSetting(key) {

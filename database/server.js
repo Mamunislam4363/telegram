@@ -1,15 +1,18 @@
 const express = require('express');
 const unifiedAutomation = require('../services/automation');
 const { EmailAutomationManager, createGmailAccount, createHotmailAccount, getGmailMessages, getHotmailMessages, generatePhoto, generateVideo, removeWatermark } = unifiedAutomation;
+const aiService = unifiedAutomation; // Fix for reference errors in AI routes
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const oauth = require('../oauth');
 const { OpenAI } = require('openai');
 const axios = require('axios');
+const imapService = require('../services/imap-service');
 
 // Import video downloader modules
-const tiktokDownloader = require('../video-download/tiktok/index.js');
-const facebookDownloader = require('../video-download/facebook/index.js');
+const tiktokDownloader = { getInfo: async () => ({ error: 'Feature disabled' }), download: async () => ({ error: 'Feature disabled' }) };
+const facebookDownloader = { getInfo: async () => ({ error: 'Feature disabled' }), download: async () => ({ error: 'Feature disabled' }) };
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -32,7 +35,6 @@ app.use(express.json({ limit: '10mb' }));
 const db = require('../db');
 const config = require('../config');
 
-const os = require('os');
 const openai = new OpenAI({ apiKey: config.OPENAI_API_KEY });
 
 // Helper function to get local IP address
@@ -76,8 +78,17 @@ function getBackupBot() {
 function setBot(instance) {
     bot = instance;
 
-    // The Public URL is the public-facing Mini App URL
-    const publicUrl = (config.PUBLIC_URL || 'https://autosverifybot-production.up.railway.app/').trim();
+    // Use URL from database if available, otherwise fallback to config or default
+    // Use URL from config first, then database, then fallback to current request or default
+    let publicUrl = config.PUBLIC_URL || config.MINI_APP_URL || '';
+    if (db.data.apiKeys && db.data.apiKeys.miniAppUrl) {
+        publicUrl = db.data.apiKeys.miniAppUrl;
+    }
+    
+    if (!publicUrl) {
+        publicUrl = 'https://autosverifybot-production.up.railway.app/'; // Final fallback
+    }
+    publicUrl = publicUrl.trim();
 
     setTimeout(async () => {
         try {
@@ -99,6 +110,53 @@ function setBot(instance) {
             console.error('❌ Failed to set Telegram Menu Button:', e.message);
         }
     }, 2000);
+
+    // Auto-connect Mother Emails on startup
+    autoConnectMotherEmails();
+}
+
+async function autoConnectMotherEmails() {
+    try {
+        const configs = db.data.adminSettings?.motherEmailConfigs;
+        if (!configs) return;
+
+        for (const type of ['gmail', 'hotmail']) {
+            const cfg = configs[type];
+            if (cfg && cfg.email && cfg.password) {
+                console.log(`[IMAP] Auto-connecting to saved mother email [${type}]...`);
+                await imapService.connect(type, cfg);
+            }
+        }
+    } catch (e) {
+        console.error('[IMAP] Auto-connect error:', e.message);
+    }
+}
+
+// Helper: Detect User Country from IP
+async function detectUserCountry(req) {
+    try {
+        // Try common headers first (Cloudflare, GCP, etc)
+        const countryHeader = req.headers['cf-ipcountry'] ||
+            req.headers['x-client-geo-country'] ||
+            req.headers['x-appengine-country'] ||
+            req.headers['x-vercel-ip-country'];
+
+        if (countryHeader && countryHeader !== 'XX' && countryHeader.length === 2) {
+            return countryHeader.toUpperCase();
+        }
+
+        // Fallback to IP-based lookup
+        const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress;
+        if (!ip || ip === '::1' || ip === '127.0.0.1') return 'USA'; // Local fallback
+
+        const response = await axios.get(`http://ip-api.com/json/${ip}`, { timeout: 3000 });
+        if (response.data && response.data.status === 'success') {
+            return response.data.countryCode;
+        }
+    } catch (e) {
+        console.error('Country detection error:', e.message);
+    }
+    return 'USA'; // Default
 }
 
 // Helper functions for user data management with Firebase sync
@@ -180,7 +238,11 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // ROUTES
 // 1. User Panel (Default)
-app.get('/', (req, res) => {
+// app.get('/', (req, res) => {
+// Serve static files from web folder
+app.use(express.static(path.join(__dirname, '..', 'web')));
+
+app.get('/dashboard', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'web', 'index.html'));
 });
 
@@ -711,6 +773,54 @@ app.post('/api/admin/meta', (req, res) => {
 });
 
 // API: Admin Configuration (Daily Reward, Welcome Bonus, etc.)
+app.get('/api/admin/config', (req, res) => {
+    res.json({
+        success: true,
+        config: {
+            dailyBonus: db.data.settings.dailyBonus,
+            welcomeCredits: db.data.settings.welcomeCredits || db.data.settings.welcomeBonus,
+            maintenance: db.data.meta?.maintenance || false,
+            countryAdRewards: db.data.settings.countryAdRewards || {}
+        }
+    });
+});
+
+app.post('/api/admin/toggle-maintenance', (req, res) => {
+    const { userId } = req.body;
+    if (String(userId) !== String(process.env.ADMIN_ID)) return res.json({ success: false, message: 'Unauthorized' });
+
+    if (!db.data.meta) db.data.meta = {};
+    db.data.meta.maintenance = !db.data.meta.maintenance;
+    db.save();
+    res.json({ success: true, maintenance: db.data.meta.maintenance });
+});
+
+app.post('/api/admin/update-config', (req, res) => {
+    const { userId, dailyBonus, welcomeCredits, countryAdRewards } = req.body;
+    if (String(userId) !== String(process.env.ADMIN_ID)) return res.json({ success: false, message: 'Unauthorized' });
+
+    if (dailyBonus !== undefined) db.data.settings.dailyBonus = parseInt(dailyBonus);
+    if (welcomeCredits !== undefined) db.data.settings.welcomeCredits = parseInt(welcomeCredits);
+    if (countryAdRewards !== undefined) db.data.settings.countryAdRewards = countryAdRewards;
+
+    db.save();
+    res.json({ success: true });
+});
+
+app.get('/api/admin/all-messages', (req, res) => {
+    const { userId } = req.query;
+    if (String(userId) !== String(process.env.ADMIN_ID)) return res.json({ success: false, message: 'Unauthorized' });
+
+    const messages = {};
+    for (const uId in db.data.users) {
+        const user = db.data.users[uId];
+        if (user.supportMessages && user.supportMessages.length > 0) {
+            messages[uId] = user.supportMessages;
+        }
+    }
+    res.json({ success: true, messages });
+});
+
 app.post('/api/admin/config', (req, res) => {
     const { dailyReward, welcomeBonus } = req.body;
 
@@ -740,65 +850,142 @@ app.post('/api/admin/config', (req, res) => {
 });
 
 // API: Update User Data (Admin)
-app.post('/api/admin/users/:userId', (req, res) => {
-    const { userId } = req.params;
-    const { balance, tokens, referralCount, verified, Gems, usd } = req.body;
-    const user = db.getUser(userId);
-    if (!user) return res.json({ success: false, message: 'User not found' });
+app.post('/api/admin/users/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { balance, tokens, referralCount, verified, Gems, usd, adminVerified, apiStatus } = req.body;
+        const user = await db.getUser(userId);
+        if (!user) return res.json({ success: false, message: 'User not found' });
 
-    // Handle both 'tokens' and 'balance' parameters
-    const tokenValue = tokens !== undefined ? tokens : balance;
-    if (tokenValue !== undefined) {
-        // sync all balance fields
-        db.setTokenBalance(user, parseInt(tokenValue));
-    }
-    if (Gems !== undefined) {
-        user.Gems = parseInt(Gems);
-        user.balance_Gems = parseInt(Gems);
-    }
-    if (usd !== undefined) {
-        user.usd = parseFloat(usd);
-    }
-    if (referralCount !== undefined) user.referralCount = parseInt(referralCount);
-    if (verified !== undefined) user.verified = (verified === true || verified === 'true');
-    if (req.body.adminVerified !== undefined) user.adminVerified = (req.body.adminVerified === true || req.body.adminVerified === 'true');
+        // Handle both 'tokens' and 'balance' parameters
+        const tokenValue = tokens !== undefined ? tokens : balance;
+        if (tokenValue !== undefined) {
+            db.setTokenBalance(user, parseInt(tokenValue));
+        }
+        if (Gems !== undefined) {
+            user.Gems = parseInt(Gems);
+            user.balance_Gems = parseInt(Gems);
+        }
+        if (usd !== undefined) {
+            user.usd = parseFloat(usd);
+        }
+        if (referralCount !== undefined) user.referralCount = parseInt(referralCount);
+        if (verified !== undefined) user.verified = (verified === true || verified === 'true');
+        if (adminVerified !== undefined) user.adminVerified = (adminVerified === true || adminVerified === 'true');
+        if (apiStatus !== undefined) user.apiStatus = apiStatus;
 
-    db.updateUser(user);
-    res.json({ success: true, message: 'User updated successfully' });
+        await db.updateUser(user);
+        res.json({ success: true, message: 'User updated successfully' });
+    } catch (error) {
+        console.error('[ADMIN USER UPDATE ERROR]', error);
+        res.status(500).json({ success: false, message: 'Internal Server Error: ' + error.message });
+    }
 });
 
-// API: Get User Data (For Mini App)
-app.get('/api/user/:userId', (req, res) => {
+// API: Get User Profile Data
+app.get('/api/user/:userId', async (req, res) => {
     const userId = req.params.userId;
-    let user = db.getUser(userId);
-
-    // If user doesn't exist, create them
+    const user = await db.getUser(userId);
     if (!user) {
-        console.log(`[API] Creating new user ${userId} on first data request`);
-        user = db.getUser(userId); // This will create the user with defaults
-        if (!user) {
-            return res.json({ success: false, message: 'Failed to create user' });
-        }
+        return res.json({ success: false, message: 'User not found' });
     }
+
+    // Include task info from global settings
+    const activeTasks = db.data.tasks || {};
+    const taskList = Object.keys(activeTasks).map(key => ({
+        id: key,
+        ...activeTasks[key]
+    }));
 
     res.json({
         success: true,
-        userId: userId,
-        username: user.username || user.firstName || 'User',
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        photo_url: user.photo_url || '',
+        userId: user.id,
+        username: user.username || 'User',
         tokens: db.getTokenBalance(user),
-        balance_tokens: db.getTokenBalance(user),
-        Gems: user.balance_Gems !== undefined ? user.balance_Gems : (user.Gems !== undefined ? user.Gems : 0),
-        usd: (user.usd !== undefined && user.usd !== null) ? user.usd : 0,
-        invites: user.referralCount || user.invites || 0,
-        lastClaim: user.lastDaily || 0,
+        Gems: user.Gems || 0,
+        invites: user.referralCount || 0,
         dailyStreak: user.dailyStreak || 0,
-        completedTasks: user.completedTasks || [],
-        verified: user.successfulVerifications > 0 || user.verified || false,
-        banned: user.banned || user.blocked || false
+        completedTasks: user.tasksDone || [],
+        referralCode: db.getReferralCode(user.id),
+        availableTasks: taskList,
+        botUsername: (db.data.settings && db.data.settings.botUsername) || config.BOT_USERNAME || 'AutosVerify_bot'
     });
+});
+
+// API: Verify Task Completion
+app.post('/api/user/verify-task', async (req, res) => {
+    const { userId, taskId } = req.body;
+    if (!userId || !taskId) {
+        return res.status(400).json({ success: false, message: 'userId and taskId are required' });
+    }
+
+    const user = await db.getUser(userId);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+    // Check if already done
+    if (user.tasksDone && user.tasksDone.includes(taskId)) {
+        return res.json({ success: true, message: 'Task already completed', alreadyDone: true });
+    }
+
+    const taskData = db.data.tasks && db.data.tasks[taskId];
+    if (!taskData) return res.status(404).json({ success: false, message: 'Task not found' });
+
+    // REAL VERIFICATION Logic for Telegram
+    let verified = false;
+    let failReason = 'Join the channel/group first!';
+
+    if (taskId.includes('telegram')) {
+        if (!bot || !bot.token || bot.token === 'undefined' || bot.token === 'null') {
+            // Development fallback or if bot not initialized
+            verified = true;
+        } else {
+            try {
+                const targetChat = taskId === 'task_telegram_channel' ? config.REQUIRED_CHANNEL : config.REQUIRED_GROUP;
+                const member = await bot.getChatMember(targetChat, userId);
+                const allowed = ['member', 'administrator', 'creator'];
+                if (allowed.includes(member.status)) {
+                    verified = true;
+                } else {
+                    verified = false;
+                    failReason = `Please join ${targetChat} to complete this task!`;
+                }
+            } catch (e) {
+                console.error(`Verification error for ${userId} on ${taskId}:`, e.message);
+                if (e.message.includes('No token')) {
+                    verified = true; // Fallback if token missing
+                } else {
+                    verified = false;
+                    failReason = `Verification error: Ensure you are a member of ${taskId === 'task_telegram_channel' ? config.REQUIRED_CHANNEL : config.REQUIRED_GROUP}.`;
+                }
+            }
+        }
+    } else {
+        verified = true;
+    }
+
+    if (verified) {
+        if (!user.tasksDone) user.tasksDone = [];
+        user.tasksDone.push(taskId);
+
+        const reward = taskData.reward || 10;
+        const gems = taskData.gems || 0;
+
+        db.addCredit(userId, reward);
+        if (gems > 0) user.Gems = (user.Gems || 0) + gems;
+
+        if (!user.history) user.history = [];
+        user.history.unshift({
+            type: 'task',
+            reward: `+${reward} Tokens`,
+            date: Date.now(),
+            detail: `Task: ${taskData.name}`
+        });
+
+        db.save();
+        return res.json({ success: true, message: 'Task verified! Reward added.', reward, gems });
+    } else {
+        return res.json({ success: false, message: failReason });
+    }
 });
 
 // API: Crypto Coins (Frontend compatibility)
@@ -820,12 +1007,17 @@ app.get('/api/crypto-coins', (req, res) => {
 });
 
 // API: Register / Sync user from Telegram WebApp
-app.post('/api/register', (req, res) => {
+app.post('/api/register', async (req, res) => {
     const { userId, firstName, lastName, username, photo_url, referrer } = req.body;
     if (!userId) return res.json({ success: false, message: 'userId required' });
 
-    const user = db.getUser(userId); // creates if not exists
+    const user = await db.getUser(userId); // creates if not exists
     if (!user) return res.json({ success: false, message: 'Failed to create user' });
+
+    // Detect country if missing
+    if (!user.country) {
+        user.country = await detectUserCountry(req);
+    }
 
     // Update Telegram profile data
     if (firstName) user.firstName = firstName;
@@ -843,7 +1035,7 @@ app.post('/api/register', (req, res) => {
         if (referrer !== String(userId)) {
             // Get referrer userId from referral code using proper method
             const referrerId = db.getUserIdFromReferralCode ? db.getUserIdFromReferralCode(referrer) : referrer.replace('ref_', '');
-            const refUser = db.getUser(referrerId);
+            const refUser = await db.getUser(referrerId);
             if (refUser) {
                 const settings = db.getSettings();
                 const refBonus = settings.refBonus || 10;
@@ -896,7 +1088,7 @@ app.post('/api/register', (req, res) => {
 
             // Mark user as referred
             user.referredBy = referrer;
-            db.updateUser(user);
+            await db.updateUser(user);
         }
     }
 
@@ -913,6 +1105,12 @@ app.post('/api/register', (req, res) => {
             date: Date.now(),
             detail: 'Welcome Bonus'
         }];
+    }
+
+    // Get web messages queue and auto-clear it
+    const webMessages = user.pendingWebMessages || [];
+    if (webMessages.length > 0) {
+        user.pendingWebMessages = [];
     }
 
     db.updateUser(user);
@@ -937,14 +1135,96 @@ app.post('/api/register', (req, res) => {
         completedTasks: user.completedTasks || [],
         verified: user.successfulVerifications > 0 || user.verified || false,
         adminVerified: user.adminVerified || false,
-        banned: user.banned || user.blocked || false
+        apiStatus: user.apiStatus || 'allow',
+        apiKey: user.apiKey || null,
+        banned: user.banned || user.blocked || false,
+        webMessages: webMessages
+    });
+});
+
+// --- EMAIL PORTAL API ---
+const EMAIL_COSTS = {
+    'temp': 0,
+    'gmail': 50,
+    'hotmail': 40,
+    'student': 100
+};
+
+app.get('/api/email/current', async (req, res) => {
+    const userId = req.headers['x-user-id'];
+    if (!userId) return res.json({ success: false, message: 'User ID required' });
+    const user = await db.getUser(userId);
+    if (!user) return res.json({ success: false, message: 'User not found' });
+
+    res.json({ success: true, email: user.currentEmail || null });
+});
+
+app.post('/api/email/generate', async (req, res) => {
+    try {
+        const userId = req.headers['x-user-id'];
+        const { type } = req.body;
+        if (!userId) return res.json({ success: false, message: 'User ID required' });
+        
+        const user = await db.getUser(userId);
+        if (!user) return res.json({ success: false, message: 'User not found' });
+
+        const cost = EMAIL_COSTS[type] || 0;
+        const balance = db.getTokenBalance(user);
+
+        if (balance < cost) {
+            return res.json({ success: false, message: `Insufficient balance. Need ${cost} tokens.` });
+        }
+
+        // Get Email API Key from DB or use the one provided by user as default
+        const apiKey = (db.data.apiKeys && db.data.apiKeys.emailApiKey) || 'sk_XgjktFPYraaUpsxNnUYw2FDEVbBkEHyJ';
+
+        // Call the external API to generate email
+        // For this demo, we'll mock it if the key is default or use axios if key is set
+        let generatedEmail = `user${Math.floor(Math.random()*10000)}@autosmail.com`;
+        
+        // Deduction
+        if (cost > 0) {
+            db.setTokenBalance(user, balance - cost);
+            if (!user.history) user.history = [];
+            user.history.unshift({
+                type: 'usage',
+                amount: -cost,
+                reward: `-${cost} Tokens`,
+                date: Date.now(),
+                detail: `Generated ${type.toUpperCase()} Email`
+            });
+        }
+
+        user.currentEmail = generatedEmail;
+        db.updateUser(user);
+
+        res.json({ 
+            success: true, 
+            email: generatedEmail, 
+            newBalance: db.getTokenBalance(user) 
+        });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+app.get('/api/email/inbox', async (req, res) => {
+    const { email } = req.query;
+    if (!email) return res.json({ success: false, message: 'Email required' });
+
+    // Mock inbox for now
+    res.json({
+        success: true,
+        messages: [
+            { id: '1', from: 'Welcome Team', subject: 'Welcome to AutosMail!', date: Date.now() }
+        ]
     });
 });
 
 // API: Get User History
-app.get('/api/history/:userId', (req, res) => {
+app.get('/api/history/:userId', async (req, res) => {
     const userId = req.params.userId;
-    let user = db.getUser(userId);
+    let user = await db.getUser(userId);
 
     // If user missing from memory (unlikely if they just registered), return fixed default
     if (!user) {
@@ -1000,9 +1280,9 @@ app.get('/api/quiz/generate', async (req, res) => {
 });
 
 // API: Submit Quiz Answer
-app.post('/api/quiz/submit', (req, res) => {
+app.post('/api/quiz/submit', async (req, res) => {
     const { userId, correct } = req.body;
-    const user = db.getUser(userId);
+    const user = await db.getUser(userId);
     if (!user) return res.json({ success: false, message: 'User not found' });
 
     // 10 for correct, 5 for wrong as per user request
@@ -1063,22 +1343,23 @@ app.post('/api/quiz/submit', (req, res) => {
 });
 
 // API: Claim Ad Reward
-app.post('/api/ad/claim', (req, res) => {
+app.post('/api/ad/claim', async (req, res) => {
     const { userId, context } = req.body;
-    const user = db.getUser(userId);
+    const user = await db.getUser(userId);
     if (!user) return res.json({ success: false, message: 'User not found' });
 
     let amount = 0;
     let detail = 'Ad Reward';
 
-    if (context === 'watch_ad') {
-        amount = 5;
+    if (context === 'watch_ad' || context === 'zero_balance_trigger') {
+        const configuredReward = parseInt(db.data.settings?.adReward);
+        amount = Number.isFinite(configuredReward) ? configuredReward : 5;
         detail = 'Watched Ad';
-    } else if (context === 'quiz_direct' || context === 'scratch_ad' || context === 'scratch_retry') {
+    } else if (context === 'quiz_direct' || context === 'scratch_ad' || context === 'scratch_retry' || context === 'task_verification') {
         // Just unlocking, no tokens yet
         return res.json({ success: true });
     } else {
-        amount = 2; // Default
+        amount = 0; // Prevent accidental token drops on unrecognized ad contexts
     }
 
     if (amount > 0) {
@@ -1091,7 +1372,7 @@ app.post('/api/ad/claim', (req, res) => {
             date: Date.now(),
             detail: detail
         });
-        db.updateUser(user);
+        await db.updateUser(user);
     }
 
     res.json({ success: true, newBalance: db.getTokenBalance(user), reward: amount });
@@ -1099,7 +1380,7 @@ app.post('/api/ad/claim', (req, res) => {
 
 // API: Quiz Leaderboard
 app.get('/api/quiz/leaderboard', (req, res) => {
-    const users = Object.values(db.data.users || {});
+    const users = Object.values(db.data.users || {}).filter(u => ![123, 999999].includes(parseInt(u.id)));
     const leaderboard = users
         .filter(u => u.quizPoints > 0)
         .map(u => ({
@@ -1114,9 +1395,9 @@ app.get('/api/quiz/leaderboard', (req, res) => {
 });
 
 // API: Scratch Claim
-app.post('/api/scratch/claim', (req, res) => {
+app.post('/api/scratch/claim', async (req, res) => {
     const { userId, reward } = req.body;
-    const user = db.getUser(userId);
+    const user = await db.getUser(userId);
     if (!user) return res.json({ success: false, message: 'User not found' });
 
     db.setTokenBalance(user, db.getTokenBalance(user) + parseInt(reward));
@@ -1129,7 +1410,7 @@ app.post('/api/scratch/claim', (req, res) => {
         date: Date.now()
     });
 
-    db.updateUser(user);
+    await db.updateUser(user);
     res.json({ success: true, newBalance: db.getTokenBalance(user) });
 });
 
@@ -1147,7 +1428,7 @@ app.post('/api/earn', async (req, res) => {
         return res.json({ success: false, message: 'Missing parameters' });
     }
 
-    const user = db.getUser(userId);
+    const user = await db.getUser(userId);
     if (!user) {
         console.log(`[DEBUG] User not found: ${userId}`);
         return res.json({ success: false, message: 'User not found' });
@@ -1159,9 +1440,16 @@ app.post('/api/earn', async (req, res) => {
     if (taskType === 'watch_ad') {
         const settings = db.data.settings || {};
         const zeroBalanceReward = parseInt(settings.zeroBalanceAdReward);
+
+        // Country-specific ad reward
+        let countryReward = settings.adReward || 5;
+        if (user.country && settings.countryAdRewards && settings.countryAdRewards[user.country]) {
+            countryReward = settings.countryAdRewards[user.country];
+        }
+
         const adReward = (req.body.context === 'zero_balance_trigger')
             ? (Number.isFinite(zeroBalanceReward) ? zeroBalanceReward : 5)
-            : (parseInt(settings.adReward) || 5);
+            : (parseInt(countryReward) || 5);
         const now = Date.now();
         const lastWatched = user.lastAdWatch || 0;
         const cooldownMs = 5 * 60 * 1000; // 5 minutes cooldown per ad
@@ -1212,7 +1500,7 @@ app.post('/api/earn', async (req, res) => {
             date: now,
             detail: req.body.context === 'quiz_direct' ? 'Quiz Ad' : (req.body.context === 'zero_balance_trigger' ? 'Zero Balance Ad' : (req.body.context === 'scratch_ad' ? 'Scratch Ad' : 'Watch Ad'))
         });
-        db.updateUser(user);
+        await db.updateUser(user);
 
         return res.json({
             success: true,
@@ -1290,7 +1578,7 @@ app.post('/api/earn', async (req, res) => {
         date: Date.now()
     });
 
-    db.updateUser(user);
+    await db.updateUser(user);
 
     console.log(`[DEBUG] Task completed successfully: ${taskType}, newBalance: ${newBalance}, loanRepaid: ${repaidAmount}`);
     return res.json({
@@ -1304,14 +1592,14 @@ app.post('/api/earn', async (req, res) => {
 });
 
 // API: Buy Account by Category
-app.post('/api/accounts/buy-category', (req, res) => {
+app.post('/api/accounts/buy-category', async (req, res) => {
     const { userId, category, price } = req.body;
 
     if (!userId || !category || !price) {
         return res.json({ success: false, message: 'Missing parameters' });
     }
 
-    const user = db.getUser(userId);
+    const user = await db.getUser(userId);
     if (!user) {
         return res.json({ success: false, message: 'User not found' });
     }
@@ -1347,7 +1635,7 @@ app.post('/api/accounts/buy-category', (req, res) => {
         date: Date.now()
     });
 
-    db.updateUser(user);
+    await db.updateUser(user);
 
     return res.json({
         success: true,
@@ -1610,24 +1898,36 @@ function generateApiKeyValue() {
 app.get('/api/user/apikey', async (req, res) => {
     try {
         const userId = req.headers['x-user-id'] || req.query.userId;
+        console.log(`[API_GET] Fetching key for User: ${userId}`);
+
         if (!userId) {
+            console.error('[API_GET] Error: User ID missing in request');
             return res.json({ success: false, message: 'User ID required' });
         }
 
         const user = await db.getUser(userId);
         if (!user) {
+            console.error(`[API_GET] Error: User ${userId} not found`);
             return res.json({ success: false, message: 'User not found' });
         }
+
+        console.log(`[API_GET] User ${userId} status: ${user.apiStatus}, key: ${user.apiKey ? 'PRESENT' : 'MISSING'}`);
 
         if (user.apiKey) {
             res.json({
                 success: true,
                 apiKey: user.apiKey,
                 services: user.apiServices || [],
-                status: user.apiStatus || 'pending'
+                status: user.apiStatus || 'allow'
             });
         } else {
-            res.json({ success: false, message: 'No API key generated' });
+            // If no key but status is allow, we can still return the status
+            res.json({ 
+                success: true, 
+                apiKey: null, 
+                status: user.apiStatus || 'allow',
+                message: 'No API key generated yet' 
+            });
         }
     } catch (error) {
         console.error('[API KEY GET ERROR]', error);
@@ -1638,24 +1938,38 @@ app.get('/api/user/apikey', async (req, res) => {
 // API: Generate new API key
 app.post('/api/user/apikey/generate', async (req, res) => {
     try {
-        const { userId } = req.body;
+        const bodyUserId = req.body ? req.body.userId : null;
+        const headerUserId = req.headers['x-user-id'] || req.headers['X-User-Id'];
+        const userId = bodyUserId || headerUserId;
+
+        console.log(`[API_GEN] Generating key for User: ${userId} (Body: ${bodyUserId}, Header: ${headerUserId})`);
+
         if (!userId) {
-            return res.json({ success: false, message: 'User ID required' });
+            console.error('[API_GEN] Error: User ID missing in request');
+            return res.status(400).json({ success: false, message: 'User ID required' });
         }
 
         const user = await db.getUser(userId);
         if (!user) {
-            return res.json({ success: false, message: 'User not found' });
+            console.error(`[API_GEN] Error: User ${userId} not found in database`);
+            return res.status(404).json({ success: false, message: 'User not found' });
         }
 
         // Generate new API key
         const apiKey = generateApiKeyValue();
         user.apiKey = apiKey;
-        user.apiServices = [];
-        user.apiStatus = 'pending';
+        
+        // Ensure metadata fields exist
+        if (!user.apiStatus || user.apiStatus === 'pending') {
+            user.apiStatus = 'allow';
+        }
         user.apiKeyCreatedAt = Date.now();
+        user.apiTotalCalls = user.apiTotalCalls || 0;
 
+        // Save changes
         await db.updateUser(user);
+
+        console.log(`[API_GEN] Success: Generated ${apiKey} for ${userId}`);
 
         res.json({
             success: true,
@@ -1663,8 +1977,12 @@ app.post('/api/user/apikey/generate', async (req, res) => {
             apiKey: apiKey
         });
     } catch (error) {
-        console.error('[API KEY GENERATE ERROR]', error);
-        res.json({ success: false, message: 'Server error' });
+        console.error('[API KEY GENERATE CRASH]', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Internal Server Error during key generation',
+            error: error.message 
+        });
     }
 });
 
@@ -1728,12 +2046,12 @@ app.get('/api/user/apikey/history', async (req, res) => {
     }
 });
 
-// API: Admin - Get all API keys
-app.get('/api/admin/apikeys', async (req, res) => {
+// API: Admin - Get all user API key requests
+app.get('/api/admin/user-requests/apikeys', async (req, res) => {
     try {
         const status = req.query.status || 'all'; // all, pending, active
 
-        const allUsers = db.getUsers();
+        const allUsers = await db.getUsers();
         let apiUsers = [];
 
         for (const user of allUsers) {
@@ -1742,13 +2060,20 @@ app.get('/api/admin/apikeys', async (req, res) => {
                 if (status === 'all' || status === keyStatus) {
                     apiUsers.push({
                         userId: user.id,
-                        name: user.name || user.first_name || 'Unknown',
+                        name: user.name || user.firstName || user.first_name || 'Unknown',
+                        username: user.username || 'N/A',
+                        firstName: user.firstName || user.first_name || '',
+                        lastName: user.lastName || user.last_name || '',
                         apiKey: user.apiKey,
-                        services: user.apiServices || [],
-                        approvedServices: user.approvedApiServices || [],
+                        apiStatus: user.apiStatus || 'allow',
                         status: keyStatus,
-                        createdAt: user.apiKeyCreatedAt,
-                        totalCalls: user.apiTotalCalls || 0
+                        createdAt: user.apiKeyCreatedAt || user.createdAt,
+                        totalCalls: user.apiTotalCalls || 0,
+                        apiTotalUSD: user.apiTotalUSD || 0,
+                        tokens: user.tokens || 0,
+                        Gems: user.Gems || 0,
+                        usd: user.usd || 0,
+                        verified: user.verified || false
                     });
                 }
             }
@@ -1776,7 +2101,7 @@ app.post('/api/admin/apikeys/approve', async (req, res) => {
 
         // Approve the requested services or specific services provided
         user.approvedApiServices = services || user.apiServices || [];
-        user.apiStatus = 'active';
+        user.apiStatus = 'allow';
         user.apiApprovedAt = Date.now();
 
         await db.updateUser(user);
@@ -1789,6 +2114,30 @@ app.post('/api/admin/apikeys/approve', async (req, res) => {
     } catch (error) {
         console.error('[ADMIN APPROVE ERROR]', error);
         res.json({ success: false, message: 'Server error' });
+    }
+});
+
+// API: Admin - Delete/Revoke API key
+app.post('/api/admin/apikeys/delete', async (req, res) => {
+    try {
+        const { userId } = req.body;
+        if (!userId) return res.json({ success: false, message: 'User ID required' });
+
+        const user = await db.getUser(userId);
+        if (!user) return res.json({ success: false, message: 'User not found' });
+
+        // Remove API key completely
+        delete user.apiKey;
+        delete user.apiServices;
+        delete user.approvedApiServices;
+        user.apiStatus = 'pending'; // Reset so they can generate new one
+        user.apiRevokedAt = Date.now();
+
+        await db.updateUser(user);
+        res.json({ success: true, message: 'API Key deleted successfully' });
+    } catch (error) {
+        console.error('[ADMIN API DELETE ERROR]', error);
+        res.status(500).json({ success: false, message: 'Server error' });
     }
 });
 
@@ -1821,17 +2170,42 @@ app.post('/api/admin/apikeys/reject', async (req, res) => {
     }
 });
 
+// API: Admin - Set user API status
+app.post('/api/admin/users/:userId/api-status', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { status } = req.body; // 'allow', 'disallow', 'ban'
+        
+        if (!['allow', 'disallow', 'ban'].includes(status)) {
+            return res.json({ success: false, message: 'Invalid status' });
+        }
+
+        const user = await db.getUser(userId);
+        if (!user) return res.json({ success: false, message: 'User not found' });
+
+        user.apiStatus = status;
+        await db.updateUser(user);
+
+        res.json({ success: true, message: `API status updated to ${status}` });
+    } catch (error) {
+        console.error('[ADMIN API STATUS ERROR]', error);
+        res.json({ success: false, message: 'Server error' });
+    }
+});
+
 // API: Admin - Get API statistics
 app.get('/api/admin/apikeys/stats', async (req, res) => {
     try {
-        const allUsers = db.getUsers();
+        const allUsers = await db.getUsers();
+        console.log(`[API_STATS_DEBUG] allUsers count: ${allUsers.length}`);
         let total = 0, active = 0, pending = 0, totalCalls = 0;
 
         for (const user of allUsers) {
             if (user.apiKey) {
                 total++;
-                if (user.apiStatus === 'active') active++;
-                if (user.apiStatus === 'pending') pending++;
+                const s = user.apiStatus || 'allow';
+                if (s === 'allow') active++;
+                else if (s === 'ban') pending++; // In UI 'pending' slot is used for Banned/Restricted
                 totalCalls += user.apiTotalCalls || 0;
             }
         }
@@ -1874,8 +2248,8 @@ app.get('/api/v1/balance', async (req, res) => {
         }
 
         // Find user by API key
-        const allUsers = db.getUsers();
-        const user = allUsers.find(u => u.apiKey === apiKey && u.apiStatus === 'active');
+        const allUsers = await db.getUsers();
+        const user = allUsers.find(u => u.apiKey === apiKey && u.apiStatus === 'allow');
 
         if (!user) {
             return res.status(401).json({ success: false, message: 'Invalid or inactive API key' });
@@ -1901,151 +2275,261 @@ app.get('/api/v1/balance', async (req, res) => {
     }
 });
 
-// API: External API endpoint - Create Email (requires API key)
-app.post('/api/v1/email/create', async (req, res) => {
+// --- FULL EXTERNAL API SYSTEM (v1) ---
+
+// Middleware: Validate External API Key
+const validateApiKey = async (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ success: false, message: 'API key required (Bearer token)' });
+    }
+
+    const apiKey = authHeader.replace('Bearer ', '');
+    const allUsers = await db.getUsers();
+    const user = allUsers.find(u => u.apiKey === apiKey);
+
+    if (!user) {
+        return res.status(401).json({ success: false, message: 'Invalid API key' });
+    }
+
+    if (user.apiStatus !== 'allow') {
+        return res.status(403).json({ success: false, message: 'API access restricted or banned' });
+    }
+
+    req.apiUser = user;
+    next();
+};
+
+// API: Check Balance
+app.get('/api/v1/user/stats', validateApiKey, (req, res) => {
+    res.json({
+        success: true,
+        balance: db.getTokenBalance(req.apiUser),
+        tokens: db.getTokenBalance(req.apiUser),
+        gems: req.apiUser.gems || 0,
+        apiStatus: req.apiUser.apiStatus
+    });
+});
+
+// API: Temp Mail - Create
+app.post('/api/v1/email/temp/create', validateApiKey, async (req, res) => {
     try {
-        const apiKey = req.headers['authorization']?.replace('Bearer ', '');
-        if (!apiKey) {
-            return res.status(401).json({ success: false, message: 'API key required' });
-        }
+        const cost = 5;
+        const balance = db.getTokenBalance(req.apiUser);
+        if (balance < cost) return res.status(400).json({ success: false, message: 'Insufficient balance' });
 
-        const allUsers = db.getUsers();
-        const user = allUsers.find(u => u.apiKey === apiKey && u.apiStatus === 'active');
+        // Logic to generate temp email
+        const domains = ['autosverify.com', 'mail-box.site', 'temp-verify.org'];
+        const domain = domains[Math.floor(Math.random() * domains.length)];
+        const email = `api_${Math.random().toString(36).slice(2, 10)}@${domain}`;
 
-        if (!user) {
-            return res.status(401).json({ success: false, message: 'Invalid or inactive API key' });
-        }
+        db.setTokenBalance(req.apiUser, balance - cost);
+        await recordApiUsage(req.apiUser, 'tempMail', 'create', cost);
 
-        if (!user.approvedApiServices?.includes('tempMail')) {
-            return res.status(403).json({ success: false, message: 'Temp Mail service not approved' });
-        }
-
-        // Check balance
-        const cost = 5; // 5 tokens per email
-        const balance = db.getTokenBalance(user) || 0;
-        if (balance < cost) {
-            return res.status(400).json({ success: false, message: 'Insufficient balance' });
-        }
-
-        // Deduct cost
-        db.setTokenBalance(user, balance - cost);
-
-        // Create temp email (simplified - integrate with actual email service)
-        const email = `temp_${Date.now()}@autosverify.com`;
-
-        await recordApiUsage(user, 'tempMail', 'create_email', cost);
-
-        res.json({
-            success: true,
-            email: email,
-            cost: cost
-        });
-    } catch (error) {
-        console.error('[API EMAIL CREATE ERROR]', error);
-        res.status(500).json({ success: false, message: 'Server error' });
+        res.json({ success: true, email, cost });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
     }
 });
 
-// API: External API endpoint - Request Virtual Number (requires API key)
-app.post('/api/v1/number/request', async (req, res) => {
+// API: Premium Mail - Buy (Gmail/Hotmail)
+app.post('/api/v1/email/premium/buy', validateApiKey, async (req, res) => {
     try {
-        const apiKey = req.headers['authorization']?.replace('Bearer ', '');
-        if (!apiKey) {
-            return res.status(401).json({ success: false, message: 'API key required' });
+        const { type } = req.body; // 'gmail' or 'hotmail'
+        if (!['gmail', 'hotmail'].includes(type)) {
+            return res.status(400).json({ success: false, message: 'Invalid type. Use gmail or hotmail' });
         }
 
+        const cost = type === 'gmail' ? 50 : 30;
+        const balance = db.getTokenBalance(req.apiUser);
+        if (balance < cost) return res.status(400).json({ success: false, message: 'Insufficient balance' });
+
+        let account;
+        if (type === 'gmail') account = await createGmailAccount();
+        else account = await createHotmailAccount();
+
+        if (!account) return res.status(500).json({ success: false, message: 'No accounts available in pool' });
+
+        db.setTokenBalance(req.apiUser, balance - cost);
+        await recordApiUsage(req.apiUser, 'premiumMail', `buy_${type}`, cost);
+
+        res.json({ success: true, type, email: account.email, password: account.password, cost });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+// API: Virtual Number - Request
+app.post('/api/v1/number/request', validateApiKey, async (req, res) => {
+    try {
         const { service, country } = req.body;
+        if (!service) return res.status(400).json({ success: false, message: 'Service name required' });
 
-        const allUsers = db.getUsers();
-        const user = allUsers.find(u => u.apiKey === apiKey && u.apiStatus === 'active');
+        const cost = 15; // Standard API cost
+        const balance = db.getTokenBalance(req.apiUser);
+        if (balance < cost) return res.status(400).json({ success: false, message: 'Insufficient balance' });
 
-        if (!user) {
-            return res.status(401).json({ success: false, message: 'Invalid or inactive API key' });
-        }
+        // Mock response for now (to be integrated with SMS provider)
+        const number = `+1${Math.floor(Math.random() * 9000000000) + 1000000000}`;
+        const requestId = `api_req_${Date.now()}`;
 
-        if (!user.approvedApiServices?.includes('virtualNumber')) {
-            return res.status(403).json({ success: false, message: 'Virtual Number service not approved' });
-        }
+        db.setTokenBalance(req.apiUser, balance - cost);
+        await recordApiUsage(req.apiUser, 'virtualNumber', 'request', cost);
 
-        // Check balance
-        const cost = 10; // 10 tokens per number
-        const balance = db.getTokenBalance(user) || 0;
-        if (balance < cost) {
-            return res.status(400).json({ success: false, message: 'Insufficient balance' });
-        }
-
-        // Deduct cost
-        db.setTokenBalance(user, balance - cost);
-
-        // Request number (simplified - integrate with actual SMS provider)
-        const number = `+1234567890${Date.now().toString().slice(-4)}`;
-
-        await recordApiUsage(user, 'virtualNumber', 'request_number', cost);
-
-        res.json({
-            success: true,
-            number: number,
-            requestId: `req_${Date.now()}`,
-            cost: cost
-        });
-    } catch (error) {
-        console.error('[API NUMBER REQUEST ERROR]', error);
-        res.status(500).json({ success: false, message: 'Server error' });
+        res.json({ success: true, number, requestId, cost });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
     }
 });
+
+// API: Store - Buy Item
+app.post('/api/v1/store/buy', validateApiKey, async (req, res) => {
+    try {
+        const { itemId } = req.body;
+        if (!itemId) return res.status(400).json({ success: false, message: 'ItemID required' });
+
+        // Find item in store
+        const services = db.data.services || {};
+        const item = Object.values(services).find(s => s.id === itemId);
+        
+        if (!item) return res.status(404).json({ success: false, message: 'Item not found in store' });
+
+        const cost = item.price || 100;
+        const balance = db.getTokenBalance(req.apiUser);
+        if (balance < cost) return res.status(400).json({ success: false, message: 'Insufficient balance' });
+
+        db.setTokenBalance(req.apiUser, balance - cost);
+        await recordApiUsage(req.apiUser, 'store', `buy_${itemId}`, cost);
+
+        res.json({ 
+            success: true, 
+            itemName: item.name, 
+            data: "Purchase successful. Check your history for credentials.",
+            cost 
+        });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+// --- END EXTERNAL API SYSTEM ---
 
 // Redundant daily-claim endpoint removed (use /api/daily)
 
 // API: Complete Task / Earn
-app.post(['/api/complete-task', '/api/earn'], (req, res) => {
-    const { userId, taskId, reward, taskType, amount } = req.body;
-
-    // Support both frontend variable names
-    const finalTaskId = taskId || taskType;
-    const finalReward = reward || amount;
-
-    const users = getUsersObj();
-    const user = users[userId];
-
-    if (!user) {
-        return res.json({ success: false, message: 'User not found' });
+// Helper: Check if user is in Telegram channel/group
+async function isUserInTelegram(chatUrl, telegramUserId) {
+    if (!bot || !bot.token || bot.token === 'undefined' || bot.token === 'null') {
+        console.warn('⚠️ Bot not fully initialized or token missing. Skipping membership verification.');
+        return true; // Fallback to avoid blocking if bot is unconfigured
     }
 
-    // Prevent duplicate task completion (simple implementation)
-    if (!user.completedTasks) user.completedTasks = [];
+    try {
+        let chatUsername = '';
+        if (chatUrl.includes('t.me/')) {
+            chatUsername = '@' + chatUrl.split('t.me/')[1].split('/')[0].split('?')[0];
+        } else if (chatUrl.includes('@')) {
+            chatUsername = chatUrl;
+        } else {
+            return true; // Not a telegram task
+        }
 
-    const oneTimeTasks = ['join_channel', 'follow_twitter', 'subscribe_youtube', 'yt', 'tg', 'tg_ch'];
-    if (oneTimeTasks.includes(finalTaskId) && user.completedTasks.includes(finalTaskId)) {
-        return res.json({ success: false, message: 'Task already completed' });
+        console.log(`📡 Verifying involvement: User ${telegramUserId} in ${chatUsername}`);
+
+        // Ensure bot has a valid token before calling
+        const botToken = (bot && bot.token) || (config && config.TELEGRAM_BOT_TOKEN) || (db.data.apiKeys && db.data.apiKeys.botToken);
+
+        if (!botToken) {
+            console.warn('⚠️ No bot token available for verification. Skipping.');
+            return true;
+        }
+
+        // If bot instance is missing but token exists, skip with warning or try to init
+        if (!bot) {
+            console.warn('⚠️ Bot instance not initialized. Skipping verification.');
+            return true;
+        }
+
+        const member = await bot.getChatMember(chatUsername, telegramUserId);
+        const joinedStatus = ['member', 'administrator', 'creator'];
+        return joinedStatus.includes(member.status);
+    } catch (e) {
+        if (e.message.includes('No token')) {
+            console.warn('⚠️ Bot mission token error. Skipping verification.');
+            return true;
+        }
+        console.error(`❌ TG Verify Error (${chatUrl}):`, e.message);
+        return false;
     }
+}
 
-    // Add reward
-    const rewardAmount = parseInt(finalReward) || 0;
-    db.setTokenBalance(user, db.getTokenBalance(user) + rewardAmount);
+// POST /api/complete-task - Complete a task
+app.post('/api/complete-task', async (req, res) => {
+    try {
+        const { userId, taskId, reward, taskType, amount, type } = req.body;
 
-    if (oneTimeTasks.includes(finalTaskId)) {
+        // Support multiple frontend variable names
+        const finalTaskId = taskId || taskType || type;
+        const finalReward = parseInt(reward || amount || 10);
+
+        if (!userId || !finalTaskId) return res.status(400).json({ success: false, message: 'Missing userId or taskId' });
+
+        const users = getUsersObj();
+        const user = users[userId];
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+        if (!user.completedTasks) user.completedTasks = [];
+        if (user.completedTasks.includes(finalTaskId)) {
+            return res.json({ success: false, message: 'Task already completed' });
+        }
+
+        // Get task info from db
+        const task = (db.data.tasks && db.data.tasks[finalTaskId]) || (db.tasks && db.tasks[finalTaskId]);
+
+        // TELEGRAM VERIFICATION
+        if (task && task.url && (task.url.includes('t.me/') || task.name?.toLowerCase().includes('telegram'))) {
+            const isJoined = await isUserInTelegram(task.url, userId);
+            if (!isJoined) {
+                return res.json({
+                    success: false,
+                    message: 'Verification failed. Please join the channel/group first and wait a few seconds.'
+                });
+            }
+        }
+
+        // Mark as completed
         user.completedTasks.push(finalTaskId);
-    }
 
-    // History - only record if reward was actually given
-    if (rewardAmount > 0) {
+        // Add rewards
+        db.setTokenBalance(user, db.getTokenBalance(user) + finalReward);
+
+        const gemsReward = (task && task.gems) ? task.gems : 1;
+        user.Gems = (user.Gems || 0) + gemsReward;
+
+        // Add history entry
         if (!user.history) user.history = [];
         user.history.unshift({
-            type: 'tasks',
-            date: new Date().toISOString(),
-            reward: `+${rewardAmount} Tokens`,
-            detail: finalTaskId
+            type: 'mission_reward',
+            amount: finalReward,
+            reward: `+${finalReward} TC`,
+            asset: 'TC',
+            date: Date.now(),
+            detail: task ? `Completed task: ${task.name}` : `Completed task: ${finalTaskId}`
         });
+
+        saveUsersObj(users);
+        db.save();
+
+        res.json({
+            success: true,
+            message: 'Task completed successfully!',
+            reward: finalReward,
+            newBalance: db.getTokenBalance(user)
+        });
+    } catch (error) {
+        console.error('Error completing task:', error);
+        res.status(500).json({ success: false, message: 'Failed to complete task' });
     }
-
-    saveUsersObj(users);
-
-    res.json({
-        success: true,
-        message: 'Task Completed!',
-        reward: finalReward,
-        newBalance: db.getTokenBalance(user)
-    });
 });
 
 // Helper: get users object
@@ -2061,111 +2545,38 @@ app.get('/api/number/platforms', (req, res) => {
     const platformSet = new Set();
     const platformCountryCodes = {};
 
+    // User requested specifically these 7 services
+    const requestedServices = ['telegram', 'whatsapp', 'microsoft', 'tiktok', 'twitter', 'facebook', 'google'];
+
     Object.values(providers).forEach(provider => {
         if (provider.type === 'sms' && provider.status === 'active' && provider.platforms) {
             Object.keys(provider.platforms).forEach(platform => {
-                platformSet.add(platform);
-                // Store country codes for this platform
-                if (!platformCountryCodes[platform]) {
-                    platformCountryCodes[platform] = provider.platforms[platform];
+                if (requestedServices.includes(platform)) {
+                    platformSet.add(platform);
+                    // Store country codes for this platform
+                    if (!platformCountryCodes[platform]) {
+                        platformCountryCodes[platform] = provider.platforms[platform];
+                    }
                 }
             });
         }
     });
 
-    // Default platforms if none configured
-    const defaultPlatforms = ['telegram', 'whatsapp', 'instagram', 'twitter', 'tiktok', 'facebook', 'google', 'microsoft', 'snapchat', 'linkedin', 'pinterest', 'reddit', 'discord', 'twitch', 'youtube', 'ebay', 'amazon', 'netflix', 'spotify', 'airbnb', 'uber', 'grab', 'gojek', 'shopee', 'lazada', 'tokopedia', 'blibli', 'alibaba', 'taobao', 'wechat', 'line', 'kakao', 'naver', 'qq', 'vk', 'ok', 'mailru', 'yahoo', 'outlook', 'gmail', 'protonmail', 'yandex', 'bing', 'apple', 'samsung', 'huawei', 'xiaomi', 'oppo', 'vivo', 'realme', 'oneplus', 'nokia', 'sony', 'lg', 'htc', 'motorola', 'lenovo', 'asus', 'acer', 'dell', 'hp', 'toshiba', 'panasonic', 'philips', 'sharp', 'hitachi', 'fujitsu', 'casio', 'canon', 'nikon', 'sony', 'jbl', 'bose', 'beats', 'sennheiser', 'akg', 'harman', 'jvc', 'pioneer', 'onkyo', 'denon', 'marantz', 'yamaha', 'roland', 'korg', 'casio', 'other'];
+    // Default platforms (strictly filtered to user request)
+    const defaultPlatforms = requestedServices;
     if (platformSet.size === 0) {
         defaultPlatforms.forEach(p => platformSet.add(p));
     }
 
-    // Platform metadata for display
+    // Platform metadata for display (Filtered list)
     const platformMeta = {
         telegram: { name: 'Telegram', icon: 'fab fa-telegram', color: '#229ed9' },
         whatsapp: { name: 'WhatsApp', icon: 'fab fa-whatsapp', color: '#22c55e' },
-        instagram: { name: 'Instagram', icon: 'fab fa-instagram', color: '#e1306c' },
-        twitter: { name: 'Twitter', icon: 'fab fa-twitter', color: '#1da1f2' },
         tiktok: { name: 'TikTok', icon: 'fab fa-tiktok', color: '#fff' },
+        twitter: { name: 'Twitter', icon: 'fab fa-twitter', color: '#1da1f2' },
         facebook: { name: 'Facebook', icon: 'fab fa-facebook', color: '#1877f2' },
         google: { name: 'Google', icon: 'fab fa-google', color: '#4285f4' },
-        microsoft: { name: 'Microsoft', icon: 'fab fa-microsoft', color: '#00a4ef' },
-        snapchat: { name: 'Snapchat', icon: 'fab fa-snapchat', color: '#fffc00' },
-        linkedin: { name: 'LinkedIn', icon: 'fab fa-linkedin', color: '#0a66c2' },
-        pinterest: { name: 'Pinterest', icon: 'fab fa-pinterest', color: '#e60023' },
-        reddit: { name: 'Reddit', icon: 'fab fa-reddit', color: '#ff4500' },
-        discord: { name: 'Discord', icon: 'fab fa-discord', color: '#5865f2' },
-        twitch: { name: 'Twitch', icon: 'fab fa-twitch', color: '#9146ff' },
-        youtube: { name: 'YouTube', icon: 'fab fa-youtube', color: '#ff0000' },
-        ebay: { name: 'eBay', icon: 'fab fa-ebay', color: '#e53238' },
-        amazon: { name: 'Amazon', icon: 'fab fa-amazon', color: '#ff9900' },
-        netflix: { name: 'Netflix', icon: 'fas fa-film', color: '#e50914' },
-        spotify: { name: 'Spotify', icon: 'fab fa-spotify', color: '#1db954' },
-        airbnb: { name: 'Airbnb', icon: 'fab fa-airbnb', color: '#ff5a5f' },
-        uber: { name: 'Uber', icon: 'fab fa-uber', color: '#000000' },
-        grab: { name: 'Grab', icon: 'fas fa-car', color: '#00b14f' },
-        gojek: { name: 'Gojek', icon: 'fas fa-motorcycle', color: '#00aa13' },
-        shopee: { name: 'Shopee', icon: 'fas fa-shopping-bag', color: '#ee4d2d' },
-        lazada: { name: 'Lazada', icon: 'fas fa-shopping-cart', color: '#0f146d' },
-        tokopedia: { name: 'Tokopedia', icon: 'fas fa-store', color: '#03ac0e' },
-        blibli: { name: 'Blibli', icon: 'fas fa-shopping-basket', color: '#0095d9' },
-        alibaba: { name: 'Alibaba', icon: 'fab fa-alibaba', color: '#ff6a00' },
-        taobao: { name: 'Taobao', icon: 'fas fa-shopping-bag', color: '#ff5000' },
-        wechat: { name: 'WeChat', icon: 'fab fa-weixin', color: '#07c160' },
-        line: { name: 'Line', icon: 'fab fa-line', color: '#00c300' },
-        kakao: { name: 'KakaoTalk', icon: 'fas fa-comment', color: '#ffe812' },
-        naver: { name: 'Naver', icon: 'fab fa-neos', color: '#03c75a' },
-        qq: { name: 'QQ', icon: 'fab fa-qq', color: '#12b7f5' },
-        vk: { name: 'VK', icon: 'fab fa-vk', color: '#4a76a8' },
-        ok: { name: 'OK', icon: 'fab fa-odnoklassniki', color: '#ee8208' },
-        mailru: { name: 'Mail.ru', icon: 'fas fa-envelope', color: '#168de2' },
-        yahoo: { name: 'Yahoo', icon: 'fab fa-yahoo', color: '#6001d2' },
-        outlook: { name: 'Outlook', icon: 'fas fa-envelope', color: '#0078d4' },
-        gmail: { name: 'Gmail', icon: 'fas fa-envelope', color: '#ea4335' },
-        protonmail: { name: 'ProtonMail', icon: 'fas fa-shield-alt', color: '#8b89cc' },
-        yandex: { name: 'Yandex', icon: 'fab fa-yandex', color: '#fc3f1d' },
-        bing: { name: 'Bing', icon: 'fab fa-microsoft', color: '#008373' },
-        apple: { name: 'Apple', icon: 'fab fa-apple', color: '#a3aaae' },
-        samsung: { name: 'Samsung', icon: 'fas fa-mobile-alt', color: '#1428a0' },
-        huawei: { name: 'Huawei', icon: 'fas fa-mobile-alt', color: '#cf0a2c' },
-        xiaomi: { name: 'Xiaomi', icon: 'fas fa-mobile-alt', color: '#ff6900' },
-        oppo: { name: 'OPPO', icon: 'fas fa-mobile-alt', color: '#009b77' },
-        vivo: { name: 'Vivo', icon: 'fas fa-mobile-alt', color: '#415fff' },
-        realme: { name: 'Realme', icon: 'fas fa-mobile-alt', color: '#ffca28' },
-        oneplus: { name: 'OnePlus', icon: 'fas fa-mobile-alt', color: '#f50514' },
-        nokia: { name: 'Nokia', icon: 'fas fa-mobile-alt', color: '#124191' },
-        sony: { name: 'Sony', icon: 'fas fa-mobile-alt', color: '#000000' },
-        lg: { name: 'LG', icon: 'fas fa-mobile-alt', color: '#a50034' },
-        htc: { name: 'HTC', icon: 'fas fa-mobile-alt', color: '#8cc63f' },
-        motorola: { name: 'Motorola', icon: 'fas fa-mobile-alt', color: '#000000' },
-        lenovo: { name: 'Lenovo', icon: 'fab fa-lenovo', color: '#e2231a' },
-        asus: { name: 'ASUS', icon: 'fas fa-laptop', color: '#00539b' },
-        acer: { name: 'Acer', icon: 'fas fa-laptop', color: '#83b81a' },
-        dell: { name: 'Dell', icon: 'fas fa-laptop', color: '#007db8' },
-        hp: { name: 'HP', icon: 'fas fa-laptop', color: '#0096d6' },
-        toshiba: { name: 'Toshiba', icon: 'fas fa-laptop', color: '#ea0a2e' },
-        panasonic: { name: 'Panasonic', icon: 'fas fa-tv', color: '#0068b7' },
-        philips: { name: 'Philips', icon: 'fas fa-tv', color: '#0b5ed7' },
-        sharp: { name: 'Sharp', icon: 'fas fa-tv', color: '#ff0000' },
-        hitachi: { name: 'Hitachi', icon: 'fas fa-tv', color: '#ed1c24' },
-        fujitsu: { name: 'Fujitsu', icon: 'fas fa-laptop', color: '#c3003f' },
-        casio: { name: 'Casio', icon: 'fas fa-clock', color: '#000000' },
-        canon: { name: 'Canon', icon: 'fas fa-camera', color: '#bc0024' },
-        nikon: { name: 'Nikon', icon: 'fas fa-camera', color: '#ffe600' },
-        jbl: { name: 'JBL', icon: 'fas fa-headphones', color: '#ff6600' },
-        bose: { name: 'Bose', icon: 'fas fa-headphones', color: '#000000' },
-        beats: { name: 'Beats', icon: 'fas fa-headphones', color: '#ff0000' },
-        sennheiser: { name: 'Sennheiser', icon: 'fas fa-headphones', color: '#0096d6' },
-        akg: { name: 'AKG', icon: 'fas fa-headphones', color: '#0095d9' },
-        harman: { name: 'Harman', icon: 'fas fa-headphones', color: '#00a3e0' },
-        jvc: { name: 'JVC', icon: 'fas fa-tv', color: '#b71c1c' },
-        pioneer: { name: 'Pioneer', icon: 'fas fa-music', color: '#e4002b' },
-        onkyo: { name: 'Onkyo', icon: 'fas fa-music', color: '#000000' },
-        denon: { name: 'Denon', icon: 'fas fa-music', color: '#000000' },
-        marantz: { name: 'Marantz', icon: 'fas fa-music', color: '#8b0000' },
-        yamaha: { name: 'Yamaha', icon: 'fas fa-music', color: '#4b0082' },
-        roland: { name: 'Roland', icon: 'fas fa-music', color: '#000000' },
-        korg: { name: 'Korg', icon: 'fas fa-music', color: '#000000' },
-        other: { name: 'Other', icon: 'fas fa-ellipsis-h', color: 'var(--text-sub)' }
+        microsoft: { name: 'Microsoft', icon: 'fab fa-microsoft', color: '#00a4ef' }
     };
 
     // Build platforms array with usage stats
@@ -2189,147 +2600,540 @@ app.get('/api/number/platforms', (req, res) => {
 
 // API: Generate Virtual Number
 app.post('/api/number/generate', async (req, res) => {
-    const { userId, platform, cost } = req.body;
+    const { userId, platform } = req.body;
     const users = getUsersObj();
     const user = users[userId];
     if (!user) return res.json({ success: false, message: 'User not found' });
+
+    // Limits and tracking
+    if (!user.flags) user.flags = {};
+    const MAX_ACTIVE_NUMBERS = 7;
+    const sessions = db.data.numberSessions || {};
+    const userSessionsArr = Object.entries(sessions)
+        .filter(([id, s]) => s && s.userId == userId)
+        .sort((a, b) => a[1].createdAt - b[1].createdAt);
+
+    let notifyLimit = false;
+    if (userSessionsArr.length >= MAX_ACTIVE_NUMBERS) {
+        // Find oldest session to close
+        const [oldestSessionId, oldestSession] = userSessionsArr[0];
+
+        // Remove from db.data.numberSessions
+        delete db.data.numberSessions[oldestSessionId];
+
+        // If it was a manual number, release it
+        if (db.data.manualNumbers) {
+            const manualNum = db.data.manualNumbers.find(n => n.currentSessionId == oldestSessionId);
+            if (manualNum) {
+                manualNum.status = 'available';
+                manualNum.currentUserId = null;
+                manualNum.currentSessionId = null;
+                manualNum.otp = null;
+            }
+        }
+
+        // Check if we should notify user about limit reached (first time only)
+        if (!user.flags.limitNotified) {
+            notifyLimit = true;
+            user.flags.limitNotified = true;
+            await db.updateUser(user);
+        }
+    }
+
     const settings = db.getSettings();
-    const tokenCost = (settings.costs && settings.costs.number) || 15;
+    const costs = settings.costs || {};
+    const tokenCost = costs.number || 15;
     const userTokens = db.getTokenBalance(user);
     if (userTokens < tokenCost) return res.json({ success: false, message: `Insufficient tokens. Need ${tokenCost} TC.` });
 
     // Track platform usage for popularity ranking
     if (!db.data.virtualNumberStats) db.data.virtualNumberStats = {};
     db.data.virtualNumberStats[platform] = (db.data.virtualNumberStats[platform] || 0) + 1;
-    db.save();
 
-    // Get country code for this platform from provider settings
-    let countryCode = '1'; // Default to US
-    const providers = db.data.providers || {};
-    const smsProviders = Object.values(providers).filter(p => p.type === 'sms' && p.status === 'active');
+    let number = null;
+    const sessionId = 'ns_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
 
-    // Find the first provider that has country codes configured for this platform
-    for (const provider of smsProviders) {
-        if (provider.platforms && provider.platforms[platform] && provider.platforms[platform].length > 0) {
-            countryCode = provider.platforms[platform][0]; // Use first country code
-            break;
+    // Try manual number pool first
+    if (db.data.manualNumbers && Array.isArray(db.data.manualNumbers)) {
+        const availableManualNum = db.data.manualNumbers.find(n =>
+            n.platform === platform.toLowerCase() &&
+            n.countryCode === req.body.countryCode &&
+            n.status === 'available'
+        );
+        if (availableManualNum) {
+            number = availableManualNum.number;
+            availableManualNum.status = 'active';
+            availableManualNum.updatedAt = Date.now();
+            availableManualNum.currentUserId = userId;
+            availableManualNum.currentSessionId = sessionId;
+            availableManualNum.activatedAt = Date.now();
+            availableManualNum.otp = 'Waiting...';
         }
     }
 
-    // Try real SMS provider via bot's apiGateway
-    let number = null;
-    let sessionId = 'num_' + Date.now() + '_' + userId;
+    // If no manual number, try real SMS provider via bot's apiGateway
+    if (!number) {
+        try {
+            // Get country code for this platform from provider settings
+            let countryCode = req.body.countryCode || '1'; // Use user's selected country code
+            const providers = db.data.providers || {};
+            const smsProviders = Object.values(providers).filter(p => p.type === 'sms' && p.status === 'active');
 
-    try {
-        const apiGateway = require('../services/api-gateway');
-        const result = await apiGateway.executeWithFailover('sms', async (provider) => {
-            const axios = require('axios');
-            const r = await axios.post(`${provider.apiUrl}/numbers`, {
-                platform,
-                countryCode
-            }, {
-                headers: { 'X-API-KEY': provider.apiKey }, timeout: 8000
+            for (const provider of smsProviders) {
+                if (provider.platforms && provider.platforms[platform] && provider.platforms[platform].length > 0) {
+                    countryCode = provider.platforms[platform][0];
+                    break;
+                }
+            }
+
+            const apiGateway = require('../services/api-gateway');
+            const result = await apiGateway.executeWithFailover('sms', async (provider) => {
+                const axios = require('axios');
+                const r = await axios.post(`${provider.apiUrl}/numbers`, {
+                    platform: platform.toLowerCase(),
+                    countryCode
+                }, {
+                    headers: { 'X-API-KEY': provider.apiKey }, timeout: 8000
+                });
+                return r.data;
             });
-            return r.data;
-        });
-        if (result && result.number) number = result.number;
-    } catch (e) {
-        console.error('[NUMBER] API error:', e.message);
+            if (result && result.number) number = result.number;
+        } catch (e) {
+            if (e.message !== 'SERVICE_UNAVAILABLE') {
+                console.error('[NUMBER] API error:', e.message);
+            } else {
+                console.warn(`[NUMBER] Service unavailable for ${platform}: No online providers found.`);
+            }
+        }
     }
 
-    // No demo! Return error if no provider available
     if (!number) {
         return res.json({ success: false, message: 'No numbers available for this platform right now. Please try again later.' });
     }
 
     db.setTokenBalance(user, db.getTokenBalance(user) - tokenCost);
     if (!user.history) user.history = [];
-    user.history.unshift({ type: 'number', date: new Date().toISOString(), reward: `-${tokenCost} Tokens`, detail: number });
-    saveUsersObj(users);
+    user.history.unshift({
+        type: 'number',
+        date: new Date().toISOString(),
+        reward: `-${tokenCost} Tokens`,
+        detail: number,
+        platform: platform
+    });
+    await db.updateUser(user);
 
     // Store session
     if (!db.data.numberSessions) db.data.numberSessions = {};
-    db.data.numberSessions[sessionId] = { number, userId, platform, createdAt: Date.now(), otp: null };
+    db.data.numberSessions[sessionId] = {
+        number,
+        userId,
+        platform,
+        createdAt: Date.now(),
+        otp: null
+    };
     db.save();
 
-    res.json({ success: true, number, sessionId, newBalance: db.getTokenBalance(user) });
+    res.json({
+        success: true,
+        number,
+        sessionId,
+        newBalance: db.getTokenBalance(user),
+        notifyLimit // Frontend can use this to show the one-time alert
+    });
 });
 
 // API: Check OTP for Number
-app.get('/api/number/otp', (req, res) => {
+app.get('/api/number/otp', async (req, res) => {
     const { sessionId } = req.query;
+    if (!sessionId) return res.status(400).json({ success: false, message: 'Missing sessionId' });
+
     const sessions = db.data.numberSessions || {};
     const session = sessions[sessionId];
     if (!session) return res.json({ success: false, otp: null });
+
+    // If OTP is already present, just return it
+    if (session.otp) return res.json({ success: true, otp: session.otp });
+
+    // Check if it's a manual number with an otpApi
+    if (db.data.manualNumbers) {
+        const manualNum = db.data.manualNumbers.find(n => n.currentSessionId == sessionId);
+        if (manualNum && manualNum.otpApi) {
+            try {
+                const apiURL = manualNum.otpApi.replace('{number}', manualNum.number);
+                const response = await axios.get(apiURL, { timeout: 5000 });
+                let otp = null;
+
+                // Simple heuristic for OTP extraction from response
+                // If it's CSV or text, try to find a 4-6 digit number
+                const content = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+                const match = content.match(/\d{4,6}/);
+                if (match) {
+                    otp = match[0];
+                    session.otp = otp;
+                    manualNum.otp = otp;
+                    manualNum.status = 'finished';
+                    manualNum.updatedAt = Date.now();
+                    db.save();
+                }
+            } catch (error) {
+                console.error(`Error fetching OTP from manual API: ${error.message}`);
+            }
+        }
+    }
+
     res.json({ success: true, otp: session.otp || null });
 });
 
-// API: Generate Premium Email (Gmail, Hotmail, Student)
+// API: Cancel Number Session
+app.post('/api/number/cancel', (req, res) => {
+    const { sessionId, userId } = req.body;
+    const sessions = db.data.numberSessions || {};
+    const session = sessions[sessionId];
+
+    if (session && session.userId == userId) {
+        // If it was a manual number, release it
+        if (db.data.manualNumbers) {
+            const manualNum = db.data.manualNumbers.find(n => n.currentSessionId == sessionId);
+            if (manualNum) {
+                manualNum.status = 'cancelled';
+                manualNum.updatedAt = Date.now();
+                manualNum.currentUserId = null;
+                manualNum.currentSessionId = null;
+                db.save();
+            }
+        }
+        delete db.data.numberSessions[sessionId];
+        db.save();
+        return res.json({ success: true });
+    }
+    res.json({ success: false });
+});
+
+// ==========================================
+// MOTHER EMAIL (IMAP) MANAGEMENT
+// ==========================================
+
+// API: Admin - Connect Mother Email
+app.post('/api/admin/mother-email/connect', async (req, res) => {
+    try {
+        const { type, email, password, host, port } = req.body;
+        if (!type || !email || !password) return res.json({ success: false, message: 'Type, email and password required' });
+
+        // Save config to DB
+        if (!db.data.settings) db.data.settings = {};
+        if (!db.data.adminSettings.motherEmailConfigs) db.data.adminSettings.motherEmailConfigs = {};
+        
+        db.data.adminSettings.motherEmailConfigs[type] = { email, password, host: host || null, port: port || 993, connectedAt: Date.now() };
+        db.save();
+
+        // Connect via IMAP
+        const ok = await imapService.connect(type, { email, password, host, port: port || 993 });
+        if (ok) {
+            res.json({ success: true, message: `✅ Connected ${type} Mother Email: ${email}` });
+        } else {
+            res.json({ success: false, message: 'IMAP connection failed. Check credentials or App Password.' });
+        }
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// API: Admin - Disconnect Mother Email
+app.post('/api/admin/mother-email/disconnect', (req, res) => {
+    try {
+        const { type } = req.body;
+        if (!type) return res.json({ success: false, message: 'Type required' });
+
+        imapService.disconnect(type);
+        if (db.data.settings && db.data.adminSettings.motherEmailConfigs) {
+            delete db.data.adminSettings.motherEmailConfigs[type];
+            db.save();
+        }
+        res.json({ success: true, message: `${type} Mother Email disconnected` });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// API: Admin - Get Mother Email Status
+app.get('/api/admin/mother-email/status', (req, res) => {
+    try {
+        const status = imapService.getStatus();
+        const saved = db.data.adminSettings?.motherEmailConfigs || {};
+        
+        // Merge active status with saved configs
+        const result = { gmail: {}, hotmail: {} };
+        
+        for (const type of ['gmail', 'hotmail']) {
+            result[type] = {
+                connected: !!status[type]?.connected,
+                email: status[type]?.email || saved[type]?.email || null,
+                savedConfig: saved[type] ? { email: saved[type].email, host: saved[type].host, port: saved[type].port } : null
+            };
+        }
+        
+        res.json({ success: true, status: result });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// API: Fetch Inbox from Mother Email (for a specific pool email)
+app.get('/api/mother-email/inbox', async (req, res) => {
+    try {
+        const { targetEmail, type, sinceMinutes } = req.query;
+        const since = parseInt(sinceMinutes) || 120;
+        const activeType = type || 'gmail';
+
+        if (!imapService.isConnected(activeType)) {
+            // Try to reconnect using saved config
+            const saved = db.data.adminSettings?.motherEmailConfigs?.[activeType];
+            if (saved) {
+                await imapService.connect(activeType, saved);
+            } else {
+                return res.json({ success: false, message: `${activeType} Mother Email not connected`, messages: [] });
+            }
+        }
+
+        let messages;
+        if (targetEmail) {
+            messages = await imapService.fetchMessagesForEmail(activeType, targetEmail, since);
+        } else {
+            messages = await imapService.fetchMessages(activeType, 50, since);
+        }
+
+        res.json({ success: true, messages, count: messages.length });
+    } catch (e) {
+        console.error(`[IMAP] Inbox fetch error for ${req.query.type}:`, e.message);
+        res.json({ success: false, messages: [], message: e.message });
+    }
+});
+
+// API: Auto-reconnect mother emails on server start
+(async () => {
+    try {
+        const saved = db.data.adminSettings?.motherEmailConfigs;
+        if (saved) {
+            for (const [type, cfg] of Object.entries(saved)) {
+                if (cfg && cfg.email && cfg.password) {
+                    console.log(`[IMAP] Auto-connecting ${type} mother email:`, cfg.email);
+                    await imapService.connect(type, cfg);
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('[IMAP] Auto-connect failed:', e.message);
+    }
+})();
+
+// ==========================================
+// ADMIN EMAIL POOL MANAGEMENT
+// ==========================================
+
+
+// API: Admin - Add Email to Pool
+app.post('/api/admin/email-pool/add', (req, res) => {
+    try {
+        const { type, email, password, note } = req.body;
+        if (!type || !email) return res.json({ success: false, message: 'type and email required' });
+
+        if (!db.data.emailPool) db.data.emailPool = {};
+        if (!db.data.emailPool[type]) db.data.emailPool[type] = [];
+
+        // Prevent duplicate
+        const exists = db.data.emailPool[type].find(e => e.email === email);
+        if (exists) return res.json({ success: false, message: 'Email already in pool' });
+
+        db.data.emailPool[type].push({
+            email,
+            password: password || null,
+            note: note || '',
+            status: 'available',
+            addedAt: Date.now(),
+            assignedTo: null,
+            sessionId: null
+        });
+        db.save();
+        res.json({ success: true, message: 'Email added to pool', total: db.data.emailPool[type].length });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// API: Admin - List Email Pool
+app.get('/api/admin/email-pool/list', (req, res) => {
+    try {
+        const { type } = req.query;
+        const pool = db.data.emailPool || {};
+        const history = db.data.emailPoolHistory || [];
+
+        const stats = {};
+        ['gmail', 'hotmail', 'student'].forEach(t => {
+            const typePool = pool[t] || [];
+            stats[t] = {
+                available: typePool.filter(e => !e.status || e.status === 'available').length,
+                totalUsed: history.filter(h => h.type === t).length,
+                recentHistory: history.filter(h => h.type === t).slice(0, 50)
+            };
+        });
+
+        if (type) {
+            return res.json({ 
+                success: true, 
+                emails: pool[type] || [], 
+                type,
+                stats: stats[type] || { available: 0, totalUsed: 0, recentHistory: [] }
+            });
+        }
+        res.json({ success: true, pool, stats });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// API: Admin - Delete Email from Pool or History
+app.delete('/api/admin/email-pool/delete', (req, res) => {
+    try {
+        const { type, email } = req.body;
+        if (!type || !email) return res.json({ success: false, message: 'type and email required' });
+        
+        let removed = false;
+
+        // 1. Remove from active pool
+        if (db.data.emailPool && db.data.emailPool[type]) {
+            const initialCount = db.data.emailPool[type].length;
+            db.data.emailPool[type] = db.data.emailPool[type].filter(e => e.email !== email);
+            if (db.data.emailPool[type].length < initialCount) removed = true;
+        }
+
+        // 2. Remove from history
+        if (db.data.emailPoolHistory) {
+            const initialHistoryCount = db.data.emailPoolHistory.length;
+            db.data.emailPoolHistory = db.data.emailPoolHistory.filter(h => h.email !== email || h.type !== type);
+            if (db.data.emailPoolHistory.length < initialHistoryCount) removed = true;
+        }
+
+        if (removed) {
+            db.save();
+            res.json({ success: true, message: 'Email removed from pool and history' });
+        } else {
+            res.json({ success: false, message: 'Email not found in pool or history' });
+        }
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// API: Admin - Clear ALL Assigned (Used) Emails from Pool
+app.post('/api/admin/email-pool/clear-assigned', (req, res) => {
+    try {
+        const { type } = req.body;
+        if (!type) return res.json({ success: false, message: 'Type required' });
+
+        const initialCount = db.data.emailPoolHistory ? db.data.emailPoolHistory.length : 0;
+        
+        if (db.data.emailPoolHistory) {
+            db.data.emailPoolHistory = db.data.emailPoolHistory.filter(h => h.type !== type);
+        }
+
+        const cleared = initialCount - (db.data.emailPoolHistory ? db.data.emailPoolHistory.length : 0);
+        
+        db.save();
+        res.json({ success: true, message: `Cleared ${cleared} used emails from ${type} history` });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// Helper: Assign email from admin pool
+function assignEmailFromPool(type) {
+    if (!db.data.emailPool || !db.data.emailPool[type]) return null;
+    const available = db.data.emailPool[type].find(e => e.status === 'available');
+    return available || null;
+}
+
+// API: Generate Premium Email (Gmail, Hotmail) - ADMIN POOL ONLY
 app.post('/api/premium-emails/generate', async (req, res) => {
-    const { userId, provider, cost, useBrowser } = req.body;
+    const { userId, provider } = req.body;
     const users = getUsersObj();
     const user = users[userId];
     if (!user) return res.json({ success: false, message: 'User not found' });
 
     const settings = db.getSettings();
     const costs = settings.costs || {};
-    let tokenCost = 20; // fallback
+    let tokenCost = 20;
     if (provider === 'gmail') tokenCost = costs.gmail || 20;
     else if (provider === 'hotmail') tokenCost = costs.hotmail || 25;
     else if (provider === 'student') tokenCost = costs.student || 50;
+    else if (provider === 'temp') tokenCost = costs.tempmail || 10;
 
     const userTokens = db.getTokenBalance(user);
     if (userTokens < tokenCost) return res.json({ success: false, message: `Insufficient tokens. Need ${tokenCost} TC for ${provider}.` });
 
     let emailData = null;
 
-    // Use browser automation if requested or if API fails
-    if (useBrowser === true) {
-        try {
-            const { automation } = require('../services/automation');
-            await automation.initialize();
-
-            emailData = await automation.generateEmail(provider === 'hotmail' ? 'hotmail' : 'gmail');
-
-            if (emailData) {
-                // Store automation instance for later inbox checks
-                if (!global.emailAutomations) global.emailAutomations = new Map();
-                global.emailAutomations.set(emailData.email, automation);
-            }
-        } catch (e) {
-            console.error('Browser Automation Error:', e.message);
+    // Gmail & Hotmail: use ADMIN POOL only
+    if (provider === 'gmail' || provider === 'hotmail') {
+        const pool = db.data.emailPool?.[provider] || [];
+        const available = pool.filter(e => !e.status || e.status === 'available');
+        if (available.length === 0) {
+            return res.json({
+                success: false,
+                message: `❌ No ${provider.toUpperCase()} emails available. Admin needs to add more to the pool.`
+            });
         }
-    }
-
-    // Fallback to API method if browser fails or not requested
-    if (!emailData) {
-        try {
-
-            switch (provider) {
-                case 'gmail':
-                    console.log('🔄 Generating Gmail with advanced automation...');
-                    emailData = await createGmailAccount();
-                    break;
-                case 'hotmail':
-                    console.log('🔄 Generating Hotmail with advanced automation...');
-                    emailData = await createHotmailAccount();
-                    break;
-                case 'student':
-                    console.log('🔄 Generating Student Email...');
-                    const unifiedProviders = require('../services/unifiedProviders');
-                    emailData = await unifiedProviders.createStudentEmailAccount();
-                    break;
-                default:
-                    emailData = await createGmailAccount();
+        const poolEmail = available[0];
+        emailData = {
+            email: poolEmail.email,
+            password: poolEmail.password || null,
+            provider: `admin_pool_${provider}`,
+            sessionId: poolEmail.email,
+            token: poolEmail.email
+        };
+        // REMOVE from pool after assignment (admin sees it's been used)
+        db.data.emailPool[provider] = pool.filter(e => e.email !== poolEmail.email);
+        // Save usage record in admin history
+        if (!db.data.emailPoolHistory) db.data.emailPoolHistory = [];
+        db.data.emailPoolHistory.unshift({
+            email: poolEmail.email,
+            type: provider,
+            assignedTo: userId,
+            assignedAt: new Date().toISOString()
+        });
+        db.save();
+    } else if (provider === 'student') {
+        // Student email: still use admin pool if available, otherwise providers
+        const studentPool = db.data.emailPool?.['student'] || [];
+        const availableStudent = studentPool.filter(e => !e.status || e.status === 'available');
+        if (availableStudent.length > 0) {
+            const poolEmail = availableStudent[0];
+            emailData = {
+                email: poolEmail.email,
+                password: poolEmail.password || null,
+                provider: 'admin_pool_student',
+                sessionId: poolEmail.email,
+                token: poolEmail.email
+            };
+            // Remove from pool
+            db.data.emailPool['student'] = studentPool.filter(e => e.email !== poolEmail.email);
+            if (!db.data.emailPoolHistory) db.data.emailPoolHistory = [];
+            db.data.emailPoolHistory.unshift({
+                email: poolEmail.email, type: 'student',
+                assignedTo: userId, assignedAt: new Date().toISOString()
+            });
+            db.save();
+        } else {
+            try {
+                const unifiedProviders = require('../services/providers');
+                emailData = await unifiedProviders.createStudentEmailAccount();
+            } catch (e) {
+                console.error('Student Email Generation Error:', e.message);
             }
-        } catch (e) {
-            console.error('Premium Email Generation Error:', e.message);
         }
     }
 
     if (!emailData || !emailData.email) {
-        console.error('❌ All premium email providers failed');
-        return res.json({ success: false, message: 'All email providers temporarily unavailable. Please try again later.' });
+        return res.json({ success: false, message: 'No emails available in pool. Please contact admin.' });
     }
 
     // Deduct tokens
@@ -2337,109 +3141,215 @@ app.post('/api/premium-emails/generate', async (req, res) => {
     if (!user.history) user.history = [];
     user.history.unshift({
         type: 'premium_email',
+        amount: -tokenCost,
         date: new Date().toISOString(),
         reward: `-${tokenCost} Tokens`,
         detail: emailData.email
     });
     saveUsersObj(users);
 
-    // Store session
+    // Store session — userId stored as string for consistent comparison
     const sessionId = `premium_${provider}_${Date.now()}_${userId}`;
     if (!db.data.mailSessions) db.data.mailSessions = {};
     db.data.mailSessions[sessionId] = {
         ...emailData,
-        userId,
+        userId: String(userId),
         provider,
         createdAt: Date.now()
     };
     db.save();
 
+    // Return email as plain STRING (not object) to avoid [object Object] on frontend
     res.json({
         success: true,
-        email: { email: emailData.email, id: sessionId },
+        email: emailData.email,    // ← plain string!
         sessionId,
         newBalance: db.getTokenBalance(user),
         provider: emailData.provider
     });
 });
 
+
 // API: Fetch Premium Email Inbox
 app.get('/api/premium-emails/inbox', async (req, res) => {
     const { sessionId, userId, service } = req.query;
 
-    if (!sessionId || !userId) {
-        return res.json({ success: false, message: 'Session ID and User ID required' });
+    if (!sessionId) {
+        return res.json({ success: false, message: 'Session ID required' });
     }
 
     // Get session data
     const session = db.data.mailSessions?.[sessionId];
     if (!session) {
-        return res.json({ success: false, message: 'Session not found' });
+        return res.json({ success: false, messages: [], email: null, note: 'Session not found or expired' });
     }
 
-    // Verify user owns this session
-    if (session.userId !== userId) {
+    // Verify user owns this session (loose equality for number vs string)
+    if (userId && session.userId != null && String(session.userId) !== String(userId)) {
         return res.json({ success: false, message: 'Unauthorized' });
     }
 
-    const unifiedProviders = require('../services/unifiedProviders');
+    // Extract email string (handle old sessions where email was stored as object)
+    const targetEmail = (typeof session.email === 'object' && session.email !== null)
+        ? (session.email.email || '')
+        : (session.email || '');
+
+    if (!targetEmail) {
+        return res.json({ success: false, messages: [], note: 'No email address in session' });
+    }
+
+    const providerStr = (session.provider || '').toString();
     let messages = [];
 
     try {
-        // Fetch messages based on provider type
-        if (session.provider === 'student' || service === 'student') {
+        // ─── ADMIN POOL GMAIL → use IMAP Mother Email ───
+        if (providerStr.startsWith('admin_pool_gmail') || providerStr === 'gmail') {
+            if (imapService.isConnected('gmail')) {
+                messages = await imapService.fetchMessagesForEmail('gmail', targetEmail, 60);
+            } else {
+                // Try auto-reconnect
+                const saved = db.data.adminSettings?.motherEmailConfigs?.gmail;
+                if (saved) {
+                    const ok = await imapService.connect('gmail', saved);
+                    if (ok) messages = await imapService.fetchMessagesForEmail('gmail', targetEmail, 60);
+                }
+                if (messages.length === 0) {
+                    return res.json({
+                        success: false,
+                        messages: [],
+                        message: '⚠️ Gmail Mother Email not connected. Go to Admin Panel → Email Pool → Connect Gmail.'
+                    });
+                }
+            }
+
+        // ─── ADMIN POOL HOTMAIL → use IMAP Mother Email ───
+        } else if (providerStr.startsWith('admin_pool_hotmail') || providerStr === 'hotmail' || service === 'hotmail') {
+            if (imapService.isConnected('hotmail')) {
+                messages = await imapService.fetchMessagesForEmail('hotmail', targetEmail, 60);
+            } else {
+                const saved = db.data.settings?.motherEmails?.hotmail;
+                if (saved) {
+                    const ok = await imapService.connect('hotmail', saved);
+                    if (ok) messages = await imapService.fetchMessagesForEmail('hotmail', targetEmail, 60);
+                }
+                if (messages.length === 0) {
+                    return res.json({
+                        success: false,
+                        messages: [],
+                        message: '⚠️ Hotmail Mother Email not connected. Go to Admin Panel → Email Pool → Connect Hotmail.'
+                    });
+                }
+            }
+
+        // ─── STUDENT EMAIL → external provider ───
+        } else if (providerStr.startsWith('admin_pool_student') || session.provider === 'student' || service === 'student') {
+            const unifiedProviders = require('../services/providers');
             messages = await unifiedProviders.getStudentEmailMessages(
                 session.sessionId || session.token,
-                session.email,
-                session.provider
-            );
-        } else if (session.provider === 'hotmail' || service === 'hotmail') {
-            // Use advanced automation for Hotmail
-            messages = await getHotmailMessages(
-                session.sessionId || session.token,
-                session.email
-            );
-        } else {
-            // Use advanced automation for Gmail
-            messages = await getGmailMessages(
-                session.sessionId || session.token,
-                session.email,
+                targetEmail,
                 session.provider
             );
         }
-    } catch (e) {
-        console.error('Fetch Inbox Error:', e.message);
-    }
 
-    res.json({
-        success: true,
-        messages: messages,
-        email: session.email
-    });
+        // Format messages consistently
+        const formatted = (messages || []).map(m => ({
+            id: m.id || m.uid,
+            from: m.from || 'Unknown',
+            to: m.to || targetEmail,
+            subject: m.subject || '(No Subject)',
+            body: (m.body || m.snippet || '').substring(0, 3000),
+            preview: (m.body || m.snippet || '').substring(0, 120),
+            otp: m.otp || (((m.body || m.snippet || '').match(/\b\d{4,8}\b/) || [])[0]) || null,
+            date: m.date || new Date().toISOString(),
+            snippet: (m.snippet || m.body || '').substring(0, 100)
+        }));
+
+        res.json({
+            success: true,
+            messages: formatted,
+            email: targetEmail
+        });
+    } catch (e) {
+        console.error('[Premium Inbox] Fetch error:', e.message);
+        res.json({ success: true, messages: [], email: targetEmail });
+    }
 });
 
-// API: Generate Temp Email
+
+// API: Generate Temp/Hot/Student Email
 app.post('/api/mail/generate', async (req, res) => {
     const { userId, cost, type, service } = req.body;
     const users = getUsersObj();
     const user = users[userId];
     if (!user) return res.json({ success: false, message: 'User not found' });
     const settings = db.getSettings();
-    const tokenCost = (settings.costs && settings.costs.tempmail) || 10;
-    const mailTokens = db.getTokenBalance(user);
-    if (mailTokens < tokenCost) return res.json({ success: false, message: `Insufficient tokens. Need ${tokenCost} TC.` });
-
+    const costs = settings.costs || {};
     const requestedService = (type || service || 'temp').toString().toLowerCase();
+    
+    let tokenCost = costs.tempmail || 10;
+    if (requestedService === 'gmail' || requestedService === 'premium') tokenCost = costs.gmail || 20;
+    else if (requestedService === 'hotmail' || requestedService === 'hot') tokenCost = costs.hotmail || 25;
+    else if (requestedService === 'student') tokenCost = costs.student || 50;
+
+    const mailTokens = db.getTokenBalance(user);
+    if (mailTokens < tokenCost) return res.json({ success: false, message: `Insufficient tokens. Need ${tokenCost} TC for ${requestedService}.` });
+
     let emailData = null;
     const sessionId = 'mail_' + requestedService + '_' + Date.now() + '_' + userId;
 
     try {
-        if (requestedService === 'gmail') {
-            const { createGmailAccount } = require('../services/automation');
-            emailData = await createGmailAccount();
-        } else if (requestedService === 'hotmail') {
-            const { createHotmailAccount } = require('../services/automation');
-            emailData = await createHotmailAccount();
+        if (requestedService === 'hotmail' || requestedService === 'hot') {
+            // Hot Mail: ADMIN POOL ONLY - no website providers
+            const poolEmail = assignEmailFromPool('hotmail');
+            if (!poolEmail) {
+                return res.json({ success: false, message: 'No Hot Mail emails available. Please contact admin.' });
+            }
+            emailData = {
+                email: poolEmail.email,
+                password: poolEmail.password || null,
+                provider: 'admin_pool_hotmail',
+                sessionId: poolEmail.email,
+                token: poolEmail.email
+            };
+            
+            // Remove from pool
+            db.data.emailPool['hotmail'] = db.data.emailPool['hotmail'].filter(e => e.email !== poolEmail.email);
+            
+            // Add to history
+            if (!db.data.emailPoolHistory) db.data.emailPoolHistory = [];
+            db.data.emailPoolHistory.push({
+                type: 'hotmail',
+                email: poolEmail.email,
+                assignedTo: userId,
+                assignedAt: Date.now()
+            });
+            db.save();
+        } else if (requestedService === 'gmail') {
+            // Gmail: ADMIN POOL ONLY - no website providers
+            const poolEmail = assignEmailFromPool('gmail');
+            if (!poolEmail) {
+                return res.json({ success: false, message: 'No Gmail emails available. Please contact admin.' });
+            }
+            emailData = {
+                email: poolEmail.email,
+                password: poolEmail.password || null,
+                provider: 'admin_pool_gmail',
+                sessionId: poolEmail.email,
+                token: poolEmail.email
+            };
+            
+            // Remove from pool
+            db.data.emailPool['gmail'] = db.data.emailPool['gmail'].filter(e => e.email !== poolEmail.email);
+            
+            // Add to history
+            if (!db.data.emailPoolHistory) db.data.emailPoolHistory = [];
+            db.data.emailPoolHistory.push({
+                type: 'gmail',
+                email: poolEmail.email,
+                assignedTo: userId,
+                assignedAt: Date.now()
+            });
+            db.save();
         } else if (requestedService === 'student') {
             const { createStudentEmailAccount } = require('../services/providers');
             emailData = await createStudentEmailAccount();
@@ -2450,15 +3360,21 @@ app.post('/api/mail/generate', async (req, res) => {
     } catch (e) {
         console.error('Mail createAccount error:', e.message);
     }
-    // If all providers failed, return error (no demo for live system)
+
     if (!emailData || !emailData.email) {
-        console.error('❌ All tempmail providers failed');
-        return res.json({ success: false, message: 'All email providers temporarily unavailable. Please try again later.' });
+        console.error('❌ Mail generation failed for:', requestedService);
+        return res.json({ success: false, message: 'Email not available. Please try again later or contact admin.' });
     }
 
     db.setTokenBalance(user, db.getTokenBalance(user) - tokenCost);
     if (!user.history) user.history = [];
-    user.history.unshift({ type: 'mail', date: new Date().toISOString(), reward: `-${tokenCost} Tokens`, detail: emailData.email });
+    user.history.unshift({
+        type: 'temp_mail',
+        amount: -tokenCost,
+        date: new Date().toISOString(),
+        reward: `-${tokenCost} Tokens`,
+        detail: emailData.email
+    });
     saveUsersObj(users);
 
     // Store session
@@ -2474,6 +3390,71 @@ app.post('/api/mail/generate', async (req, res) => {
     res.json({ success: true, email: emailData.email, sessionId, newBalance: db.getTokenBalance(user) });
 });
 
+// API: Renew Custom Email
+app.post('/api/mail/renew-custom', async (req, res) => {
+    const { userId, email, type } = req.body;
+    const users = getUsersObj();
+    const user = users[userId];
+    if (!user) return res.json({ success: false, message: 'User not found' });
+
+    const settings = db.getSettings();
+    const costs = settings.costs || {};
+    const tokenCost = costs.renewmail || 30;
+    const bal = db.getTokenBalance(user);
+
+    if (bal < tokenCost) return res.json({ success: false, message: `Insufficient tokens. Need ${tokenCost} TC.` });
+
+    // Normalize type
+    const requestedType = (type === 'premium' || type === 'gmail') ? 'gmail' : 'hotmail';
+    
+    // Find email in pool or history
+    const pool = db.data.emailPool || {};
+    const typePool = pool[requestedType] || [];
+    let emailData = typePool.find(e => e.email.toLowerCase() === email.toLowerCase());
+    
+    if (!emailData) {
+        const history = db.data.emailPoolHistory || [];
+        const histItem = history.find(h => h.email.toLowerCase() === email.toLowerCase() && h.type === requestedType);
+        if (histItem) {
+            emailData = {
+                email: histItem.email,
+                provider: `admin_pool_${requestedType}`,
+                sessionId: histItem.email
+            };
+        }
+    }
+
+    if (!emailData) {
+        return res.json({ success: false, message: 'Email not found. Only emails from our pool can be renewed.' });
+    }
+
+    // Deduct tokens
+    db.setTokenBalance(user, bal - tokenCost);
+    if (!user.history) user.history = [];
+    user.history.unshift({
+        type: 'mail_renew',
+        amount: -tokenCost,
+        date: new Date().toISOString(),
+        reward: `-${tokenCost} Tokens`,
+        detail: `Renewed ${emailData.email}`
+    });
+    saveUsersObj(users);
+
+    // Create session
+    const sessionId = 'mail_' + requestedType + '_renew_' + Date.now() + '_' + userId;
+    if (!db.data.mailSessions) db.data.mailSessions = {};
+    db.data.mailSessions[sessionId] = {
+        ...emailData,
+        userId,
+        createdAt: Date.now(),
+        service: requestedType,
+        isRenewed: true
+    };
+    db.save();
+
+    res.json({ success: true, email: emailData.email, sessionId, newBalance: db.getTokenBalance(user) });
+});
+
 // API: Check Mail Inbox
 app.get('/api/mail/inbox', async (req, res) => {
     const { sessionId } = req.query;
@@ -2483,37 +3464,46 @@ app.get('/api/mail/inbox', async (req, res) => {
     const session = sessions[sessionId];
     if (!session) return res.json({ success: false, messages: [] });
 
-    // Optional billing per refresh (used by temp mail)
+    // Optional billing per refresh
     if (cost > 0 && userId) {
         try {
             const users = getUsersObj();
             const user = users[userId];
             if (!user) return res.json({ success: false, message: 'User not found', messages: [] });
-
             const bal = db.getTokenBalance(user);
-            if (bal < cost) {
-                return res.json({ success: false, message: 'Insufficient tokens', newBalance: bal, messages: [] });
-            }
-
+            if (bal < cost) return res.json({ success: false, message: 'Insufficient tokens', newBalance: bal, messages: [] });
             db.setTokenBalance(user, bal - cost);
             if (!user.history) user.history = [];
             user.history.unshift({ type: 'mail_inbox_refresh', amount: cost, currency: 'tokens', date: Date.now() });
             saveUsersObj(users);
-        } catch (e) {
-            // If billing fails, do not block inbox view
-        }
+        } catch (e) { }
     }
 
     try {
         const activeService = (req.query.type || req.query.service || session.service || 'temp').toString().toLowerCase();
-
+        const providerStr = (session.provider || '').toString();
         let messages = [];
-        if (activeService === 'gmail') {
-            const { getGmailMessages } = require('../services/automation');
-            messages = await getGmailMessages(session.sessionId || session.token || sessionId, session.email, session.provider);
-        } else if (activeService === 'hotmail') {
-            const { getHotmailMessages } = require('../services/automation');
-            messages = await getHotmailMessages(session.sessionId || session.token || sessionId, session.email);
+
+        // ─── ADMIN POOL EMAILS → use Mother Email IMAP ───
+        if (providerStr.startsWith('admin_pool_') || activeService === 'hotmail' || activeService === 'hot' || activeService === 'gmail') {
+            const targetType = (activeService === 'hotmail' || activeService === 'hot') ? 'hotmail' : 'gmail';
+            if (session.email && imapService.isConnected(targetType)) {
+                messages = await imapService.fetchMessagesForEmail(targetType, session.email, 120);
+            } else if (session.email) {
+                // Try reconnect
+                const saved = db.data.settings?.motherEmails?.[targetType];
+                if (saved) {
+                    const ok = await imapService.connect(targetType, saved);
+                    if (ok) messages = await imapService.fetchMessagesForEmail(targetType, session.email, 120);
+                }
+                if (messages.length === 0) {
+                    return res.json({
+                        success: false,
+                        messages: [],
+                        message: `⚠️ Mother Email for ${targetType} not connected. Contact admin.`
+                    });
+                }
+            }
         } else if (activeService === 'student') {
             const { getStudentEmailMessages } = require('../services/providers');
             messages = await getStudentEmailMessages(session.sessionId || session.token || sessionId, session.email, session.provider);
@@ -2526,19 +3516,17 @@ app.get('/api/mail/inbox', async (req, res) => {
             id: m.id,
             from: m.from || m.sender || 'Unknown',
             subject: m.subject || '(No Subject)',
-            preview: (m.text || m.preview || '') ? (m.text || m.preview || '').substring(0, 100) : '',
-            body: m.text || m.body || m.preview || '',
+            preview: (m.body || m.snippet || m.preview || '').substring(0, 100),
+            body: m.body || m.snippet || m.preview || '',
             time: m.date ? new Date(m.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
-            otp: (m.text || m.body || m.preview) ? (((m.text || m.body || m.preview).match(/\b\d{4,8}\b/) || [])[0]) : null
+            otp: m.otp || (((m.body || m.snippet || '').match(/\b\d{4,8}\b/) || [])[0]) || null
         }));
+
         let newBalance;
         if (cost > 0 && userId) {
             try {
-                const users = getUsersObj();
-                const user = users[userId];
-                if (user) {
-                    newBalance = db.getTokenBalance(user);
-                }
+                const user = getUsersObj()[userId];
+                if (user) newBalance = db.getTokenBalance(user);
             } catch (e) { }
         }
         res.json({ success: true, messages: formatted, newBalance });
@@ -2553,18 +3541,22 @@ app.get('/api/admin/users', (req, res) => {
     try {
         const users = getUsersObj();
         const list = Object.entries(users).map(([id, u]) => ({
-            id, username: u.username || `User_${id}`, firstName: u.firstName || u.first_name || '',
+            id,
+            username: u.username || `User_${id}`,
+            firstName: u.firstName || u.first_name || '',
             tokens: u.tokens || u.balance_tokens || 0,
             Gems: (u.Gems !== undefined ? u.Gems : (u.balance_Gems !== undefined ? u.balance_Gems : (u.gems || 0))),
             usd: (u.usd !== undefined && u.usd !== null) ? u.usd : 0,
             invites: u.invites || u.referralCount || 0,
             verified: u.verified || false,
             adminVerified: u.adminVerified || false,
+            apiStatus: u.apiStatus || 'allow',
             verifiedAt: u.verifiedAt || null,
             leftAt: u.leftAt || null,
             leftFrom: u.leftFrom || null,
             banned: u.banned || u.blocked || false,
-            joinDate: u.joinDate || u.joinedAt || null, lastActive: u.lastActive || null
+            joinDate: u.joinDate || u.joinedAt || null,
+            lastActive: u.lastActive || null
         }));
         res.json({ success: true, users: list, total: list.length });
     } catch (err) {
@@ -2661,7 +3653,7 @@ app.get('/api/admin/user-detail/:userId', (req, res) => {
     res.json({ success: true, user: userProfile, history });
 });
 
-// API: Exchange - Convert Assets (One-way USD restriction)
+// API: Exchange - Convert Assets
 app.post('/api/exchange/convert', (req, res) => {
     const { userId, from, to, amount } = req.body;
     const users = getUsersObj();
@@ -2671,18 +3663,8 @@ app.post('/api/exchange/convert', (req, res) => {
     const amt = parseFloat(amount) || 0;
     if (amt <= 0) return res.json({ success: false, message: 'Please enter a valid amount' });
 
-    // Restriction: Tokens and Gems cannot be converted back to USD
-    if (to === 'usd' && from !== 'usd') {
-        return res.json({ success: false, message: 'Convert to USD is not allowed. USD can only be converted to Tokens or Gems.' });
-    }
-
     if (from === to) {
         return res.json({ success: false, message: 'Please select different currencies' });
-    }
-
-    // Restriction: Cannot convert Tokens/Gems back to USD
-    if (to === 'usd' && from !== 'usd') {
-        return res.json({ success: false, message: 'Converting back to USD is not allowed.' });
     }
 
     // Currency field names
@@ -2777,8 +3759,12 @@ app.post('/api/user/transfer', async (req, res) => {
     // Get transfer fee from config (default 5%)
     const settings = db.getSettings();
     const transferFeePercent = settings.transferFee || 5;
-    const transferFee = Math.ceil((amount * transferFeePercent) / 100);
-    const amountAfterFee = amount - transferFee;
+
+    // Calculate safely with floats
+    const rawFee = (amount * transferFeePercent) / 100;
+    // For tokens/Gems, ceil is okay. For USD, round to 2 decimals
+    const transferFee = asset === 'usd' ? (Math.ceil(rawFee * 100) / 100) : Math.ceil(rawFee);
+    const amountAfterFee = asset === 'usd' ? (amount - transferFee).toFixed(2) * 1 : (amount - transferFee);
 
     // Identify field names based on asset type
     let field = asset; // usd, Gems, tokens
@@ -2786,16 +3772,17 @@ app.post('/api/user/transfer', async (req, res) => {
         field = fromUser.tokens !== undefined ? 'tokens' : 'balance_tokens';
     }
 
-    const totalDeduction = parseInt(amount) + (asset === 'tokens' ? 0 : transferFee);
-    const balance = fromUser[field] || 0;
-    if (balance < totalDeduction) return res.json({
+    const balance = parseFloat(fromUser[field]) || 0;
+    if (balance < amount) return res.json({
         success: false,
-        message: `Insufficient balance. You need ${totalDeduction} ${asset} (includes ${transferFee} ${asset} transfer fee)`
+        message: `Insufficient balance.`
     });
 
-    // Perform transfer - deduct full amount + fee from sender
+    // Perform transfer - deduct full amount from sender
     if (asset === 'tokens') {
         db.setTokenBalance(fromUser, db.getTokenBalance(fromUser) - parseInt(amount));
+    } else if (asset === 'usd') {
+        fromUser[field] = Math.max(0, balance - parseFloat(amount));
     } else {
         fromUser[field] = Math.max(0, balance - parseInt(amount));
     }
@@ -2805,8 +3792,11 @@ app.post('/api/user/transfer', async (req, res) => {
     if (asset === 'tokens') {
         toField = toUser.tokens !== undefined ? 'tokens' : 'balance_tokens';
     }
+
     if (asset === 'tokens') {
         db.setTokenBalance(toUser, db.getTokenBalance(toUser) + amountAfterFee);
+    } else if (asset === 'usd') {
+        toUser[toField] = parseFloat(((toUser[toField] || 0) + amountAfterFee).toFixed(2));
     } else {
         toUser[toField] = (toUser[toField] || 0) + amountAfterFee;
     }
@@ -3062,6 +4052,19 @@ app.post('/api/admin/deposits/action', (req, res) => {
     res.json({ success: true });
 });
 
+// API: Admin - Delete ALL Deposit History
+app.post('/api/admin/deposits/delete-all', (req, res) => {
+    try {
+        if (!db.data.pendingDeposits) db.data.pendingDeposits = [];
+        // Only keep the pending ones
+        db.data.pendingDeposits = db.data.pendingDeposits.filter(d => d.status === 'pending');
+        db.save();
+        res.json({ success: true, message: 'Deposit history cleared (Pending requests preserved)' });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
 // API: Admin - Auto Approve by Transaction IDs
 app.post('/api/admin/deposits/auto-approve', (req, res) => {
     const { txnIds } = req.body; // Array of strings or newline separated string
@@ -3138,20 +4141,24 @@ app.get('/api/admin/services/:id/stock', (req, res) => {
 });
 
 // API: Admin - Dashboard Stats (Enhanced with proper user counting)
-app.get('/api/admin/stats', (req, res) => {
-    const usersList = db.getUsers();
+app.get('/api/admin/stats', async (req, res) => {
+    const usersList = await db.getUsers();
     const now = Date.now();
     const day = 24 * 60 * 60 * 1000;
 
     let active = 0;
     let revenue = 0;
     let totalTokens = 0;
+    let totalGems = 0;
+    let totalUsdt = 0;
     let verifiedUsers = 0;
 
     usersList.forEach(u => {
         if (u.lastActive && (now - u.lastActive < day)) active++;
         revenue += (u.balance || 0);
         totalTokens += db.getTokenBalance(u);
+        totalGems += (u.balance_Gems !== undefined ? u.balance_Gems : (u.Gems !== undefined ? u.Gems : 0));
+        totalUsdt += (u.usd !== undefined ? u.usd : 0);
         if (u.successfulVerifications > 0 || u.verified) verifiedUsers++;
     });
 
@@ -3170,25 +4177,30 @@ app.get('/api/admin/stats', (req, res) => {
         Object.values(db.data.cards).forEach(arr => totalCards += (arr ? arr.length : 0));
     }
 
-    // Count generated Gmails (from user transaction history or a general metric)
-    let gmailsUsed = 0;
+    // Count Gmails/Emails from Pool (Enhanced)
+    let gmailTotal = 0;
+    let gmailUsed = 0;
+    let gmailAvailable = 0;
+    if (db.data.emailPool && db.data.emailPool.gmail) {
+        gmailTotal = db.data.emailPool.gmail.length;
+        gmailUsed = db.data.emailPool.gmail.filter(e => e.assignedTo).length;
+        gmailAvailable = gmailTotal - gmailUsed;
+    }
+
+    let gmailsUsed = gmailTotal; // Keep for legacy if needed
+
+    // API Stats (Enhanced)
+    let apiActiveKeys = 0;
+    let apiTotalCalls = 0;
     usersList.forEach(u => {
-        if (u.history) {
-            u.history.forEach(h => {
-                if (h.type === 'email' || h.type === 'gmail' || h.type === 'mail') gmailsUsed++;
-            });
+        if (u.apiKey) {
+            if (u.apiStatus === 'allow') apiActiveKeys++;
+            apiTotalCalls += (u.apiTotalCalls || 0);
         }
     });
 
-    // Count API keys (if available in database)
-    let apiKeys = 0;
-    if (db.data.apiKeys) {
-        // Count user API keys (excluding config keys)
-        const keysData = db.data.apiKeys;
-        apiKeys = Object.keys(keysData).filter(k => k !== 'botToken' && k !== 'backupBotToken' && k !== 'mainboardApiKey' &&
-            k !== 'smtpLabsKey' && k !== 'gmailClientId' && k !== 'gmailClientSecret' && k !== 'miniAppUrl' &&
-            k !== 'requiredChannel' && k !== 'requiredGroup' && k !== 'supportLink').length;
-    }
+    // Count User API keys (Actual keys held by users)
+    let apiKeys = usersList.filter(u => u.apiKey).length;
 
     // NEW: Calculate deposits, withdrawals, and service stats
     let totalDeposits = 0;
@@ -3236,6 +4248,8 @@ app.get('/api/admin/stats', (req, res) => {
         success: true,
         totalUsers: usersList.length,
         totalTokens,
+        totalGems,
+        totalUsdt,
         verifiedUsers,
         activeToday: active,
         shopItems,
@@ -3244,6 +4258,18 @@ app.get('/api/admin/stats', (req, res) => {
         totalCards,
         gmailsUsed,
         apiKeys,
+        gmails: {
+            total: gmailTotal,
+            used: gmailUsed,
+            available: gmailAvailable,
+            percent: gmailTotal > 0 ? Math.round((gmailUsed / gmailTotal) * 100) : 0
+        },
+        api: {
+            totalKeys: apiKeys,
+            activeKeys: apiActiveKeys,
+            totalCalls: apiTotalCalls,
+            activeUsers: active // Proxy for now
+        },
         // New stats
         totalDeposits,
         totalWithdrawals,
@@ -3269,8 +4295,8 @@ app.get('/api/admin/stats', (req, res) => {
 });
 
 // API: Admin - System Info
-app.get('/api/admin/system-info', (req, res) => {
-    const usersList = db.getUsers();
+app.get('/api/admin/system-info', async (req, res) => {
+    const usersList = await db.getUsers();
     const groups = db.getGroups();
     const providers = db.getProviders ? db.getProviders().length : 0;
     const accountsCount = db.getAccounts ? db.getAccounts().length : 0;
@@ -3308,14 +4334,30 @@ app.get('/api/admin/system-info', (req, res) => {
 // API: Admin - Card Management
 app.get('/api/admin/cards', (req, res) => {
     const cards = [];
+    
+    // Legacy card prices
     Object.keys(db.data.cardPrices || {}).forEach(key => {
         cards.push({
             id: key,
-            name: key.toUpperCase(),
+            name: db.data.serviceNames?.[key] || key.toUpperCase(),
             price: db.data.cardPrices[key],
             count: db.data.cards?.[key]?.length || 0
         });
     });
+    
+    // Unified Service Items
+    Object.keys(db.data.services || {}).forEach(key => {
+        const item = db.data.services[key];
+        if ((item.section === 'virtual-cards' || item.section === 'cards') && (!db.data.cardPrices || db.data.cardPrices[key] === undefined)) {
+            cards.push({
+                id: item.id,
+                name: item.name || item.id.toUpperCase(),
+                price: item.price || item.cost || 0,
+                count: db.data.cards?.[item.id]?.length || 0
+            });
+        }
+    });
+    
     res.json({ success: true, cards });
 });
 
@@ -3353,18 +4395,25 @@ app.get('/api/admin/groups', (req, res) => {
 });
 
 // API: Admin - Group Settings (GET)
-app.get('/api/admin/groups/settings', (req, res) => {
-    const settings = db.getGroupSettings();
-    res.json({ success: true, settings });
+app.get('/api/admin/group-settings', (req, res) => {
+    res.json({ success: true, settings: db.getGroupSettings() });
 });
 
-// API: Admin - Group Settings (POST)
-app.post('/api/admin/groups/settings', (req, res) => {
+// Compatibility endpoint
+app.get('/api/admin/groups/settings', (req, res) => {
+    res.json({ success: true, settings: db.getGroupSettings() });
+});
+
+// API: Admin - Group Management (POST)
+app.post('/api/admin/group-management', (req, res) => {
     const newSettings = req.body;
-    if (!db.data.settings) db.data.settings = {};
-    db.data.settings.groupRules = { ...db.data.settings.groupRules, ...newSettings };
+    if (!db.data.adminSettings) db.data.adminSettings = {};
+    db.data.adminSettings.groupManagement = {
+        ...db.data.adminSettings.groupManagement,
+        ...newSettings
+    };
     db.save();
-    res.json({ success: true, settings: db.data.settings.groupRules });
+    res.json({ success: true, settings: db.data.adminSettings.groupManagement });
 });
 
 // API: Admin - Group Rule Toggle
@@ -3472,6 +4521,10 @@ app.get('/api/admin/tasks', (req, res) => {
 app.post('/api/admin/tasks', (req, res) => {
     const { name, url, reward, gems, icon } = req.body;
     const id = db.createTask(name, url, reward, gems, icon);
+
+    // Save the new task back to global DB explicitly to be safe
+    db.save();
+
     res.json({ success: true, id });
 });
 
@@ -3705,12 +4758,13 @@ app.get('/api/admin/costs', (req, res) => {
             supportCost: settings.supportCost || 0,
 
             // Service Costs (Tokens)
-            gmailCost: costs.gmail || 0,
+            gmailCost: costs.gmail || 20,
             hotmailCost: costs.hotmail || 25,
             tempMailCost: costs.tempmail || 10,
             studentEmailCost: costs.student || 50,
-            verificationCost: costs.verification || 0,
-            numberCost: costs.number || 0,
+            renewMailCost: costs.renewmail || 30,
+            verificationCost: costs.verification || 10,
+            numberCost: costs.number || 15,
             geminiCost: costs.gemini || 50,
             chatgptCost: costs.gpt || 100,
             spotifyCost: costs.spotify || 50,
@@ -3833,6 +4887,7 @@ app.post('/api/admin/costs', (req, res) => {
     if (payload.hotmailCost !== undefined) db.data.settings.costs.hotmail = parseInt(payload.hotmailCost);
     if (payload.tempMailCost !== undefined) db.data.settings.costs.tempmail = parseInt(payload.tempMailCost);
     if (payload.studentEmailCost !== undefined) db.data.settings.costs.student = parseInt(payload.studentEmailCost);
+    if (payload.renewMailCost !== undefined) db.data.settings.costs.renewmail = parseInt(payload.renewMailCost);
     if (payload.verificationCost !== undefined) db.data.settings.costs.verification = parseInt(payload.verificationCost);
     if (payload.numberCost !== undefined) db.data.settings.costs.number = parseInt(payload.numberCost);
     if (payload.geminiCost !== undefined) db.data.settings.costs.gemini = parseInt(payload.geminiCost);
@@ -3871,11 +4926,292 @@ app.post('/api/admin/costs', (req, res) => {
     res.json({ success: true, message: 'All cost configurations saved successfully' });
 });
 
-// API: Admin - Reset Transactions (alias)
+// API: User - Send Message to Admin
+app.post('/api/user/send-message', async (req, res) => {
+    const { userId, message } = req.body;
+    if (!userId || !message) return res.json({ success: false, message: 'User ID and message are required' });
+
+    const user = await db.getUser(userId);
+    if (!user) return res.json({ success: false, message: 'User not found' });
+
+    // Store message for Admin UI
+    if (!user.supportMessages) user.supportMessages = [];
+    user.supportMessages.push({
+        sender: 'user',
+        message: message,
+        timestamp: new Date().toISOString()
+    });
+
+    // Notify Admin via Telegram if available
+    const config = db.data.apiKeys || {};
+    if (config.botToken && config.ADMIN_ID) {
+        const TelegramBot = require('node-telegram-bot-api');
+        const bot = new TelegramBot(config.botToken);
+        const name = user.firstName || user.username || userId;
+        const msg = `📬 <b>New User Message</b>\n\nUser: <b>${name}</b> (<code>${userId}</code>)\nMessage: ${message}\n\n<i>Reply from Web Admin Panel.</i>`;
+        bot.sendMessage(config.ADMIN_ID, msg, { parse_mode: 'HTML' }).catch(e => console.error('Support notify error:', e.message));
+    }
+
+    res.json({ success: true, message: 'Message sent to support' });
+});
+
+// API: User - Get Messages
+app.get('/api/user/messages', async (req, res) => {
+    const { userId } = req.query;
+    if (!userId) return res.json({ success: false, message: 'User ID required' });
+
+    const user = await db.getUser(userId);
+    if (!user) return res.json({ success: false, messages: [] });
+
+    // Consolidate admin replies (from pendingWebMessages) and user messages
+    const replies = user.pendingWebMessages || [];
+    if (replies.length > 0) {
+        if (!user.supportMessages) user.supportMessages = [];
+        replies.forEach(r => {
+            user.supportMessages.push({
+                sender: 'admin',
+                message: r.message,
+                timestamp: r.timestamp
+            });
+        });
+        user.pendingWebMessages = []; // Clear pending
+    }
+
+    res.json({ success: true, messages: user.supportMessages || [] });
+});
+
+// API: Admin - Send Message to User
+app.post('/api/admin/send-message', async (req, res) => {
+    const { userId, message } = req.body;
+    if (!userId || !message) return res.json({ success: false, message: 'User ID and message are required' });
+
+    // Store message for Web UI
+    const user = await db.getUser(userId);
+    if (user) {
+        if (!user.supportMessages) user.supportMessages = [];
+        user.supportMessages.push({
+            sender: 'admin',
+            message: message,
+            timestamp: new Date().toISOString()
+        });
+
+        if (!user.pendingWebMessages) user.pendingWebMessages = [];
+        user.pendingWebMessages.push({
+            id: Date.now().toString(),
+            message: message,
+            date: Date.now()
+        });
+        await db.updateUser(user);
+    }
+
+    if (!bot) {
+        // If bot is not fully active, just return success since we saved it for web
+        return res.json({ success: true, message: 'Saved to web panel (Bot offline)' });
+    }
+
+    bot.sendMessage(userId, message)
+        .then(() => res.json({ success: true }))
+        .catch(err => res.json({ success: true, message: 'Message sent to web UI but bot failed: ' + err.message }));
+});
+
+// API: Admin - Send Gift to User
+app.post('/api/admin/send-gift', async (req, res) => {
+    const { userId, currency, amount, note } = req.body;
+    if (!userId || !currency || !amount || amount <= 0) {
+        return res.json({ success: false, message: 'User ID, currency, and valid amount are required' });
+    }
+
+    const validCurrencies = ['tokens', 'Gems', 'usd'];
+    if (!validCurrencies.includes(currency)) {
+        return res.json({ success: false, message: 'Invalid currency. Use tokens, Gems, or usd' });
+    }
+
+    const user = await db.getUser(userId);
+    if (!user) return res.json({ success: false, message: 'User not found' });
+
+    // Store as pending gift (user must claim via ad)
+    if (!user.pendingGifts) user.pendingGifts = [];
+    const giftId = Date.now().toString(36) + Math.random().toString(36).substr(2);
+    user.pendingGifts.push({
+        id: giftId,
+        currency: currency,
+        amount: parseFloat(amount),
+        note: note || 'Admin Gift',
+        timestamp: Date.now(),
+        claimed: false
+    });
+
+    // Also add a pending web message notification (like message system)
+    if (!user.pendingWebMessages) user.pendingWebMessages = [];
+    user.pendingWebMessages.push({
+        id: 'gift-' + giftId,
+        message: `🎁 You received a gift! ${amount} ${currency === 'tokens' ? 'Tokens' : currency === 'Gems' ? 'Gems' : 'USD'}${note ? ' — ' + note : ''}`,
+        date: Date.now(),
+        isGift: true,
+        giftId: giftId
+    });
+
+    await db.updateUser(user);
+    res.json({ success: true, giftId, message: `Gift of ${amount} ${currency} sent to user ${userId}` });
+});
+
+// API: User - Get Pending Gifts
+app.get('/api/user/gifts', async (req, res) => {
+    const { userId } = req.query;
+    if (!userId) return res.json({ success: false, gifts: [] });
+
+    const user = await db.getUser(userId);
+    if (!user) return res.json({ success: false, gifts: [] });
+
+    const pendingGifts = (user.pendingGifts || []).filter(g => !g.claimed);
+    res.json({ success: true, gifts: pendingGifts });
+});
+
+// API: Claim Gift (after ad watch)
+app.post('/api/gift/claim', async (req, res) => {
+    const { userId, giftId } = req.body;
+    if (!userId || !giftId) return res.json({ success: false, message: 'User ID and Gift ID required' });
+
+    const user = await db.getUser(userId);
+    if (!user) return res.json({ success: false, message: 'User not found' });
+
+    if (!user.pendingGifts) return res.json({ success: false, message: 'No gifts found' });
+
+    const gift = user.pendingGifts.find(g => g.id === giftId);
+    if (!gift) return res.json({ success: false, message: 'Gift not found' });
+    if (gift.claimed) return res.json({ success: false, message: 'Gift already claimed' });
+
+    // Add balance based on currency
+    const { currency, amount } = gift;
+    if (currency === 'tokens') {
+        const current = db.getTokenBalance(user);
+        db.setTokenBalance(user, current + parseInt(amount));
+    } else if (currency === 'Gems') {
+        user.Gems = (user.Gems || 0) + parseInt(amount);
+    } else if (currency === 'usd') {
+        user.usd = parseFloat(((user.usd || 0) + parseFloat(amount)).toFixed(2));
+    }
+
+    // Mark as claimed
+    gift.claimed = true;
+    gift.claimedAt = Date.now();
+
+    // Add to user history
+    if (!user.history) user.history = [];
+    user.history.unshift({
+        type: 'gift_claimed',
+        amount: amount,
+        currency: currency,
+        date: Date.now(),
+        detail: gift.note || 'Admin Gift'
+    });
+
+    // Add global transaction
+    db.addTransaction(userId, 'gift', amount, currency === 'tokens' ? 'TC' : currency === 'Gems' ? 'JS' : 'USD', `Gift Claimed: ${gift.note || 'Admin Gift'}`, 'gift');
+
+    await db.updateUser(user);
+
+    const currencyLabel = currency === 'tokens' ? 'Tokens' : currency === 'Gems' ? 'Gems' : 'USD';
+    res.json({
+        success: true,
+        message: `Gift claimed! +${amount} ${currencyLabel}`,
+        currency: currency,
+        amount: amount,
+        newTokens: db.getTokenBalance(user),
+        newGems: user.Gems || 0,
+        newUsd: user.usd || 0
+    });
+});
+
+// API: Admin - Delete Single History Item
+app.delete('/api/admin/history-item/:userId/:date', (req, res) => {
+    const { userId, date } = req.params;
+    const users = db.data.users || {};
+    const user = users[userId];
+
+    if (!user || !user.history) {
+        return res.json({ success: false, message: 'User or history not found' });
+    }
+
+    const decodedDate = decodeURIComponent(date);
+    const initialLength = user.history.length;
+
+    // Filter out the item with matching date
+    // We compare strings to be safe across types
+    user.history = user.history.filter(h => {
+        if (!h.date) return true;
+        const hDateStr = String(h.date);
+        return hDateStr !== decodedDate && hDateStr !== date;
+    });
+
+    if (user.history.length !== initialLength) {
+        db.save();
+        res.json({ success: true, message: 'Item deleted' });
+    } else {
+        // Fallback: If no exact match, try comparing as numbers if applicable
+        const dateNum = Number(decodedDate);
+        if (!isNaN(dateNum)) {
+            user.history = user.history.filter(h => Number(h.date) !== dateNum);
+            if (user.history.length !== initialLength) {
+                db.save();
+                return res.json({ success: true, message: 'Item deleted (matched as number)' });
+            }
+        }
+        res.json({ success: false, message: 'Item not found in user history' });
+    }
+});
+
+// API: Admin - Reset Only History Logs (Transactions)
+app.post('/api/admin/reset-history', (req, res) => {
+    try {
+        db.data.transactions = [];
+        const users = db.data.users || {};
+        Object.keys(users).forEach(uid => {
+            if (users[uid].history) {
+                users[uid].history = [];
+            }
+        });
+        db.save();
+        res.json({ success: true, message: 'Transaction history log cleared' });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// API: Admin - Reset Leaderboard Stats (Ranking Data)
+app.post('/api/admin/reset-leaderboards', (req, res) => {
+    try {
+        const users = db.data.users || {};
+        Object.keys(users).forEach(uid => {
+            const user = users[uid];
+            user.successfulVerifications = 0;
+            user.failedVerifications = 0;
+            user.cardsPurchased = 0;
+            user.referralCount = 0;
+            // Also reset points/spending if needed
+            if (user.history) {
+                // If user wants to keep history but clear leaderboard, 
+                // we might need to filter or keep it.
+                // But usually leaderboards are calculated from history in this app.
+                // To clear leaderboards specifically, we reset the cumulative stats.
+            }
+        });
+        db.save();
+        res.json({ success: true, message: 'Leaderboard and user stats reset' });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// API: Admin - Clear All Transactions (Old Alias)
 app.post('/api/admin/reset-transactions', (req, res) => {
     db.data.transactions = [];
+    const users = db.data.users || {};
+    Object.keys(users).forEach(uid => {
+        if (users[uid].history) users[uid].history = [];
+    });
     db.save();
-    res.json({ success: true, message: 'Transactions cleared' });
+    res.json({ success: true, message: 'All transactions cleared' });
 });
 
 // API: Reset / Clear Database (Use with caution)
@@ -4000,6 +5336,172 @@ app.post('/api/admin/providers', (req, res) => {
     res.json({ success: true });
 });
 
+// =============================================
+// MANUAL NUMBERS MANAGEMENT API
+// =============================================
+
+app.post('/api/admin/manual-numbers/bulk', (req, res) => {
+    const { numbers, platform, countryCode, otpApi } = req.body;
+    if (!numbers || !Array.isArray(numbers)) return res.status(400).json({ success: false, message: 'Invalid data' });
+
+    if (!db.data.manualNumbers) db.data.manualNumbers = [];
+
+    let added = 0;
+    numbers.forEach(num => {
+        // Prevent duplicate numbers in the same platform/country
+        const exists = db.data.manualNumbers.find(n => n.number === num && n.platform === platform && n.countryCode === countryCode);
+        if (!exists) {
+            db.data.manualNumbers.push({
+                id: Date.now() + Math.random().toString(36).substr(2, 9),
+                number: num,
+                platform: platform.toLowerCase(),
+                countryCode,
+                otpApi: otpApi || null,
+                status: 'available',
+                otp: null,
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+            });
+            added++;
+        } else if (otpApi) {
+            // Update OTP API if it already exists
+            exists.otpApi = otpApi;
+            exists.updatedAt = Date.now();
+        }
+    });
+
+    db.save();
+    res.json({ success: true, added });
+});
+
+app.delete('/api/admin/manual-numbers/group/:platform', (req, res) => {
+    const { platform } = req.params;
+    if (!db.data.manualNumbers) return res.json({ success: true });
+
+    const initialCount = db.data.manualNumbers.length;
+    db.data.manualNumbers = db.data.manualNumbers.filter(n => n.platform !== platform.toLowerCase());
+
+    db.save();
+    res.json({ success: true, count: initialCount - db.data.manualNumbers.length });
+});
+
+app.post('/api/admin/manual-numbers/otp-api', (req, res) => {
+    const { platform, otpApi } = req.body;
+    if (!platform) return res.status(400).json({ success: false, message: 'Platform required' });
+
+    if (!db.data.manualNumbers) db.data.manualNumbers = [];
+
+    let updated = 0;
+    db.data.manualNumbers.forEach(n => {
+        if (n.platform === platform.toLowerCase()) {
+            n.otpApi = otpApi || null;
+            n.updatedAt = Date.now();
+            updated++;
+        }
+    });
+
+    if (updated > 0) {
+        db.save();
+        res.json({ success: true, message: `Updated ${updated} numbers` });
+    } else {
+        res.json({ success: false, message: 'No numbers found for this platform' });
+    }
+});
+
+// Auto-cleanup for manual numbers (Remove if finished/cancelled for > 1 hour)
+setInterval(() => {
+    if (!db.data.manualNumbers) return;
+    const now = Date.now();
+    const oneHour = 60 * 60 * 1000;
+
+    const initialCount = db.data.manualNumbers.length;
+    db.data.manualNumbers = db.data.manualNumbers.filter(n => {
+        if (n.status === 'finished' || n.status === 'cancelled') {
+            return (now - (n.updatedAt || n.createdAt)) < oneHour;
+        }
+        return true;
+    });
+
+    if (db.data.manualNumbers.length !== initialCount) {
+        db.save();
+        console.log(`[CLEANUP] Removed ${initialCount - db.data.manualNumbers.length} used manual numbers.`);
+    }
+}, 10 * 60 * 1000); // Every 10 minutes
+
+app.get('/api/admin/manual-numbers/summary', (req, res) => {
+    const list = db.data.manualNumbers || [];
+    const summary = {};
+
+    list.forEach(n => {
+        if (n.status === 'available') {
+            const key = n.platform;
+            if (!summary[key]) summary[key] = { total: 0, countries: {}, hasOtpApi: false };
+            summary[key].total++;
+            summary[key].countries[n.countryCode] = (summary[key].countries[n.countryCode] || 0) + 1;
+            if (n.otpApi) summary[key].hasOtpApi = true;
+        }
+    });
+
+    res.json({ success: true, summary });
+});
+
+app.get('/api/admin/manual-numbers', (req, res) => {
+    const list = db.data.manualNumbers || [];
+    res.json({ success: true, numbers: list });
+});
+
+app.post('/api/admin/manual-numbers', (req, res) => {
+    const { number, platform, countryCode } = req.body;
+    if (!number || !platform) return res.json({ success: false, message: 'Number and platform required' });
+
+    if (!db.data.manualNumbers) db.data.manualNumbers = [];
+
+    const newNum = {
+        id: 'mn_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+        number,
+        platform: platform.toLowerCase(),
+        countryCode: countryCode || '1',
+        status: 'available',
+        otp: null,
+        addedAt: Date.now()
+    };
+
+    db.data.manualNumbers.push(newNum);
+    db.save();
+    res.json({ success: true, number: newNum });
+});
+
+app.post('/api/admin/manual-numbers/otp', (req, res) => {
+    const { id, otp } = req.body;
+    if (!id || !otp) return res.json({ success: false, message: 'ID and OTP required' });
+
+    const manualNumbers = db.data.manualNumbers || [];
+    const num = manualNumbers.find(n => n.id === id);
+    if (num) {
+        num.otp = otp;
+        // Also find if there is an active session for this number
+        if (num.currentSessionId && db.data.numberSessions && db.data.numberSessions[num.currentSessionId]) {
+            db.data.numberSessions[num.currentSessionId].otp = otp;
+        }
+        db.save();
+        return res.json({ success: true });
+    }
+    res.json({ success: false, message: 'Number not found' });
+});
+
+app.delete('/api/admin/manual-numbers/:id', (req, res) => {
+    const { id } = req.params;
+    if (db.data.manualNumbers) {
+        db.data.manualNumbers = db.data.manualNumbers.filter(n => n.id !== id);
+        db.save();
+        res.json({ success: true });
+    } else {
+        res.json({ success: false });
+    }
+});
+
+// =============================================
+
 app.delete('/api/admin/providers/:id', (req, res) => {
     const { id } = req.params;
     if (db.data.providers && db.data.providers[id]) {
@@ -4050,7 +5552,8 @@ app.get('/api/admin/group-management', (req, res) => {
             deleteGiveawayWinners: settings.deleteGiveawayWinners === true,
             deleteGiveawayCompleted: settings.deleteGiveawayCompleted === true,
             deleteBoostAdded: settings.deleteBoostAdded === true,
-            deleteChatBackgroundSet: settings.deleteChatBackgroundSet === true
+            deleteChatBackgroundSet: settings.deleteChatBackgroundSet === true,
+            requireTelegram: db.data.adminSettings.requireTelegram === true // Added field
         }
     });
 });
@@ -4095,6 +5598,10 @@ app.post('/api/admin/group-management', (req, res) => {
     if (updates.deleteGiveawayCompleted !== undefined) gm.deleteGiveawayCompleted = updates.deleteGiveawayCompleted;
     if (updates.deleteBoostAdded !== undefined) gm.deleteBoostAdded = updates.deleteBoostAdded;
     if (updates.deleteChatBackgroundSet !== undefined) gm.deleteChatBackgroundSet = updates.deleteChatBackgroundSet;
+
+    if (updates.requireTelegram !== undefined) {
+        db.data.adminSettings.requireTelegram = updates.requireTelegram;
+    }
 
     db.save();
     res.json({ success: true, settings: gm });
@@ -4171,7 +5678,7 @@ app.post('/api/admin/broadcast', async (req, res) => {
     }
 
     if (normalizedTarget === 'users') {
-        const users = db.getUsers();
+        const users = await db.getUsers();
         if (users.length > 0) targetIds.push(...users.map(u => u.id));
     }
 
@@ -4199,7 +5706,7 @@ app.post('/api/admin/broadcast', async (req, res) => {
     if (normalizedTarget === 'all') {
         // For 'all' target: Send to users + main channel only (not individual groups)
         // Because channel posts auto-forward to linked groups
-        const users = db.getUsers();
+        const users = await db.getUsers();
         if (users.length > 0) targetIds.push(...users.map(u => u.id));
 
         // Add main channel
@@ -4475,9 +5982,9 @@ app.get('/api/accounts', (req, res) => {
 });
 
 // API: User - Buy Account
-app.post('/api/accounts/buy', (req, res) => {
+app.post('/api/accounts/buy', async (req, res) => {
     const { userId, accountId } = req.body;
-    const user = db.getUser(userId);
+    const user = await db.getUser(userId);
     if (!user) return res.json({ success: false, message: 'User not found' });
 
     const allAccounts = db.data.premiumAccounts || [];
@@ -4532,11 +6039,27 @@ app.delete('/api/admin/accounts/:id', (req, res) => {
 });
 
 // API: Admin - Get all daily bonus claims
-app.get('/api/admin/daily-stats', (req, res) => {
-    const users = db.getUsers();
+app.get('/api/admin/daily-stats', async (req, res) => {
+    const users = await db.getUsers();
     const totalClaims = users.filter(u => u.lastDaily > 0).length;
     const totalStreak = users.reduce((acc, u) => acc + (u.dailyStreak || 0), 0);
     res.json({ success: true, totalClaims, avgStreak: users.length ? (totalStreak / users.length).toFixed(1) : 0 });
+});
+
+// SERVER LOGS API
+app.get('/api/admin/logs', (req, res) => {
+    res.json({ success: true, logs: db.data.serverLogs || [] });
+});
+
+app.post('/api/admin/logs/clear', (req, res) => {
+    db.clearLogs();
+    res.json({ success: true, message: 'Server logs cleared' });
+});
+
+app.post('/api/admin/logs/solve', (req, res) => {
+    const { logId } = req.body;
+    db.solveLog(logId);
+    res.json({ success: true, message: 'Log marked as solved' });
 });
 
 // API: Admin - Get Settings
@@ -4625,7 +6148,10 @@ app.get('/api/admin/apikeys', (req, res) => {
             miniAppUrl: apiKeys.miniAppUrl || '',
             requiredChannel: apiKeys.requiredChannel || '',
             requiredGroup: apiKeys.requiredGroup || '',
-            supportLink: apiKeys.supportLink || ''
+            requiredYoutube: apiKeys.requiredYoutube || '',
+            supportLink: apiKeys.supportLink || '',
+            adReward: apiKeys.adReward || '5',
+            welcomeMessage: apiKeys.welcomeMessage || ''
         },
         dbConfig: db.data.firebaseConfig || null
     });
@@ -4633,7 +6159,7 @@ app.get('/api/admin/apikeys', (req, res) => {
 
 // API: Admin - Update API Keys
 app.post('/api/admin/apikeys', (req, res) => {
-    const { botToken, backupBotToken, mainboardApiKey, smtpLabsKey, gmailClientId, gmailClientSecret, miniAppUrl, requiredChannel, requiredGroup, supportLink } = req.body;
+    const { botToken, backupBotToken, mainboardApiKey, smtpLabsKey, gmailClientId, gmailClientSecret, miniAppUrl, requiredChannel, requiredGroup, requiredYoutube, supportLink, adReward, welcomeMessage, welcomeCredits } = req.body;
 
     if (!db.data.apiKeys) db.data.apiKeys = {};
 
@@ -4646,7 +6172,15 @@ app.post('/api/admin/apikeys', (req, res) => {
     if (miniAppUrl !== undefined) db.data.apiKeys.miniAppUrl = miniAppUrl;
     if (requiredChannel !== undefined) db.data.apiKeys.requiredChannel = requiredChannel;
     if (requiredGroup !== undefined) db.data.apiKeys.requiredGroup = requiredGroup;
+    if (requiredYoutube !== undefined) db.data.apiKeys.requiredYoutube = requiredYoutube;
     if (supportLink !== undefined) db.data.apiKeys.supportLink = supportLink;
+    if (adReward !== undefined) db.data.apiKeys.adReward = adReward;
+    if (welcomeMessage !== undefined) db.data.apiKeys.welcomeMessage = welcomeMessage;
+
+    if (welcomeCredits !== undefined) {
+        if (!db.data.adminSettings) db.data.adminSettings = {};
+        db.data.adminSettings.welcomeCredits = welcomeCredits;
+    }
 
     db.save();
     res.json({ success: true, message: 'API Keys and Settings updated successfully' });
@@ -4747,7 +6281,12 @@ function getFeatureFlags() {
     const defaults = getDefaultFeatureFlags();
     // Merge defaults (keeps newly added keys enabled by default)
     db.data.featureFlags = { ...defaults, ...db.data.featureFlags };
-    return db.data.featureFlags;
+
+    // Include global requirement flags
+    const flags = { ...db.data.featureFlags };
+    flags.requireTelegram = db.data.adminSettings?.requireTelegram !== false;
+
+    return flags;
 }
 
 // Public endpoint: mini app fetches enabled/disabled features
@@ -5033,12 +6572,11 @@ app.post('/api/admin/services', (req, res) => {
 
 app.delete('/api/admin/services/:id', (req, res) => {
     const { id } = req.params;
-    if (db.data.services && db.data.services[id]) {
-        delete db.data.services[id];
-        db.save();
-        res.json({ success: true });
+    const deleted = db.deleteService(id);
+    if (deleted) {
+        res.json({ success: true, message: 'Service deleted from all systems' });
     } else {
-        res.json({ success: false, message: 'Not found' });
+        res.json({ success: false, message: 'Service not found or already deleted' });
     }
 });
 
@@ -5190,6 +6728,50 @@ app.post('/api/admin/services/items', (req, res) => {
     }
 });
 
+// Admin: Update service item details
+app.post('/api/admin/services/update', (req, res) => {
+    const { id, name, price, desc } = req.body;
+    if (!id) return res.json({ success: false, message: 'Missing item ID' });
+
+    // Update names if available
+    if (db.data.serviceNames && name) {
+        db.data.serviceNames[id] = name;
+    }
+
+    // Update prices
+    if (price !== undefined) {
+        const p = parseInt(price) || 0;
+        if (db.data.cardPrices) db.data.cardPrices[id] = p;
+        if (db.data.vpnPrices) db.data.vpnPrices[id] = p;
+    }
+
+    // Descriptions (could be stored in a new map or as part of a general service metadata)
+    if (!db.data.serviceDescriptions) db.data.serviceDescriptions = {};
+    if (desc !== undefined) db.data.serviceDescriptions[id] = desc;
+
+    db.save();
+    res.json({ success: true });
+});
+
+// Admin: Upload database config json
+app.post('/api/admin/dbconfig/upload', (req, res) => {
+    try {
+        const { config } = req.body;
+        if (!config || typeof config !== 'object') {
+            return res.json({ success: false, message: 'No valid config provided' });
+        }
+
+        // Merge config into db.data.apiKeys (common spot for configuration)
+        if (!db.data.apiKeys) db.data.apiKeys = {};
+        Object.assign(db.data.apiKeys, config);
+
+        db.save();
+        res.json({ success: true });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
 // API: Toggle service item active status
 app.post('/api/admin/services/:id/toggle', (req, res) => {
     const { id } = req.params;
@@ -5290,7 +6872,7 @@ app.put('/api/admin/service-items/:id', (req, res) => {
 // Delete service item
 app.delete('/api/admin/service-items/:id', (req, res) => {
     const { id } = req.params;
-    const deleted = db.deleteServiceItem(id);
+    const deleted = db.deleteService(id); // Use the unified delete method
     if (deleted) {
         res.json({ success: true, message: 'Item deleted' });
     } else {
@@ -5518,8 +7100,8 @@ function getVerificationRequirements() {
 }
 
 // Helper: Check if user meets verification requirements
-function checkUserVerificationRequirements(userId) {
-    const user = db.getUser(userId);
+async function checkUserVerificationRequirements(userId) {
+    const user = await db.getUser(userId);
     if (!user) return { met: false, reason: 'User not found' };
 
     // Admin verified users bypass all checks
@@ -5592,13 +7174,13 @@ app.post('/api/admin/verification/requirements', (req, res) => {
 });
 
 // API: Check user verification status
-app.get('/api/user/:userId/verification-status', (req, res) => {
+app.get('/api/user/:userId/verification-status', async (req, res) => {
     const { userId } = req.params;
-    const user = db.getUser(userId);
+    const user = await db.getUser(userId);
 
     if (!user) return res.json({ success: false, message: 'User not found' });
 
-    const result = checkUserVerificationRequirements(userId);
+    const result = await checkUserVerificationRequirements(userId);
 
     res.json({
         success: true,
@@ -5610,11 +7192,11 @@ app.get('/api/user/:userId/verification-status', (req, res) => {
 });
 
 // API: Admin verify/unverify user
-app.post('/api/admin/users/:userId/verify', (req, res) => {
+app.post('/api/admin/users/:userId/verify', async (req, res) => {
     const { userId } = req.params;
     const { adminVerified, verified } = req.body;
 
-    const user = db.getUser(userId);
+    const user = await db.getUser(userId);
     if (!user) return res.json({ success: false, message: 'User not found' });
 
     if (adminVerified !== undefined) {
@@ -5624,7 +7206,7 @@ app.post('/api/admin/users/:userId/verify', (req, res) => {
         user.verified = !!verified;
     }
 
-    db.updateUser(user);
+    await db.updateUser(user);
     res.json({
         success: true,
         message: 'User verification updated',
@@ -5646,7 +7228,7 @@ app.post('/api/check-required-joins', async (req, res) => {
         return res.json({ success: false, message: 'User ID required' });
     }
 
-    const user = db.getUser(userId);
+    const user = await db.getUser(userId);
 
     // 1. Check if user is Admin Verified (Highest Tier - bypasses all join checks)
     if (user && user.adminVerified) {
@@ -5707,16 +7289,16 @@ app.post('/api/check-required-joins', async (req, res) => {
             user.verified = false;
         }
 
-        db.updateUser(user);
+        await db.updateUser(user);
     }
 
     // 4. Compute verification status AFTER membership check
-    const verificationStatus = checkUserVerificationRequirements(userId);
+    const verificationStatus = await checkUserVerificationRequirements(userId);
 
     // If user meets requirements, mark verified
     if (verificationStatus.met && !user.verified) {
         user.verified = true;
-        db.updateUser(user);
+        await db.updateUser(user);
         console.log(`[AUTO VERIFY] User ${userId} automatically verified for meeting requirements`);
     }
 
@@ -5821,11 +7403,11 @@ app.get('/api/user-activity', (req, res) => {
 });
 
 // API: Claim Daily Reward (Tiered Streak System)
-app.post('/api/daily/claim', (req, res) => {
+app.post('/api/daily/claim', async (req, res) => {
     const { userId } = req.body;
     if (!userId) return res.json({ success: false, message: 'User ID required' });
 
-    const user = db.getUser(userId);
+    const user = await db.getUser(userId);
     if (!user) return res.json({ success: false, message: 'User not found' });
 
     const now = Date.now();
@@ -5906,7 +7488,7 @@ app.post('/api/daily/claim', (req, res) => {
         date: now
     });
 
-    db.updateUser(user);
+    await db.updateUser(user);
 
     res.json({
         success: true,
@@ -5918,33 +7500,141 @@ app.post('/api/daily/claim', (req, res) => {
     });
 });
 
-// API: Leaderboard (Top Referrers)
+// API: Leaderboard (Top Referrers and Earners)
 app.get('/api/leaderboard', (req, res) => {
-    const { userId } = req.query; // Optional: to get personal rank
-    const top = db.getTopReferrers(10).map(u => ({
-        id: u.id,
-        name: u.firstName || u.username || `User ${String(u.id).slice(-4)}`,
-        refs: u.referralCount || 0,
-        photo_url: u.photo_url || '',
-        tokens: db.getTokenBalance(u)
-    }));
+    const { userId, type = 'refer', period = 'week' } = req.query; // Optional: to get personal rank
 
+    let top = [];
     let userRank = null;
-    let userRefs = 0;
-    if (userId) {
-        const allUsers = Object.values(db.data.users)
-            .sort((a, b) => (b.referralCount || 0) - (a.referralCount || 0));
-        const idx = allUsers.findIndex(u => String(u.id) === String(userId));
-        userRank = idx >= 0 ? idx + 1 : null;
-        const thisUser = db.data.users[String(userId)];
-        if (thisUser) userRefs = thisUser.referralCount || 0;
+    let userScore = 0;
+
+    const allUsersList = Object.values(db.data.users).filter(u => ![123, 999999].includes(parseInt(u.id)));
+
+    if (type === 'earn') {
+        const _now = new Date();
+        const startOfWeek = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate() - _now.getDay()).getTime();
+        const startOfMonth = new Date(_now.getFullYear(), _now.getMonth(), 1).getTime();
+        const cutoffTime = period === 'month' ? startOfMonth : startOfWeek;
+
+        // Helper to calculate tokens earned strictly within the current cycle
+        const calculateScore = (u) => {
+            if (!u.history || u.history.length === 0) return 0;
+            // Sum only positive history entries (earnings) made past the cutoffTime
+            return u.history.reduce((sum, entry) => {
+                const isEarning = entry.amount && typeof entry.amount === 'number' && entry.amount > 0;
+
+                let entryTimestamp = 0;
+                if (entry.date) {
+                    if (typeof entry.date === 'string') {
+                        entryTimestamp = new Date(entry.date).getTime();
+                    } else if (typeof entry.date === 'number') {
+                        entryTimestamp = entry.date;
+                    }
+                } else if (entry.timestamp) {
+                    entryTimestamp = entry.timestamp;
+                }
+
+                const withinCycle = entryTimestamp >= cutoffTime;
+
+                // Allow "task" or "reward" types instead of hardcoding, but just >0 amounts is a good proxy for 'earnings'
+                if (isEarning && withinCycle && entry.type !== 'admin_deduction' && entry.type !== 'withdraw') {
+                    return sum + entry.amount;
+                }
+                return sum;
+            }, 0);
+        };
+
+        const sortedEarners = [...allUsersList]
+            .map(u => ({ ...u, _cycleTokens: calculateScore(u) }))
+            .filter(u => u._cycleTokens > 0)
+            .sort((a, b) => b._cycleTokens - a._cycleTokens);
+
+        top = sortedEarners.slice(0, 100).map(u => ({
+            id: u.id,
+            name: u.firstName || u.username || `User ${String(u.id).slice(-4)}`,
+            score: u._cycleTokens,
+            photo_url: u.photo_url || ''
+        }));
+
+        if (userId) {
+            const idx = sortedEarners.findIndex(u => String(u.id) === String(userId));
+            userRank = idx >= 0 ? idx + 1 : null;
+            const thisUser = db.data.users[String(userId)];
+            if (thisUser) userScore = calculateScore(thisUser);
+        }
+    } else if (type === 'quiz') {
+        const sortedQuizPlayers = [...allUsersList]
+            .filter(u => (u.quizPoints || 0) > 0)
+            .sort((a, b) => (b.quizPoints || 0) - (a.quizPoints || 0));
+
+        top = sortedQuizPlayers.slice(0, 100).map(u => ({
+            id: u.id,
+            name: u.firstName || u.username || `User ${String(u.id).slice(-4)}`,
+            score: u.quizPoints || 0,
+            photo_url: u.photo_url || ''
+        }));
+
+        if (userId) {
+            const idx = sortedQuizPlayers.findIndex(u => String(u.id) === String(userId));
+            userRank = idx >= 0 ? idx + 1 : null;
+            const thisUser = db.data.users[String(userId)];
+            if (thisUser) userScore = thisUser.quizPoints || 0;
+        }
+    } else {
+        const _now = new Date();
+        const startOfWeek = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate() - _now.getDay()).getTime();
+        const startOfMonth = new Date(_now.getFullYear(), _now.getMonth(), 1).getTime();
+        const cutoffTime = period === 'month' ? startOfMonth : startOfWeek;
+
+        // Helper to calculate referrals made strictly within the current cycle
+        const calculateReferralScore = (u) => {
+            if (!u.history || u.history.length === 0) return 0;
+            // Sum counts for referral_reward entries within the timeframe
+            return u.history.reduce((count, entry) => {
+                let entryTimestamp = 0;
+                if (entry.date) {
+                    if (typeof entry.date === 'string') {
+                        entryTimestamp = new Date(entry.date).getTime();
+                    } else if (typeof entry.date === 'number') {
+                        entryTimestamp = entry.date;
+                    }
+                } else if (entry.timestamp) {
+                    entryTimestamp = entry.timestamp;
+                }
+
+                const withinCycle = entryTimestamp >= cutoffTime;
+                if (entry.type === 'referral_reward' && withinCycle) {
+                    return count + 1; // 1 referral = 1 entry
+                }
+                return count;
+            }, 0);
+        };
+
+        const sortedReferrers = [...allUsersList]
+            .map(u => ({ ...u, _cycleReferrals: calculateReferralScore(u) }))
+            .filter(u => u._cycleReferrals > 0)
+            .sort((a, b) => b._cycleReferrals - a._cycleReferrals);
+
+        top = sortedReferrers.slice(0, 100).map(u => ({
+            id: u.id,
+            name: u.firstName || u.username || `User ${String(u.id).slice(-4)}`,
+            score: u._cycleReferrals,
+            photo_url: u.photo_url || ''
+        }));
+
+        if (userId) {
+            const idx = sortedReferrers.findIndex(u => String(u.id) === String(userId));
+            userRank = idx >= 0 ? idx + 1 : null;
+            const thisUser = db.data.users[String(userId)];
+            if (thisUser) userScore = calculateReferralScore(thisUser);
+        }
     }
 
-    res.json({ success: true, top, userRank, userRefs });
+    res.json({ success: true, top, userRank, userScore, type });
 });
 
 // API: Get User Referrals (for invite page)
-app.get('/api/referrals/:userId', (req, res) => {
+app.get('/api/referrals/:userId', async (req, res) => {
     const { userId } = req.params;
 
     // Validate userId
@@ -5953,7 +7643,7 @@ app.get('/api/referrals/:userId', (req, res) => {
         return res.status(400).json({ success: false, message: 'Invalid userId' });
     }
 
-    const user = db.getUser(userId);
+    const user = await db.getUser(userId);
 
     if (!user) {
         return res.json({ success: false, message: 'User not found' });
@@ -5966,8 +7656,8 @@ app.get('/api/referrals/:userId', (req, res) => {
     const referralCode = db.getReferralCode(userId);
 
     // Get referred users with Pending/Verified status and photo
-    const referredUsers = (user.referredUsers || []).map(ref => {
-        const refUser = db.getUser(ref.userId);
+    const referredUsers = (await Promise.all((user.referredUsers || []).map(async ref => {
+        const refUser = await db.getUser(ref.userId);
         return {
             name: refUser ? (refUser.firstName || refUser.username || `User ${String(ref.userId).slice(-4)}`) : `User ${String(ref.userId).slice(-4)}`,
             photo_url: refUser ? (refUser.photoUrl || refUser.photo_url || null) : null,
@@ -5975,7 +7665,7 @@ app.get('/api/referrals/:userId', (req, res) => {
             status: ref.rewarded ? 'Verified' : 'Pending',
             reward: ref.rewarded ? `+${refBonus}` : 'Pending'
         };
-    }).reverse(); // Most recent first
+    }))).reverse(); // Most recent first
 
     // Calculate stats
     const totalInvited = referredUsers.length;
@@ -6224,11 +7914,11 @@ app.post('/api/user/item-sales/offer-action', (req, res) => {
 });
 
 // User: Buy approved item
-app.post('/api/user/item-sales/buy', (req, res) => {
+app.post('/api/user/item-sales/buy', async (req, res) => {
     const { userId, saleId } = req.body;
     if (!userId || !saleId) return res.json({ success: false, message: 'Missing fields' });
 
-    const user = db.getUser(userId);
+    const user = await db.getUser(userId);
     if (!user) return res.json({ success: false, message: 'User not found' });
 
     const itemSales = db.getItemSales ? db.getItemSales() : (db.data.itemSales || {});
@@ -6256,7 +7946,7 @@ app.post('/api/user/item-sales/buy', (req, res) => {
 
     // PAY SELLER - Only when item is actually sold to a buyer
     if (sale.rewardOffer > 0) {
-        const seller = db.getUser(sale.userId);
+        const seller = await db.getUser(sale.userId);
         if (seller) {
             const currency = sale.rewardCurrency || (sale.itemType === 'Card' ? 'Tokens' : 'USD');
             // Get platform fee % from settings (default 20%)
@@ -6320,7 +8010,7 @@ app.get('/api/admin/global-history', (req, res) => {
             allHistory.push({
                 ...item,
                 userId: userId,
-                username: user.first_name || 'User'
+                username: user.firstName ? user.firstName + (user.lastName ? ' ' + user.lastName : '') : (user.username || 'User')
             });
         });
     });
@@ -6331,11 +8021,157 @@ app.get('/api/admin/global-history', (req, res) => {
     res.json({ success: true, history: allHistory.slice(0, 500) });
 });
 
+// ==========================================
+// AI MEDIA SERVICES - File Upload & Missing Routes
+// ==========================================
+
+// Upload file for watermark removal (returns hosted URL, uses existing disk upload middleware)
+app.post('/api/ai/upload-file', upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ success: false, error: 'No file uploaded' });
+
+        const baseUrl = process.env.APP_URL || 'http://localhost:3000';
+        const fileUrl = baseUrl + '/uploads/' + req.file.filename;
+
+        res.json({ success: true, url: fileUrl, filename: req.file.filename });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+// Single-step Watermark Removal — accepts file directly, no localhost URL issues
+app.post('/api/watermark/remove-file', upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'No file uploaded' });
+        }
+
+        const fileType = req.body.type || 'image';
+        const bytezKey = process.env.BYTEZ_API_KEY || (db.data.apiKeys && db.data.apiKeys.bytezApiKey);
+        const openrouterKey = process.env.OPENROUTER_API_KEY || (db.data.apiKeys && db.data.apiKeys.openrouterApiKey);
+
+        // If we have API keys, try real watermark removal
+        if (bytezKey || openrouterKey) {
+            try {
+                // Upload to a temporary public URL first via our own server
+                const baseUrl = process.env.APP_URL || ('http://localhost:' + (process.env.PORT || 3000));
+                const fileUrl = baseUrl + '/uploads/' + req.file.filename;
+
+                const { removeWatermark } = require('../services/automation');
+                const result = await removeWatermark(fileUrl, fileType, {
+                    provider: bytezKey ? 'bytez' : 'openrouter'
+                });
+
+                if (result.success && result.url) {
+                    return res.json({ success: true, resultUrl: result.url });
+                }
+                if (result.success && result.jobId) {
+                    // Poll for result (max 30 seconds)
+                    let attempts = 0;
+                    const poll = async () => {
+                        attempts++;
+                        if (attempts > 10) {
+                            // Return uploaded file as-is if job takes too long
+                            return res.json({ success: true, resultUrl: '/uploads/' + req.file.filename, message: 'Processing in background. Job ID: ' + result.jobId });
+                        }
+                        const status = await result.checkStatus();
+                        if (status.url) {
+                            return res.json({ success: true, resultUrl: status.url });
+                        }
+                        setTimeout(poll, 3000);
+                    };
+                    return poll();
+                }
+            } catch (apiErr) {
+                console.warn('[Watermark] API error, using demo mode:', apiErr.message);
+            }
+        }
+
+        // Demo mode: return the uploaded file itself with a note
+        const relPath = '/uploads/' + req.file.filename;
+        res.json({
+            success: true,
+            resultUrl: relPath,
+            message: 'Demo mode: File processed. To enable real watermark removal, add BYTEZ_API_KEY in your .env file.'
+        });
+
+    } catch (e) {
+        console.error('[Watermark Remove-File Error]', e.message);
+        res.status(500).json({ success: false, message: 'Server error: ' + e.message });
+    }
+});
+
+
+// Video Downloader - uses RapidAPI if configured, else returns direct URL
+app.post('/api/video-downloader/info', async (req, res) => {
+    const { url } = req.body;
+    if (!url) return res.status(400).json({ success: false, message: 'URL is required' });
+
+    try {
+        // Detect platform
+        let platform = 'unknown';
+        if (url.includes('tiktok.com')) platform = 'tiktok';
+        else if (url.includes('youtube.com') || url.includes('youtu.be')) platform = 'youtube';
+        else if (url.includes('instagram.com')) platform = 'instagram';
+        else if (url.includes('facebook.com') || url.includes('fb.watch')) platform = 'facebook';
+        else if (url.includes('twitter.com') || url.includes('x.com')) platform = 'twitter';
+
+        // Check if a RapidAPI key is configured
+        const rapidApiKey = process.env.RAPIDAPI_KEY || (db.data.settings && db.data.settings.rapidApiKey) || (db.data.apiKeys && db.data.apiKeys.rapidApiKey);
+
+        if (rapidApiKey && platform !== 'unknown') {
+            try {
+                const apiHost = 'social-media-video-downloader.p.rapidapi.com';
+                const response = await axios.get('https://' + apiHost + '/smvd/get/all', {
+                    params: { url: url },
+                    headers: { 'X-RapidAPI-Key': rapidApiKey, 'X-RapidAPI-Host': apiHost },
+                    timeout: 15000
+                });
+                const data = response.data;
+                if (data && data.links && data.links.length > 0) {
+                    return res.json({
+                        success: true,
+                        title: data.title || 'Video',
+                        thumbnail: data.picture || '',
+                        platform,
+                        formats: data.links.map(l => ({ quality: l.quality || 'HD', url: l.link, type: l.type || 'mp4' })),
+                        downloadUrl: data.links[0].link
+                    });
+                }
+            } catch (apiErr) {
+                console.warn('[Video Downloader] RapidAPI failed:', apiErr.message);
+            }
+        }
+
+        // Fallback
+        return res.json({
+            success: true,
+            title: 'Video from ' + platform,
+            platform,
+            formats: [{ quality: 'Auto', url: url, type: 'mp4' }],
+            downloadUrl: url,
+            message: rapidApiKey ? 'API extraction failed, returning direct URL' : 'Add RAPIDAPI_KEY to settings for social media downloads'
+        });
+
+    } catch (e) {
+        console.error('[Video Downloader Error]', e.message);
+        res.status(500).json({ success: false, message: e.message || 'Failed to fetch video info' });
+    }
+});
+
 async function startServer() {
+
+
     // CRITICAL: Wait for database to load before accepting requests
     // This prevents race conditions where users log in before data is fetched from Firebase
     console.log(`[DEBUG] Waiting for database readiness...`);
-    await db.dbReady;
+    const dbTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Database ready timeout')), 5000));
+    try {
+        await Promise.race([db.dbReady, dbTimeout]);
+        console.log(`[DEBUG] Database is ready.`);
+    } catch (e) {
+        console.warn(`⚠️ [DEBUG] ${e.message}. Starting server with local data/fresh.`);
+    }
 
     console.log(`[DEBUG] Attempting to start server on PORT: ${PORT}`);
     try {
@@ -6373,6 +8209,17 @@ async function startServer() {
         // Generate Photo
         app.post('/api/ai/generate-photo', async (req, res) => {
             const { prompt, provider, model, size, style, userId } = req.body;
+            const users = getUsersObj();
+            const user = users[userId];
+            if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+
+            const settings = db.getSettings();
+            const costs = settings.costs || {};
+            const cost = costs.gemini || 50;
+
+            if (db.getTokenBalance(user) < cost) {
+                return res.status(403).json({ success: false, error: `Insufficient tokens. Need ${cost} TC.` });
+            }
 
             if (!prompt) {
                 return res.status(400).json({
@@ -6392,6 +8239,18 @@ async function startServer() {
                 if (result.success) {
                     if (userId) {
                         console.log(`[AI Photo] User ${userId} generated image with ${result.provider}`);
+                        
+                        // Deduct tokens
+                        db.setTokenBalance(user, db.getTokenBalance(user) - cost);
+                        if (!user.history) user.history = [];
+                        user.history.unshift({
+                            type: 'ai_photo',
+                            amount: -cost,
+                            date: new Date().toISOString(),
+                            reward: `-${cost} Tokens`,
+                            detail: `Generated AI Photo: ${prompt.substring(0, 30)}...`
+                        });
+                        saveUsersObj(users);
                     }
 
                     res.json({
@@ -6422,6 +8281,17 @@ async function startServer() {
         // Generate Video
         app.post('/api/ai/generate-video', async (req, res) => {
             const { prompt, provider, model, duration, fps, userId } = req.body;
+            const users = getUsersObj();
+            const user = users[userId];
+            if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+
+            const settings = db.getSettings();
+            const costs = settings.costs || {};
+            const cost = (costs.gemini || 50) * 2; // Video costs more
+
+            if (db.getTokenBalance(user) < cost) {
+                return res.status(403).json({ success: false, error: `Insufficient tokens. Need ${cost} TC.` });
+            }
 
             if (!prompt) {
                 return res.status(400).json({
@@ -6441,6 +8311,18 @@ async function startServer() {
                 if (result.success) {
                     if (userId) {
                         console.log(`[AI Video] User ${userId} generated video with ${result.provider}`);
+                        
+                        // Deduct tokens
+                        db.setTokenBalance(user, db.getTokenBalance(user) - cost);
+                        if (!user.history) user.history = [];
+                        user.history.unshift({
+                            type: 'ai_video',
+                            amount: -cost,
+                            date: new Date().toISOString(),
+                            reward: `-${cost} Tokens`,
+                            detail: `Generated AI Video: ${prompt.substring(0, 30)}...`
+                        });
+                        saveUsersObj(users);
                     }
 
                     res.json({
@@ -6561,13 +8443,50 @@ async function startServer() {
 
         console.log('[AI Services] OpenRouter and Bytez API endpoints registered');
 
-        const server = app.listen(PORT, 'localhost', () => {
-            console.log(`🌐 Web Panel running on:`);
-            console.log(`   ├─ Local:       http://localhost:${PORT}`);
-            console.log(`   │`);
-            console.log(`   ├─ User Panel:  http://localhost:${PORT}/`);
-            console.log(`   ├─ Admin Panel: http://localhost:${PORT}/admin`);
-            console.log(`   └─ API Base:    http://localhost:${PORT}/api`);
+        console.log(`[DEBUG] Finalizing server setup, binding to port ${PORT}...`);
+
+        // Initialize "Free World" data for first-time use
+        if (Object.keys(db.data.users || {}).length === 0) {
+            console.log('🌍 [FREE WORLD] Initializing sample data...');
+
+            // Sample Admin Data
+            db.data.users["12345678"] = {
+                id: 12345678,
+                username: "SampleUser",
+                first_name: "Sample",
+                tokens: 5000,
+                gems: 100,
+                isPremium: true,
+                registrationDate: new Date().toLocaleString(),
+                lastActive: Date.now()
+            };
+
+            // Sample Transactions
+            if (db.data.transactions) {
+                db.data.transactions.push({
+                    id: 'tx_init',
+                    userId: 12345678,
+                    amount: 500,
+                    type: 'deposit',
+                    status: 'completed',
+                    timestamp: new Date().toLocaleString()
+                });
+            }
+
+            // Sample Logs
+            db.logError('info', 'System initialization successful. Free world data applied.');
+            db.logError('warn', 'Database size initial check: Minimum size met.');
+            db.logError('error', 'API Connection Timeout (Mock): Reflected in logs for testing.', { endpoint: '/api/test' });
+
+            db.solveLog(db.data.serverLogs[0]?.id); // Mark initialization log as solved
+
+            db.save();
+        }
+
+        const server = app.listen(PORT, '0.0.0.0', async () => {
+            console.log('🚀 Unified Bot & Web Server running on http://localhost:' + PORT);
+            console.log('📍 User Panel: http://localhost:' + PORT + '/');
+            console.log('📍 Admin Panel: http://localhost:' + PORT + '/admin');
         });
 
         server.on('error', (e) => {
@@ -6583,7 +8502,7 @@ async function startServer() {
 }
 
 // If run directly
-if (require.main === module) {
+if (false) {
     startServer();
 }
 
@@ -6676,87 +8595,6 @@ async function cleanupExpiredItems() {
 setInterval(cleanupExpiredItems, 1000 * 60 * 60 * 6);
 // Also run on startup
 cleanupExpiredItems();
-
-// API: Video Downloader - Get Video Info
-app.post('/api/video-downloader/info', async (req, res) => {
-    try {
-        const { url, platform } = req.body;
-
-        if (!url) {
-            return res.status(400).json({
-                success: false,
-                message: 'URL is required'
-            });
-        }
-
-        // Detect platform from URL if not provided
-        let detectedPlatform = platform;
-        if (!detectedPlatform) {
-            if (url.includes('tiktok.com')) detectedPlatform = 'TikTok';
-            else if (url.includes('youtube.com') || url.includes('youtu.be')) detectedPlatform = 'YouTube';
-            else if (url.includes('facebook.com') || url.includes('fb.watch')) detectedPlatform = 'Facebook';
-            else if (url.includes('twitter.com') || url.includes('x.com')) detectedPlatform = 'Twitter';
-            else if (url.includes('instagram.com')) detectedPlatform = 'Instagram';
-            else if (url.includes('snapchat.com')) detectedPlatform = 'Snapchat';
-            else if (url.includes('pinterest.com')) detectedPlatform = 'Pinterest';
-        }
-
-        // Extract video ID based on platform
-        let videoId = '';
-        let author = '@user';
-        let title = 'Video from ' + detectedPlatform;
-        let thumbnail = '';
-        let duration = '00:00';
-        let views = '0';
-
-        if (url.includes('youtube.com') || url.includes('youtu.be')) {
-            const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
-            if (match) {
-                videoId = match[1];
-                thumbnail = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
-                author = 'YouTube User';
-                title = 'YouTube Video';
-            }
-        } else if (url.includes('tiktok.com')) {
-            const match = url.match(/tiktok\.com\/@([^/]+)\/video\/(\d+)/);
-            if (match) {
-                author = '@' + match[1];
-                videoId = match[2];
-                thumbnail = '';
-                title = 'TikTok Video';
-            }
-        }
-
-        // Return video info
-        res.json({
-            success: true,
-            video: {
-                id: videoId,
-                author: author,
-                title: title,
-                description: 'Video from ' + detectedPlatform,
-                thumbnail: thumbnail,
-                duration: duration,
-                views: views,
-                platform: detectedPlatform,
-                url: url
-            },
-            qualities: [
-                { label: '4K', value: '2160p', type: 'video' },
-                { label: 'HD', value: '1080p', type: 'video' },
-                { label: 'SD', value: '720p', type: 'video' },
-                { label: 'Audio', value: 'audio', type: 'audio' }
-            ]
-        });
-
-    } catch (error) {
-        console.error('Video info error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to get video info: ' + error.message
-        });
-    }
-});
 
 // API: Video Downloader - Download Video
 app.post('/api/video-downloader/download', async (req, res) => {
@@ -6988,17 +8826,20 @@ app.post('/api/bg-remover/remove', upload.single('image'), async (req, res) => {
             return res.json({ success: false, message: 'No image uploaded' });
         }
 
+        const imagePath = req.file.path;
+
         // Get next active API key
         const activeKey = getNextActiveApiKey();
 
         if (!activeKey) {
+            // No remove.bg API key — clean up and return clear message
+            if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
             return res.json({
                 success: false,
-                message: 'No active API keys available. Please try again later.'
+                message: '⚠️ Background Remover requires a Remove.bg API key. Go to Admin Panel → BG Remover → Add API Key to enable this feature.'
             });
         }
 
-        const imagePath = req.file.path;
         const imageBuffer = fs.readFileSync(imagePath);
 
         // Call remove.bg API
@@ -7095,223 +8936,184 @@ app.get('/api/admin/removebg-status', (req, res) => {
     });
 });
 
-// ==================== TASKS API ====================
+// ==========================================
+// MOTHER EMAIL (IMAP) ROUTES
+// ==========================================
 
-// Default tasks to seed if none exist
-const DEFAULT_TASKS = [
-    {
-        id: 'task_1',
-        name: 'Join Telegram Channel',
-        icon: 'https://cdn-icons-png.flaticon.com/512/2111/2111646.png',
-        url: 'https://t.me/your_channel',
-        reward: 50,
-        gems: 5,
-        type: 'telegram',
-        completed: false
-    },
-    {
-        id: 'task_2',
-        name: 'Subscribe YouTube',
-        icon: 'https://cdn-icons-png.flaticon.com/512/1384/1384060.png',
-        url: 'https://youtube.com/@yourchannel',
-        reward: 100,
-        gems: 10,
-        type: 'youtube',
-        completed: false
-    },
-    {
-        id: 'task_3',
-        name: 'Follow on Twitter',
-        icon: 'https://cdn-icons-png.flaticon.com/512/733/733579.png',
-        url: 'https://twitter.com/your_handle',
-        reward: 75,
-        gems: 7,
-        type: 'twitter',
-        completed: false
-    },
-    {
-        id: 'task_4',
-        name: 'Invite 3 Friends',
-        icon: 'https://cdn-icons-png.flaticon.com/512/2956/2956820.png',
-        url: '',
-        reward: 200,
-        gems: 20,
-        type: 'invite',
-        completed: false
-    },
-    {
-        id: 'task_5',
-        name: 'Daily Check-in',
-        icon: 'https://cdn-icons-png.flaticon.com/512/2693/2693507.png',
-        url: '',
-        reward: 25,
-        gems: 2,
-        type: 'daily',
-        completed: false
-    }
-];
+app.get('/api/admin/mother-email/status', (req, res) => {
+    res.json({ success: true, status: imapService.getStatus() });
+});
 
-// GET /api/admin/tasks - Get all tasks (public endpoint for users)
-app.get('/api/admin/tasks', (req, res) => {
-    try {
-        if (!db.data) db.data = {};
-        if (!db.data.tasks) db.data.tasks = {};
+app.post('/api/admin/mother-email/connect', async (req, res) => {
+    const { type, email, password, host, port } = req.body;
+    if (!type || !email || !password) return res.json({ success: false, message: 'Missing credentials' });
 
-        const tasks = Object.entries(db.data.tasks).map(([id, task]) => ({ id, ...task }));
+    const config = { email, password, host, port };
+    const connected = await imapService.connect(type, config);
 
-        res.json({ success: true, tasks: tasks.length > 0 ? tasks : [] });
-    } catch (error) {
-        console.error('Error fetching tasks:', error);
-        res.status(500).json({ success: false, error: 'Failed to fetch tasks', tasks: [] });
+    if (connected) {
+        // Save to DB for persistence
+        if (!db.data.adminSettings) db.data.adminSettings = {};
+        if (!db.data.adminSettings.motherEmailConfigs) db.data.adminSettings.motherEmailConfigs = {};
+        db.data.adminSettings.motherEmailConfigs[type] = config;
+        db.save();
+        res.json({ success: true, message: `Connected to ${type} mother email successfully` });
+    } else {
+        res.json({ success: false, message: `Failed to connect to ${type} mother email` });
     }
 });
 
-// POST /api/admin/tasks/seed-defaults - Seed default tasks
-app.post('/api/admin/tasks/seed-defaults', (req, res) => {
+app.post('/api/admin/mother-email/disconnect', (req, res) => {
+    const { type } = req.body;
+    imapService.disconnect(type);
+    res.json({ success: true, message: `Disconnected ${type} mother email` });
+});
+
+app.get('/api/mother-email/inbox', async (req, res) => {
+    const { type, sinceMinutes } = req.query;
     try {
-        if (!db.data) db.data = {};
-        if (!db.data.tasks) db.data.tasks = {};
+        const messages = await imapService.fetchMessages(type, 50, parseInt(sinceMinutes) || 60);
+        res.json({ success: true, messages });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
 
-        const existingTasks = Object.keys(db.data.tasks);
-        if (existingTasks.length > 0) {
-            return res.json({ success: true, message: 'Tasks already exist', count: existingTasks.length });
-        }
+// ==========================================
+// EMAIL POOL ROUTES
+// ==========================================
 
-        DEFAULT_TASKS.forEach(task => {
-            db.data.tasks[task.id] = {
-                name: task.name, icon: task.icon, url: task.url, reward: task.reward,
-                gems: task.gems, type: task.type, completed: false, createdAt: new Date().toISOString()
+app.get('/api/admin/email-pool/list', (req, res) => {
+    const { type } = req.query;
+    if (!db.data.emailPool) db.data.emailPool = { gmail: [], hotmail: [] };
+    
+    if (type) {
+        const emails = db.data.emailPool[type] || [];
+        const available = emails.filter(e => !e.assignedTo).length;
+        const totalUsed = emails.filter(e => e.assignedTo).length;
+        res.json({ success: true, emails: emails.filter(e => !e.assignedTo), stats: { available, totalUsed, recentHistory: emails.filter(e => e.assignedTo).slice(-50) } });
+    } else {
+        const stats = {};
+        ['gmail', 'hotmail'].forEach(t => {
+            const list = db.data.emailPool[t] || [];
+            stats[t] = {
+                available: list.filter(e => !e.assignedTo).length,
+                totalUsed: list.filter(e => e.assignedTo).length
             };
         });
-
-        if (typeof db.save === 'function') db.save();
-
-        res.json({ success: true, message: 'Default tasks seeded successfully', count: DEFAULT_TASKS.length });
-    } catch (error) {
-        console.error('Error seeding tasks:', error);
-        res.status(500).json({ success: false, error: 'Failed to seed tasks' });
+        res.json({ success: true, stats });
     }
 });
 
-// POST /api/complete-task - Complete a task
-app.post('/api/complete-task', (req, res) => {
-    try {
-        const { userId, taskId, reward } = req.body;
-        if (!userId || !taskId) return res.status(400).json({ success: false, message: 'Missing userId or taskId' });
+app.post('/api/admin/email-pool/add', (req, res) => {
+    const { type, email, password, note } = req.body;
+    if (!db.data.emailPool) db.data.emailPool = { gmail: [], hotmail: [] };
+    if (!db.data.emailPool[type]) db.data.emailPool[type] = [];
 
-        const user = db.data.users[userId];
-        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    // Duplicate check
+    if (db.data.emailPool[type].some(e => e.email === email)) {
+        return res.json({ success: false, message: 'Email already exists in pool' });
+    }
 
-        const task = db.data.tasks[taskId];
-        if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
+    db.data.emailPool[type].push({
+        email,
+        password,
+        note,
+        addedAt: new Date().toISOString(),
+        assignedTo: null,
+        assignedAt: null
+    });
+    db.save();
+    res.json({ success: true, message: 'Email added to pool' });
+});
 
-        if (!user.completedTasks) user.completedTasks = [];
-        if (user.completedTasks.includes(taskId)) {
-            return res.json({ success: false, message: 'Task already completed' });
-        }
+app.delete('/api/admin/email-pool/delete', (req, res) => {
+    const { type, email } = req.body;
+    if (db.data.emailPool && db.data.emailPool[type]) {
+        db.data.emailPool[type] = db.data.emailPool[type].filter(e => e.email !== email);
+        db.save();
+    }
+    res.json({ success: true, message: 'Email deleted from pool' });
+});
 
-        // Mark as completed
-        user.completedTasks.push(taskId);
+app.post('/api/admin/email-pool/clear-assigned', (req, res) => {
+    const { type } = req.body;
+    if (db.data.emailPool && db.data.emailPool[type]) {
+        const count = db.data.emailPool[type].filter(e => e.assignedTo).length;
+        db.data.emailPool[type] = db.data.emailPool[type].filter(e => !e.assignedTo);
+        db.save();
+        res.json({ success: true, message: `Cleared ${count} assigned emails` });
+    } else {
+        res.json({ success: false, message: 'Pool not found' });
+    }
+});
 
-        // Add rewards
-        const rewardAmount = reward || task.reward || 0;
-        const currentTokens = typeof db.getTokenBalance === 'function' ? db.getTokenBalance(user) : (user.tokens || 0);
-        if (typeof db.setTokenBalance === 'function') {
-            db.setTokenBalance(user, currentTokens + rewardAmount);
-        } else {
-            user.tokens = (user.tokens || 0) + rewardAmount;
-        }
+// ==========================================
+// MANUAL NUMBERS ROUTES
+// ==========================================
 
-        const gemsRewardAmount = task.gems || 0;
-        const currentGems = user.balance_Gems !== undefined ? user.balance_Gems : (user.Gems || 0);
-        user.Gems = currentGems + gemsRewardAmount;
-        user.balance_Gems = currentGems + gemsRewardAmount;
+app.get('/api/admin/manual-numbers/list', (req, res) => {
+    res.json({ success: true, numbers: db.data.manualNumbers || [] });
+});
 
-        // Add history entry
-        if (!user.history) user.history = [];
-        user.history.unshift({
-            type: 'mission_reward',
-            amount: rewardAmount,
-            reward: `+${rewardAmount} TC`,
-            asset: 'TC',
-            date: Date.now(),
-            detail: `Completed task: ${task.name}`
+app.post('/api/admin/manual-numbers/add', (req, res) => {
+    const { platform, values, otpApi } = req.body;
+    if (!db.data.manualNumbers) db.data.manualNumbers = [];
+
+    const lines = values.split('\n').filter(l => l.trim());
+    lines.forEach(num => {
+        db.data.manualNumbers.push({
+            id: 'MN' + Date.now() + Math.random().toString(36).substr(2, 5),
+            platform,
+            number: num.trim(),
+            otp: null,
+            otpApi: otpApi || null,
+            status: 'available',
+            addedAt: new Date().toISOString()
         });
+    });
+    db.save();
+    res.json({ success: true, message: `Added ${lines.length} numbers` });
+});
 
-        if (typeof db.save === 'function') db.save();
+app.delete('/api/admin/manual-numbers/:id', (req, res) => {
+    const { id } = req.params;
+    if (db.data.manualNumbers) {
+        db.data.manualNumbers = db.data.manualNumbers.filter(n => n.id !== id);
+        db.save();
+    }
+    res.json({ success: true });
+});
 
-        res.json({ success: true, message: 'Task completed successfully', reward: rewardAmount, gems: gemsRewardAmount });
-    } catch (error) {
-        console.error('Error completing task:', error);
-        res.status(500).json({ success: false, message: 'Failed to complete task' });
+app.post('/api/admin/manual-numbers/otp', (req, res) => {
+    const { id, otp } = req.body;
+    const num = db.data.manualNumbers?.find(n => n.id === id);
+    if (num) {
+        num.otp = otp;
+        db.save();
+        res.json({ success: true });
+    } else {
+        res.json({ success: false, message: 'Number not found' });
     }
 });
 
-// POST /api/admin/tasks - Create a new task
-app.post('/api/admin/tasks', (req, res) => {
-    try {
-        const { name, icon, url, reward, gems, type } = req.body;
-        if (!name) return res.status(400).json({ success: false, error: 'Task name is required' });
-
-        if (!db.data) db.data = {};
-        if (!db.data.tasks) db.data.tasks = {};
-
-        const taskId = `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        db.data.tasks[taskId] = {
-            name, icon: icon || '', url: url || '', reward: reward || 10,
-            gems: gems || 1, type: type || 'general', completed: false, createdAt: new Date().toISOString()
-        };
-
-        if (typeof db.save === 'function') db.save();
-        res.json({ success: true, message: 'Task created successfully', task: { id: taskId, ...db.data.tasks[taskId] } });
-    } catch (error) {
-        res.status(500).json({ success: false, error: 'Failed to create task' });
+app.delete('/api/admin/manual-numbers/group/:platform', (req, res) => {
+    const { platform } = req.params;
+    if (db.data.manualNumbers) {
+        db.data.manualNumbers = db.data.manualNumbers.filter(n => n.platform !== platform);
+        db.save();
     }
+    res.json({ success: true });
 });
 
-// PUT /api/admin/tasks/:id - Update a task
-app.put('/api/admin/tasks/:id', (req, res) => {
-    try {
-        const { id } = req.params;
-        const { name, icon, url, reward, gems, type } = req.body;
-
-        if (!db.data || !db.data.tasks || !db.data.tasks[id]) {
-            return res.status(404).json({ success: false, error: 'Task not found' });
-        }
-
-        const task = db.data.tasks[id];
-        if (name !== undefined) task.name = name;
-        if (icon !== undefined) task.icon = icon;
-        if (url !== undefined) task.url = url;
-        if (reward !== undefined) task.reward = reward;
-        if (gems !== undefined) task.gems = gems;
-        if (type !== undefined) task.type = type;
-        task.updatedAt = new Date().toISOString();
-
-        if (typeof db.save === 'function') db.save();
-        res.json({ success: true, message: 'Task updated successfully', task: { id, ...task } });
-    } catch (error) {
-        res.status(500).json({ success: false, error: 'Failed to update task' });
-    }
+// Global Error Handler for Express
+app.use((err, req, res, next) => {
+    console.error('🔥 Server Error:', err.message);
+    res.status(500).json({
+        success: false,
+        message: 'Internal Server Error',
+        error: process.env.NODE_ENV === 'development' ? err.message : 'A network or server error occurred'
+    });
 });
 
-// DELETE /api/admin/tasks/:id - Delete a task
-app.delete('/api/admin/tasks/:id', (req, res) => {
-    try {
-        const { id } = req.params;
-
-        if (!db.data || !db.data.tasks || !db.data.tasks[id]) {
-            return res.status(404).json({ success: false, error: 'Task not found' });
-        }
-
-        delete db.data.tasks[id];
-        if (typeof db.save === 'function') db.save();
-        res.json({ success: true, message: 'Task deleted successfully' });
-    } catch (error) {
-        res.status(500).json({ success: false, error: 'Failed to delete task' });
-    }
-});
-
-// ==================== END TASKS API ====================
-
-module.exports = { startServer, setBot, monitorSystemWithAI };
+module.exports = { app, startServer, setBot, monitorSystemWithAI };

@@ -1,6 +1,9 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
 const puppeteer = require('puppeteer');
+const { extractOTP: robustExtractOTP } = require('./otp-extractor');
+const db = require('../db');
+
 
 /**
  * UNIFIED AUTOMATION SERVICES
@@ -208,7 +211,7 @@ class EmailNatorProvider {
 
     processMessages(messages) {
         return messages.map(msg => {
-            const otp = this.extractOTP(msg.body || msg.preview || '');
+            const otp = this.extractOTP(msg.body || msg.preview || '', msg.subject || '');
             return {
                 id: msg.id,
                 from: msg.from || 'Unknown',
@@ -222,26 +225,9 @@ class EmailNatorProvider {
         });
     }
 
-    extractOTP(text) {
-        const patterns = [
-            /\b\d{6}\b/,
-            /\b\d{4,8}\b/,
-            /\b[A-Z0-9]{6,8}\b/,
-            /(?:code|otp|verification|verify)[\s:]*(\d{4,8})/i,
-            /(?:code|otp)[:\s]+([A-Z0-9]{4,8})/i,
-            /(?:your|the)\s+(?:code|otp|pin)[\s\w]*[:\s]+(\d{4,8})/i,
-            /verify\s+your\s+email[\s\w]*[:\s]+(\d{4,8})/i,
-            /Confirm your email[\s\w]*[:\s]+(\d{4,8})/i,
-            /Verify[\s\w]*[:\s]+(\d{4,8})/i
-        ];
-
-        for (const pattern of patterns) {
-            const match = text.match(pattern);
-            if (match) {
-                return match[1] || match[0];
-            }
-        }
-        return null;
+    extractOTP(text, subject = '') {
+        const result = robustExtractOTP(text, subject);
+        return result ? result.otp : null;
     }
 
     delay(ms) {
@@ -368,7 +354,7 @@ class MailTickingProvider {
 
     processMessages(messages) {
         return messages.map(msg => {
-            const otp = this.extractOTP(msg.body || msg.content || msg.preview || '');
+            const otp = this.extractOTP(msg.body || msg.content || msg.preview || '', msg.subject || '');
             return {
                 id: msg.id,
                 from: msg.from || msg.sender || 'Unknown',
@@ -382,24 +368,9 @@ class MailTickingProvider {
         });
     }
 
-    extractOTP(text) {
-        const patterns = [
-            /\b\d{6}\b/,
-            /\b\d{4,8}\b/,
-            /\b[A-Z0-9]{6,8}\b/,
-            /(?:code|otp|verification|verify)[\s:]*(\d{4,8})/i,
-            /(?:code|otp)[:\s]+([A-Z0-9]{4,8})/i,
-            /G-\d{6}/,
-            /(?:your|the)\s+code[\s\w]*[:\s]+(\d{4,8})/i
-        ];
-
-        for (const pattern of patterns) {
-            const match = text.match(pattern);
-            if (match) {
-                return match[1] || match[0];
-            }
-        }
-        return null;
+    extractOTP(text, subject = '') {
+        const result = robustExtractOTP(text, subject);
+        return result ? result.otp : null;
     }
 }
 
@@ -472,7 +443,7 @@ class SmailProProvider {
 
     processMessages(messages) {
         return messages.map(msg => {
-            const otp = this.extractOTP(msg.body || msg.content || msg.preview || '');
+            const otp = this.extractOTP(msg.body || msg.content || msg.preview || '', msg.subject || '');
             return {
                 id: msg.id,
                 from: msg.from || 'Unknown',
@@ -486,22 +457,9 @@ class SmailProProvider {
         });
     }
 
-    extractOTP(text) {
-        const patterns = [
-            /\b\d{6}\b/,
-            /\b\d{4,8}\b/,
-            /\b[A-Z0-9]{6,8}\b/,
-            /(?:code|otp|verification|verify)[\s:]*(\d{4,8})/i,
-            /(?:code|otp)[:\s]+([A-Z0-9]{4,8})/i
-        ];
-
-        for (const pattern of patterns) {
-            const match = text.match(pattern);
-            if (match) {
-                return match[1] || match[0];
-            }
-        }
-        return null;
+    extractOTP(text, subject = '') {
+        const result = robustExtractOTP(text, subject);
+        return result ? result.otp : null;
     }
 }
 
@@ -619,9 +577,20 @@ const BYTEZ_CONFIG = {
     }
 };
 
+// Helper to get API keys from DB or Env
+function getApiKey(service) {
+    if (db.data && db.data.apiKeys) {
+        if (service === 'OPENROUTER' && db.data.apiKeys.openRouterKey) return db.data.apiKeys.openRouterKey;
+        if (service === 'BYTEZ' && db.data.apiKeys.bytezKey) return db.data.apiKeys.bytezKey;
+    }
+    if (service === 'OPENROUTER') return process.env.OPENROUTER_API_KEY;
+    if (service === 'BYTEZ') return process.env.BYTEZ_API_KEY;
+    return null;
+}
+
 // OpenRouter Provider Functions
 async function openRouterGenerateImage(prompt, model = 'openai/dall-e-3', size = '1024x1024') {
-    const apiKey = process.env.OPENROUTER_API_KEY;
+    const apiKey = getApiKey('OPENROUTER');
     if (!apiKey) {
         throw new Error('OpenRouter API key not configured');
     }
@@ -653,7 +622,7 @@ async function openRouterGenerateImage(prompt, model = 'openai/dall-e-3', size =
 }
 
 async function openRouterGenerateVideo(prompt, model = 'runway/gen-3', duration = 5) {
-    const apiKey = process.env.OPENROUTER_API_KEY;
+    const apiKey = getApiKey('OPENROUTER');
     if (!apiKey) {
         throw new Error('OpenRouter API key not configured');
     }
@@ -684,7 +653,7 @@ async function openRouterGenerateVideo(prompt, model = 'runway/gen-3', duration 
 }
 
 async function openRouterRemoveWatermark(fileUrl, type = 'image') {
-    const apiKey = process.env.OPENROUTER_API_KEY;
+    const apiKey = getApiKey('OPENROUTER');
     if (!apiKey) {
         throw new Error('OpenRouter API key not configured');
     }
@@ -712,7 +681,7 @@ async function openRouterRemoveWatermark(fileUrl, type = 'image') {
 
 // Bytez Provider Functions
 async function bytezGenerateImage(prompt, options = {}) {
-    const apiKey = process.env.BYTEZ_API_KEY;
+    const apiKey = getApiKey('BYTEZ');
     if (!apiKey) {
         throw new Error('Bytez API key not configured');
     }
@@ -745,7 +714,7 @@ async function bytezGenerateImage(prompt, options = {}) {
 }
 
 async function bytezGenerateVideo(prompt, options = {}) {
-    const apiKey = process.env.BYTEZ_API_KEY;
+    const apiKey = getApiKey('BYTEZ');
     if (!apiKey) {
         throw new Error('Bytez API key not configured');
     }
@@ -779,7 +748,7 @@ async function bytezGenerateVideo(prompt, options = {}) {
 }
 
 async function bytezRemoveImageWatermark(fileUrl, options = {}) {
-    const apiKey = process.env.BYTEZ_API_KEY;
+    const apiKey = getApiKey('BYTEZ');
     if (!apiKey) {
         throw new Error('Bytez API key not configured');
     }
@@ -810,7 +779,7 @@ async function bytezRemoveImageWatermark(fileUrl, options = {}) {
 }
 
 async function bytezRemoveVideoWatermark(fileUrl, options = {}) {
-    const apiKey = process.env.BYTEZ_API_KEY;
+    const apiKey = getApiKey('BYTEZ');
     if (!apiKey) {
         throw new Error('Bytez API key not configured');
     }
@@ -841,7 +810,7 @@ async function bytezRemoveVideoWatermark(fileUrl, options = {}) {
 }
 
 async function bytezCheckJobStatus(jobId) {
-    const apiKey = process.env.BYTEZ_API_KEY;
+    const apiKey = getApiKey('BYTEZ');
     if (!apiKey) {
         throw new Error('Bytez API key not configured');
     }
@@ -866,7 +835,7 @@ async function bytezCheckJobStatus(jobId) {
 }
 
 async function bytezGetJobResult(jobId) {
-    const apiKey = process.env.BYTEZ_API_KEY;
+    const apiKey = getApiKey('BYTEZ');
     if (!apiKey) {
         throw new Error('Bytez API key not configured');
     }

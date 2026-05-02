@@ -18,7 +18,7 @@ class ApiGateway {
                 // Get decrypted version
                 return db.getProviderDecrypted(id);
             })
-            .filter(p => p && p.type === type && p.status === 'online')
+            .filter(p => p && p.type === type && (p.status === 'online' || p.status === 'active'))
             .sort((a, b) => (a.priority || 10) - (b.priority || 10));
     }
 

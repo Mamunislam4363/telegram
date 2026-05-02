@@ -325,7 +325,7 @@ const newScript = `<!-- ====== LANGUAGE SYSTEM JS ====== -->
                             const textMatch = html.match(/>([^<]+)</g);
                             if (textMatch) {
                                 // Replace text while keeping tags
-                                html = html.replace(/>([^<]+)</g, `> ${ t[key]}< `);
+                                html = html.replace(/>([^<]+)</g, `> \${ t[key]}< `);
                                 el.innerHTML = html;
                             } else {
                                 // Fallback if no text nodes found between tags
@@ -362,7 +362,7 @@ const newScript = `<!-- ====== LANGUAGE SYSTEM JS ====== -->
                                 let html = el.innerHTML;
                                 const textMatch = html.match(/>([^<]+)</g);
                                 if (textMatch) {
-                                    html = html.replace(/>([^<]+)</g, `> ${ t[key] }< `);
+                                    html = html.replace(/>([^<]+)</g, `> \${ t[key] }< `);
                                     el.innerHTML = html;
                                 }
                             } else {

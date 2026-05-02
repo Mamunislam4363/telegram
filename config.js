@@ -17,7 +17,7 @@ module.exports = {
     ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'admin123',
 
     // Public URL for web panel (your domain or IP)
-    PUBLIC_URL: process.env.PUBLIC_URL || 'https://autosverifybot-production.up.railway.app/',
+    PUBLIC_URL: process.env.APP_URL || process.env.PUBLIC_URL || 'https://autosverifybot-production.up.railway.app/',
 
     // OAUTH CONFIGURATION (FOR GMAIL SERVICE SYSTEM)
     GMAIL_CLIENT_ID: process.env.GMAIL_CLIENT_ID,
@@ -27,7 +27,7 @@ module.exports = {
     },
 
     // Mini App URL
-    MINI_APP_URL: process.env.MINI_APP_URL || 'https://autosverifybot-production.up.railway.app/',
+    MINI_APP_URL: process.env.APP_URL || process.env.MINI_APP_URL || 'https://autosverifybot-production.up.railway.app/',
 
     // Mandatory Channel & Group (IDs are preferred for stability)
     // NOTE: Using usernames directly as env vars have invalid IDs
@@ -37,7 +37,7 @@ module.exports = {
     REQUIRED_GROUP_NAME: '@AutosVerifyCh',
 
     // Set to true to skip mandatory join check (if channels don't exist)
-    SKIP_MANDATORY_JOIN: false,
+    SKIP_MANDATORY_JOIN: true,
 
     // Encryption Key for sensitive data in DB
     ENCRYPTION_KEY: process.env.ENCRYPTION_KEY || 'default_secret_key_32_bytes_long____',
@@ -65,6 +65,11 @@ module.exports = {
     // Automated Backup Bot
     BACKUP_BOT_TOKEN: process.env.BACKUP_BOT_TOKEN,
     BACKUP_CHAT_ID: process.env.BACKUP_CHAT_ID || '8125978050',
+
+    // Bot Connection Settings (Proxy/DNS)
+    USE_PROXY: process.env.USE_PROXY === 'true',
+    PROXY_URL: process.env.PROXY_URL || '', // Example: socks5://127.0.0.1:1080
+    TELEGRAM_API_BASE: process.env.TELEGRAM_API_BASE || 'https://api.telegram.org',
 
     // OpenAI Configuration
     OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',

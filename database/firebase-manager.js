@@ -59,12 +59,18 @@ class FirebaseManager {
     // Get all data (Snapshot)
     async getData() {
         if (!this.connected) return null;
+        console.log('📡 Fetching data from Firebase...');
         try {
-            const snapshot = await this.db.ref('/').once('value');
+            // Add a 20s timeout to the read operation (increased from 5s for stability on slow connections)
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Firebase read timeout')), 60000));
+            const dataPromise = this.db.ref('/').once('value');
+            
+            const snapshot = await Promise.race([dataPromise, timeoutPromise]);
+            console.log('✅ Firebase data fetched.');
             return snapshot.val();
         } catch (error) {
             console.error('❌ Firebase Read Error:', error.message);
-            return null;
+            throw error; // Throw so we don't accidentally migrate on timeout
         }
     }
 

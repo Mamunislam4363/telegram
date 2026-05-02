@@ -9,8 +9,26 @@ const googleDriveStorage = require('./google-drive-storage');
 
 class UnifiedDatabase {
     constructor() {
-        this.storageType = 'local'; // 'local' or 'google_drive'
-        this._tryAutoConnect();
+        this.storageType = 'local';
+        this.ready = this._tryAutoConnect();
+        this.dbReady = this.ready; // Compatibility with server.js
+    }
+
+    /**
+     * Proxy to localDb.data for compatibility with existing code
+     */
+    get data() {
+        return localDb.data;
+    }
+
+    /**
+     * Proxy save for compatibility
+     */
+    save() {
+        if (this.storageType === 'local') {
+            return localDb.save();
+        }
+        // For Google Drive, we save individually in methods
     }
 
     async _tryAutoConnect() {
@@ -100,14 +118,23 @@ class UnifiedDatabase {
     }
 
     /**
-     * Get users (from active storage)
+     * Get users as array
      */
     async getUsers() {
+        const usersObj = await this.getUsersObj();
+        return Object.values(usersObj || {});
+    }
+
+    /**
+     * Get users as object
+     */
+    async getUsersObj() {
+        await this.ready;
         if (this.storageType === 'google_drive') {
-            const data = await googleDriveStorage.loadData('users.json');
-            return data || {};
+            return await googleDriveStorage.loadData('users.json') || {};
         } else {
-            return localDb.getUsers();
+            // localDb is the Database instance from db.js
+            return localDb.data.users || {};
         }
     }
 
@@ -115,28 +142,51 @@ class UnifiedDatabase {
      * Get user by ID
      */
     async getUser(userId) {
-        const users = await this.getUsers();
-        return users[userId] || null;
+        await this.ready;
+        const usersObj = await this.getUsersObj();
+        const id = String(userId);
+        
+        if (usersObj[id]) return usersObj[id];
+        
+        // If local, use the localDb helper which handles initialization
+        if (this.storageType === 'local') {
+            return localDb.getUser(userId);
+        }
+        
+        // For Google Drive, we might need to initialize if it doesn't exist
+        // But for now, let's just return null or the object if it exists
+        return usersObj[id] || null;
     }
 
     /**
      * Save user
      */
     async saveUser(userId, userData) {
+        await this.ready;
+        const id = String(userId);
         if (this.storageType === 'google_drive') {
-            const users = await this.getUsers();
-            users[userId] = userData;
+            const users = await this.getUsersObj();
+            users[id] = userData;
             await googleDriveStorage.saveData('users.json', users);
         } else {
-            localDb.getUsers()[userId] = userData;
+            localDb.data.users[id] = userData;
             localDb.save();
         }
+    }
+
+    /**
+     * Update user (compatibility with local db)
+     */
+    async updateUser(user) {
+        if (!user || !user.id) return;
+        return this.saveUser(user.id, user);
     }
 
     /**
      * Get services
      */
     async getServices() {
+        await this.ready;
         if (this.storageType === 'google_drive') {
             const data = await googleDriveStorage.loadData('services.json');
             return data || {};
@@ -189,6 +239,7 @@ class UnifiedDatabase {
      * Get settings
      */
     async getSettings() {
+        await this.ready;
         if (this.storageType === 'google_drive') {
             const data = await googleDriveStorage.loadData('settings.json');
             return data || {};

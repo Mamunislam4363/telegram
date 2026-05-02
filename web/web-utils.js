@@ -74,9 +74,9 @@ function openHotmailDirect() {
     console.log('[GLOBAL] openHotmailDirect called');
     try {
         if (typeof nav === 'function') {
-            nav('hotmail');
+            nav('hotMail');
         } else if (typeof showPage === 'function') {
-            showPage('hotmail');
+            showPage('hotMail');
         }
 
         if (typeof window !== 'undefined') {
@@ -99,9 +99,9 @@ function openStudentEmailDirect() {
     console.log('[GLOBAL] openStudentEmailDirect called');
     try {
         if (typeof nav === 'function') {
-            nav('studentEmail');
+            nav('studentMail');
         } else if (typeof showPage === 'function') {
-            showPage('studentEmail');
+            showPage('studentMail');
         }
 
         if (typeof window !== 'undefined') {

@@ -255,6 +255,25 @@
 }
 
 /* Responsive grid adjustments */
+@media (max-width: 480px) {
+    .daily-streak-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    .ds-day.day-7 {
+        grid-column: 1 / -1;
+    }
+
+    .ds-day-icon {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .ds-day-reward {
+        font-size: 10px;
+    }
+}
+
 @media (max-width: 360px) {
     .grid-2 {
         grid-template-columns: 1fr;
@@ -262,6 +281,16 @@
 
     .grid-3 {
         grid-template-columns: repeat(2, 1fr);
+    }
+
+    .daily-streak-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .ds-day.day-7 {
+        grid-column: 1 / -1;
+        flex-direction: column;
+        gap: 8px;
     }
 }
 
