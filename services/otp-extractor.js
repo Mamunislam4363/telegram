@@ -19,7 +19,8 @@ const EXCLUSIONS = {
     url: /(https?:\/\/|www\.|\.com|\.net|\.org|\.png|\.jpg)/gi,
     email: /@/,
     phone: /\b\d{10,15}\b/, // Too long for OTP
-    currency: /(\$|usd|tk|৳|credits?|cost|price|amount|balance|rs\.?|inr)/gi
+    currency: /(\$|usd|tk|৳|credits?|cost|price|amount|balance|rs\.?|inr)/gi,
+    zip: /\b(98052|94043|98034|94040|95014)\b/g // Common tech office zip codes
 };
 
 /**
@@ -55,6 +56,10 @@ function isNearKeyword(text, token, position) {
  * Check if should exclude this candidate
  */
 function shouldExclude(token, context, fullText) {
+    // Zip code / Blacklisted
+    if (EXCLUSIONS.zip.test(token)) return true;
+    EXCLUSIONS.zip.lastIndex = 0;
+
     // Year format
     if (EXCLUSIONS.year.test(token)) return true;
 
@@ -230,7 +235,8 @@ function extractOTP(emailText, subject = '') {
     }
 
     // ==== PHASE 2: ALPHANUMERIC ====
-    const alphanumRegex = /\b[A-Z0-9]{4,10}\b/gi;
+    // Enhanced regex: must NOT be immediately followed by lowercase letters (to avoid '22804Don't')
+    const alphanumRegex = /\b[A-Z0-9]{4,10}(?![a-z])\b/gi;
 
     while ((match = alphanumRegex.exec(fullText)) !== null) {
         const token = match[0].toUpperCase();

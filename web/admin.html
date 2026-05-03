@@ -1595,7 +1595,7 @@
                                         class="w-8 h-8 rounded-lg bg-gradient-to-br from-gray-500 to-gray-600 flex items-center justify-center">
                                         <i class="fas fa-th-large text-white text-sm"></i>
                                     </div>
-                                    <span>All Items</span>
+                                    <span>All Cards</span>
                                 </button>
 
                                 <button onclick="filterItemSales('Card')" id="filter-card"
@@ -4457,7 +4457,7 @@
                         <div class="flex items-center gap-3">
                             <span id="categoryTotalStock"
                                 class="px-4 py-2 bg-orange-500/20 text-orange-400 rounded-full text-sm font-bold">0
-                                items</span>
+                                Cards</span>
                             <button onclick="editCurrentCategory()"
                                 class="p-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30">
                                 <i class="fas fa-edit"></i>
@@ -4500,7 +4500,7 @@
                                 <span class="text-xs text-gray-400">API Keys</span>
                                 <span
                                     class="item-count-badge px-2 py-1 bg-orange-500/30 text-orange-400 rounded-full text-xs font-bold"
-                                    data-item="gemini">5 items</span>
+                                    data-item="gemini">5 Cards</span>
                             </div>
                         </div>
 
@@ -4517,7 +4517,7 @@
                                 <span class="text-xs text-gray-400">AI Access</span>
                                 <span
                                     class="item-count-badge px-2 py-1 bg-blue-500/30 text-blue-400 rounded-full text-xs font-bold"
-                                    data-item="chatgpt">3 items</span>
+                                    data-item="chatgpt">3 Cards</span>
                             </div>
                         </div>
 
@@ -4534,7 +4534,7 @@
                                 <span class="text-xs text-gray-400">Image Gen</span>
                                 <span
                                     class="item-count-badge px-2 py-1 bg-green-500/30 text-green-400 rounded-full text-xs font-bold"
-                                    data-item="4jibit">8 items</span>
+                                    data-item="4jibit">8 Cards</span>
                             </div>
                         </div>
 
@@ -4552,7 +4552,7 @@
                                 <span class="text-xs text-gray-400">VPN Access</span>
                                 <span
                                     class="item-count-badge px-2 py-1 bg-cyan-500/30 text-cyan-400 rounded-full text-xs font-bold"
-                                    data-item="surfshark">12 items</span>
+                                    data-item="surfshark">12 Cards</span>
                             </div>
                         </div>
 
@@ -4569,7 +4569,7 @@
                                 <span class="text-xs text-gray-400">VPN Access</span>
                                 <span
                                     class="item-count-badge px-2 py-1 bg-purple-500/30 text-purple-400 rounded-full text-xs font-bold"
-                                    data-item="nordvpn">7 items</span>
+                                    data-item="nordvpn">7 Cards</span>
                             </div>
                         </div>
 
@@ -4586,7 +4586,7 @@
                                 <span class="text-xs text-gray-400">VPN Access</span>
                                 <span
                                     class="item-count-badge px-2 py-1 bg-yellow-500/30 text-yellow-400 rounded-full text-xs font-bold"
-                                    data-item="protonvpn">4 items</span>
+                                    data-item="protonvpn">4 Cards</span>
                             </div>
                         </div>
                     </div>
@@ -7223,7 +7223,7 @@
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                             <span class="item-count-badge px-2 py-1 bg-white/10 text-white rounded-full text-[10px] sm:text-xs font-bold"
-                                                data-item="${s.id}">${s.stock || 0} items</span>
+                                                data-item="${s.id}">${s.stock || 0} Cards</span>
                                         </div>
                                     </div>
                                 </div>
@@ -7828,18 +7828,10 @@
                 }
             });
 
-            // Update category total
-            const visibleItems =
-                document.querySelectorAll(`.service-item-box[data-category="${categoryId}"]:not(.hidden)`);
-            let totalCount = 0;
-            visibleItems.forEach(item => {
-                const badge = item.querySelector('.item-count-badge');
-                if (badge) {
-                    const count = parseInt(badge.textContent) || 0;
-                    totalCount += count;
-                }
-            });
-            document.getElementById('categoryTotalStock').textContent = totalCount + ' items';
+            // Update category total (Count of boxes)
+            const visibleItems = document.querySelectorAll(`.service-item-box[data-category="${categoryId}"]:not(.hidden)`);
+            const label = (categoryId === 'virtual-cards' || categoryId === 'cards') ? 'Cards' : 'Services';
+            document.getElementById('categoryTotalStock').textContent = visibleItems.length + ' ' + label;
         }
 
         // Open item management modal
@@ -7857,7 +7849,7 @@
                                         </div>
                                     </div>
                                     <div style="background:#1a1a2e; border:1px solid #333; border-radius:12px; padding:16px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;">
-                                        <span id="itemManageType" style="color:var(--text-sub); font-size:14px;">Items</span>
+                                        <span id="itemManageType" style="color:var(--text-sub); font-size:14px;">Cards</span>
                                         <span id="itemManageCount" style="color:#22c55e; font-weight:bold; font-size:24px;">0</span>
                                     </div>
                                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
@@ -8410,18 +8402,20 @@
         function updateServiceStockDisplay(items) {
             // Calculate stock for each item
             const stockMap = {};
-            let virtualCardsTotal = 0;
-            let vpnTotal = 0;
+            let virtualCardsCount = 0;
+            let vpnCount = 0;
 
             items.forEach(item => {
                 const count = item.stock || 0;
                 stockMap[item.id] = count;
 
+                // Count unique services in each section
                 if (item.section === 'cards' || item.id === 'gemini' || item.id === 'chatgpt' ||
-                    item.id === 'spotify' || item.id === '4jibit') {
-                    virtualCardsTotal += count;
+                    item.id === 'spotify' || item.id === '4jibit' || item.id === 'adobeexpress' || 
+                    item.id === 'chatgptplus' || item.id === 'youtube') {
+                    virtualCardsCount++;
                 } else if (item.section === 'vpn') {
-                    vpnTotal += count;
+                    vpnCount++;
                 }
             });
 
@@ -8434,12 +8428,11 @@
             if (stockGemini) stockGemini.textContent = stockMap['gemini'] || 0;
             if (stockChatgpt) stockChatgpt.textContent = stockMap['chatgpt'] || 0;
 
-            // Update category totals
+            // Update category totals (Show number of Cards/Services)
             const virtualCardsTotalStock = document.getElementById('virtualCardsTotalStock');
             const vpnTotalStock = document.getElementById('vpnTotalStock');
-            if (virtualCardsTotalStock) virtualCardsTotalStock.textContent = virtualCardsTotal +
-                ' items';
-            if (vpnTotalStock) vpnTotalStock.textContent = vpnTotal + ' items';
+            if (virtualCardsTotalStock) virtualCardsTotalStock.textContent = virtualCardsCount + ' Cards';
+            if (vpnTotalStock) vpnTotalStock.textContent = vpnCount + ' Services';
         }
 
         function openServiceItemModal(itemId, category) {

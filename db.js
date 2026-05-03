@@ -384,6 +384,12 @@ class Database {
     }
 
     _getFirebasePayload() {
+        // Safety: Don't push if users data is missing but was expected
+        if (this.ready && (!this.data.users || Object.keys(this.data.users).length === 0)) {
+            console.error("⚠️ [CRITICAL] Attempted to push empty users to Firebase. Aborting sync for safety.");
+            return null;
+        }
+
         const payload = { ...this.data };
         if (payload.broadcasts) delete payload.broadcasts;
         if (payload.scheduledBroadcasts) delete payload.scheduledBroadcasts;
@@ -427,35 +433,38 @@ class Database {
             // Merge logic: If localData has users that are more complete than remote, use them
             if (localData && localData.users) {
                 let mergedCount = 0;
+                let keyRestoredCount = 0;
                 Object.keys(localData.users).forEach(uid => {
                     const localUser = localData.users[uid];
                     const remoteUser = (this.data.users && this.data.users[uid]) || null;
                     
                     if (remoteUser) {
-                        // 1. If local user has apiKey but remote doesn't
+                        // 1. CRITICAL: If local user has apiKey but remote doesn't (Sync lag)
                         if (localUser.apiKey && !remoteUser.apiKey) {
                             this.data.users[uid].apiKey = localUser.apiKey;
                             this.data.users[uid].apiStatus = localUser.apiStatus || remoteUser.apiStatus;
+                            keyRestoredCount++;
                             mergedCount++;
                         } 
-                        // 2. If both have keys but local is newer (heuristically or if remote is a known old state)
-                        else if (localUser.apiKey && remoteUser.apiKey && localUser.apiKey !== remoteUser.apiKey) {
-                            // If local has more tokens or activity, it's likely the newer state
-                            const localTokens = localUser.tokens || localUser.balance_tokens || 0;
-                            const remoteTokens = remoteUser.tokens || remoteUser.balance_tokens || 0;
-                            if (localTokens >= remoteTokens) {
-                                this.data.users[uid].apiKey = localUser.apiKey;
+                        // 2. If local has more recent tokens/history
+                        else {
+                            const localHistory = (localUser.history || []).length;
+                            const remoteHistory = (remoteUser.history || []).length;
+                            if (localHistory > remoteHistory) {
+                                // Sync history if local is more complete
+                                this.data.users[uid].history = localUser.history;
                                 mergedCount++;
                             }
                         }
                     } else {
-                        // User exists locally but not in remote? Should be rare but handle it
+                        // User exists locally but not in remote
                         if (!this.data.users) this.data.users = {};
                         this.data.users[uid] = localUser;
                         mergedCount++;
                     }
                 });
-                if (mergedCount > 0) console.log(`🔄 Merged ${mergedCount} user updates from local backup into Firebase session.`);
+                if (keyRestoredCount > 0) console.log(`🛡️ [SECURITY] Restored ${keyRestoredCount} API keys from local backup into Firebase session.`);
+                if (mergedCount > 0) console.log(`🔄 Merged ${mergedCount} total user updates from local backup.`);
             }
 
             console.log("✅ Database loaded from Firebase. Keys:", Object.keys(remoteData));
@@ -546,8 +555,10 @@ class Database {
 
                 try {
                     const payload = this._getFirebasePayload();
-                    await firebaseManager.setData(payload);
-                    console.log("🔥 Firebase sync completed.");
+                    if (payload) {
+                        await firebaseManager.setData(payload);
+                        console.log("🔥 Firebase sync completed.");
+                    }
                 } catch (e) {
                     console.error("Firebase Sync Error:", e.message);
                 }

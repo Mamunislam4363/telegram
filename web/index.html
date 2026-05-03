@@ -1662,26 +1662,8 @@
                     </div>
 
                     <div id="apiKeyContent">
-                        <!-- No Key State for Page -->
-                        <div id="apiKeyNoKey"
-                            style="display:none; text-align:center; padding:40px 20px; background:var(--bg-card); border-radius:24px; border:1px solid var(--border-color); margin-bottom:24px;">
-                            <div
-                                style="width:64px; height:64px; background:rgba(147,51,234,0.1); color:#9333ea; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 20px;">
-                                <i class="fas fa-key" style="font-size:24px;"></i>
-                            </div>
-                            <div style="color:var(--text-main); font-size:20px; font-weight:800; margin-bottom:12px;">No
-                                API Key Yet</div>
-                            <p style="color:var(--text-sub); font-size:14px; line-height:1.6; margin-bottom:24px;">
-                                Generate your unique secret key to start integrating our premium services into your
-                                applications.</p>
-                            <button onclick="generateNewApiKey(this)"
-                                style="width:100%; height:54px; background:linear-gradient(135deg, #9333ea 0%, #6366f1 100%); color:#fff; border:none; border-radius:16px; font-weight:800; font-size:16px; cursor:pointer; box-shadow: 0 4px 15px rgba(147, 51, 234, 0.3);">
-                                GENERATE NOW
-                            </button>
-                        </div>
-
-                        <!-- Active Key State for Page -->
-                        <div id="apiKeyActive" style="display:none;">
+                        <!-- Unified API Page Section -->
+                        <div id="apiKeyActive" style="display:block;">
                             <!-- Header Card -->
                             <div
                                 style="background: linear-gradient(135deg, #9333ea 0%, #6366f1 100%); border-radius: 24px; padding: 24px; margin-bottom: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);">
@@ -7354,20 +7336,8 @@
                             restricted by the admin.</p>
                     </div>
 
-                    <!-- No Key State (Generate Now) -->
-                    <div id="apiModalNoKey" style="display:none; text-align:center; padding:20px 0;">
-                        <div style="color:var(--text-main); font-size:18px; font-weight:800; margin-bottom:8px;">No API
-                            Key Yet</div>
-                        <p style="color:var(--text-sub); font-size:14px; line-height:1.5; margin-bottom:24px;">Start
-                            using our API by generating your unique secret key.</p>
-                        <button onclick="generateNewApiKey(this)"
-                            style="width:100%; height:52px; background:linear-gradient(135deg, #9333ea 0%, #6366f1 100%); color:#fff; border:none; border-radius:16px; font-weight:800; font-size:15px; cursor:pointer; box-shadow: 0 4px 15px rgba(147, 51, 234, 0.3);">
-                            GENERATE NOW
-                        </button>
-                    </div>
-
-                    <!-- Active Key State -->
-                    <div id="apiModalActive" style="display:none;">
+                    <!-- Unified API Modal Section -->
+                    <div id="apiModalActive" style="display:block;">
                         <div
                             style="font-size:12px; font-weight:700; color:var(--text-sub); text-transform:uppercase; margin-bottom:12px;">
                             Your Secret Key</div>

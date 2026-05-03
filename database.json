@@ -1,10 +1,16 @@
 {
   "users": {
     "123": {
+      "Gems": 1,
       "adminVerified": true,
+      "apiKeyCreatedAt": 1777839782889,
+      "apiRevokedAt": 1777834360605,
       "apiStatus": "allow",
-      "balance": 60,
-      "balance_tokens": 60,
+      "apiTotalCalls": 0,
+      "apiTotalUSD": 0,
+      "balance": 55,
+      "balance_Gems": 0,
+      "balance_tokens": 55,
       "blocked": false,
       "cardsPurchased": 0,
       "channelJoined": false,
@@ -17,16 +23,38 @@
         {
           "type": "premium_email",
           "amount": -20,
-          "date": "2026-05-03T18:32:09.544Z",
+          "date": "2026-05-03T21:39:51.834Z",
           "reward": "-20 Tokens",
-          "detail": "Mamunislam4.3638.92@gmail.com"
+          "detail": "Mamunislam4.3638.9.2@gmail.com"
         },
         {
-          "type": "premium_email",
+          "type": "mission_reward",
+          "amount": 10,
+          "reward": "+10 TC",
+          "asset": "TC",
+          "date": 1777838228955,
+          "detail": "Completed task: Youtube Channel"
+        },
+        {
+          "type": "ad_reward",
+          "amount": 5,
+          "currency": "tokens",
+          "date": 1777838097333,
+          "detail": "Watched Ad"
+        },
+        {
+          "amount": -20,
+          "date": "2026-05-03T18:32:09.544Z",
+          "detail": "Mamunislam4.3638.92@gmail.com",
+          "reward": "-20 Tokens",
+          "type": "premium_email"
+        },
+        {
           "amount": -20,
           "date": "2026-05-03T18:32:06.524Z",
+          "detail": "Mamunislam4.36389.2@gmail.com",
           "reward": "-20 Tokens",
-          "detail": "Mamunislam4.36389.2@gmail.com"
+          "type": "premium_email"
         },
         {
           "amount": -20,
@@ -76,21 +104,17 @@
       "joinedChannel": false,
       "joinedGroup": false,
       "language": "en",
-      "lastActive": 1777833970957,
+      "lastActive": 1777845518646,
       "lastDaily": 0,
       "lastName": "",
       "referralCode": "ref_95CMCD",
       "referralCount": 0,
       "successfulVerifications": 0,
-      "tokens": 60,
+      "tokens": 55,
       "usd": 0,
       "username": "TestUser",
       "verified": true,
-      "apiRevokedAt": 1777832949270,
-      "apiKey": "sk_Ni1ns4EZLBnCql4zIwQjyNpPxE7GoAok",
-      "apiKeyCreatedAt": 1777832987101,
-      "apiTotalCalls": 0,
-      "apiTotalUSD": 0,
+      "apiKey": "sk_9dSb7i4Gmx3y7CvQFqxcK982FzsdOSj6",
       "approvedApiServices": [
         "balance",
         "tempmail",
@@ -98,8 +122,9 @@
         "virtualnumber",
         "store"
       ],
-      "Gems": 0,
-      "balance_Gems": 0
+      "completedTasks": [
+        "task_youtube"
+      ]
     },
     "12345": {
       "adminVerified": false,
@@ -2910,18 +2935,443 @@
         "type": "Visa CARD",
         "vpn": "UrbanVPN - UK Vpn Use",
         "zip": "W1B 5AH"
+      },
+      {
+        "key": "VPN",
+        "info": " Bangladesh",
+        "addedAt": 1777839217872
+      },
+      {
+        "key": "Country",
+        "info": " Kazakhstan",
+        "addedAt": 1777839217879
+      },
+      {
+        "key": "Type",
+        "info": " MASTER CARD",
+        "addedAt": 1777839217884
+      },
+      {
+        "key": "Name",
+        "info": " Caleb Oliver",
+        "addedAt": 1777839217889
+      },
+      {
+        "key": "State",
+        "info": " Almaty",
+        "addedAt": 1777839217899
+      },
+      {
+        "key": "City",
+        "info": " Semipalatinsk",
+        "addedAt": 1777839217903
+      },
+      {
+        "key": "District",
+        "info": " Almaty",
+        "addedAt": 1777839217908
+      },
+      {
+        "key": "Address 1",
+        "info": " Semipalatinsk",
+        "addedAt": 1777839217914
+      },
+      {
+        "key": "Postal Code",
+        "info": " 020101",
+        "addedAt": 1777839217918
+      },
+      {
+        "key": "5154622143944209|01|2029|865",
+        "info": "",
+        "addedAt": 1777839217922
+      },
+      {
+        "key": "5154624427120035|01|2029|600",
+        "info": "",
+        "addedAt": 1777839217926
+      },
+      {
+        "key": "5154621025494655|01|2029|604",
+        "info": "",
+        "addedAt": 1777839217929
+      },
+      {
+        "key": "5154629071871072|01|2029|235",
+        "info": "",
+        "addedAt": 1777839217931
+      },
+      {
+        "key": "5154629893961341|01|2029|533",
+        "info": "",
+        "addedAt": 1777839217936
+      },
+      {
+        "key": "5154627046338219|01|2029|729",
+        "info": "",
+        "addedAt": 1777839217938
+      },
+      {
+        "key": "5154624380007088|01|2029|566",
+        "info": "",
+        "addedAt": 1777839217943
+      },
+      {
+        "key": "5154624318733029|01|2029|760",
+        "info": "",
+        "addedAt": 1777839217947
+      },
+      {
+        "key": "5154622349842900|01|2029|818",
+        "info": "",
+        "addedAt": 1777839217950
+      },
+      {
+        "key": "5154628326091627|01|2029|174",
+        "info": "",
+        "addedAt": 1777839217953
+      },
+      {
+        "key": "5154624543705545|01|2029|805",
+        "info": "",
+        "addedAt": 1777839217957
+      },
+      {
+        "key": "5154627453353412|01|2029|206",
+        "info": "",
+        "addedAt": 1777839217961
+      },
+      {
+        "key": "5154628411848956|01|2029|263",
+        "info": "",
+        "addedAt": 1777839217965
+      },
+      {
+        "key": "5154621090034105|01|2029|245",
+        "info": "",
+        "addedAt": 1777839217998
+      },
+      {
+        "key": "5154627470354195|01|2029|635",
+        "info": "",
+        "addedAt": 1777839218004
+      },
+      {
+        "key": "5154620536238874|01|2029|637",
+        "info": "",
+        "addedAt": 1777839218010
+      },
+      {
+        "key": "5154620768777656|01|2029|367",
+        "info": "",
+        "addedAt": 1777839218019
+      },
+      {
+        "key": "5154620186346472|01|2029|622",
+        "info": "",
+        "addedAt": 1777839218024
+      },
+      {
+        "key": "5154624602546558|01|2029|582",
+        "info": "",
+        "addedAt": 1777839218027
+      },
+      {
+        "key": "5154623896824952|01|2029|994",
+        "info": "",
+        "addedAt": 1777839218030
+      },
+      {
+        "key": "5154625606332085|01|2029|744",
+        "info": "",
+        "addedAt": 1777839218031
+      },
+      {
+        "key": "5154621876197092|01|2029|884",
+        "info": "",
+        "addedAt": 1777839218034
+      },
+      {
+        "key": "5154627556523465|01|2029|338",
+        "info": "",
+        "addedAt": 1777839218037
+      },
+      {
+        "key": "5154626978610520|01|2029|144",
+        "info": "",
+        "addedAt": 1777839218038
+      },
+      {
+        "key": "5154620053770457|01|2029|483",
+        "info": "",
+        "addedAt": 1777839218040
+      },
+      {
+        "key": "5154621796162705|01|2029|388",
+        "info": "",
+        "addedAt": 1777839218043
+      },
+      {
+        "key": "5154625358644604|01|2029|906",
+        "info": "",
+        "addedAt": 1777839218045
+      },
+      {
+        "key": "5154626992265335|01|2029|317",
+        "info": "",
+        "addedAt": 1777839218047
+      },
+      {
+        "key": "5154620526922297|01|2029|969",
+        "info": "",
+        "addedAt": 1777839218049
+      },
+      {
+        "key": "5154620238924342|01|2029|543",
+        "info": "",
+        "addedAt": 1777839218052
+      },
+      {
+        "key": "5154620355433028|01|2029|481",
+        "info": "",
+        "addedAt": 1777839218054
+      },
+      {
+        "key": "5154625482472997|01|2029|942",
+        "info": "",
+        "addedAt": 1777839218057
+      },
+      {
+        "key": "5154622323140685|01|2029|359",
+        "info": "",
+        "addedAt": 1777839218060
+      }
+    ],
+    "chatgpt": [
+      {
+        "key": "VPN",
+        "info": " Bangladesh",
+        "addedAt": 1777839233166
+      },
+      {
+        "key": "Country",
+        "info": " Kazakhstan",
+        "addedAt": 1777839233171
+      },
+      {
+        "key": "Type",
+        "info": " MASTER CARD",
+        "addedAt": 1777839233175
+      },
+      {
+        "key": "Name",
+        "info": " Caleb Oliver",
+        "addedAt": 1777839233179
+      },
+      {
+        "key": "State",
+        "info": " Almaty",
+        "addedAt": 1777839233182
+      },
+      {
+        "key": "City",
+        "info": " Semipalatinsk",
+        "addedAt": 1777839233186
+      },
+      {
+        "key": "District",
+        "info": " Almaty",
+        "addedAt": 1777839233193
+      },
+      {
+        "key": "Address 1",
+        "info": " Semipalatinsk",
+        "addedAt": 1777839233198
+      },
+      {
+        "key": "Postal Code",
+        "info": " 020101",
+        "addedAt": 1777839233201
+      },
+      {
+        "key": "5154622143944209|01|2029|865",
+        "info": "",
+        "addedAt": 1777839233207
+      },
+      {
+        "key": "5154624427120035|01|2029|600",
+        "info": "",
+        "addedAt": 1777839233212
+      },
+      {
+        "key": "5154621025494655|01|2029|604",
+        "info": "",
+        "addedAt": 1777839233217
+      },
+      {
+        "key": "5154629071871072|01|2029|235",
+        "info": "",
+        "addedAt": 1777839233222
+      },
+      {
+        "key": "5154629893961341|01|2029|533",
+        "info": "",
+        "addedAt": 1777839233229
+      },
+      {
+        "key": "5154627046338219|01|2029|729",
+        "info": "",
+        "addedAt": 1777839233232
+      },
+      {
+        "key": "5154624380007088|01|2029|566",
+        "info": "",
+        "addedAt": 1777839233240
+      },
+      {
+        "key": "5154624318733029|01|2029|760",
+        "info": "",
+        "addedAt": 1777839233244
+      },
+      {
+        "key": "5154622349842900|01|2029|818",
+        "info": "",
+        "addedAt": 1777839233248
+      },
+      {
+        "key": "5154628326091627|01|2029|174",
+        "info": "",
+        "addedAt": 1777839233253
+      },
+      {
+        "key": "5154624543705545|01|2029|805",
+        "info": "",
+        "addedAt": 1777839233259
+      },
+      {
+        "key": "5154627453353412|01|2029|206",
+        "info": "",
+        "addedAt": 1777839233279
+      },
+      {
+        "key": "5154628411848956|01|2029|263",
+        "info": "",
+        "addedAt": 1777839233310
+      },
+      {
+        "key": "5154621090034105|01|2029|245",
+        "info": "",
+        "addedAt": 1777839233315
+      },
+      {
+        "key": "5154627470354195|01|2029|635",
+        "info": "",
+        "addedAt": 1777839233321
+      },
+      {
+        "key": "5154620536238874|01|2029|637",
+        "info": "",
+        "addedAt": 1777839233328
+      },
+      {
+        "key": "5154620768777656|01|2029|367",
+        "info": "",
+        "addedAt": 1777839233334
+      },
+      {
+        "key": "5154620186346472|01|2029|622",
+        "info": "",
+        "addedAt": 1777839233338
+      },
+      {
+        "key": "5154624602546558|01|2029|582",
+        "info": "",
+        "addedAt": 1777839233345
+      },
+      {
+        "key": "5154623896824952|01|2029|994",
+        "info": "",
+        "addedAt": 1777839233350
+      },
+      {
+        "key": "5154625606332085|01|2029|744",
+        "info": "",
+        "addedAt": 1777839233356
+      },
+      {
+        "key": "5154621876197092|01|2029|884",
+        "info": "",
+        "addedAt": 1777839233361
+      },
+      {
+        "key": "5154627556523465|01|2029|338",
+        "info": "",
+        "addedAt": 1777839233365
+      },
+      {
+        "key": "5154626978610520|01|2029|144",
+        "info": "",
+        "addedAt": 1777839233367
+      },
+      {
+        "key": "5154620053770457|01|2029|483",
+        "info": "",
+        "addedAt": 1777839233370
+      },
+      {
+        "key": "5154621796162705|01|2029|388",
+        "info": "",
+        "addedAt": 1777839233373
+      },
+      {
+        "key": "5154625358644604|01|2029|906",
+        "info": "",
+        "addedAt": 1777839233376
+      },
+      {
+        "key": "5154626992265335|01|2029|317",
+        "info": "",
+        "addedAt": 1777839233379
+      },
+      {
+        "key": "5154620526922297|01|2029|969",
+        "info": "",
+        "addedAt": 1777839233382
+      },
+      {
+        "key": "5154620238924342|01|2029|543",
+        "info": "",
+        "addedAt": 1777839233384
+      },
+      {
+        "key": "5154620355433028|01|2029|481",
+        "info": "",
+        "addedAt": 1777839233389
+      },
+      {
+        "key": "5154625482472997|01|2029|942",
+        "info": "",
+        "addedAt": 1777839233391
+      },
+      {
+        "key": "5154622323140685|01|2029|359",
+        "info": "",
+        "addedAt": 1777839233394
       }
     ]
   },
   "cardPrices": {
-    "adobeexpress": 50,
+    "adobeexpress": 180,
     "chatgpt": 200,
     "chatgptplus": 50,
     "gemini": 50,
     "spotify": 50,
     "youtube": 50
   },
-  "serviceNames": {},
+  "serviceNames": {
+    "adobeexpress": "Adobeexpress",
+    "chatgpt": "Chatgpt"
+  },
   "scheduledBroadcasts": [],
   "tickets": [],
   "payments": [],
@@ -2960,7 +3410,8 @@
     "expressvpn": 120,
     "nordvpn": 100,
     "protonvpn": 90,
-    "surfshark": 80
+    "surfshark": 80,
+    "adobeexpress": 180
   },
   "vpnServiceNames": {
     "cyberghost": "👻 CyberGhost",
@@ -2971,12 +3422,6 @@
   },
   "emailPool": {
     "gmail": [
-      {
-        "addedAt": 1777777314105,
-        "email": "Mamunislam4.3638.9.2@gmail.com",
-        "note": "",
-        "status": "available"
-      },
       {
         "addedAt": 1777777314588,
         "email": "Mamunislam4.363.892@gmail.com",
@@ -3905,16 +4350,22 @@
   },
   "emailPoolHistory": [
     {
-      "email": "Mamunislam4.3638.92@gmail.com",
+      "email": "Mamunislam4.3638.9.2@gmail.com",
       "type": "gmail",
       "assignedTo": "123",
-      "assignedAt": "2026-05-03T18:32:09.541Z"
+      "assignedAt": "2026-05-03T21:39:51.817Z"
     },
     {
-      "email": "Mamunislam4.36389.2@gmail.com",
-      "type": "gmail",
+      "assignedAt": "2026-05-03T18:32:09.541Z",
       "assignedTo": "123",
-      "assignedAt": "2026-05-03T18:32:06.518Z"
+      "email": "Mamunislam4.3638.92@gmail.com",
+      "type": "gmail"
+    },
+    {
+      "assignedAt": "2026-05-03T18:32:06.518Z",
+      "assignedTo": "123",
+      "email": "Mamunislam4.36389.2@gmail.com",
+      "type": "gmail"
     },
     {
       "assignedAt": "2026-05-03T18:09:24.249Z",
@@ -4338,22 +4789,29 @@
       "userId": "6915386689"
     },
     "premium_gmail_1777833126528_123": {
+      "createdAt": 1777833126528,
       "email": "Mamunislam4.36389.2@gmail.com",
-      "password": null,
       "provider": "gmail",
       "sessionId": "Mamunislam4.36389.2@gmail.com",
       "token": "Mamunislam4.36389.2@gmail.com",
-      "userId": "123",
-      "createdAt": 1777833126528
+      "userId": "123"
     },
     "premium_gmail_1777833129546_123": {
+      "createdAt": 1777833129546,
       "email": "Mamunislam4.3638.92@gmail.com",
-      "password": null,
       "provider": "gmail",
       "sessionId": "Mamunislam4.3638.92@gmail.com",
       "token": "Mamunislam4.3638.92@gmail.com",
+      "userId": "123"
+    },
+    "premium_gmail_1777844391840_123": {
+      "email": "Mamunislam4.3638.9.2@gmail.com",
+      "password": null,
+      "provider": "gmail",
+      "sessionId": "Mamunislam4.3638.9.2@gmail.com",
+      "token": "Mamunislam4.3638.9.2@gmail.com",
       "userId": "123",
-      "createdAt": 1777833129546
+      "createdAt": 1777844391858
     }
   },
   "premiumMailSettings": {
@@ -4471,5 +4929,8 @@
     "tiktok": 7,
     "twitter": 5,
     "whatsapp": 3
+  },
+  "serviceDescriptions": {
+    "adobeexpress": "No description"
   }
 }

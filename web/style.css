@@ -2988,3 +2988,5 @@ button,
     aspect-ratio: 340/215 !important;
     box-sizing: border-box !important;
 }
+.pulse-btn { animation: pulse-shadow 2s infinite; }
+@keyframes pulse-shadow { 0% { box-shadow: 0 0 0 0 rgba(147, 51, 234, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(147, 51, 234, 0); } 100% { box-shadow: 0 0 0 0 rgba(147, 51, 234, 0); } }

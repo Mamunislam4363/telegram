@@ -3543,7 +3543,21 @@ app.get('/api/mail/inbox', async (req, res) => {
             preview: (m.body || m.snippet || m.preview || '').substring(0, 100),
             body: m.body || m.snippet || m.preview || '',
             time: m.date ? new Date(m.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
-            otp: m.otp || (((m.body || m.snippet || '').match(/\b\d{4,8}\b/) || [])[0]) || null
+            otp: m.otp || (function(text) {
+                if (!text) return null;
+                const blacklist = ['98052', '94043', '98034', '94040', '95014'];
+                const contextRegex = /(?:code|otp|verification|verify|pin|passcode|security)\D*(\d{4,8})\b/i;
+                const contextMatch = text.match(contextRegex);
+                if (contextMatch && !blacklist.includes(contextMatch[1])) return contextMatch[1];
+                const allMatches = text.match(/\b\d{4,8}\b/g) || [];
+                for (const match of allMatches) {
+                    if (!blacklist.includes(match) && match.length >= 6) return match;
+                }
+                for (const match of allMatches) {
+                    if (!blacklist.includes(match)) return match;
+                }
+                return null;
+            })(m.body || m.snippet || '') || null
         }));
 
         let newBalance;
@@ -6044,11 +6058,7 @@ app.post('/api/accounts/buy', async (req, res) => {
 
     res.json({
         success: true,
-        account: {
-            email: account.email,
-            password: account.password,
-            instructions: account.instructions
-        },
+        account: account, // Return full object so cards work
         newBalance: user.tokens !== undefined ? user.tokens : user.balance_tokens
     });
 });

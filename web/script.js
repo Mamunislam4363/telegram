@@ -2064,6 +2064,45 @@ function showAdAndEarn(context = 'watch_ad') {
                         watchBtn.disabled = true;
                         watchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading Ad...';
 
+                        function showAdPlayingUI() {
+                            const AD_DURATION = 5; // Reduced to 5 seconds as requested
+
+                            contentBox.innerHTML =
+                                '<div style="width:70px; height:70px; border:4px solid rgba(245,158,11,0.15); border-top-color:#f59e0b; border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 24px;"></div>' +
+                                '<div style="font-size:20px; font-weight:800; margin-bottom:6px;">Ad is Playing...</div>' +
+                                '<p style="font-size:13px; color:#888; margin-bottom:20px; line-height:1.5;">Watch the ad appearing on screen<br>to earn your reward</p>' +
+                                '<div style="width:100%; height:8px; background:rgba(255,255,255,0.05); border-radius:4px; overflow:hidden; margin-bottom:16px;">' +
+                                '<div id="ad-timer-progress" style="height:100%; width:0%; background:linear-gradient(90deg,#f59e0b,#22c55e); border-radius:4px; transition:width 0.25s linear;"></div>' +
+                                '</div>' +
+                                '<div id="ad-timer-text" style="font-size:50px; font-weight:900; color:#f59e0b; line-height:1;">' + AD_DURATION + '</div>' +
+                                '<p style="font-size:11px; color:#444; margin-top:12px;">seconds remaining</p>';
+
+                            const adStartTime = Date.now();
+                            const adEndTime = adStartTime + AD_DURATION * 1000;
+                            let adDone = false;
+
+                            function tickAd() {
+                                if (adDone) return;
+                                const now = Date.now();
+                                const remaining = Math.max(0, adEndTime - now);
+                                const elapsed = now - adStartTime;
+                                const secsLeft = Math.ceil(remaining / 1000);
+                                const pct = Math.min(100, (elapsed / (AD_DURATION * 1000)) * 100);
+                                const progEl = document.getElementById('ad-timer-progress');
+                                const txtEl = document.getElementById('ad-timer-text');
+                                if (progEl) progEl.style.width = pct + '%';
+                                if (txtEl) txtEl.textContent = secsLeft;
+                                if (remaining <= 0) {
+                                    adDone = true;
+                                    showAdCompletionScreen();
+                                    return;
+                                }
+                                setTimeout(tickAd, 250);
+                            }
+                            tickAd();
+                            setTimeout(() => { if (!adDone) { adDone = true; showAdCompletionScreen(); } }, (AD_DURATION + 3) * 1000);
+                        }
+
                         // ============================================
                         // OPTION 1: Adsgram SDK
                         // ============================================
@@ -2093,127 +2132,40 @@ function showAdAndEarn(context = 'watch_ad') {
                         }
 
                         // ============================================
-                        // OPTION 2: Monetag
+                        // OPTION 2: Monetag / Direct Links Fallback
                         // ============================================
                         if (monetagPublisherId) {
                             try {
-                                // User provided specific SDK format
                                 const monetagSDK = document.createElement('script');
                                 monetagSDK.src = '//libtl.com/sdk.js';
                                 monetagSDK.setAttribute('data-zone', monetagPublisherId);
                                 monetagSDK.setAttribute('data-sdk', 'show_' + monetagPublisherId);
                                 document.body.appendChild(monetagSDK);
-
-                                // Keep fallback for other formats if needed
                                 setTimeout(() => {
                                     const inpageScript = document.createElement('script');
                                     inpageScript.src = 'https://thubanoa.com/1?z=' + monetagPublisherId;
                                     inpageScript.async = true;
                                     document.body.appendChild(inpageScript);
                                 }, 500);
-                            } catch (e) {
-                                console.warn('[Monetag] Script injection failed:', e);
-                            }
+                            } catch (e) { }
 
                             if (monetagDirectUrl) {
-                                if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
-                                    window.Telegram.WebApp.openLink(monetagDirectUrl);
-                                } else {
-                                    window.open(monetagDirectUrl, '_blank');
-                                }
+                                if (window.Telegram?.WebApp?.openLink) window.Telegram.WebApp.openLink(monetagDirectUrl);
+                                else window.open(monetagDirectUrl, '_blank');
                             }
                             showAdPlayingUI();
                             return;
                         }
 
-                        // ============================================
-                        // OPTION 3: Adsterra
-                        // ============================================
-                        const adsterraCfg = ads['adsterra'] && ads['adsterra'].enabled ? ads['adsterra'] : null;
-                        if (adsterraCfg) {
-                            if (adsterraCfg.directUrl) {
-                                if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
-                                    window.Telegram.WebApp.openLink(adsterraCfg.directUrl);
-                                } else {
-                                    window.open(adsterraCfg.directUrl, '_blank');
-                                }
-                            }
-                            showAdPlayingUI();
-                            return;
-                        }
-
-                        // ============================================
-                        // OPTION 4: Google AdSense
-                        // ============================================
-                        const adsenseCfg = ads['adsense'] && ads['adsense'].enabled ? ads['adsense'] : null;
-                        if (adsenseCfg && adsenseCfg.publisherId) {
-                            const s = document.createElement('script');
-                            s.async = true;
-                            s.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseCfg.publisherId}`;
-                            s.crossOrigin = "anonymous";
-                            document.head.appendChild(s);
-                            showAdPlayingUI();
-                            return;
-                        }
-
-                        // Fallback for any other network with a direct link
                         if (anyDirectUrl) {
-                            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
-                                window.Telegram.WebApp.openLink(anyDirectUrl);
-                            } else {
-                                window.open(anyDirectUrl, '_blank');
-                            }
+                            if (window.Telegram?.WebApp?.openLink) window.Telegram.WebApp.openLink(anyDirectUrl);
+                            else window.open(anyDirectUrl, '_blank');
                             showAdPlayingUI();
                             return;
                         }
 
-                        // If no ad found
-                        watchBtn.disabled = false;
-                        watchBtn.innerHTML = 'TAP TO WATCH AD';
-                        window.showToast('No ads available right now. Please try again later.');
-
-                        // ============================================
-                        // TIMER: Countdown while ad plays
-                        // 15s for Monetag (time for overlay to show), 5s otherwise
-                        // ============================================
-                        const AD_DURATION = monetagPublisherId ? 15 : (anyDirectUrl ? 10 : 5);
-
-                        contentBox.innerHTML =
-                            '<div style="width:70px; height:70px; border:4px solid rgba(245,158,11,0.15); border-top-color:#f59e0b; border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 24px;"></div>' +
-                            '<div style="font-size:20px; font-weight:800; margin-bottom:6px;">Ad is Playing...</div>' +
-                            '<p style="font-size:13px; color:#888; margin-bottom:20px; line-height:1.5;">Watch the ad appearing on screen<br>to earn your reward</p>' +
-                            '<div style="width:100%; height:8px; background:rgba(255,255,255,0.05); border-radius:4px; overflow:hidden; margin-bottom:16px;">' +
-                            '<div id="ad-timer-progress" style="height:100%; width:0%; background:linear-gradient(90deg,#f59e0b,#22c55e); border-radius:4px; transition:width 0.25s linear;"></div>' +
-                            '</div>' +
-                            '<div id="ad-timer-text" style="font-size:50px; font-weight:900; color:#f59e0b; line-height:1;">' + AD_DURATION + '</div>' +
-                            '<p style="font-size:11px; color:#444; margin-top:12px;">seconds remaining</p>';
-
-                        // Start countdown timer
-                        const adStartTime = Date.now();
-                        const adEndTime = adStartTime + AD_DURATION * 1000;
-                        let adDone = false;
-
-                        function tickAd() {
-                            if (adDone) return;
-                            const now = Date.now();
-                            const remaining = Math.max(0, adEndTime - now);
-                            const elapsed = now - adStartTime;
-                            const secsLeft = Math.ceil(remaining / 1000);
-                            const pct = Math.min(100, (elapsed / (AD_DURATION * 1000)) * 100);
-                            const progEl = document.getElementById('ad-timer-progress');
-                            const txtEl = document.getElementById('ad-timer-text');
-                            if (progEl) progEl.style.width = pct + '%';
-                            if (txtEl) txtEl.textContent = secsLeft;
-                            if (remaining <= 0) {
-                                adDone = true;
-                                showAdCompletionScreen();
-                                return;
-                            }
-                            setTimeout(tickAd, 250);
-                        }
-                        tickAd();
-                        // Safety fallback
-                        setTimeout(() => { if (!adDone) { adDone = true; showAdCompletionScreen(); } }, (AD_DURATION + 5) * 1000);
+                        // If no ad found, fallback to silent timer to ensure reward
+                        showAdPlayingUI();
                     }; // end watchBtn.onclick
                 } // end if (watchBtn)
             } // end if (contentBox)
@@ -3745,7 +3697,12 @@ function renderRecentActivity(history) {
         'account_purchase': { icon: 'fas fa-shopping-cart', color: '#3b82f6', name: 'Account Purchase' },
         'mail': { icon: 'fas fa-envelope', color: '#ef4444', name: 'Email Generated' },
         'temp_mail': { icon: 'fas fa-envelope-open', color: '#ef4444', name: 'Temp Mail' },
+        'temp_email': { icon: 'fas fa-envelope-open', color: '#ef4444', name: 'Temp Mail' },
         'premium_mail': { icon: 'fas fa-crown', color: '#f59e0b', name: 'Premium Mail' },
+        'premium_email': { icon: 'fas fa-crown', color: '#f59e0b', name: 'Premium Mail' },
+        'hotmail_email': { icon: 'fab fa-microsoft', color: '#3b82f6', name: 'Hotmail Access' },
+        'student_email': { icon: 'fas fa-graduation-cap', color: '#10b981', name: 'Student Mail' },
+        'gmail_email': { icon: 'fab fa-google', color: '#ef4444', name: 'Gmail Access' },
         'number': { icon: 'fas fa-phone', color: '#9333ea', name: 'Virtual Number' },
         'redeem': { icon: 'fas fa-ticket-alt', color: '#22c55e', name: 'Code Redeemed' },
         'daily_bonus': { icon: 'fas fa-gift', color: '#fbbf24', name: 'Daily Bonus' },
@@ -3785,7 +3742,7 @@ function renderRecentActivity(history) {
         const date = item.date ? new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
         const time = item.date ? new Date(item.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '';
         const POS_TYPES = new Set(['transfer_in', 'redeem', 'daily_bonus', 'ad_reward', 'mission_reward', 'quiz_reward', 'bonus', 'deposit', 'gift_claimed', 'gift']);
-        const NEG_TYPES = new Set(['transfer_out', 'account_purchase', 'mail', 'number', 'support_contact']);
+        const NEG_TYPES = new Set(['transfer_out', 'account_purchase', 'mail', 'number', 'support_contact', 'premium_email', 'temp_email', 'hotmail_email', 'student_email', 'gmail_email', 'premium_mail', 'temp_mail']);
         // Fix: For mail type, if amount is 0 or missing, use mailCost from config
         let rawAmount = item.amount;
         if ((item.type === 'mail' || item.type === 'email' || config.name?.includes('Mail')) && (!rawAmount || rawAmount === 0)) {
@@ -3948,37 +3905,43 @@ function closeBanModal() {
 
 // Update profile verification/banned icons
 function updateProfileStatusIcons() {
-    const verifiedIcon = document.getElementById('prof-verified-icon');
-    const bannedIcon = document.getElementById('prof-banned-icon');
-    const homeVerifiedIcon = document.getElementById('home-verified-icon');
-    const homeBannedIcon = document.getElementById('home-banned-icon');
+    const verifiedIcons = [
+        document.getElementById('prof-verified-icon'),
+        document.getElementById('home-verified-icon')
+    ];
+    const bannedIcons = [
+        document.getElementById('prof-banned-icon'),
+        document.getElementById('home-banned-icon')
+    ];
 
-    if (verifiedIcon && bannedIcon) {
+    verifiedIcons.forEach(icon => {
+        if (!icon) return;
         if (userData.banned) {
-            verifiedIcon.style.display = 'none';
-            bannedIcon.style.display = 'inline';
-        } else if (userData.verified || userData.adminVerified) {
-            verifiedIcon.style.display = 'inline';
-            bannedIcon.style.display = 'none';
+            icon.style.display = 'none';
+        } else if (userData.adminVerified) {
+            icon.style.display = 'inline-block';
+            icon.className = 'fas fa-certificate'; // Unique badge shape
+            icon.style.color = '#fbbf24'; // Golden
+            icon.style.filter = 'drop-shadow(0 0 3px rgba(251, 191, 36, 0.5))';
+            icon.style.fontSize = '18px';
+            icon.style.marginLeft = '4px';
+            icon.title = 'Admin Verified Account';
+        } else if (userData.verified) {
+            icon.style.display = 'inline-block';
+            icon.className = 'fas fa-check-circle';
+            icon.style.color = '#22c55e'; // Standard Green
+            icon.style.filter = 'none';
+            icon.style.fontSize = '16px';
+            icon.style.marginLeft = '4px';
         } else {
-            verifiedIcon.style.display = 'none';
-            bannedIcon.style.display = 'none';
+            icon.style.display = 'none';
         }
-    }
+    });
 
-    // Update home header icons
-    if (homeVerifiedIcon && homeBannedIcon) {
-        if (userData.banned) {
-            homeVerifiedIcon.style.display = 'none';
-            homeBannedIcon.style.display = 'inline';
-        } else if (userData.verified || userData.adminVerified) {
-            homeVerifiedIcon.style.display = 'inline';
-            homeBannedIcon.style.display = 'none';
-        } else {
-            homeVerifiedIcon.style.display = 'none';
-            homeBannedIcon.style.display = 'none';
-        }
-    }
+    bannedIcons.forEach(icon => {
+        if (!icon) return;
+        icon.style.display = userData.banned ? 'inline-block' : 'none';
+    });
 }
 
 function formatCompact(num) {
@@ -4585,6 +4548,27 @@ async function buyUserCard(cardId, price) {
             window.showToast('✅ Card purchased successfully!');
             loadRecentActivity();
 
+            // Show details if it's a card
+            if (data.details && (data.details.cardNumber || data.details.email)) {
+                // Parse expiry
+                let month = 'MM', year = 'YYYY';
+                if (data.details.cardExpiry && data.details.cardExpiry.includes('/')) {
+                    const parts = data.details.cardExpiry.split('/');
+                    month = parts[0];
+                    year = parts[1].length === 2 ? '20' + parts[1] : parts[1];
+                }
+
+                showCardDetail({
+                    cardName: 'MARKETPLACE CARD',
+                    holderName: 'CARD HOLDER',
+                    number: data.details.cardNumber || data.details.email || '**** **** **** ****',
+                    cvv: data.details.cardCVV || data.details.password || '***',
+                    month: month,
+                    year: year,
+                    country: 'Marketplace'
+                });
+            }
+
             if (window.Telegram?.WebApp?.HapticFeedback) {
                 window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
             }
@@ -4763,10 +4747,25 @@ function buyPremiumAccount(accountId, type, price) {
                 userData.tokens = res.newBalance;
                 renderBalances();
 
-                // Show account details
-                window.showToast(`✅ Account purchased!\n\nEmail: ${res.account.email}\nPassword: ${res.account.password}${res.account.instructions ? '\nNotes: ' + res.account.instructions : ''}\n\nPlease save these details!`);
+                // Special handling for VCC cards
+                if (type === 'card' || (res.account && res.account.type === 'card')) {
+                    const card = res.account;
+                    showCardDetail({
+                        cardName: card.name || 'VIRTUAL CARD',
+                        holderName: 'CARD HOLDER',
+                        number: card.email || card.number || '**** **** **** ****',
+                        cvv: card.password || card.cvv || '***',
+                        expiry: card.instructions || (card.month ? `${card.month}/${card.year}` : 'MM/YYYY'),
+                        country: card.country || 'Global'
+                    });
+                    window.showToast('✅ Card purchased! Details shown below.');
+                } else {
+                    // Show regular account details
+                    window.showToast(`✅ Account purchased!\n\nEmail: ${res.account.email}\nPassword: ${res.account.password}${res.account.instructions ? '\nNotes: ' + res.account.instructions : ''}\n\nPlease save these details!`);
+                }
 
                 renderAccounts(); // Refresh
+                if (typeof renderCards === 'function') renderCards();
             } else {
                 window.showToast(res.message || 'Purchase failed');
             }
@@ -9321,109 +9320,82 @@ window.closeApiManagementModal = function () {
 };
 
 async function loadApiKey() {
-    // Elements for Modal & Page
+    console.log('[API_UI] loadApiKey called. Unified Syncing...');
+    
+    // Elements for Unified Modal & Page
     const modalLoading = document.getElementById('apiModalLoading');
     const modalBanned = document.getElementById('apiModalBanned');
-    const modalNoKey = document.getElementById('apiModalNoKey');
     const modalActive = document.getElementById('apiModalActive');
     const modalDisplay = document.getElementById('modalApiKeyDisplay');
+    const modalRegenBtn = document.getElementById('modalRegenBtn');
 
-    const pageNoKey = document.getElementById('apiKeyNoKey');
     const pageActive = document.getElementById('apiKeyActive');
     const pageBanned = document.getElementById('apiKeyBannedNotice');
     const pageContent = document.getElementById('apiKeyContent');
     const pageDisplay = document.getElementById('userApiKeyDisplay');
+    const pageRegenBtn = document.getElementById('regenerateApiKeyBtn');
 
-    // FAST PATH: If we already have a key in memory, show it instantly and skip loading
-    if (userData && userData.apiKey) {
-        if (modalLoading) modalLoading.style.display = 'none';
-        if (modalNoKey) modalNoKey.style.display = 'none';
-        if (pageNoKey) pageNoKey.style.display = 'none';
-        
-        if (modalActive) modalActive.style.display = 'block';
-        if (pageActive) pageActive.style.display = 'block';
-        
-        if (modalDisplay) modalDisplay.value = userData.apiKey;
-        if (pageDisplay) pageDisplay.value = userData.apiKey;
-        
-        console.log('[API_UI] Using cached key for instant display');
-    } else {
-        // Only show loading if we are absolutely sure there is no local key
-        if (modalLoading) modalLoading.style.display = 'block';
-        if (modalNoKey) modalNoKey.style.display = 'none';
-        if (modalActive) modalActive.style.display = 'none';
-    }
+    // 1. Initial State: Show Loading, Hide Banned
+    if (modalBanned) modalBanned.style.display = 'none';
+    if (pageBanned) pageBanned.style.display = 'none';
+    if (modalLoading) modalLoading.style.display = 'block';
 
-    // Background fetch to sync latest state
     try {
-        console.log('[API_UI] loadApiKey fetching for user:', userData?.id);
-        // Add cache-busting to prevent browser caching
-        const cacheBuster = `?_=${Date.now()}`;
-        const res = await apiFetch('/api/user/apikey' + cacheBuster, { method: 'GET' });
+        const userId = userData.id || (window.Telegram?.WebApp?.initDataUnsafe?.user?.id);
+        if (!userId) return;
+
+        const res = await apiFetch(`/api/user/apikey?userId=${userId}&_=${Date.now()}`, { method: 'GET' });
         const data = await res.json();
-        console.log('[API_UI] loadApiKey server response:', data);
 
         if (modalLoading) modalLoading.style.display = 'none';
+        if (!data || !data.success) return;
 
-        // Keep local key if the fetch failed, don't wipe it
-        if (!data || data.success !== true) {
-            console.warn("[API_UI] API key sync failed, keeping current local state.");
+        // Handle Ban
+        if (data.status === 'ban') {
+            if (modalBanned) modalBanned.style.display = 'block';
+            if (pageBanned) pageBanned.style.display = 'block';
+            if (modalActive) modalActive.style.display = 'none';
+            if (pageActive) pageActive.style.display = 'none';
+            if (pageContent) pageContent.style.display = 'none';
             return;
         }
 
-        if (data.success && data.apiKey) {
-            if (userData) userData.apiKey = data.apiKey;
-            try {
-                if (userData && userData.id) {
-                    localStorage.setItem(`userData_${userData.id}`, JSON.stringify(userData));
-                }
-            } catch (e) { }
-
-            // Sync Displays
-            if (pageDisplay) pageDisplay.value = data.apiKey;
-            if (modalDisplay) modalDisplay.value = data.apiKey;
-
-            // Toggle Visibility
-            if (modalActive) modalActive.style.display = 'block';
-            if (pageActive) pageActive.style.display = 'block';
-            if (modalNoKey) modalNoKey.style.display = 'none';
-            if (pageNoKey) pageNoKey.style.display = 'none';
-        } else {
-            // Server says no key. 
-            // If we HAVE a local key, DO NOT wipe it yet. It might be a sync lag.
-            if (userData && userData.apiKey) {
-                console.warn("[API_UI] Server says no key, but keeping local key.");
-                if (modalActive) modalActive.style.display = 'block';
-                if (pageActive) pageActive.style.display = 'block';
-            } else {
-                // No local key and no server key -> Show Generate screen
-                if (userData) userData.apiKey = null;
-                if (modalNoKey) modalNoKey.style.display = 'block';
-                if (pageNoKey) pageNoKey.style.display = 'block';
-                if (modalActive) modalActive.style.display = 'none';
-                if (pageActive) pageActive.style.display = 'none';
-            }
+        // Update memory
+        if (userData) {
+            userData.apiKey = data.apiKey || null;
+            userData.apiStatus = data.status || 'pending';
+            try { localStorage.setItem(`userData_${userId}`, JSON.stringify(userData)); } catch (e) {}
         }
 
-        // Handle Ban
-        if (data.status === 'ban' || (userData && userData.apiStatus === 'ban')) {
-            [modalActive, modalNoKey, pageActive, pageNoKey].forEach(el => { if (el) el.style.display = 'none'; });
-            if (modalBanned) modalBanned.style.display = 'block';
-            if (pageBanned) pageBanned.style.display = 'block';
-            if (pageContent) pageContent.style.display = 'none';
-        }
+        // Show Content
+        if (modalActive) modalActive.style.display = 'block';
+        if (pageActive) pageActive.style.display = 'block';
+        if (pageContent) pageContent.style.display = 'block';
+
+        const buttonText = '<i class="fas fa-magic"></i> GENERATE NOW';
+        const displayValue = data.apiKey || '--- CLICK BELOW TO GENERATE ---';
+
+        if (modalDisplay) modalDisplay.value = displayValue;
+        if (pageDisplay) pageDisplay.value = displayValue;
+
+        // Set Unified Button Appearance
+        const updateBtn = (btn) => {
+            if (!btn) return;
+            btn.innerHTML = buttonText;
+            btn.style.background = 'linear-gradient(135deg, #9333ea 0%, #6366f1 100%)';
+            btn.style.color = '#fff';
+            btn.style.border = 'none';
+            btn.style.boxShadow = '0 4px 15px rgba(147, 51, 234, 0.3)';
+            if (!data.apiKey) btn.classList.add('pulse-btn');
+            else btn.classList.remove('pulse-btn');
+        };
+
+        updateBtn(modalRegenBtn);
+        updateBtn(pageRegenBtn);
+
     } catch (e) {
-        console.error('Load API Key error:', e);
+        console.error('Unified Sync error:', e);
         if (modalLoading) modalLoading.style.display = 'none';
-        // Always show No Key UI on error if nothing is already visible
-        try {
-            if (!(userData && userData.apiKey)) {
-                if (modalActive) modalActive.style.display = 'none';
-                if (pageActive) pageActive.style.display = 'none';
-                if (modalNoKey) modalNoKey.style.display = 'block';
-                if (pageNoKey) pageNoKey.style.display = 'block';
-            }
-        } catch (_) { }
     }
 }
 
@@ -9449,7 +9421,7 @@ window.generateNewApiKey = async function (btnElement) {
             console.log(`[API_UI] Starting generation for ${userId}. First time: ${isFirstTime}`);
             if (btn) {
                 btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> PLEASE WAIT... GENERATING';
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> GENERATING...';
             }
 
             const res = await apiFetch('/api/user/apikey/generate', {
@@ -9457,38 +9429,16 @@ window.generateNewApiKey = async function (btnElement) {
                 body: { userId: userId }
             });
 
-            console.log('[API_UI] Request status:', res.status);
             const data = await res.json();
-            console.log('[API_UI] Server Response:', data);
-
             if (data.success) {
                 window.showToast('✅ API Key generated successfully!');
-
-                // Update global userData
+                
+                // Update local storage and memory
                 if (userData) userData.apiKey = data.apiKey;
-                try {
-                    if (userData && userData.id) {
-                        localStorage.setItem(`userData_${userData.id}`, JSON.stringify(userData));
-                    }
-                } catch (e) { }
+                try { localStorage.setItem(`userData_${userId}`, JSON.stringify(userData)); } catch (e) {}
 
-                // Get all elements for instant update
-                const display = document.getElementById('userApiKeyDisplay');
-                const modalDisplay = document.getElementById('modalApiKeyDisplay');
-                const modalNoKey = document.getElementById('apiModalNoKey');
-                const modalActive = document.getElementById('apiModalActive');
-                const pageNoKey = document.getElementById('apiKeyNoKey');
-                const pageActive = document.getElementById('apiKeyActive');
-
-                // Update values
-                if (display) display.value = data.apiKey;
-                if (modalDisplay) modalDisplay.value = data.apiKey;
-
-                // Force UI transition
-                if (modalNoKey) modalNoKey.style.display = 'none';
-                if (pageNoKey) pageNoKey.style.display = 'none';
-                if (modalActive) modalActive.style.display = 'block';
-                if (pageActive) pageActive.style.display = 'block';
+                // CRITICAL: Call loadApiKey to update the Unified UI (text, buttons, colors)
+                await loadApiKey();
 
                 if (window.Telegram?.WebApp?.HapticFeedback) {
                     window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
@@ -9498,17 +9448,14 @@ window.generateNewApiKey = async function (btnElement) {
             }
         } catch (e) {
             console.error('[API_UI] Fatal Exception:', e);
-            window.showToast('❌ ' + (e.message || 'Connection error. Try again.'));
+            window.showToast('❌ ' + (e.message || 'Connection error.'));
         } finally {
-            if (btn) {
-                btn.disabled = false;
-                btn.innerHTML = originalContent;
-            }
+            if (btn) btn.disabled = false;
         }
     };
 
-    // Skip confirmation for the very first generation (Generate Now)
-    if (isFirstTime) {
+    // Auto-proceed if the current button text suggests it's the first time
+    if (isFirstTime || btnText.includes('GENERATE')) {
         startRegen();
     } else {
         const confirmMsg = 'Confirm: Regenerate your API Key? Old one will stop working immediately.';
