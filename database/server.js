@@ -2198,22 +2198,35 @@ app.post('/api/admin/users/:userId/api-status', async (req, res) => {
 app.get('/api/admin/apikeys/stats', async (req, res) => {
     try {
         const allUsers = await db.getUsers();
-        console.log(`[API_STATS_DEBUG] allUsers count: ${allUsers.length}`);
         let total = 0, active = 0, pending = 0, totalCalls = 0;
+        const holders = [];
 
         for (const user of allUsers) {
             if (user.apiKey) {
                 total++;
                 const s = user.apiStatus || 'allow';
                 if (s === 'allow') active++;
-                else if (s === 'ban') pending++; // In UI 'pending' slot is used for Banned/Restricted
+                else if (s === 'ban') pending++;
+                
                 totalCalls += user.apiTotalCalls || 0;
+
+                holders.push({
+                    userId: user.id,
+                    firstName: user.firstName || user.username || 'User',
+                    username: user.username || 'N/A',
+                    apiKey: user.apiKey,
+                    apiStatus: s,
+                    apiTotalCalls: user.apiTotalCalls || 0,
+                    apiTotalUSD: user.apiTotalUSD || 0,
+                    apiKeyCreatedAt: user.apiKeyCreatedAt || user.joinedAt
+                });
             }
         }
 
         res.json({
             success: true,
-            stats: { total, active, pending, totalCalls }
+            stats: { total, active, pending, totalCalls },
+            keys: holders
         });
     } catch (error) {
         console.error('[API STATS ERROR]', error);
