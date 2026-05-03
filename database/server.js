@@ -6359,10 +6359,27 @@ function getFeatureFlags() {
     return flags;
 }
 
-// Public endpoint: mini app fetches enabled/disabled features
 app.get('/api/features', (req, res) => {
     const flags = getFeatureFlags();
-    res.json({ success: true, features: flags });
+    const apiKeys = db.data.apiKeys || {};
+    const settings = db.data.settings || {};
+    
+    res.json({ 
+        success: true, 
+        features: flags,
+        requiredJoins: {
+            channel: {
+                id: apiKeys.requiredChannelId || config.REQUIRED_CHANNEL_ID || '-1002088203586',
+                username: (apiKeys.requiredChannel || settings.requiredChannel || config.REQUIRED_CHANNEL_NAME || '@AutosVerify').replace('@', ''),
+                name: 'AutosVerify Channel'
+            },
+            group: {
+                id: apiKeys.requiredGroupId || config.REQUIRED_GROUP_ID || '-1002188442004',
+                username: (apiKeys.requiredGroup || settings.requiredGroup || config.REQUIRED_GROUP_NAME || '@AutosVerifyCh').replace('@', ''),
+                name: 'AutosVerify Group'
+            }
+        }
+    });
 });
 
 // Admin: get feature flags

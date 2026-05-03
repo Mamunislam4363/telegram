@@ -7188,6 +7188,12 @@ document.addEventListener('DOMContentLoaded', async function () {
         const featuresData = await featuresRes.json();
         const joinRequired = featuresData.success ? featuresData.features.joinRequired : false;
 
+        // Update REQUIRED_JOINS with dynamic data from server
+        if (featuresData.success && featuresData.requiredJoins) {
+            REQUIRED_JOINS = featuresData.requiredJoins;
+            console.log('[INIT] Required Joins updated from server:', REQUIRED_JOINS);
+        }
+
         if (joinRequired && !userData.adminVerified) {
             console.log('[INIT] Join check enabled - verifying membership...');
             const joinCheck = await checkRequiredJoins();
