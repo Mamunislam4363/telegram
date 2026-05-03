@@ -30,7 +30,8 @@ app.use((req, res, next) => {
     }
 });
 
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 const db = require('../db');
 const config = require('../config');
@@ -2960,6 +2961,56 @@ app.post('/api/admin/email-pool/add', (req, res) => {
     }
 });
 
+// API: Admin - Bulk Add Emails to Pool
+app.post('/api/admin/email-pool/bulk', (req, res) => {
+    try {
+        const { type, emails } = req.body;
+        if (!type || !emails || !Array.isArray(emails)) {
+            return res.status(400).json({ success: false, message: 'Type and emails array required' });
+        }
+
+        if (!db.data.emailPool) db.data.emailPool = {};
+        if (!db.data.emailPool[type]) db.data.emailPool[type] = [];
+
+        let addedCount = 0;
+        let skippedCount = 0;
+
+        emails.forEach(item => {
+            const email = item.email ? item.email.trim() : '';
+            if (!email) return;
+
+            const exists = db.data.emailPool[type].find(e => e.email === email);
+            if (!exists) {
+                db.data.emailPool[type].push({
+                    email,
+                    password: item.password || null,
+                    note: item.note || '',
+                    status: 'available',
+                    addedAt: Date.now(),
+                    assignedTo: null,
+                    sessionId: null
+                });
+                addedCount++;
+            } else {
+                skippedCount++;
+            }
+        });
+
+        if (addedCount > 0) db.save();
+        
+        res.json({ 
+            success: true, 
+            message: `Batch processed: ${addedCount} added, ${skippedCount} duplicates skipped.`,
+            added: addedCount,
+            skipped: skippedCount,
+            total: db.data.emailPool[type].length 
+        });
+    } catch (e) {
+        console.error('[BULK_EMAIL_ADD_ERROR]', e);
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
 // API: Admin - List Email Pool
 app.get('/api/admin/email-pool/list', (req, res) => {
     try {
@@ -3717,11 +3768,30 @@ app.post('/api/exchange/convert', (req, res) => {
 
     // History record
     if (!user.history) user.history = [];
+    
+    // Determine the amount to show in history based on token impact
+    let historyAmount = 0;
+    let historyAsset = 'TC';
+    
+    if (to === 'tokens') {
+        historyAmount = amountAfterFee;
+        historyAsset = 'TC';
+    } else if (from === 'tokens') {
+        historyAmount = -amt;
+        historyAsset = 'TC';
+    } else {
+        // If neither is tokens, show the source asset deduction
+        historyAmount = -amt;
+        historyAsset = from === 'usd' ? 'USD' : from;
+    }
+
     user.history.unshift({
         type: 'exchange',
         from, to,
         fromAmount: amt,
         toAmount: amountAfterFee,
+        amount: historyAmount,
+        asset: historyAsset,
         fee: exchangeFee,
         feePercent: exchangeFeePercent,
         date: Date.now()

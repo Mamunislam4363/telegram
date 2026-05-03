@@ -60,7 +60,7 @@
       "joinedChannel": false,
       "joinedGroup": false,
       "language": "en",
-      "lastActive": 1777780115767,
+      "lastActive": 1777751817415,
       "lastDaily": 0,
       "lastName": "",
       "referralCode": "ref_DQ83W6",
@@ -1765,9 +1765,9 @@
       "enabled": true,
       "intervalHours": 6,
       "keep": 30,
-      "lastBackupAt": 1777780037029,
-      "lastBackupFile": "auto_backup_1777780037029.json",
-      "nextBackupAt": 1777864560000
+      "lastBackupAt": 1777626985422,
+      "lastBackupFile": "auto_backup_1777626985422.json",
+      "nextBackupAt": 1777778160000
     },
     "gems": {
       "currentPrice": 1,

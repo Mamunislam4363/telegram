@@ -11810,26 +11810,49 @@
             if (!rawValues) return alert('Please enter at least one email');
 
             const lines = rawValues.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-            let added = 0;
-            let failed = 0;
+            const emails = [];
 
             for (const line of lines) {
                 const parts = line.split(':');
                 const email = parts[0].trim();
                 const password = parts.slice(1).join(':').trim() || null;
 
-                if (!email || !email.includes('@')) { failed++; continue; }
+                if (email && email.includes('@')) {
+                    emails.push({ email, password, note });
+                }
+            }
 
-                try {
-                    const res = await fetch('/api/admin/email-pool/add', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ type, email, password, note })
-                    });
-                    const data = await res.json();
-                    if (data.success) added++;
-                    else failed++;
-                } catch (e) { failed++; }
+            if (emails.length === 0) return alert('No valid emails found in your input');
+
+            // Use Loading Overlay if available
+            const saveBtn = event.currentTarget || document.activeElement;
+            const originalText = saveBtn ? saveBtn.textContent : 'Save';
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'Processing...';
+            }
+
+            try {
+                const res = await fetch('/api/admin/email-pool/bulk', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type, emails })
+                });
+                const data = await res.json();
+                
+                closeAddEmailModal();
+                if (data.success) {
+                    alert(`✅ Result: ${data.message}`);
+                } else {
+                    alert('❌ Error: ' + (data.message || 'Unknown error'));
+                }
+            } catch (e) { 
+                alert('❌ Network error during bulk add');
+            } finally {
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = originalText;
+                }
             }
 
             closeAddEmailModal();

@@ -808,6 +808,48 @@ bot.onText(/\/start/, async (msg) => {
     }
 });
 
+// /api
+bot.onText(/\/api/, async (msg) => {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+    const user = db.getUser(userId);
+
+    if (!user) return bot.sendMessage(chatId, "❌ User not found. Please /start first.");
+
+    if (user.apiStatus === 'ban') {
+        return bot.sendMessage(chatId, "🚫 **Access Denied**\n\nYour API access has been restricted.", { parse_mode: 'Markdown' });
+    }
+
+    if (!user.apiKey) {
+        return bot.sendMessage(chatId, 
+            "🔑 **API Access**\n\nYou haven't generated an API key yet.\n\nPlease open the **Mini App > Profile > API Access** to generate your key.", 
+            { 
+                parse_mode: 'Markdown',
+                reply_markup: {
+                    inline_keyboard: [[{ text: '🚀 Open Mini App', web_app: { url: config.PUBLIC_URL } }]]
+                }
+            }
+        );
+    }
+
+    const msgText = 
+        `🔑 **Your API Access**\n\n` +
+        `👤 **User ID:** \`${userId}\`\n` +
+        `🔐 **API Key:** \`${user.apiKey}\`\n\n` +
+        `⚠️ **Security Warning:**\n` +
+        `Do not share this key with anyone. It gives full access to your account balances and services via API.`;
+
+    bot.sendMessage(chatId, msgText, { 
+        parse_mode: 'Markdown',
+        reply_markup: {
+            inline_keyboard: [
+                [{ text: '🔄 Regenerate in App', web_app: { url: config.PUBLIC_URL } }],
+                [{ text: '📚 API Documentation', url: 'https://docs.autosverify.com' }] // Placeholder
+            ]
+        }
+    });
+});
+
 // /admin command - Admin Panel Access
 bot.onText(/\/admin/, async (msg) => {
     const chatId = msg.chat.id;
@@ -878,6 +920,10 @@ async function sendMainMenu(chatId, user, msgFrom) {
         reply_markup: {
             inline_keyboard: [
                 [{ text: '🚀 Launch App', web_app: { url: miniAppUrl } }],
+                [
+                    { text: '🔑 API Access', callback_data: 'view_api_key' },
+                    { text: '📊 Profile', web_app: { url: miniAppUrl + '#profile' } }
+                ],
                 [{ text: '📢 Join Channel', url: `https://t.me/${requiredChannel.replace('@', '')}` }],
                 [{ text: '👥 Join Group', url: `https://t.me/${requiredGroup.replace('@', '')}` }],
                 [{ text: '📺 YouTube Channel', url: requiredYoutube }]
@@ -1388,6 +1434,43 @@ bot.on('callback_query', async (query) => {
                     show_alert: true
                 });
             }
+        }
+
+        // VIEW API KEY
+        if (data === 'view_api_key') {
+            await bot.answerCallbackQuery(query.id);
+            if (user.apiStatus === 'ban') {
+                return bot.sendMessage(chatId, "🚫 **Access Denied**\n\nYour API access has been restricted.", { parse_mode: 'Markdown' });
+            }
+
+            if (!user.apiKey) {
+                return bot.sendMessage(chatId, 
+                    "🔑 **API Access**\n\nYou haven't generated an API key yet.\n\nPlease open the **Mini App > Profile > API Access** to generate your key.", 
+                    { 
+                        parse_mode: 'Markdown',
+                        reply_markup: {
+                            inline_keyboard: [[{ text: '🚀 Open Mini App', web_app: { url: config.PUBLIC_URL } }]]
+                        }
+                    }
+                );
+            }
+
+            const msgText = 
+                `🔑 **Your API Access**\n\n` +
+                `👤 **User ID:** \`${userId}\`\n` +
+                `🔐 **API Key:** \`${user.apiKey}\`\n\n` +
+                `⚠️ **Security Warning:**\n` +
+                `Do not share this key with anyone. It gives full access to your account balances and services via API.`;
+
+            return bot.sendMessage(chatId, msgText, { 
+                parse_mode: 'Markdown',
+                reply_markup: {
+                    inline_keyboard: [
+                        [{ text: '🔄 Regenerate in App', web_app: { url: config.PUBLIC_URL } }],
+                        [{ text: '📚 API Documentation', url: 'https://docs.autosverify.com' }]
+                    ]
+                }
+            });
         }
 
         // VERIFY MEMBERSHIP (Mandatory Join Check)
