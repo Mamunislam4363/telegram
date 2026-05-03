@@ -187,6 +187,56 @@
             -webkit-overflow-scrolling: touch !important;
             scrollbar-width: none !important;
             -ms-overflow-style: none !important;
+            display: flex !important;
+            flex-direction: column !important;
+        }
+
+        /* Fix for vertical stretching on mobile */
+        .page {
+            height: auto !important;
+            min-height: auto !important;
+            display: none;
+        }
+
+        .page.active {
+            display: block !important;
+        }
+
+        .main-scroll {
+            height: auto !important;
+            min-height: calc(100dvh - 70px) !important;
+        }
+
+        /* Force 2 columns on grids that should stay compact */
+        .compact-grid-2 {
+            display: grid !important;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 12px !important;
+        }
+
+        /* Prevent em-cards from being too tall */
+        .em-card {
+            min-height: 120px !important;
+            height: auto !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: center !important;
+            align-items: center !important;
+            padding: 16px !important;
+        }
+
+        .em-icon {
+            margin-bottom: 12px !important;
+        }
+
+        .em-title {
+            margin-bottom: 4px !important;
+        }
+
+        /* Specific fix for Email Menu Cards */
+        .email-menu-card {
+            min-height: 140px !important;
+            height: auto !important;
         }
 
         #app-container::-webkit-scrollbar {
@@ -2094,59 +2144,59 @@
                         style="margin-bottom:16px; text-transform:uppercase; letter-spacing:1px; color:var(--text-sub); font-size:12px; font-weight:700;">
                         Select Service</div>
 
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
-                        <div id="premiumGmailCard" onclick="openPremiumGmailDirect()"
-                            style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:18px; padding:28px 12px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px; cursor:pointer; transition:transform 0.2s; min-height:160px; width:100%;"
+                    <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:16px;">
+                        <div id="premiumGmailCard" onclick="openPremiumGmailDirect()" class="email-menu-card"
+                            style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:18px; padding:20px 12px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; cursor:pointer; transition:transform 0.2s; width:100%;"
                             onmousedown="this.style.transform='scale(0.97)'"
                             onmouseup="this.style.transform='scale(1)'">
                             <div
-                                style="width:60px; height:60px; background:linear-gradient(135deg, #fbbf24, #d97706); border-radius:18px; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 24px rgba(251,191,36,0.3); flex-shrink:0; margin: 0 auto;">
-                                <i class="fas fa-envelope" style="font-size:28px; color:#fff;"></i>
+                                style="width:50px; height:50px; background:linear-gradient(135deg, #fbbf24, #d97706); border-radius:16px; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 24px rgba(251,191,36,0.3); flex-shrink:0; margin: 0 auto;">
+                                <i class="fas fa-envelope" style="font-size:24px; color:#fff;"></i>
                             </div>
                             <div
-                                style="font-size:15px; font-weight:900; color:var(--text-main); letter-spacing:0.5px; text-transform:uppercase; text-align:center; width:100%;">
+                                style="font-size:13px; font-weight:900; color:var(--text-main); letter-spacing:0.5px; text-transform:uppercase; text-align:center; width:100%;">
                                 PREMIUM GMAIL</div>
                         </div>
 
                         <!-- Temp Mail Card -->
-                        <div id="tempMailCard" onclick="openTempMailDirect()"
-                            style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:18px; padding:28px 12px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px; cursor:pointer; transition:transform 0.2s; min-height:160px; width:100%;"
+                        <div id="tempMailCard" onclick="openTempMailDirect()" class="email-menu-card"
+                            style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:18px; padding:20px 12px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; cursor:pointer; transition:transform 0.2s; width:100%;"
                             onmousedown="this.style.transform='scale(0.97)'"
                             onmouseup="this.style.transform='scale(1)'">
                             <div
-                                style="width:60px; height:60px; background:linear-gradient(135deg, #ef4444, #b91c1c); border-radius:18px; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 24px rgba(220,38,38,0.3); flex-shrink:0; margin: 0 auto;">
-                                <i class="fas fa-envelope-open-text" style="font-size:28px; color:#fff;"></i>
+                                style="width:50px; height:50px; background:linear-gradient(135deg, #ef4444, #b91c1c); border-radius:16px; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 24px rgba(220,38,38,0.3); flex-shrink:0; margin: 0 auto;">
+                                <i class="fas fa-envelope-open-text" style="font-size:24px; color:#fff;"></i>
                             </div>
                             <div
-                                style="font-size:15px; font-weight:900; color:var(--text-main); letter-spacing:0.5px; text-transform:uppercase; text-align:center; width:100%;">
+                                style="font-size:13px; font-weight:900; color:var(--text-main); letter-spacing:0.5px; text-transform:uppercase; text-align:center; width:100%;">
                                 TEMP MAIL</div>
                         </div>
 
                         <!-- Hot Mail Card -->
-                        <div id="hotMailCard" onclick="openHotmailDirect()"
-                            style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:18px; padding:28px 12px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px; cursor:pointer; transition:transform 0.2s; min-height:160px; width:100%;"
+                        <div id="hotMailCard" onclick="openHotmailDirect()" class="email-menu-card"
+                            style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:18px; padding:20px 12px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; cursor:pointer; transition:transform 0.2s; width:100%;"
                             onmousedown="this.style.transform='scale(0.97)'"
                             onmouseup="this.style.transform='scale(1)'">
                             <div
-                                style="width:60px; height:60px; background:linear-gradient(135deg, #f97316, #ea580c); border-radius:18px; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 24px rgba(249,115,22,0.3); flex-shrink:0; margin: 0 auto;">
-                                <i class="fas fa-fire" style="font-size:28px; color:#fff;"></i>
+                                style="width:50px; height:50px; background:linear-gradient(135deg, #f97316, #ea580c); border-radius:16px; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 24px rgba(249,115,22,0.3); flex-shrink:0; margin: 0 auto;">
+                                <i class="fas fa-fire" style="font-size:24px; color:#fff;"></i>
                             </div>
                             <div
-                                style="font-size:15px; font-weight:900; color:var(--text-main); letter-spacing:0.5px; text-transform:uppercase; text-align:center; width:100%;">
+                                style="font-size:13px; font-weight:900; color:var(--text-main); letter-spacing:0.5px; text-transform:uppercase; text-align:center; width:100%;">
                                 HOT MAIL</div>
                         </div>
 
                         <!-- Student Email Card -->
-                        <div id="studentMailCard" onclick="openStudentEmailDirect()"
-                            style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:18px; padding:28px 12px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px; cursor:pointer; transition:transform 0.2s; min-height:160px; width:100%;"
+                        <div id="studentMailCard" onclick="openStudentEmailDirect()" class="email-menu-card"
+                            style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:18px; padding:20px 12px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; cursor:pointer; transition:transform 0.2s; width:100%;"
                             onmousedown="this.style.transform='scale(0.97)'"
                             onmouseup="this.style.transform='scale(1)'">
                             <div
-                                style="width:60px; height:60px; background:linear-gradient(135deg, #3b82f6, #2563eb); border-radius:18px; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 24px rgba(59,130,246,0.3); flex-shrink:0; margin: 0 auto;">
-                                <i class="fas fa-graduation-cap" style="font-size:28px; color:#fff;"></i>
+                                style="width:50px; height:50px; background:linear-gradient(135deg, #3b82f6, #2563eb); border-radius:16px; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 24px rgba(59,130,246,0.3); flex-shrink:0; margin: 0 auto;">
+                                <i class="fas fa-graduation-cap" style="font-size:24px; color:#fff;"></i>
                             </div>
                             <div
-                                style="font-size:15px; font-weight:900; color:var(--text-main); letter-spacing:0.5px; text-transform:uppercase; text-align:center; width:100%;">
+                                style="font-size:13px; font-weight:900; color:var(--text-main); letter-spacing:0.5px; text-transform:uppercase; text-align:center; width:100%;">
                                 STUDENT MAIL</div>
                         </div>
                     </div>
@@ -2672,7 +2722,7 @@
                     </div>
 
                     <!-- Stats Grid -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
                         <!-- TC Box -->
                         <div
                             style="background: rgba(255,255,255,0.06); border-radius: 12px; padding: 8px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">
@@ -3582,7 +3632,7 @@
                         free tokens daily!</div>
                 </div>
 
-                <div class="earn-menu-grid">
+                <div class="earn-menu-grid compact-grid-2">
                     <div class="em-card" onclick="startQuizFlow()">
                         <div class="em-icon" style="color:#22c55e"><i class="fas fa-question-circle"></i>
                         </div>
