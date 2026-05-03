@@ -6967,7 +6967,7 @@ window.copyMailOtp = copyMailOtp;
 window.updateMailBalance = updateMailBalance;
 
 // REQUIRED CHANNELS/GROUPS CONFIG
-const REQUIRED_JOINS = {
+let REQUIRED_JOINS = {
     channel: {
         id: '-1002188442004', // @AutosVerifych
         username: 'AutosVerifych',
