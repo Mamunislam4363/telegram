@@ -9331,6 +9331,7 @@ async function loadApiKey() {
 // Export to window for HTML onclick
 window.generateNewApiKey = async function(btnElement) {
     console.log('[API_UI] generateNewApiKey clicked');
+    window.showToast('⏳ Initializing Key Regeneration...');
     const btn = btnElement || document.getElementById('regenerateApiKeyBtn');
     const btnText = btn ? btn.textContent.trim().toUpperCase() : '';
     const isFirstTime = btnText.includes('GENERATE NOW');
@@ -9357,8 +9358,7 @@ window.generateNewApiKey = async function(btnElement) {
                 body: { userId: userId }
             });
             
-            if (!res.ok && res.status === 500) throw new Error('Internal Server Error (500)');
-
+            console.log('[API_UI] Request status:', res.status);
             const data = await res.json();
             console.log('[API_UI] Server Response:', data);
             

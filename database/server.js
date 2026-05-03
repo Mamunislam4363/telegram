@@ -30,8 +30,7 @@ app.use((req, res, next) => {
     }
 });
 
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.json({ limit: '10mb' }));
 
 const db = require('../db');
 const config = require('../config');
@@ -1078,7 +1077,7 @@ app.post('/api/register', async (req, res) => {
                     date: Date.now()
                 });
 
-                db.updateUser(refUser);
+        await db.updateUser(refUser);
 
                 // Notify referrer about new referral
                 const botToken = config.BOT_TOKEN || '';
@@ -1089,7 +1088,7 @@ app.post('/api/register', async (req, res) => {
 
             // Mark user as referred
             user.referredBy = referrer;
-            await db.updateUser(user);
+        await db.updateUser(user);
         }
     }
 
@@ -1114,7 +1113,7 @@ app.post('/api/register', async (req, res) => {
         user.pendingWebMessages = [];
     }
 
-    db.updateUser(user);
+        await db.updateUser(user);
 
     // Always return the synced balance
     const tokens = db.getTokenBalance(user);
@@ -1197,7 +1196,7 @@ app.post('/api/email/generate', async (req, res) => {
         }
 
         user.currentEmail = generatedEmail;
-        db.updateUser(user);
+        await db.updateUser(user);
 
         res.json({ 
             success: true, 
@@ -1334,7 +1333,7 @@ app.post('/api/quiz/submit', async (req, res) => {
         detail: correct ? 'Quiz Correct' : 'Quiz Wrong'
     });
 
-    db.updateUser(user);
+        await db.updateUser(user);
     res.json({
         success: true,
         newBalance: newBalance,
@@ -1411,7 +1410,7 @@ app.post('/api/scratch/claim', async (req, res) => {
         date: Date.now()
     });
 
-    await db.updateUser(user);
+        await db.updateUser(user);
     res.json({ success: true, newBalance: db.getTokenBalance(user) });
 });
 
@@ -1579,7 +1578,7 @@ app.post('/api/earn', async (req, res) => {
         date: Date.now()
     });
 
-    await db.updateUser(user);
+        await db.updateUser(user);
 
     console.log(`[DEBUG] Task completed successfully: ${taskType}, newBalance: ${newBalance}, loanRepaid: ${repaidAmount}`);
     return res.json({
@@ -1636,7 +1635,7 @@ app.post('/api/accounts/buy-category', async (req, res) => {
         date: Date.now()
     });
 
-    await db.updateUser(user);
+        await db.updateUser(user);
 
     return res.json({
         success: true,
@@ -1968,7 +1967,7 @@ app.post('/api/user/apikey/generate', async (req, res) => {
         user.apiTotalCalls = user.apiTotalCalls || 0;
 
         // Save changes
-        await db.updateUser(user);
+        await db.updateUser(user, null, true);
 
         console.log(`[API_GEN] Success: Generated ${apiKey} for ${userId}`);
 
@@ -1979,11 +1978,13 @@ app.post('/api/user/apikey/generate', async (req, res) => {
         });
     } catch (error) {
         console.error('[API KEY GENERATE CRASH]', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Internal Server Error during key generation',
-            error: error.message 
-        });
+        if (!res.headersSent) {
+            res.status(500).json({ 
+                success: false, 
+                message: 'Internal Server Error during key generation',
+                error: error.message 
+            });
+        }
     }
 });
 
@@ -2190,47 +2191,6 @@ app.post('/api/admin/users/:userId/api-status', async (req, res) => {
         res.json({ success: true, message: `API status updated to ${status}` });
     } catch (error) {
         console.error('[ADMIN API STATUS ERROR]', error);
-        res.json({ success: false, message: 'Server error' });
-    }
-});
-
-// API: Admin - Toggle User API Key Active Status
-app.post('/api/admin/users/:userId/apikey/toggle', async (req, res) => {
-    try {
-        const { userId } = req.params;
-        const { active } = req.body;
-        
-        const user = await db.getUser(userId);
-        if (!user) return res.json({ success: false, message: 'User not found' });
-
-        user.apiStatus = active ? 'allow' : 'ban';
-        await db.updateUser(user);
-
-        res.json({ success: true, message: `API Key ${active ? 'activated' : 'deactivated'} successfully` });
-    } catch (error) {
-        console.error('[ADMIN API TOGGLE ERROR]', error);
-        res.json({ success: false, message: 'Server error' });
-    }
-});
-
-// API: Admin - Delete User API Key
-app.post('/api/admin/users/:userId/apikey/delete', async (req, res) => {
-    try {
-        const { userId } = req.params;
-        
-        const user = await db.getUser(userId);
-        if (!user) return res.json({ success: false, message: 'User not found' });
-
-        // Completely remove API key data
-        user.apiKey = null;
-        user.apiKeyCreatedAt = null;
-        user.apiStatus = 'allow'; // Reset status to allow for new generation
-        
-        await db.updateUser(user);
-
-        res.json({ success: true, message: 'API Key deleted successfully. User must now regenerate.' });
-    } catch (error) {
-        console.error('[ADMIN API DELETE ERROR]', error);
         res.json({ success: false, message: 'Server error' });
     }
 });
@@ -2678,7 +2638,7 @@ app.post('/api/number/generate', async (req, res) => {
         if (!user.flags.limitNotified) {
             notifyLimit = true;
             user.flags.limitNotified = true;
-            await db.updateUser(user);
+        await db.updateUser(user);
         }
     }
 
@@ -2762,7 +2722,7 @@ app.post('/api/number/generate', async (req, res) => {
         detail: number,
         platform: platform
     });
-    await db.updateUser(user);
+        await db.updateUser(user);
 
     // Store session
     if (!db.data.numberSessions) db.data.numberSessions = {};
@@ -2999,56 +2959,6 @@ app.post('/api/admin/email-pool/add', (req, res) => {
         res.json({ success: true, message: 'Email added to pool', total: db.data.emailPool[type].length });
     } catch (e) {
         res.json({ success: false, message: e.message });
-    }
-});
-
-// API: Admin - Bulk Add Emails to Pool
-app.post('/api/admin/email-pool/bulk', (req, res) => {
-    try {
-        const { type, emails } = req.body;
-        if (!type || !emails || !Array.isArray(emails)) {
-            return res.status(400).json({ success: false, message: 'Type and emails array required' });
-        }
-
-        if (!db.data.emailPool) db.data.emailPool = {};
-        if (!db.data.emailPool[type]) db.data.emailPool[type] = [];
-
-        let addedCount = 0;
-        let skippedCount = 0;
-
-        emails.forEach(item => {
-            const email = item.email ? item.email.trim() : '';
-            if (!email) return;
-
-            const exists = db.data.emailPool[type].find(e => e.email === email);
-            if (!exists) {
-                db.data.emailPool[type].push({
-                    email,
-                    password: item.password || null,
-                    note: item.note || '',
-                    status: 'available',
-                    addedAt: Date.now(),
-                    assignedTo: null,
-                    sessionId: null
-                });
-                addedCount++;
-            } else {
-                skippedCount++;
-            }
-        });
-
-        if (addedCount > 0) db.save();
-        
-        res.json({ 
-            success: true, 
-            message: `Batch processed: ${addedCount} added, ${skippedCount} duplicates skipped.`,
-            added: addedCount,
-            skipped: skippedCount,
-            total: db.data.emailPool[type].length 
-        });
-    } catch (e) {
-        console.error('[BULK_EMAIL_ADD_ERROR]', e);
-        res.status(500).json({ success: false, message: e.message });
     }
 });
 
@@ -3809,30 +3719,11 @@ app.post('/api/exchange/convert', (req, res) => {
 
     // History record
     if (!user.history) user.history = [];
-    
-    // Determine the amount to show in history based on token impact
-    let historyAmount = 0;
-    let historyAsset = 'TC';
-    
-    if (to === 'tokens') {
-        historyAmount = amountAfterFee;
-        historyAsset = 'TC';
-    } else if (from === 'tokens') {
-        historyAmount = -amt;
-        historyAsset = 'TC';
-    } else {
-        // If neither is tokens, show the source asset deduction
-        historyAmount = -amt;
-        historyAsset = from === 'usd' ? 'USD' : from;
-    }
-
     user.history.unshift({
         type: 'exchange',
         from, to,
         fromAmount: amt,
         toAmount: amountAfterFee,
-        amount: historyAmount,
-        asset: historyAsset,
         fee: exchangeFee,
         feePercent: exchangeFeePercent,
         date: Date.now()
@@ -5162,7 +5053,7 @@ app.post('/api/admin/send-gift', async (req, res) => {
         giftId: giftId
     });
 
-    await db.updateUser(user);
+        await db.updateUser(user);
     res.json({ success: true, giftId, message: `Gift of ${amount} ${currency} sent to user ${userId}` });
 });
 
@@ -5220,7 +5111,7 @@ app.post('/api/gift/claim', async (req, res) => {
     // Add global transaction
     db.addTransaction(userId, 'gift', amount, currency === 'tokens' ? 'TC' : currency === 'Gems' ? 'JS' : 'USD', `Gift Claimed: ${gift.note || 'Admin Gift'}`, 'gift');
 
-    await db.updateUser(user);
+        await db.updateUser(user);
 
     const currencyLabel = currency === 'tokens' ? 'Tokens' : currency === 'Gems' ? 'Gems' : 'USD';
     res.json({
@@ -6400,27 +6291,10 @@ function getFeatureFlags() {
     return flags;
 }
 
+// Public endpoint: mini app fetches enabled/disabled features
 app.get('/api/features', (req, res) => {
     const flags = getFeatureFlags();
-    const apiKeys = db.data.apiKeys || {};
-    const settings = db.data.settings || {};
-    
-    res.json({ 
-        success: true, 
-        features: flags,
-        requiredJoins: {
-            channel: {
-                id: apiKeys.requiredChannelId || config.REQUIRED_CHANNEL_ID || '-1002088203586',
-                username: (apiKeys.requiredChannel || settings.requiredChannel || config.REQUIRED_CHANNEL_NAME || '@AutosVerify').replace('@', ''),
-                name: 'AutosVerify Channel'
-            },
-            group: {
-                id: apiKeys.requiredGroupId || config.REQUIRED_GROUP_ID || '-1002188442004',
-                username: (apiKeys.requiredGroup || settings.requiredGroup || config.REQUIRED_GROUP_NAME || '@AutosVerifyCh').replace('@', ''),
-                name: 'AutosVerify Group'
-            }
-        }
-    });
+    res.json({ success: true, features: flags });
 });
 
 // Admin: get feature flags
@@ -7334,7 +7208,7 @@ app.post('/api/admin/users/:userId/verify', async (req, res) => {
         user.verified = !!verified;
     }
 
-    await db.updateUser(user);
+        await db.updateUser(user);
     res.json({
         success: true,
         message: 'User verification updated',
@@ -7376,12 +7250,10 @@ app.post('/api/check-required-joins', async (req, res) => {
     const reqs = getVerificationRequirements();
 
     // 3. Real-time channel/group membership check (strict)
-    // Use configured requiredChannel/requiredGroup with proper fallbacks
+    // Use configured requiredChannel/requiredGroup if present
     const apiKeys = db.data.apiKeys || {};
-    const settings = db.data.settings || {};
-    
-    const requiredChannel = (apiKeys.requiredChannel || settings.requiredChannel || config.REQUIRED_CHANNEL_NAME || '@AutosVerify').toString().trim();
-    const requiredGroup = (apiKeys.requiredGroup || settings.requiredGroup || config.REQUIRED_GROUP_NAME || '@AutosVerifyCh').toString().trim();
+    const requiredChannel = (apiKeys.requiredChannel || '').toString().trim();
+    const requiredGroup = (apiKeys.requiredGroup || '').toString().trim();
 
     let channelJoined = user?.joinedChannel || user?.channelJoined || false;
     let groupJoined = user?.joinedGroup || user?.groupJoined || false;
@@ -7618,7 +7490,7 @@ app.post('/api/daily/claim', async (req, res) => {
         date: now
     });
 
-    await db.updateUser(user);
+        await db.updateUser(user);
 
     res.json({
         success: true,

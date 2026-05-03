@@ -423,17 +423,32 @@ class Database {
         if (remoteData) {
             // Remote exists -> Use it (Primary)
             this.data = { ...defaultData, ...remoteData, settings: { ...defaultData.settings, ...(remoteData.settings || {}) } };
-            // Ensure default tasks exist if not already in database
-            if (!this.data.tasks || Object.keys(this.data.tasks).length === 0) {
-                this.data.tasks = defaultData.tasks;
-                console.log("📋 Initialized default tasks from defaultData.");
+            
+            // Merge logic: If localData has users that are more complete than remote, use them
+            if (localData && localData.users) {
+                let mergedCount = 0;
+                Object.keys(localData.users).forEach(uid => {
+                    const localUser = localData.users[uid];
+                    const remoteUser = (this.data.users && this.data.users[uid]) || null;
+                    
+                    if (remoteUser) {
+                        // If local user has apiKey but remote doesn't (sync lag)
+                        if (localUser.apiKey && !remoteUser.apiKey) {
+                            this.data.users[uid] = { ...remoteUser, ...localUser };
+                            mergedCount++;
+                        }
+                    } else {
+                        // User exists locally but not in remote? Should be rare but handle it
+                        if (!this.data.users) this.data.users = {};
+                        this.data.users[uid] = localUser;
+                        mergedCount++;
+                    }
+                });
+                if (mergedCount > 0) console.log(`🔄 Merged ${mergedCount} users from local backup into Firebase session.`);
             }
-            // Ensure itemSales exists if not already in database
-            if (!this.data.itemSales) {
-                this.data.itemSales = {};
-                console.log("🛒 Initialized itemSales in database.");
-            }
-            console.log("✅ Database loaded from Firebase.");
+
+            console.log("✅ Database loaded from Firebase. Keys:", Object.keys(remoteData));
+            if (remoteData.users) console.log("✅ Found users in Firebase. Count:", Object.keys(remoteData.users).length);
         } else if (!remoteError && localData) {
             // Remote empty (and no error) but Local exists -> MIGRATE
             console.log("📤 Migrating Local Data to Firebase...");
@@ -475,30 +490,59 @@ class Database {
         console.log("ℹ️ Local backup deletion skipped (kept for persistence safety).");
     }
 
-    async save() {
+    async save(force = false) {
         if (!this.ready) return;
 
         // Always keep the local cache for reliability.
-        this.saveLocalBackup();
+        try {
+            this.saveLocalBackup();
+        } catch (e) {
+            console.error("❌ Critical: Failed to save local backup:", e.message);
+        }
 
-        // Sync to Firebase (Primary). Debounced to avoid heavy full overwrites on every small change.
+        // Sync to Firebase (Primary)
         if (!firebaseManager.connected) return;
+
+        if (force) {
+            // Immediate sync for critical data
+            if (this._firebaseSaveTimer) {
+                clearTimeout(this._firebaseSaveTimer);
+                this._firebaseSaveTimer = null;
+            }
+            this._firebaseSavePending = false;
+            try {
+                const payload = this._getFirebasePayload();
+                await firebaseManager.setData(payload);
+                console.log("🔥 [CRITICAL SAVE] Firebase sync forced.");
+            } catch (e) {
+                console.error("Firebase Force Sync Error:", e.message);
+            }
+            return;
+        }
 
         this._firebaseSavePending = true;
         if (this._firebaseSaveTimer) return;
 
-        this._firebaseSaveTimer = setTimeout(async () => {
-            this._firebaseSaveTimer = null;
-            if (!this._firebaseSavePending) return;
-            this._firebaseSavePending = false;
+        // Return a promise that resolves when the timer fires
+        return new Promise((resolve) => {
+            this._firebaseSaveTimer = setTimeout(async () => {
+                this._firebaseSaveTimer = null;
+                if (!this._firebaseSavePending) {
+                    resolve();
+                    return;
+                }
+                this._firebaseSavePending = false;
 
-            try {
-                const payload = this._getFirebasePayload();
-                await firebaseManager.setData(payload);
-            } catch (e) {
-                console.error("Firebase Sync Error:", e.message);
-            }
-        }, 120);
+                try {
+                    const payload = this._getFirebasePayload();
+                    await firebaseManager.setData(payload);
+                    console.log("🔥 Firebase sync completed.");
+                } catch (e) {
+                    console.error("Firebase Sync Error:", e.message);
+                }
+                resolve();
+            }, 120);
+        });
     }
 
     saveLocalBackup() {
@@ -647,7 +691,7 @@ class Database {
         return Object.values(this.data.groups || {});
     }
 
-    updateUser(userOrId, updates = null) {
+    async updateUser(userOrId, updates = null, forceSave = false) {
         // Handle both formats: updateUser(userObject) or updateUser(userId, updates)
         let userId, userData;
 
@@ -701,7 +745,7 @@ class Database {
             });
         }
 
-        this.save();
+        await this.save(forceSave);
         return true;
     }
 
