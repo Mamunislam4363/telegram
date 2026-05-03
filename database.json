@@ -1,7 +1,7 @@
 {
   "users": {
     "123": {
-      "adminVerified": true,
+      "adminVerified": false,
       "apiStatus": "allow",
       "balance": 100,
       "balance_tokens": 100,
@@ -27,7 +27,7 @@
       "joinedChannel": false,
       "joinedGroup": false,
       "language": "en",
-      "lastActive": 1777785613322,
+      "lastActive": 1777795693167,
       "lastDaily": 0,
       "lastName": "",
       "referralCode": "ref_95CMCD",
@@ -36,7 +36,9 @@
       "tokens": 100,
       "usd": 0,
       "username": "TestUser",
-      "verified": true
+      "verified": false,
+      "Gems": 0,
+      "balance_Gems": 0
     },
     "12345": {
       "adminVerified": false,
@@ -953,9 +955,14 @@
     },
     "6915386689": {
       "balance": 0,
+      "balance_tokens": 0,
       "blocked": false,
       "cardsPurchased": 2,
+      "channelJoined": false,
+      "country": "BD",
       "failedVerifications": 0,
+      "firstName": "Onlin Income (Admin)",
+      "groupJoined": false,
       "history": [
         {
           "amount": 100,
@@ -967,15 +974,22 @@
       ],
       "id": 6915386689,
       "joinedAt": 1770566699567,
-      "lastActive": 1777783922736,
+      "joinedChannel": false,
+      "joinedGroup": false,
+      "lastActive": 1777791619347,
       "lastDaily": 1770722478067,
+      "lastName": "",
+      "photo_url": "https://t.me/i/userpic/320/UJnmZwyAzNUY1ZaCek8VmtASJCrKxfnyfq38LVaFR7CpvD8JJr8VZHQLBQ2fukuP.svg",
+      "referralCode": "ref_9LB8KH",
       "referralCount": 0,
       "referredBy": "7672601379",
       "successfulVerifications": 0,
       "tasksDone": [
         "channel"
       ],
-      "username": "Onlin_Income_Support"
+      "tokens": 0,
+      "username": "Onlin_Income_Support",
+      "verified": false
     },
     "6924092571": {
       "balance": 100,
@@ -3627,10 +3641,10 @@
   "featureFlags": {
     "tempMail": true,
     "virtualNumber": true,
-    "premiumMail": false,
+    "premiumMail": true,
     "accountsShop": true,
     "cardsVcc": true,
-    "joinRequired": true,
+    "joinRequired": false,
     "home_verify": true,
     "home_mail": true,
     "home_number": true,
@@ -3680,7 +3694,7 @@
     "number_services": true,
     "redeem_code": true,
     "referral": true,
-    "requireTelegram": true,
+    "requireTelegram": false,
     "studentMail": true,
     "support": true,
     "tasks": true,
