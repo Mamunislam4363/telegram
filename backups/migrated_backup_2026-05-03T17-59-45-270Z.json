@@ -3,7 +3,19 @@
     "123": {
       "Gems": 0,
       "adminVerified": true,
+      "apiKey": "sk_GcN4U1RGSQbKtAsgMR8TJ41DsXENUFmG",
+      "apiKeyCreatedAt": 1777829825853,
+      "apiRevokedAt": 1777827164480,
       "apiStatus": "allow",
+      "apiTotalCalls": 0,
+      "apiTotalUSD": 0,
+      "approvedApiServices": [
+        "balance",
+        "tempmail",
+        "premiummail",
+        "virtualnumber",
+        "store"
+      ],
       "balance": 100,
       "balance_Gems": 0,
       "balance_tokens": 100,
@@ -29,7 +41,7 @@
       "joinedChannel": false,
       "joinedGroup": false,
       "language": "en",
-      "lastActive": 1777823361640,
+      "lastActive": 1777830024695,
       "lastDaily": 0,
       "lastName": "",
       "referralCode": "ref_95CMCD",
@@ -954,9 +966,12 @@
       "successfulVerifications": 0
     },
     "6915386689": {
+      "Gems": 0,
       "adminVerified": true,
-      "balance": 0,
-      "balance_tokens": 0,
+      "apiStatus": "allow",
+      "balance": 4980,
+      "balance_Gems": 0,
+      "balance_tokens": 4980,
       "blocked": false,
       "cardsPurchased": 2,
       "channelJoined": false,
@@ -965,6 +980,13 @@
       "firstName": "Onlin Income (Admin)",
       "groupJoined": false,
       "history": [
+        {
+          "amount": -20,
+          "date": "2026-05-03T15:39:19.908Z",
+          "detail": "Mamunislam43.6.3.89.2@gmail.com",
+          "reward": "-20 Tokens",
+          "type": "premium_email"
+        },
         {
           "amount": 100,
           "date": 1777783910680,
@@ -977,7 +999,7 @@
       "joinedAt": 1770566699567,
       "joinedChannel": false,
       "joinedGroup": false,
-      "lastActive": 1777791619347,
+      "lastActive": 1777824999628,
       "lastDaily": 1770722478067,
       "lastName": "",
       "photo_url": "https://t.me/i/userpic/320/UJnmZwyAzNUY1ZaCek8VmtASJCrKxfnyfq38LVaFR7CpvD8JJr8VZHQLBQ2fukuP.svg",
@@ -988,7 +1010,8 @@
       "tasksDone": [
         "channel"
       ],
-      "tokens": 0,
+      "tokens": 4980,
+      "usd": 0,
       "username": "Onlin_Income_Support",
       "verified": true
     },
@@ -1286,6 +1309,7 @@
       "vpnsPurchased": 0
     },
     "7672601379": {
+      "adminVerified": true,
       "balance": 895,
       "balance_tokens": 895,
       "blocked": false,
@@ -1325,7 +1349,7 @@
       ],
       "tokens": 895,
       "username": "RiadAlMamun_Supporter",
-      "verified": false,
+      "verified": true,
       "vpnsPurchased": 1
     },
     "7672601379p": {
@@ -1564,20 +1588,10 @@
       "username": "Andu_graphics"
     },
     "8125978050": {
-      "adminVerified": true,
       "balance": 950,
       "blocked": false,
       "cardsPurchased": 2,
       "failedVerifications": 0,
-      "history": [
-        {
-          "amount": 100,
-          "date": 1777822452529,
-          "detail": "Welcome Bonus",
-          "reward": "+100 Tokens",
-          "type": "bonus"
-        }
-      ],
       "id": 8125978050,
       "joinedAt": 1770642654179,
       "language": "en",
@@ -1585,11 +1599,7 @@
       "lastDaily": 1770796487608,
       "referralCount": 0,
       "successfulVerifications": 0,
-      "username": "Riad_Al_Mamun",
-      "verified": true,
-      "apiKey": "sk_MANUAL_TEST_KEY_1234567890",
-      "apiStatus": "allow",
-      "apiKeyCreatedAt": 1777823469672
+      "username": "Riad_Al_Mamun"
     },
     "8128770916": {
       "balance": 50,
@@ -2906,12 +2916,6 @@
   "emailPool": {
     "gmail": [
       {
-        "addedAt": 1777777312298,
-        "email": "Mamunislam43.6.3.89.2@gmail.com",
-        "note": "",
-        "status": "available"
-      },
-      {
         "addedAt": 1777777312739,
         "email": "Mamunislam43.6.3.8.92@gmail.com",
         "note": "",
@@ -3654,7 +3658,38 @@
     "welcomeCredits": 100
   },
   "featureFlags": {
+    "tempMail": true,
+    "virtualNumber": true,
+    "premiumMail": true,
     "accountsShop": true,
+    "cardsVcc": true,
+    "joinRequired": false,
+    "home_verify": true,
+    "home_mail": true,
+    "home_number": true,
+    "home_gemini": true,
+    "home_chatgpt": true,
+    "home_accounts": true,
+    "home_vcc": true,
+    "home_premiumMail": false,
+    "aiPhotoGen": true,
+    "aiVideoGen": true,
+    "bgRemover": true,
+    "videoDownloader": true,
+    "vpnServices": true,
+    "dailyCheckin": true,
+    "tasksSystem": true,
+    "redeemCodes": true,
+    "referralSystem": true,
+    "quizFeature": true,
+    "exchange": true,
+    "home_aiPhoto": true,
+    "home_aiVideo": true,
+    "home_bgRemover": true,
+    "home_videoDownload": true,
+    "home_vpn": true,
+    "home_accountsShop": true,
+    "home_vccShop": true,
     "admin_backup": true,
     "admin_broadcast": true,
     "admin_group_controller": true,
@@ -3670,51 +3705,20 @@
     "admin_settings": true,
     "admin_stats": true,
     "admin_upload_file": true,
-    "aiPhotoGen": true,
-    "aiVideoGen": true,
-    "bgRemover": true,
     "buy_cards": true,
     "buy_premium_app": true,
     "buy_vpn": true,
-    "cardsVcc": true,
-    "dailyCheckin": true,
     "daily_bonus": true,
-    "exchange": true,
-    "home_accounts": true,
-    "home_accountsShop": true,
-    "home_aiPhoto": true,
-    "home_aiVideo": true,
-    "home_bgRemover": true,
-    "home_chatgpt": true,
-    "home_gemini": true,
-    "home_mail": true,
-    "home_number": true,
-    "home_premiumMail": false,
-    "home_vcc": true,
-    "home_vccShop": true,
-    "home_verify": true,
-    "home_videoDownload": true,
-    "home_vpn": true,
     "hotMail": true,
-    "joinRequired": false,
     "number_services": true,
-    "premiumMail": true,
-    "quizFeature": true,
-    "redeemCodes": true,
     "redeem_code": true,
     "referral": true,
-    "referralSystem": true,
     "requireTelegram": false,
     "studentMail": true,
     "support": true,
     "tasks": true,
-    "tasksSystem": true,
-    "tempMail": true,
     "transfer": true,
-    "verification": false,
-    "videoDownloader": true,
-    "virtualNumber": true,
-    "vpnServices": true
+    "verification": false
   },
   "numberServices": {},
   "services": {},
@@ -3864,6 +3868,14 @@
       "publisherId": ""
     }
   },
+  "emailPoolHistory": [
+    {
+      "assignedAt": "2026-05-03T15:39:19.906Z",
+      "assignedTo": 6915386689,
+      "email": "Mamunislam43.6.3.89.2@gmail.com",
+      "type": "gmail"
+    }
+  ],
   "groupWarnings": {
     "-1002516230551_7672601379": 1
   },
@@ -4200,6 +4212,14 @@
       "service": "temp",
       "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJpYXQiOjE3Nzc3NDczNjMsInJvbGVzIjpbIlJPTEVfVVNFUiJdLCJhZGRyZXNzIjoiZTNkM21mQGRlbHRham9obnNvbnMuY29tIiwiaWQiOiI2OWY2NDVhMzdjZmVkYzMxYzEwY2I2MDEiLCJtZXJjdXJlIjp7InN1YnNjcmliZSI6WyIvYWNjb3VudHMvNjlmNjQ1YTM3Y2ZlZGMzMWMxMGNiNjAxIl19fQ.VT4TJyqtb8PbqkF75G5SjS6q1GO5y5-0KRlEouKgeYTm-9Vp5KW7TMDFUaxWCiUjC-5Kc3M9S36EbHL8KrVOGQ",
       "userId": "123"
+    },
+    "premium_gmail_1777822759909_6915386689": {
+      "createdAt": 1777822759909,
+      "email": "Mamunislam43.6.3.89.2@gmail.com",
+      "provider": "gmail",
+      "sessionId": "Mamunislam43.6.3.89.2@gmail.com",
+      "token": "Mamunislam43.6.3.89.2@gmail.com",
+      "userId": "6915386689"
     }
   },
   "premiumMailSettings": {

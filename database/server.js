@@ -84,7 +84,7 @@ function setBot(instance) {
     if (db.data.apiKeys && db.data.apiKeys.miniAppUrl) {
         publicUrl = db.data.apiKeys.miniAppUrl;
     }
-    
+
     if (!publicUrl) {
         publicUrl = 'https://autosverifybot-production.up.railway.app/'; // Final fallback
     }
@@ -169,11 +169,9 @@ function getUsersObj() {
 }
 
 function saveUsersObj(users) {
-    // Sync users to db.data.users
-    if (users) {
-        db.data.users = users;
-    }
-    // Trigger Firebase save
+    // Trigger Firebase save only - users object is already modified in place via getUsersObj() reference
+    // IMPORTANT: Do NOT assign db.data.users = users as this causes race conditions
+    // where concurrent saves wipe out data added between getUsersObj() and saveUsersObj()
     if (typeof db.save === 'function') {
         db.save();
     }
@@ -1077,7 +1075,7 @@ app.post('/api/register', async (req, res) => {
                     date: Date.now()
                 });
 
-        await db.updateUser(refUser);
+                await db.updateUser(refUser);
 
                 // Notify referrer about new referral
                 const botToken = config.BOT_TOKEN || '';
@@ -1088,7 +1086,7 @@ app.post('/api/register', async (req, res) => {
 
             // Mark user as referred
             user.referredBy = referrer;
-        await db.updateUser(user);
+            await db.updateUser(user);
         }
     }
 
@@ -1113,10 +1111,12 @@ app.post('/api/register', async (req, res) => {
         user.pendingWebMessages = [];
     }
 
-        await db.updateUser(user);
+    await db.updateUser(user);
 
     // Always return the synced balance
     const tokens = db.getTokenBalance(user);
+
+    console.log(`[AUTH] User registered: ${userId}, Key present: ${!!user.apiKey}, Status: ${user.apiStatus || 'allow'}`);
 
     res.json({
         success: true,
@@ -1164,7 +1164,7 @@ app.post('/api/email/generate', async (req, res) => {
         const userId = req.headers['x-user-id'];
         const { type } = req.body;
         if (!userId) return res.json({ success: false, message: 'User ID required' });
-        
+
         const user = await db.getUser(userId);
         if (!user) return res.json({ success: false, message: 'User not found' });
 
@@ -1180,8 +1180,8 @@ app.post('/api/email/generate', async (req, res) => {
 
         // Call the external API to generate email
         // For this demo, we'll mock it if the key is default or use axios if key is set
-        let generatedEmail = `user${Math.floor(Math.random()*10000)}@autosmail.com`;
-        
+        let generatedEmail = `user${Math.floor(Math.random() * 10000)}@autosmail.com`;
+
         // Deduction
         if (cost > 0) {
             db.setTokenBalance(user, balance - cost);
@@ -1198,10 +1198,10 @@ app.post('/api/email/generate', async (req, res) => {
         user.currentEmail = generatedEmail;
         await db.updateUser(user);
 
-        res.json({ 
-            success: true, 
-            email: generatedEmail, 
-            newBalance: db.getTokenBalance(user) 
+        res.json({
+            success: true,
+            email: generatedEmail,
+            newBalance: db.getTokenBalance(user)
         });
     } catch (e) {
         res.json({ success: false, message: e.message });
@@ -1333,7 +1333,7 @@ app.post('/api/quiz/submit', async (req, res) => {
         detail: correct ? 'Quiz Correct' : 'Quiz Wrong'
     });
 
-        await db.updateUser(user);
+    await db.updateUser(user);
     res.json({
         success: true,
         newBalance: newBalance,
@@ -1410,7 +1410,7 @@ app.post('/api/scratch/claim', async (req, res) => {
         date: Date.now()
     });
 
-        await db.updateUser(user);
+    await db.updateUser(user);
     res.json({ success: true, newBalance: db.getTokenBalance(user) });
 });
 
@@ -1578,7 +1578,7 @@ app.post('/api/earn', async (req, res) => {
         date: Date.now()
     });
 
-        await db.updateUser(user);
+    await db.updateUser(user);
 
     console.log(`[DEBUG] Task completed successfully: ${taskType}, newBalance: ${newBalance}, loanRepaid: ${repaidAmount}`);
     return res.json({
@@ -1635,7 +1635,7 @@ app.post('/api/accounts/buy-category', async (req, res) => {
         date: Date.now()
     });
 
-        await db.updateUser(user);
+    await db.updateUser(user);
 
     return res.json({
         success: true,
@@ -1912,8 +1912,8 @@ app.get('/api/user/apikey', async (req, res) => {
         }
 
         console.log(`[API_GET] User ${userId} status: ${user.apiStatus}, key: ${user.apiKey ? 'PRESENT' : 'MISSING'}`);
-
         if (user.apiKey) {
+            console.log(`[API_GET] Returning existing key for ${userId}: ${user.apiKey.substring(0, 8)}...`);
             res.json({
                 success: true,
                 apiKey: user.apiKey,
@@ -1921,12 +1921,13 @@ app.get('/api/user/apikey', async (req, res) => {
                 status: user.apiStatus || 'allow'
             });
         } else {
+            console.warn(`[API_GET] No key found in database for user ${userId}`);
             // If no key but status is allow, we can still return the status
-            res.json({ 
-                success: true, 
-                apiKey: null, 
+            res.json({
+                success: true,
+                apiKey: null,
                 status: user.apiStatus || 'allow',
-                message: 'No API key generated yet' 
+                message: 'No API key generated yet'
             });
         }
     } catch (error) {
@@ -1952,19 +1953,22 @@ app.post('/api/user/apikey/generate', async (req, res) => {
         const user = await db.getUser(userId);
         if (!user) {
             console.error(`[API_GEN] Error: User ${userId} not found in database`);
+            console.error('[API_GEN] Error: User ${userId} not found in database');
             return res.status(404).json({ success: false, message: 'User not found' });
         }
 
         // Generate new API key
         const apiKey = generateApiKeyValue();
         user.apiKey = apiKey;
-        
-        // Ensure metadata fields exist
-        if (!user.apiStatus || user.apiStatus === 'pending') {
-            user.apiStatus = 'allow';
-        }
+
+        // Initialize stats and approvals
+        user.apiStatus = 'allow';
         user.apiKeyCreatedAt = Date.now();
         user.apiTotalCalls = user.apiTotalCalls || 0;
+        user.apiTotalUSD = user.apiTotalUSD || 0;
+
+        // Auto-approve all standard services for the new key
+        user.approvedApiServices = ['balance', 'tempmail', 'premiummail', 'virtualnumber', 'store'];
 
         // Save changes
         await db.updateUser(user, null, true);
@@ -1979,10 +1983,10 @@ app.post('/api/user/apikey/generate', async (req, res) => {
     } catch (error) {
         console.error('[API KEY GENERATE CRASH]', error);
         if (!res.headersSent) {
-            res.status(500).json({ 
-                success: false, 
+            res.status(500).json({
+                success: false,
                 message: 'Internal Server Error during key generation',
-                error: error.message 
+                error: error.message
             });
         }
     }
@@ -2177,7 +2181,7 @@ app.post('/api/admin/users/:userId/api-status', async (req, res) => {
     try {
         const { userId } = req.params;
         const { status } = req.body; // 'allow', 'disallow', 'ban'
-        
+
         if (!['allow', 'disallow', 'ban'].includes(status)) {
             return res.json({ success: false, message: 'Invalid status' });
         }
@@ -2257,11 +2261,7 @@ app.get('/api/v1/balance', async (req, res) => {
             return res.status(401).json({ success: false, message: 'Invalid or inactive API key' });
         }
 
-        // Check if user has balance access
-        if (!user.approvedApiServices?.includes('balance')) {
-            return res.status(403).json({ success: false, message: 'Balance service not approved' });
-        }
-
+        // Recording usage (balance check is free but we track it)
         await recordApiUsage(user, 'balance', 'get_balance', 0);
 
         res.json({
@@ -2393,7 +2393,7 @@ app.post('/api/v1/store/buy', validateApiKey, async (req, res) => {
         // Find item in store
         const services = db.data.services || {};
         const item = Object.values(services).find(s => s.id === itemId);
-        
+
         if (!item) return res.status(404).json({ success: false, message: 'Item not found in store' });
 
         const cost = item.price || 100;
@@ -2403,11 +2403,11 @@ app.post('/api/v1/store/buy', validateApiKey, async (req, res) => {
         db.setTokenBalance(req.apiUser, balance - cost);
         await recordApiUsage(req.apiUser, 'store', `buy_${itemId}`, cost);
 
-        res.json({ 
-            success: true, 
-            itemName: item.name, 
+        res.json({
+            success: true,
+            itemName: item.name,
             data: "Purchase successful. Check your history for credentials.",
-            cost 
+            cost
         });
     } catch (e) {
         res.status(500).json({ success: false, message: e.message });
@@ -2536,7 +2536,11 @@ app.post('/api/complete-task', async (req, res) => {
 
 // Helper: get users object
 function getUsersObj() { return db.data.users || {}; }
-function saveUsersObj(users) { db.data.users = users; db.save(); }
+function saveUsersObj(users) {
+    // Trigger Firebase save only - users object is already modified in place via getUsersObj() reference
+    // IMPORTANT: Do NOT assign db.data.users = users as this causes race conditions
+    db.save();
+}
 
 // API: Get Virtual Number Platforms (Sorted by Popularity)
 app.get('/api/number/platforms', (req, res) => {
@@ -2638,7 +2642,7 @@ app.post('/api/number/generate', async (req, res) => {
         if (!user.flags.limitNotified) {
             notifyLimit = true;
             user.flags.limitNotified = true;
-        await db.updateUser(user);
+            await db.updateUser(user);
         }
     }
 
@@ -2722,7 +2726,7 @@ app.post('/api/number/generate', async (req, res) => {
         detail: number,
         platform: platform
     });
-        await db.updateUser(user);
+    await db.updateUser(user);
 
     // Store session
     if (!db.data.numberSessions) db.data.numberSessions = {};
@@ -2824,7 +2828,7 @@ app.post('/api/admin/mother-email/connect', async (req, res) => {
         // Save config to DB
         if (!db.data.settings) db.data.settings = {};
         if (!db.data.adminSettings.motherEmailConfigs) db.data.adminSettings.motherEmailConfigs = {};
-        
+
         db.data.adminSettings.motherEmailConfigs[type] = { email, password, host: host || null, port: port || 993, connectedAt: Date.now() };
         db.save();
 
@@ -2862,10 +2866,10 @@ app.get('/api/admin/mother-email/status', (req, res) => {
     try {
         const status = imapService.getStatus();
         const saved = db.data.adminSettings?.motherEmailConfigs || {};
-        
+
         // Merge active status with saved configs
         const result = { gmail: {}, hotmail: {} };
-        
+
         for (const type of ['gmail', 'hotmail']) {
             result[type] = {
                 connected: !!status[type]?.connected,
@@ -2873,7 +2877,7 @@ app.get('/api/admin/mother-email/status', (req, res) => {
                 savedConfig: saved[type] ? { email: saved[type].email, host: saved[type].host, port: saved[type].port } : null
             };
         }
-        
+
         res.json({ success: true, status: result });
     } catch (e) {
         res.json({ success: false, message: e.message });
@@ -2980,9 +2984,9 @@ app.get('/api/admin/email-pool/list', (req, res) => {
         });
 
         if (type) {
-            return res.json({ 
-                success: true, 
-                emails: pool[type] || [], 
+            return res.json({
+                success: true,
+                emails: pool[type] || [],
                 type,
                 stats: stats[type] || { available: 0, totalUsed: 0, recentHistory: [] }
             });
@@ -2998,7 +3002,7 @@ app.delete('/api/admin/email-pool/delete', (req, res) => {
     try {
         const { type, email } = req.body;
         if (!type || !email) return res.json({ success: false, message: 'type and email required' });
-        
+
         let removed = false;
 
         // 1. Remove from active pool
@@ -3033,13 +3037,13 @@ app.post('/api/admin/email-pool/clear-assigned', (req, res) => {
         if (!type) return res.json({ success: false, message: 'Type required' });
 
         const initialCount = db.data.emailPoolHistory ? db.data.emailPoolHistory.length : 0;
-        
+
         if (db.data.emailPoolHistory) {
             db.data.emailPoolHistory = db.data.emailPoolHistory.filter(h => h.type !== type);
         }
 
         const cleared = initialCount - (db.data.emailPoolHistory ? db.data.emailPoolHistory.length : 0);
-        
+
         db.save();
         res.json({ success: true, message: `Cleared ${cleared} used emails from ${type} history` });
     } catch (e) {
@@ -3224,7 +3228,7 @@ app.get('/api/premium-emails/inbox', async (req, res) => {
                 }
             }
 
-        // ─── ADMIN POOL HOTMAIL → use IMAP Mother Email ───
+            // ─── ADMIN POOL HOTMAIL → use IMAP Mother Email ───
         } else if (providerStr.startsWith('admin_pool_hotmail') || providerStr === 'hotmail' || service === 'hotmail') {
             if (imapService.isConnected('hotmail')) {
                 messages = await imapService.fetchMessagesForEmail('hotmail', targetEmail, 60);
@@ -3243,7 +3247,7 @@ app.get('/api/premium-emails/inbox', async (req, res) => {
                 }
             }
 
-        // ─── STUDENT EMAIL → external provider ───
+            // ─── STUDENT EMAIL → external provider ───
         } else if (providerStr.startsWith('admin_pool_student') || session.provider === 'student' || service === 'student') {
             const unifiedProviders = require('../services/providers');
             messages = await unifiedProviders.getStudentEmailMessages(
@@ -3287,7 +3291,7 @@ app.post('/api/mail/generate', async (req, res) => {
     const settings = db.getSettings();
     const costs = settings.costs || {};
     const requestedService = (type || service || 'temp').toString().toLowerCase();
-    
+
     let tokenCost = costs.tempmail || 10;
     if (requestedService === 'gmail' || requestedService === 'premium') tokenCost = costs.gmail || 20;
     else if (requestedService === 'hotmail' || requestedService === 'hot') tokenCost = costs.hotmail || 25;
@@ -3313,10 +3317,10 @@ app.post('/api/mail/generate', async (req, res) => {
                 sessionId: poolEmail.email,
                 token: poolEmail.email
             };
-            
+
             // Remove from pool
             db.data.emailPool['hotmail'] = db.data.emailPool['hotmail'].filter(e => e.email !== poolEmail.email);
-            
+
             // Add to history
             if (!db.data.emailPoolHistory) db.data.emailPoolHistory = [];
             db.data.emailPoolHistory.push({
@@ -3339,10 +3343,10 @@ app.post('/api/mail/generate', async (req, res) => {
                 sessionId: poolEmail.email,
                 token: poolEmail.email
             };
-            
+
             // Remove from pool
             db.data.emailPool['gmail'] = db.data.emailPool['gmail'].filter(e => e.email !== poolEmail.email);
-            
+
             // Add to history
             if (!db.data.emailPoolHistory) db.data.emailPoolHistory = [];
             db.data.emailPoolHistory.push({
@@ -3408,12 +3412,12 @@ app.post('/api/mail/renew-custom', async (req, res) => {
 
     // Normalize type
     const requestedType = (type === 'premium' || type === 'gmail') ? 'gmail' : 'hotmail';
-    
+
     // Find email in pool or history
     const pool = db.data.emailPool || {};
     const typePool = pool[requestedType] || [];
     let emailData = typePool.find(e => e.email.toLowerCase() === email.toLowerCase());
-    
+
     if (!emailData) {
         const history = db.data.emailPoolHistory || [];
         const histItem = history.find(h => h.email.toLowerCase() === email.toLowerCase() && h.type === requestedType);
@@ -4336,7 +4340,7 @@ app.get('/api/admin/system-info', async (req, res) => {
 // API: Admin - Card Management
 app.get('/api/admin/cards', (req, res) => {
     const cards = [];
-    
+
     // Legacy card prices
     Object.keys(db.data.cardPrices || {}).forEach(key => {
         cards.push({
@@ -4346,7 +4350,7 @@ app.get('/api/admin/cards', (req, res) => {
             count: db.data.cards?.[key]?.length || 0
         });
     });
-    
+
     // Unified Service Items
     Object.keys(db.data.services || {}).forEach(key => {
         const item = db.data.services[key];
@@ -4359,7 +4363,7 @@ app.get('/api/admin/cards', (req, res) => {
             });
         }
     });
-    
+
     res.json({ success: true, cards });
 });
 
@@ -5053,7 +5057,7 @@ app.post('/api/admin/send-gift', async (req, res) => {
         giftId: giftId
     });
 
-        await db.updateUser(user);
+    await db.updateUser(user);
     res.json({ success: true, giftId, message: `Gift of ${amount} ${currency} sent to user ${userId}` });
 });
 
@@ -5111,7 +5115,7 @@ app.post('/api/gift/claim', async (req, res) => {
     // Add global transaction
     db.addTransaction(userId, 'gift', amount, currency === 'tokens' ? 'TC' : currency === 'Gems' ? 'JS' : 'USD', `Gift Claimed: ${gift.note || 'Admin Gift'}`, 'gift');
 
-        await db.updateUser(user);
+    await db.updateUser(user);
 
     const currencyLabel = currency === 'tokens' ? 'Tokens' : currency === 'Gems' ? 'Gems' : 'USD';
     res.json({
@@ -7208,7 +7212,7 @@ app.post('/api/admin/users/:userId/verify', async (req, res) => {
         user.verified = !!verified;
     }
 
-        await db.updateUser(user);
+    await db.updateUser(user);
     res.json({
         success: true,
         message: 'User verification updated',
@@ -7490,7 +7494,7 @@ app.post('/api/daily/claim', async (req, res) => {
         date: now
     });
 
-        await db.updateUser(user);
+    await db.updateUser(user);
 
     res.json({
         success: true,
@@ -8241,7 +8245,7 @@ async function startServer() {
                 if (result.success) {
                     if (userId) {
                         console.log(`[AI Photo] User ${userId} generated image with ${result.provider}`);
-                        
+
                         // Deduct tokens
                         db.setTokenBalance(user, db.getTokenBalance(user) - cost);
                         if (!user.history) user.history = [];
@@ -8313,7 +8317,7 @@ async function startServer() {
                 if (result.success) {
                     if (userId) {
                         console.log(`[AI Video] User ${userId} generated video with ${result.provider}`);
-                        
+
                         // Deduct tokens
                         db.setTokenBalance(user, db.getTokenBalance(user) - cost);
                         if (!user.history) user.history = [];
@@ -8988,7 +8992,7 @@ app.get('/api/mother-email/inbox', async (req, res) => {
 app.get('/api/admin/email-pool/list', (req, res) => {
     const { type } = req.query;
     if (!db.data.emailPool) db.data.emailPool = { gmail: [], hotmail: [] };
-    
+
     if (type) {
         const emails = db.data.emailPool[type] || [];
         const available = emails.filter(e => !e.assignedTo).length;

@@ -169,16 +169,16 @@ function apiFetch(url, options = {}) {
     } catch (e) {
         body = {};
     }
-    
+
     // Ultimate userId discovery
-    const userId = body.userId || 
-                   userData.id || 
-                   (window.Telegram?.WebApp?.initDataUnsafe?.user?.id) || 
-                   null;
+    const userId = body.userId ||
+        userData.id ||
+        (window.Telegram?.WebApp?.initDataUnsafe?.user?.id) ||
+        null;
 
     if (!userId) {
         console.warn('[apiFetch] Blocked: No userId discovered');
-        return Promise.resolve({ 
+        return Promise.resolve({
             json: () => Promise.resolve({ success: false, message: 'Auth Error: No User ID' }),
             ok: false
         });
@@ -662,7 +662,7 @@ function showPage(targetId) {
 
         // Restore scroll position (so Back keeps you at the same place)
         const mainScroll = document.getElementById('mainScroll');
-        const savedTop = (pageScrollPositions[targetId] ?? 0);
+        const savedTop = (targetId === 'home') ? 0 : (pageScrollPositions[targetId] ?? 0);
         if (mainScroll) {
             setTimeout(() => {
                 mainScroll.scrollTop = savedTop;
@@ -840,13 +840,19 @@ function showPage(targetId) {
         const pageNoKey = document.getElementById('apiKeyNoKey');
         const pageActive = document.getElementById('apiKeyActive');
         const pageDisplay = document.getElementById('userApiKeyDisplay');
-        
+
         if (userData && userData.apiKey) {
             if (pageActive) pageActive.style.display = 'block';
             if (pageNoKey) pageNoKey.style.display = 'none';
             if (pageDisplay) pageDisplay.value = userData.apiKey;
         }
         loadApiKey();
+    }
+
+    if (targetId === 'home') {
+        try {
+            pageScrollPositions.home = 0;
+        } catch (e) { }
     }
 
     // Immediate render from cache for VCC and VPN
@@ -3439,7 +3445,11 @@ async function registerAndFetchUser() {
         try {
             const parsed = JSON.parse(cachedData);
             if (parsed.id == currentUserId) {
+                const keepApiKey = userData && userData.apiKey;
                 userData = { ...userData, ...parsed };
+                if (keepApiKey && !userData.apiKey) {
+                    userData.apiKey = keepApiKey;
+                }
                 console.log("💾 Loaded from cache:", userData.completedTasks?.length || 0, "tasks");
                 if (userData.completedTasks) {
                     userData.completedTasks.forEach(tid => { IN_PROGRESS_TASKS[tid] = 'completed'; });
@@ -3488,11 +3498,20 @@ async function registerAndFetchUser() {
             userData.verified = data.verified || false;
             userData.adminVerified = data.adminVerified || false;
             userData.apiStatus = data.apiStatus || 'allow';
-            // Update API Key only if server provides one, to avoid overwriting local cache with null during sync hiccups
-            if (data.apiKey) {
-                userData.apiKey = data.apiKey;
-            } else if (!userData.apiKey) {
-                userData.apiKey = null;
+            
+            // STRICT API KEY SYNC: Trust the server if it explicitly sends a key
+            // If the server response has an apiKey (even if it's null/undefined), sync it
+            // but keep the local one if the server response property is missing entirely
+            if (data.hasOwnProperty('apiKey')) {
+                if (data.apiKey) {
+                    userData.apiKey = data.apiKey;
+                    console.log("[API_SYNC] Synced key from server:", data.apiKey.substring(0, 8) + '...');
+                } else {
+                    // Server explicitly sent null/empty key - only wipe if we don't have one locally
+                    // or if we want to force server as source of truth. Let's trust server.
+                    userData.apiKey = null;
+                    console.log("[API_SYNC] Server reported NO key.");
+                }
             }
             userData.dailyStreak = data.dailyStreak || 0;
             userData.lastDailyClaim = data.lastClaim || 0;
@@ -5802,14 +5821,14 @@ function openRenewMailModal(type) {
     const sheet = document.getElementById('renewMailSheet');
     const costDisplay = document.getElementById('renewMailCostDisplay');
     const input = document.getElementById('renewCustomEmailInput');
-    
+
     // Clear input
     if (input) input.value = '';
-    
+
     // Set cost from config
     const cost = (window.serviceConfig && window.serviceConfig.renewMailCost) || 30;
     if (costDisplay) costDisplay.textContent = cost + ' TC';
-    
+
     modal.style.display = 'flex';
     setTimeout(() => { sheet.style.transform = 'translateY(0)'; }, 20);
     if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
@@ -5825,7 +5844,7 @@ function closeRenewMailModal() {
 async function confirmRenewCustomEmail() {
     const email = document.getElementById('renewCustomEmailInput').value.trim();
     const btn = document.getElementById('confirmRenewBtn');
-    
+
     if (!email) {
         window.showToast('Please enter an email address');
         return;
@@ -5854,21 +5873,21 @@ async function confirmRenewCustomEmail() {
 
         if (data.success) {
             window.showToast('✅ Email renewed successfully!', 'success');
-            
+
             // Set the new session
             const type = currentRenewType === 'premium' ? 'premium' : (currentRenewType === 'hot' ? 'hot' : 'hotmail');
             mailSessions[type] = data.sessionId;
-            
+
             // Update balance and start polling
             if (data.newBalance !== undefined) {
                 userData.balance_tokens = data.newBalance;
                 userData.tokens = data.newBalance;
                 updateMailBalance(type);
             }
-            
+
             closeRenewMailModal();
             startInboxPolling(type);
-            
+
             if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
         } else {
             window.showToast('❌ ' + (data.message || 'Renewal failed'), 'error');
@@ -5971,23 +5990,23 @@ function renderInbox(emails, type) {
             }
         } else {
             const combined = ((email.subject || '') + " " + (email.body || email.preview || '')).toUpperCase();
-            
+
             // Robust Regex for OTPs: 4-8 digits or 5-8 alphanumeric characters
             // This regex tries to find strings that look like codes
             const matches = combined.match(/\b([A-Z0-9]{4,8})\b/g);
-            
+
             if (matches) {
                 matches.forEach(code => {
                     // Filter out common false positives and non-OTP strings
                     const isDigitOnly = /^\d{4,8}$/.test(code);
                     const isAlphanumeric = /[A-Z]/.test(code) && /\d/.test(code);
                     const isCommonWord = ['LOGIN', 'VERIFY', 'EMAIL', 'CODE', 'PASS', 'USER', 'ADMIN', 'GMAIL', 'HTML'].includes(code);
-                    
+
                     if ((isDigitOnly || isAlphanumeric) && !isCommonWord) {
                         // Check for context keywords nearby in the text if it's alphanumeric (to avoid random strings)
                         const contextKeywords = ["OTP", "CODE", "VERIF", "LOGIN", "SIGN", "PASS", "TOKEN", "PIN"];
                         const hasContext = contextKeywords.some(k => combined.includes(k));
-                        
+
                         // Higher confidence if it's pure digits OR has context keywords
                         if (isDigitOnly || hasContext) {
                             if (!otps.some(o => o.code === code)) {
@@ -7205,7 +7224,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         } else {
             console.log('[INIT] Join check skipped (disabled or admin) - proceeding to app');
         }
-        
+
         continueInitialization();
     } catch (error) {
         console.error('[INIT] Critical initialization error:', error);
@@ -9224,35 +9243,54 @@ window.removeBackground = removeBackground;
 window.downloadVideo = downloadVideo;
 
 // API KEY MANAGEMENT
-window.openApiManagementModal = function() {
-    const modal = document.getElementById('apiManagementModal');
-    if (modal) {
-        const modalNoKey = document.getElementById('apiModalNoKey');
-        const modalActive = document.getElementById('apiModalActive');
-        const modalLoading = document.getElementById('apiModalLoading');
-        const modalDisplay = document.getElementById('modalApiKeyDisplay');
-
-        // Reset visibility immediately
-        if (modalLoading) modalLoading.style.display = 'none';
-        if (modalNoKey) modalNoKey.style.display = 'none';
-        if (modalActive) modalActive.style.display = 'none';
-
-        // STRICT POLICY: If key exists in memory, show active screen INSTANTLY
-        if (userData && userData.apiKey) {
-            if (modalActive) modalActive.style.display = 'block';
-            if (modalDisplay) modalDisplay.value = userData.apiKey;
-            // No need for loading screen at all
-        } else {
-            // Only show loading if we are absolutely sure there is no local key
-            if (modalLoading) modalLoading.style.display = 'block';
+window.openApiManagementModal = async function () {
+    try {
+        // If membership join gating is enabled, enforce it here too (not only on init)
+        if (typeof checkRequiredJoins === 'function' && typeof showJoinRequiredModal === 'function') {
+            try {
+                const joinCheck = await checkRequiredJoins();
+                if (joinCheck && joinCheck.canProceed === false) {
+                    showJoinRequiredModal(joinCheck);
+                    return;
+                }
+            } catch (e) {
+                // If join check fails, don't hard-block API management UI
+            }
         }
 
-        modal.style.display = 'flex';
-        loadApiKey(); // This will sync with server in background
+        const modal = document.getElementById('apiManagementModal');
+        if (modal) {
+            const modalNoKey = document.getElementById('apiModalNoKey');
+            const modalActive = document.getElementById('apiModalActive');
+            const modalBanned = document.getElementById('apiModalBanned');
+            const modalLoading = document.getElementById('apiModalLoading');
+            const modalDisplay = document.getElementById('modalApiKeyDisplay');
+
+            // Reset visibility immediately
+            if (modalLoading) modalLoading.style.display = 'none';
+            if (modalNoKey) modalNoKey.style.display = 'none';
+            if (modalActive) modalActive.style.display = 'none';
+            if (modalBanned) modalBanned.style.display = 'none';
+
+            // STRICT POLICY: If key exists in memory, show active screen INSTANTLY
+            if (userData && userData.apiKey) {
+                if (modalActive) modalActive.style.display = 'block';
+                if (modalDisplay) modalDisplay.value = userData.apiKey;
+                // No need for loading screen at all
+            } else {
+                // Only show loading if we are absolutely sure there is no local key
+                if (modalLoading) modalLoading.style.display = 'block';
+            }
+
+            modal.style.display = 'flex';
+            loadApiKey(); // This will sync with server in background
+        }
+    } catch (e) {
+        console.error('[API_UI] openApiManagementModal error:', e);
     }
 };
 
-window.closeApiManagementModal = function() {
+window.closeApiManagementModal = function () {
     const modal = document.getElementById('apiManagementModal');
     if (modal) modal.style.display = 'none';
 };
@@ -9264,42 +9302,69 @@ async function loadApiKey() {
     const modalNoKey = document.getElementById('apiModalNoKey');
     const modalActive = document.getElementById('apiModalActive');
     const modalDisplay = document.getElementById('modalApiKeyDisplay');
-    
+
     const pageNoKey = document.getElementById('apiKeyNoKey');
     const pageActive = document.getElementById('apiKeyActive');
     const pageBanned = document.getElementById('apiKeyBannedNotice');
     const pageContent = document.getElementById('apiKeyContent');
     const pageDisplay = document.getElementById('userApiKeyDisplay');
-    
-    // FAST PATH: If we already have a key in memory, show it instantly
+
+    // FAST PATH: If we already have a key in memory, show it instantly and skip loading
     if (userData && userData.apiKey) {
         if (modalLoading) modalLoading.style.display = 'none';
-        if (modalActive) modalActive.style.display = 'block';
-        if (pageActive) pageActive.style.display = 'block';
         if (modalNoKey) modalNoKey.style.display = 'none';
         if (pageNoKey) pageNoKey.style.display = 'none';
+        
+        if (modalActive) modalActive.style.display = 'block';
+        if (pageActive) pageActive.style.display = 'block';
+        
         if (modalDisplay) modalDisplay.value = userData.apiKey;
         if (pageDisplay) pageDisplay.value = userData.apiKey;
+        
+        console.log('[API_UI] Using cached key for instant display');
     } else {
-        // If no local key, show loading initially
+        // Only show loading if we are absolutely sure there is no local key
         if (modalLoading) modalLoading.style.display = 'block';
+        if (modalNoKey) modalNoKey.style.display = 'none';
+        if (modalActive) modalActive.style.display = 'none';
     }
 
     // Background fetch to sync latest state
     try {
-        const res = await apiFetch('/api/user/apikey', { method: 'GET' });
+        console.log('[API_UI] loadApiKey fetching for user:', userData?.id);
+        // Add cache-busting to prevent browser caching
+        const cacheBuster = `?_=${Date.now()}`;
+        const res = await apiFetch('/api/user/apikey' + cacheBuster, { method: 'GET' });
         const data = await res.json();
-        
+        console.log('[API_UI] loadApiKey server response:', data);
+
         if (modalLoading) modalLoading.style.display = 'none';
+
+        // If server returns failure, always show a sane UI (No Key) instead of blank
+        if (!data || data.success !== true) {
+            if (modalBanned) modalBanned.style.display = 'none';
+            if (modalActive) modalActive.style.display = 'none';
+            if (pageActive) pageActive.style.display = 'none';
+
+            if (modalNoKey) modalNoKey.style.display = 'block';
+            if (pageNoKey) pageNoKey.style.display = 'block';
+            if (pageContent) pageContent.style.display = '';
+            return;
+        }
 
         if (data.success && data.apiKey) {
             // Update global data
             if (userData) userData.apiKey = data.apiKey;
-            
+            try {
+                if (userData && userData.id) {
+                    localStorage.setItem(`userData_${userData.id}`, JSON.stringify(userData));
+                }
+            } catch (e) { }
+
             // Sync Displays
             if (pageDisplay) pageDisplay.value = data.apiKey;
             if (modalDisplay) modalDisplay.value = data.apiKey;
-            
+
             // Toggle Visibility
             if (modalActive) modalActive.style.display = 'block';
             if (pageActive) pageActive.style.display = 'block';
@@ -9308,6 +9373,11 @@ async function loadApiKey() {
         } else if (data.success && !data.apiKey) {
             // Server explicitly says no key - update local state
             if (userData) userData.apiKey = null;
+            try {
+                if (userData && userData.id) {
+                    localStorage.setItem(`userData_${userData.id}`, JSON.stringify(userData));
+                }
+            } catch (e) { }
             if (modalNoKey) modalNoKey.style.display = 'block';
             if (pageNoKey) pageNoKey.style.display = 'block';
             if (modalActive) modalActive.style.display = 'none';
@@ -9316,7 +9386,7 @@ async function loadApiKey() {
 
         // Handle Ban
         if (data.status === 'ban' || (userData && userData.apiStatus === 'ban')) {
-            [modalActive, modalNoKey, pageActive, pageNoKey].forEach(el => { if(el) el.style.display = 'none'; });
+            [modalActive, modalNoKey, pageActive, pageNoKey].forEach(el => { if (el) el.style.display = 'none'; });
             if (modalBanned) modalBanned.style.display = 'block';
             if (pageBanned) pageBanned.style.display = 'block';
             if (pageContent) pageContent.style.display = 'none';
@@ -9324,19 +9394,27 @@ async function loadApiKey() {
     } catch (e) {
         console.error('Load API Key error:', e);
         if (modalLoading) modalLoading.style.display = 'none';
-        // If error and we have no local key, we stay in whatever state we were (or show error toast)
+        // Always show No Key UI on error if nothing is already visible
+        try {
+            if (!(userData && userData.apiKey)) {
+                if (modalActive) modalActive.style.display = 'none';
+                if (pageActive) pageActive.style.display = 'none';
+                if (modalNoKey) modalNoKey.style.display = 'block';
+                if (pageNoKey) pageNoKey.style.display = 'block';
+            }
+        } catch (_) { }
     }
 }
 
 // Export to window for HTML onclick
-window.generateNewApiKey = async function(btnElement) {
+window.generateNewApiKey = async function (btnElement) {
     console.log('[API_UI] generateNewApiKey clicked');
     window.showToast('⏳ Initializing Key Regeneration...');
     const btn = btnElement || document.getElementById('regenerateApiKeyBtn');
     const btnText = btn ? btn.textContent.trim().toUpperCase() : '';
     const isFirstTime = btnText.includes('GENERATE NOW');
     const originalContent = btn ? btn.innerHTML : '';
-    
+
     // Check if user is logged in
     const userId = userData.id || (window.Telegram?.WebApp?.initDataUnsafe?.user?.id);
     if (!userId) {
@@ -9352,22 +9430,27 @@ window.generateNewApiKey = async function(btnElement) {
                 btn.disabled = true;
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> PLEASE WAIT... GENERATING';
             }
-            
-            const res = await apiFetch('/api/user/apikey/generate', { 
+
+            const res = await apiFetch('/api/user/apikey/generate', {
                 method: 'POST',
                 body: { userId: userId }
             });
-            
+
             console.log('[API_UI] Request status:', res.status);
             const data = await res.json();
             console.log('[API_UI] Server Response:', data);
-            
+
             if (data.success) {
                 window.showToast('✅ API Key generated successfully!');
-                
+
                 // Update global userData
                 if (userData) userData.apiKey = data.apiKey;
-                
+                try {
+                    if (userData && userData.id) {
+                        localStorage.setItem(`userData_${userData.id}`, JSON.stringify(userData));
+                    }
+                } catch (e) { }
+
                 // Get all elements for instant update
                 const display = document.getElementById('userApiKeyDisplay');
                 const modalDisplay = document.getElementById('modalApiKeyDisplay');
@@ -9375,17 +9458,17 @@ window.generateNewApiKey = async function(btnElement) {
                 const modalActive = document.getElementById('apiModalActive');
                 const pageNoKey = document.getElementById('apiKeyNoKey');
                 const pageActive = document.getElementById('apiKeyActive');
-                
+
                 // Update values
                 if (display) display.value = data.apiKey;
                 if (modalDisplay) modalDisplay.value = data.apiKey;
-                
+
                 // Force UI transition
                 if (modalNoKey) modalNoKey.style.display = 'none';
                 if (pageNoKey) pageNoKey.style.display = 'none';
                 if (modalActive) modalActive.style.display = 'block';
                 if (pageActive) pageActive.style.display = 'block';
-                
+
                 if (window.Telegram?.WebApp?.HapticFeedback) {
                     window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
                 }
@@ -9419,10 +9502,10 @@ window.generateNewApiKey = async function(btnElement) {
 function copyToClipboard(elementId) {
     const el = document.getElementById(elementId);
     if (!el) return;
-    
+
     el.select();
     el.setSelectionRange(0, 99999); // For mobile
-    
+
     try {
         navigator.clipboard.writeText(el.value);
         window.showToast('Copied to clipboard!');

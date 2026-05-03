@@ -1,9 +1,22 @@
 {
   "users": {
     "123": {
+      "Gems": 0,
       "adminVerified": true,
+      "apiKey": "sk_glNMT6rktEh6Y8AxRYLNquGPRCOANTSb",
+      "apiKeyCreatedAt": 1777827056319,
       "apiStatus": "allow",
+      "apiTotalCalls": 0,
+      "apiTotalUSD": 0,
+      "approvedApiServices": [
+        "balance",
+        "tempmail",
+        "premiummail",
+        "virtualnumber",
+        "store"
+      ],
       "balance": 100,
+      "balance_Gems": 0,
       "balance_tokens": 100,
       "blocked": false,
       "cardsPurchased": 0,
@@ -27,7 +40,7 @@
       "joinedChannel": false,
       "joinedGroup": false,
       "language": "en",
-      "lastActive": 1777831533653,
+      "lastActive": 1777827042298,
       "lastDaily": 0,
       "lastName": "",
       "referralCode": "ref_95CMCD",
@@ -36,21 +49,7 @@
       "tokens": 100,
       "usd": 0,
       "username": "TestUser",
-      "verified": true,
-      "Gems": 0,
-      "apiKeyCreatedAt": 1777831373077,
-      "apiRevokedAt": 1777831344215,
-      "apiTotalCalls": 0,
-      "apiTotalUSD": 0,
-      "balance_Gems": 0,
-      "apiKey": "sk_xdZjvIvslcLYW4yhs3Pwf7GYAp8Ch3OL",
-      "approvedApiServices": [
-        "balance",
-        "tempmail",
-        "premiummail",
-        "virtualnumber",
-        "store"
-      ]
+      "verified": true
     },
     "12345": {
       "adminVerified": false,
@@ -2916,6 +2915,18 @@
   "emailPool": {
     "gmail": [
       {
+        "addedAt": 1777777312739,
+        "email": "Mamunislam43.6.3.8.92@gmail.com",
+        "note": "",
+        "status": "available"
+      },
+      {
+        "addedAt": 1777777312993,
+        "email": "Mamunislam43.6.3.8.9.2@gmail.com",
+        "note": "",
+        "status": "available"
+      },
+      {
         "addedAt": 1777777313236,
         "email": "Mamunislam4.363892@gmail.com",
         "note": "",
@@ -3642,15 +3653,6 @@
       "welcomeMessage": true,
       "welcomeMessageText": "👋 Welcome {name} to {title}!"
     },
-    "motherEmailConfigs": {
-      "gmail": {
-        "connectedAt": 1777830351563,
-        "email": "mamunislam4363892@gmail.com",
-        "host": "imap.gmail.com",
-        "password": "ocul jkro zmyy gyau",
-        "port": 993
-      }
-    },
     "supportCost": 10,
     "welcomeCredits": 100
   },
@@ -3867,18 +3869,6 @@
   },
   "emailPoolHistory": [
     {
-      "assignedAt": "2026-05-03T17:50:42.441Z",
-      "assignedTo": "123",
-      "email": "Mamunislam43.6.3.8.9.2@gmail.com",
-      "type": "gmail"
-    },
-    {
-      "assignedAt": "2026-05-03T17:46:42.693Z",
-      "assignedTo": "123",
-      "email": "Mamunislam43.6.3.8.92@gmail.com",
-      "type": "gmail"
-    },
-    {
       "assignedAt": "2026-05-03T15:39:19.906Z",
       "assignedTo": 6915386689,
       "email": "Mamunislam43.6.3.89.2@gmail.com",
@@ -3939,24 +3929,6 @@
       "sessionId": "hotmail_1775213206419",
       "token": "hotmail_1775213206419",
       "userId": 999999
-    },
-    "mail_premium_1777830621489_123": {
-      "createdAt": 1777830622483,
-      "email": "wache4@deltajohnsons.com",
-      "password": "qng47",
-      "provider": "mail.tm",
-      "service": "premium",
-      "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJpYXQiOjE3Nzc4MzA2MjIsInJvbGVzIjpbIlJPTEVfVVNFUiJdLCJhZGRyZXNzIjoid2FjaGU0QGRlbHRham9obnNvbnMuY29tIiwiaWQiOiI2OWY3OGFkZThmYjYxYjc4MzEwYzViZTQiLCJtZXJjdXJlIjp7InN1YnNjcmliZSI6WyIvYWNjb3VudHMvNjlmNzhhZGU4ZmI2MWI3ODMxMGM1YmU0Il19fQ.W9GOmy5U8i3tUq7erLlbAL_RSPvyXhgn46OlxLj8QY6wKQLCp5Ku1u_jfZIju3CodIfRzrupECBUL0ZfMtmnYQ",
-      "userId": "123"
-    },
-    "mail_premium_1777830629758_123": {
-      "createdAt": 1777830630790,
-      "email": "ftd568@deltajohnsons.com",
-      "password": "ieh48j",
-      "provider": "mail.tm",
-      "service": "premium",
-      "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJpYXQiOjE3Nzc4MzA2MzAsInJvbGVzIjpbIlJPTEVfVVNFUiJdLCJhZGRyZXNzIjoiZnRkNTY4QGRlbHRham9obnNvbnMuY29tIiwiaWQiOiI2OWY3OGFlNjVmMmNjMWFhNGUwY2NkYzkiLCJtZXJjdXJlIjp7InN1YnNjcmliZSI6WyIvYWNjb3VudHMvNjlmNzhhZTY1ZjJjYzFhYTRlMGNjZGM5Il19fQ.AyZ6cyqt7Nc7db1f3mf3ircEbaCvPEUPNacWj5UV-1XRbaMER31meYGmvPeodXaA_0QSzAzfwU3NrJXdDZNHXA",
-      "userId": "123"
     },
     "mail_student_1775213206943_999999": {
       "createdAt": 1775213210984,
@@ -4240,15 +4212,6 @@
       "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJpYXQiOjE3Nzc3NDczNjMsInJvbGVzIjpbIlJPTEVfVVNFUiJdLCJhZGRyZXNzIjoiZTNkM21mQGRlbHRham9obnNvbnMuY29tIiwiaWQiOiI2OWY2NDVhMzdjZmVkYzMxYzEwY2I2MDEiLCJtZXJjdXJlIjp7InN1YnNjcmliZSI6WyIvYWNjb3VudHMvNjlmNjQ1YTM3Y2ZlZGMzMWMxMGNiNjAxIl19fQ.VT4TJyqtb8PbqkF75G5SjS6q1GO5y5-0KRlEouKgeYTm-9Vp5KW7TMDFUaxWCiUjC-5Kc3M9S36EbHL8KrVOGQ",
       "userId": "123"
     },
-    "mail_temp_1777830398663_123": {
-      "createdAt": 1777830399693,
-      "email": "d084i@deltajohnsons.com",
-      "password": "z79tn",
-      "provider": "mail.tm",
-      "service": "temp",
-      "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJpYXQiOjE3Nzc4MzAzOTksInJvbGVzIjpbIlJPTEVfVVNFUiJdLCJhZGRyZXNzIjoiZDA4NGlAZGVsdGFqb2huc29ucy5jb20iLCJpZCI6IjY5Zjc4OWZmZWQ4NzFkOGM2NjA2ZmM1ZSIsIm1lcmN1cmUiOnsic3Vic2NyaWJlIjpbIi9hY2NvdW50cy82OWY3ODlmZmVkODcxZDhjNjYwNmZjNWUiXX19.yHpnOC0064Ae5vLmhq5-sqFu2aqWIj6ckLk1nxi-BCRnlMG7PZawcy-iQyBya_MBYENtqJWBp8TyRHSAIdCMLQ",
-      "userId": "123"
-    },
     "premium_gmail_1777822759909_6915386689": {
       "createdAt": 1777822759909,
       "email": "Mamunislam43.6.3.89.2@gmail.com",
@@ -4256,22 +4219,6 @@
       "sessionId": "Mamunislam43.6.3.89.2@gmail.com",
       "token": "Mamunislam43.6.3.89.2@gmail.com",
       "userId": "6915386689"
-    },
-    "premium_gmail_1777830402717_123": {
-      "createdAt": 1777830402717,
-      "email": "Mamunislam43.6.3.8.92@gmail.com",
-      "provider": "gmail",
-      "sessionId": "Mamunislam43.6.3.8.92@gmail.com",
-      "token": "Mamunislam43.6.3.8.92@gmail.com",
-      "userId": "123"
-    },
-    "premium_gmail_1777830642502_123": {
-      "createdAt": 1777830642502,
-      "email": "Mamunislam43.6.3.8.9.2@gmail.com",
-      "provider": "gmail",
-      "sessionId": "Mamunislam43.6.3.8.9.2@gmail.com",
-      "token": "Mamunislam43.6.3.8.9.2@gmail.com",
-      "userId": "123"
     }
   },
   "premiumMailSettings": {
