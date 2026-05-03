@@ -9306,15 +9306,12 @@ async function loadApiKey() {
             if (modalNoKey) modalNoKey.style.display = 'none';
             if (pageNoKey) pageNoKey.style.display = 'none';
         } else if (data.success && !data.apiKey) {
-            // Server explicitly says no key
-            // Only show "No Key" screen if we definitely don't have a local one
-            if (!userData || !userData.apiKey) {
-                if (userData) userData.apiKey = null;
-                if (modalNoKey) modalNoKey.style.display = 'block';
-                if (pageNoKey) pageNoKey.style.display = 'block';
-                if (modalActive) modalActive.style.display = 'none';
-                if (pageActive) pageActive.style.display = 'none';
-            }
+            // Server explicitly says no key - update local state
+            if (userData) userData.apiKey = null;
+            if (modalNoKey) modalNoKey.style.display = 'block';
+            if (pageNoKey) pageNoKey.style.display = 'block';
+            if (modalActive) modalActive.style.display = 'none';
+            if (pageActive) pageActive.style.display = 'none';
         }
 
         // Handle Ban

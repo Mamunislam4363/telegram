@@ -2194,39 +2194,67 @@ app.post('/api/admin/users/:userId/api-status', async (req, res) => {
     }
 });
 
+// API: Admin - Toggle User API Key Active Status
+app.post('/api/admin/users/:userId/apikey/toggle', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { active } = req.body;
+        
+        const user = await db.getUser(userId);
+        if (!user) return res.json({ success: false, message: 'User not found' });
+
+        user.apiStatus = active ? 'allow' : 'ban';
+        await db.updateUser(user);
+
+        res.json({ success: true, message: `API Key ${active ? 'activated' : 'deactivated'} successfully` });
+    } catch (error) {
+        console.error('[ADMIN API TOGGLE ERROR]', error);
+        res.json({ success: false, message: 'Server error' });
+    }
+});
+
+// API: Admin - Delete User API Key
+app.post('/api/admin/users/:userId/apikey/delete', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        
+        const user = await db.getUser(userId);
+        if (!user) return res.json({ success: false, message: 'User not found' });
+
+        // Completely remove API key data
+        user.apiKey = null;
+        user.apiKeyCreatedAt = null;
+        user.apiStatus = 'allow'; // Reset status to allow for new generation
+        
+        await db.updateUser(user);
+
+        res.json({ success: true, message: 'API Key deleted successfully. User must now regenerate.' });
+    } catch (error) {
+        console.error('[ADMIN API DELETE ERROR]', error);
+        res.json({ success: false, message: 'Server error' });
+    }
+});
+
 // API: Admin - Get API statistics
 app.get('/api/admin/apikeys/stats', async (req, res) => {
     try {
         const allUsers = await db.getUsers();
+        console.log(`[API_STATS_DEBUG] allUsers count: ${allUsers.length}`);
         let total = 0, active = 0, pending = 0, totalCalls = 0;
-        const holders = [];
 
         for (const user of allUsers) {
             if (user.apiKey) {
                 total++;
                 const s = user.apiStatus || 'allow';
                 if (s === 'allow') active++;
-                else if (s === 'ban') pending++;
-                
+                else if (s === 'ban') pending++; // In UI 'pending' slot is used for Banned/Restricted
                 totalCalls += user.apiTotalCalls || 0;
-
-                holders.push({
-                    userId: user.id,
-                    firstName: user.firstName || user.username || 'User',
-                    username: user.username || 'N/A',
-                    apiKey: user.apiKey,
-                    apiStatus: s,
-                    apiTotalCalls: user.apiTotalCalls || 0,
-                    apiTotalUSD: user.apiTotalUSD || 0,
-                    apiKeyCreatedAt: user.apiKeyCreatedAt || user.joinedAt
-                });
             }
         }
 
         res.json({
             success: true,
-            stats: { total, active, pending, totalCalls },
-            keys: holders
+            stats: { total, active, pending, totalCalls }
         });
     } catch (error) {
         console.error('[API STATS ERROR]', error);

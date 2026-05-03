@@ -1550,16 +1550,22 @@
                             </select>
                         </div>
 
-                        <!-- API Key Management Section (Added to fix null error) -->
+                        <!-- API Key Management Section -->
                         <div id="apiKeySection" class="mb-6 p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl hidden">
                             <div class="flex items-center justify-between mb-2">
                                 <span class="text-xs font-bold text-purple-400 uppercase">API Key Status</span>
                                 <span id="apiKeyStatusBadge" class="px-2 py-1 rounded text-xs font-bold bg-green-500/20 text-green-400">ACTIVE</span>
                             </div>
                             <div id="apiKeyInfo" class="text-xs font-mono text-gray-300 break-all mb-4"></div>
-                            <button id="toggleApiKeyBtn" onclick="toggleUserApiKey()" class="w-full py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 rounded-lg text-xs font-bold transition-all">
-                                <i class="fas fa-ban mr-2"></i>Deactivate API Key
-                            </button>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button id="toggleApiKeyBtn" onclick="toggleUserApiKey()" class="py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 rounded-lg text-xs font-bold transition-all">
+                                    <i class="fas fa-ban mr-2"></i>Ban Access
+                                </button>
+                                <button onclick="deleteUserApiKey()" class="py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-xs font-bold transition-all">
+                                    <i class="fas fa-trash-alt mr-2"></i>Delete Key
+                                </button>
+                            </div>
+                            <p class="text-[10px] text-gray-500 mt-3 italic text-center">Deleting will force user to regenerate a new key.</p>
                         </div>
 
                         <div class="flex gap-3">
@@ -6893,17 +6899,44 @@
                             ? 'px-2 py-1 rounded text-xs font-bold bg-green-500/20 text-green-400'
                             : 'px-2 py-1 rounded text-xs font-bold bg-red-500/20 text-red-400';
                         document.getElementById('toggleApiKeyBtn').innerHTML = newStatus
-                            ? '<i class="fas fa-ban mr-2"></i>Deactivate API Key'
-                            : '<i class="fas fa-check mr-2"></i>Activate API Key';
+                            ? '<i class="fas fa-ban mr-2"></i>Ban Access'
+                            : '<i class="fas fa-check mr-2"></i>Unban Access';
                         apiKeySection.dataset.isActive = newStatus;
-                        alert('API Key ' + (newStatus ? 'activated' : 'deactivated') + ' successfully!');
+                        showToast('API Key ' + (newStatus ? 'activated' : 'deactivated') + ' successfully!');
                     } else {
-                        alert('Error: ' + data.message);
+                        showToast('Error: ' + data.message, 'error');
                     }
                 })
                 .catch(err => {
                     console.error('Error toggling API key:', err);
-                    alert('Failed to toggle API key status');
+                    showToast('Failed to toggle API key status', 'error');
+                });
+        }
+
+        function deleteUserApiKey() {
+            const apiKeySection = document.getElementById('apiKeySection');
+            const userId = apiKeySection.dataset.userId;
+            
+            if (!confirm('Are you sure you want to PERMANENTLY DELETE this API key? The user will have to regenerate a new one.')) return;
+
+            fetch(`/api/admin/users/${userId}/apikey/delete`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('API Key deleted successfully!');
+                        apiKeySection.classList.add('hidden');
+                        // Refresh user data to update the table
+                        fetchUsers();
+                    } else {
+                        showToast('Error: ' + data.message, 'error');
+                    }
+                })
+                .catch(err => {
+                    console.error('Error deleting API key:', err);
+                    showToast('Failed to delete API key', 'error');
                 });
         }
 

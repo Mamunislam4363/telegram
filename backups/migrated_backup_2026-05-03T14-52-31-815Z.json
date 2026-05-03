@@ -1,11 +1,9 @@
 {
   "users": {
     "123": {
-      "Gems": 0,
       "adminVerified": false,
       "apiStatus": "allow",
       "balance": 100,
-      "balance_Gems": 0,
       "balance_tokens": 100,
       "blocked": false,
       "cardsPurchased": 0,
@@ -29,7 +27,7 @@
       "joinedChannel": false,
       "joinedGroup": false,
       "language": "en",
-      "lastActive": 1777820231625,
+      "lastActive": 1777796052749,
       "lastDaily": 0,
       "lastName": "",
       "referralCode": "ref_95CMCD",
@@ -38,7 +36,9 @@
       "tokens": 100,
       "usd": 0,
       "username": "TestUser",
-      "verified": false
+      "verified": false,
+      "Gems": 0,
+      "balance_Gems": 0
     },
     "12345": {
       "adminVerified": false,
