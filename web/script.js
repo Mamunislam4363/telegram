@@ -3499,18 +3499,22 @@ async function registerAndFetchUser() {
             userData.adminVerified = data.adminVerified || false;
             userData.apiStatus = data.apiStatus || 'allow';
             
-            // STRICT API KEY SYNC: Trust the server if it explicitly sends a key
-            // If the server response has an apiKey (even if it's null/undefined), sync it
-            // but keep the local one if the server response property is missing entirely
+            // SOFT API KEY SYNC: Trust the server if it explicitly sends a key, 
+            // but NEVER wipe a local key if the server just says null (could be sync lag).
             if (data.hasOwnProperty('apiKey')) {
                 if (data.apiKey) {
                     userData.apiKey = data.apiKey;
                     console.log("[API_SYNC] Synced key from server:", data.apiKey.substring(0, 8) + '...');
                 } else {
-                    // Server explicitly sent null/empty key - only wipe if we don't have one locally
-                    // or if we want to force server as source of truth. Let's trust server.
-                    userData.apiKey = null;
-                    console.log("[API_SYNC] Server reported NO key.");
+                    // Server returned null. ONLY wipe if we don't have one locally 
+                    // OR if we want to trust server's empty state after a delay.
+                    // For now, let's keep local key to prevent "Generate" prompt flickering.
+                    if (!userData.apiKey) {
+                        userData.apiKey = null;
+                        console.log("[API_SYNC] Server reported NO key. Local was already empty.");
+                    } else {
+                        console.warn("[API_SYNC] Server reported NO key, but keeping local key to prevent loss.");
+                    }
                 }
             }
             userData.dailyStreak = data.dailyStreak || 0;
@@ -5717,9 +5721,22 @@ function updateMailBalance(type) {
 function generateTempMail(type) {
     if (checkZeroBalanceAdTrigger()) return;
     if (!type) type = 'temp';
-    const cost = type === "temp"
-        ? (parseInt(window.appCostConfig?.mailCost) || 10)
-        : (parseInt(window.appCostConfig?.premiumMailCost) || 50);
+
+    // ✅ FIX: Premium/hotmail types must use premium email API, NOT temp mail API
+    if (type === 'premium') {
+        generatePremiumMail('gmail');
+        return;
+    }
+    if (type === 'hot' || type === 'hotmail') {
+        generatePremiumMail('hotmail');
+        return;
+    }
+    if (type === 'student') {
+        generatePremiumMail('student');
+        return;
+    }
+
+    const cost = parseInt(window.appCostConfig?.mailCost) || 10;
 
     // If no user login, cannot generate
     if (!userData.id || userData.id === 0) {
@@ -5761,9 +5778,8 @@ function generateTempMail(type) {
                 startInboxPolling(type);
                 if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
             } else {
-                // API returned error - show error message, no demo
                 if (addrEl) {
-                    addrEl.innerHTML = '<span style="color:#f87171;">Failed. Tap NEW GMAIL to retry</span>';
+                    addrEl.innerHTML = '<span style="color:#f87171;">Failed. Tap to retry</span>';
                     addrEl.style.fontStyle = "normal";
                     addrEl.style.opacity = "1";
                 }
@@ -5771,9 +5787,8 @@ function generateTempMail(type) {
             }
         })
         .catch(() => {
-            // Network error - show error
             if (addrEl) {
-                addrEl.innerHTML = '<span style="color:#f87171;">Network error. Tap NEW GMAIL to retry</span>';
+                addrEl.innerHTML = '<span style="color:#f87171;">Network error. Retry</span>';
                 addrEl.style.fontStyle = "normal";
                 addrEl.style.opacity = "1";
             }
@@ -5934,11 +5949,17 @@ function refreshInbox(type) {
     const refreshIcon = document.getElementById(type + "RefreshIcon");
     if (refreshIcon) refreshIcon.classList.add("fa-spin");
 
+    // Clear list if it's been empty for a while to show loading state
+    if (listEl && listEl.children.length === 0) {
+        listEl.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-sub);"><i class="fas fa-spinner fa-spin" style="font-size:24px; margin-bottom:10px;"></i><div style="font-size:12px;">Checking for new messages...</div></div>`;
+    }
+
     const sessionId = mailSessions[type].id || mailSessions[type].sessionId;
 
     // Choose endpoint based on type
     let endpoint = `/api/mail/inbox?sessionId=${sessionId}&userId=${userData.id}&cost=${refreshCost}`;
-    if (type === 'premium') {
+    // ✅ FIX: Premium, hotmail, hot and student all use the premium emails inbox (IMAP-based)
+    if (type === 'premium' || type === 'hotmail' || type === 'hot' || type === 'student') {
         endpoint = `/api/premium-emails/inbox?sessionId=${sessionId}&userId=${userData.id}`;
     }
 
@@ -5955,15 +5976,15 @@ function refreshInbox(type) {
                 renderBalances();
                 updateMailBalance(type);
             }
-            renderInbox(data.messages || [], type);
+            renderInbox(data.messages || [], type, data.message || data.note);
         })
-        .catch(() => {
+        .catch((err) => {
             if (refreshIcon) refreshIcon.classList.remove("fa-spin");
-            renderInbox([], type);
+            renderInbox([], type, "Connection error: " + (err.message || "Unknown"));
         });
 }
 
-function renderInbox(emails, type) {
+function renderInbox(emails, type, serverMsg = null) {
     const listEl = document.getElementById(type + "InboxList");
     const otpListEl = document.getElementById(type + "OtpList");
     if (!listEl) return;
@@ -5974,7 +5995,12 @@ function renderInbox(emails, type) {
     }
 
     if (emails.length === 0) {
-        listEl.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-sub);"><i class="fas fa-inbox" style="font-size:32px; margin-bottom:10px; opacity:0.3;"></i><div style="font-size:12px;">Waiting for incoming emails...</div></div>`;
+        const emptyMsg = serverMsg ? `<div style="color:#ef4444; font-weight:600; margin-bottom:5px; font-size:11px;">${serverMsg}</div>` : "";
+        listEl.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-sub);">
+            <i class="fas fa-inbox" style="font-size:32px; margin-bottom:10px; opacity:0.3;"></i>
+            ${emptyMsg}
+            <div style="font-size:12px;">Waiting for incoming emails...</div>
+        </div>`;
         if (otpListEl) otpListEl.innerHTML = `<div style="font-size:11px; color:var(--text-sub); padding:10px;">No OTP yet</div>`;
         return;
     }
@@ -5990,31 +6016,29 @@ function renderInbox(emails, type) {
             }
         } else {
             const combined = ((email.subject || '') + " " + (email.body || email.preview || '')).toUpperCase();
-
-            // Robust Regex for OTPs: 4-8 digits or 5-8 alphanumeric characters
-            // This regex tries to find strings that look like codes
-            const matches = combined.match(/\b([A-Z0-9]{4,8})\b/g);
-
-            if (matches) {
-                matches.forEach(code => {
-                    // Filter out common false positives and non-OTP strings
-                    const isDigitOnly = /^\d{4,8}$/.test(code);
-                    const isAlphanumeric = /[A-Z]/.test(code) && /\d/.test(code);
-                    const isCommonWord = ['LOGIN', 'VERIFY', 'EMAIL', 'CODE', 'PASS', 'USER', 'ADMIN', 'GMAIL', 'HTML'].includes(code);
-
-                    if ((isDigitOnly || isAlphanumeric) && !isCommonWord) {
-                        // Check for context keywords nearby in the text if it's alphanumeric (to avoid random strings)
-                        const contextKeywords = ["OTP", "CODE", "VERIF", "LOGIN", "SIGN", "PASS", "TOKEN", "PIN"];
-                        const hasContext = contextKeywords.some(k => combined.includes(k));
-
-                        // Higher confidence if it's pure digits OR has context keywords
-                        if (isDigitOnly || hasContext) {
-                            if (!otps.some(o => o.code === code)) {
-                                otps.push({ code, from: email.from || email.sender || 'Unknown' });
-                            }
+            const blacklist = ['98052', '94043', '98034', '94040', '95014'];
+            
+            // Try context first (High confidence)
+            const contextRegex = /(?:CODE|OTP|VERIF|PIN|PASS|SECURITY)\D*(\d{4,8})\b/i;
+            const contextMatch = combined.match(contextRegex);
+            
+            if (contextMatch && !blacklist.includes(contextMatch[1])) {
+                if (!otps.some(o => o.code === contextMatch[1])) {
+                    otps.push({ code: contextMatch[1], from: email.from || email.sender || 'Unknown' });
+                }
+            } else {
+                // Fallback to searching all digit sequences
+                const matches = combined.match(/\b\d{4,8}\b/g);
+                if (matches) {
+                    const filtered = matches.filter(m => !blacklist.includes(m));
+                    if (filtered.length > 0) {
+                        // Prioritize 6-digit codes as they are the standard for Microsoft/Google
+                        const bestMatch = filtered.find(m => m.length === 6) || filtered[0];
+                        if (!otps.some(o => o.code === bestMatch)) {
+                            otps.push({ code: bestMatch, from: email.from || email.sender || 'Unknown' });
                         }
                     }
-                });
+                }
             }
         }
     });
@@ -6043,20 +6067,21 @@ function renderInbox(emails, type) {
 
     // Render Inbox List
     listEl.innerHTML = emails.map(email => `
-        <div class="inbox-item" onclick="openEmailMessage('${email.id}', '${type}')">
-            <div class="ii-icon"><i class="fas fa-envelope"></i></div>
-            <div class="ii-body">
-                <div class="ii-top">
-                    <div class="ii-sender">${email.from || email.sender || 'Unknown'}</div>
-                    <div class="ii-time">${email.time || ''}</div>
+        <div class="inbox-item" onclick="openEmailMessage('${email.id}', '${type}')" style="cursor:pointer; transition:all 0.2s; border-left: 3px solid transparent;">
+            <div class="ii-icon" style="background:rgba(245,158,11,0.1);"><i class="fas fa-envelope" style="color:#f59e0b;"></i></div>
+            <div class="ii-body" style="flex:1; min-width:0;">
+                <div class="ii-top" style="margin-bottom:2px; display:flex; justify-content:space-between; align-items:center;">
+                    <div class="ii-sender" style="font-weight:800; color:#fff; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; min-width:0; padding-right:10px;">${email.from || email.sender || 'Unknown'}</div>
+                    <div class="ii-time" style="font-size:10px; opacity:0.6; flex-shrink:0;">${email.time || ''}</div>
                 </div>
-                <div class="ii-subject">${email.subject}</div>
+                <div class="ii-subject" style="font-size:11px; color:var(--text-sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; min-width:0;">${email.subject}</div>
             </div>
-            <div style="display:flex; align-items:center; gap:12px;">
-                <button class="ii-quick-copy" onclick="event.stopPropagation(); quickCopyEmailContent('${email.id}', '${type}', this)">
-                    <i class="fas fa-copy"></i>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <button class="ii-quick-copy" onclick="event.stopPropagation(); quickCopyEmailContent('${email.id}', '${type}', this)" 
+                    style="width:30px; height:30px; border-radius:50%; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; color:var(--text-sub);">
+                    <i class="fas fa-copy" style="font-size:12px;"></i>
                 </button>
-                <i class="fas fa-chevron-right" style="font-size:12px; color:var(--text-sub);"></i>
+                <i class="fas fa-chevron-right" style="font-size:10px; color:var(--text-sub); opacity:0.5;"></i>
             </div>
         </div>
     `).join("");
@@ -9340,20 +9365,13 @@ async function loadApiKey() {
 
         if (modalLoading) modalLoading.style.display = 'none';
 
-        // If server returns failure, always show a sane UI (No Key) instead of blank
+        // Keep local key if the fetch failed, don't wipe it
         if (!data || data.success !== true) {
-            if (modalBanned) modalBanned.style.display = 'none';
-            if (modalActive) modalActive.style.display = 'none';
-            if (pageActive) pageActive.style.display = 'none';
-
-            if (modalNoKey) modalNoKey.style.display = 'block';
-            if (pageNoKey) pageNoKey.style.display = 'block';
-            if (pageContent) pageContent.style.display = '';
+            console.warn("[API_UI] API key sync failed, keeping current local state.");
             return;
         }
 
         if (data.success && data.apiKey) {
-            // Update global data
             if (userData) userData.apiKey = data.apiKey;
             try {
                 if (userData && userData.id) {
@@ -9370,18 +9388,21 @@ async function loadApiKey() {
             if (pageActive) pageActive.style.display = 'block';
             if (modalNoKey) modalNoKey.style.display = 'none';
             if (pageNoKey) pageNoKey.style.display = 'none';
-        } else if (data.success && !data.apiKey) {
-            // Server explicitly says no key - update local state
-            if (userData) userData.apiKey = null;
-            try {
-                if (userData && userData.id) {
-                    localStorage.setItem(`userData_${userData.id}`, JSON.stringify(userData));
-                }
-            } catch (e) { }
-            if (modalNoKey) modalNoKey.style.display = 'block';
-            if (pageNoKey) pageNoKey.style.display = 'block';
-            if (modalActive) modalActive.style.display = 'none';
-            if (pageActive) pageActive.style.display = 'none';
+        } else {
+            // Server says no key. 
+            // If we HAVE a local key, DO NOT wipe it yet. It might be a sync lag.
+            if (userData && userData.apiKey) {
+                console.warn("[API_UI] Server says no key, but keeping local key.");
+                if (modalActive) modalActive.style.display = 'block';
+                if (pageActive) pageActive.style.display = 'block';
+            } else {
+                // No local key and no server key -> Show Generate screen
+                if (userData) userData.apiKey = null;
+                if (modalNoKey) modalNoKey.style.display = 'block';
+                if (pageNoKey) pageNoKey.style.display = 'block';
+                if (modalActive) modalActive.style.display = 'none';
+                if (pageActive) pageActive.style.display = 'none';
+            }
         }
 
         // Handle Ban

@@ -1953,7 +1953,6 @@ app.post('/api/user/apikey/generate', async (req, res) => {
         const user = await db.getUser(userId);
         if (!user) {
             console.error(`[API_GEN] Error: User ${userId} not found in database`);
-            console.error('[API_GEN] Error: User ${userId} not found in database');
             return res.status(404).json({ success: false, message: 'User not found' });
         }
 
@@ -3233,7 +3232,7 @@ app.get('/api/premium-emails/inbox', async (req, res) => {
             if (imapService.isConnected('hotmail')) {
                 messages = await imapService.fetchMessagesForEmail('hotmail', targetEmail, 60);
             } else {
-                const saved = db.data.settings?.motherEmails?.hotmail;
+                const saved = db.data.adminSettings?.motherEmailConfigs?.hotmail;
                 if (saved) {
                     const ok = await imapService.connect('hotmail', saved);
                     if (ok) messages = await imapService.fetchMessagesForEmail('hotmail', targetEmail, 60);
@@ -3265,7 +3264,26 @@ app.get('/api/premium-emails/inbox', async (req, res) => {
             subject: m.subject || '(No Subject)',
             body: (m.body || m.snippet || '').substring(0, 3000),
             preview: (m.body || m.snippet || '').substring(0, 120),
-            otp: m.otp || (((m.body || m.snippet || '').match(/\b\d{4,8}\b/) || [])[0]) || null,
+            otp: m.otp || (function(text) {
+                if (!text) return null;
+                // Exclude common false positives like Microsoft Redmond Zip (98052) or Google MV Zip (94043)
+                const blacklist = ['98052', '94043', '98034', '94040', '95014'];
+                
+                // Try to find code near "code" or "otp" keyword first (High confidence)
+                const contextRegex = /(?:code|otp|verification|verify|pin|passcode|security)\D*(\d{4,8})\b/i;
+                const contextMatch = text.match(contextRegex);
+                if (contextMatch && !blacklist.includes(contextMatch[1])) return contextMatch[1];
+
+                // Fallback to any 4-8 digit number that isn't blacklisted
+                const allMatches = text.match(/\b\d{4,8}\b/g) || [];
+                for (const match of allMatches) {
+                    if (!blacklist.includes(match) && match.length >= 6) return match; // Prioritize 6+ digits
+                }
+                for (const match of allMatches) {
+                    if (!blacklist.includes(match)) return match;
+                }
+                return null;
+            })(m.body || m.snippet || '') || null,
             date: m.date || new Date().toISOString(),
             snippet: (m.snippet || m.body || '').substring(0, 100)
         }));
@@ -7514,7 +7532,7 @@ app.get('/api/leaderboard', (req, res) => {
     let userRank = null;
     let userScore = 0;
 
-    const allUsersList = Object.values(db.data.users).filter(u => ![123, 999999].includes(parseInt(u.id)));
+    const allUsersList = Object.values(db.data.users);
 
     if (type === 'earn') {
         const _now = new Date();

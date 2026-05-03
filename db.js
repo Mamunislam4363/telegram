@@ -432,10 +432,21 @@ class Database {
                     const remoteUser = (this.data.users && this.data.users[uid]) || null;
                     
                     if (remoteUser) {
-                        // If local user has apiKey but remote doesn't (sync lag)
+                        // 1. If local user has apiKey but remote doesn't
                         if (localUser.apiKey && !remoteUser.apiKey) {
-                            this.data.users[uid] = { ...remoteUser, ...localUser };
+                            this.data.users[uid].apiKey = localUser.apiKey;
+                            this.data.users[uid].apiStatus = localUser.apiStatus || remoteUser.apiStatus;
                             mergedCount++;
+                        } 
+                        // 2. If both have keys but local is newer (heuristically or if remote is a known old state)
+                        else if (localUser.apiKey && remoteUser.apiKey && localUser.apiKey !== remoteUser.apiKey) {
+                            // If local has more tokens or activity, it's likely the newer state
+                            const localTokens = localUser.tokens || localUser.balance_tokens || 0;
+                            const remoteTokens = remoteUser.tokens || remoteUser.balance_tokens || 0;
+                            if (localTokens >= remoteTokens) {
+                                this.data.users[uid].apiKey = localUser.apiKey;
+                                mergedCount++;
+                            }
                         }
                     } else {
                         // User exists locally but not in remote? Should be rare but handle it
@@ -444,7 +455,7 @@ class Database {
                         mergedCount++;
                     }
                 });
-                if (mergedCount > 0) console.log(`🔄 Merged ${mergedCount} users from local backup into Firebase session.`);
+                if (mergedCount > 0) console.log(`🔄 Merged ${mergedCount} user updates from local backup into Firebase session.`);
             }
 
             console.log("✅ Database loaded from Firebase. Keys:", Object.keys(remoteData));
@@ -740,7 +751,18 @@ class Database {
         if (userData && typeof userData === 'object') {
             Object.keys(userData).forEach(key => {
                 if (key !== 'id') { // Don't overwrite ID
-                    this.data.users[id][key] = userData[key];
+                    const newValue = userData[key];
+                    const existingValue = this.data.users[id][key];
+
+                    // CRITICAL PROTECTION: Do not overwrite apiKey or apiStatus with null/undefined 
+                    // if they already exist in the database. This prevents race conditions 
+                    // from stale objects in the bot/server.
+                    if ((key === 'apiKey' || key === 'apiStatus') && (newValue === null || newValue === undefined) && existingValue) {
+                        // Keep existing value
+                        return;
+                    }
+
+                    this.data.users[id][key] = newValue;
                 }
             });
         }
