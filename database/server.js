@@ -4215,13 +4215,18 @@ app.get('/api/admin/stats', async (req, res) => {
         Object.values(db.data.cards).forEach(arr => totalCards += (arr ? arr.length : 0));
     }
 
-    // Count Gmails/Emails from Pool (Enhanced)
+    // Count ALL Emails from Pool (Enhanced to include all categories)
     let gmailTotal = 0;
     let gmailUsed = 0;
     let gmailAvailable = 0;
-    if (db.data.emailPool && db.data.emailPool.gmail) {
-        gmailTotal = db.data.emailPool.gmail.length;
-        gmailUsed = db.data.emailPool.gmail.filter(e => e.assignedTo).length;
+    
+    if (db.data.emailPool) {
+        Object.values(db.data.emailPool).forEach(pool => {
+            if (Array.isArray(pool)) {
+                gmailTotal += pool.length;
+                gmailUsed += pool.filter(e => e.assignedTo || e.status === 'used').length;
+            }
+        });
         gmailAvailable = gmailTotal - gmailUsed;
     }
 
@@ -6911,6 +6916,28 @@ app.delete('/api/admin/service-items/:id', (req, res) => {
         res.json({ success: true, message: 'Item deleted' });
     } else {
         res.status(404).json({ success: false, message: 'Item not found' });
+    }
+});
+
+// Clear all stock for a specific item
+app.delete('/api/admin/service-items/:id/clear', (req, res) => {
+    const { id } = req.params;
+    let cleared = false;
+    
+    if (db.data.cards && db.data.cards[id]) {
+        db.data.cards[id] = [];
+        cleared = true;
+    }
+    if (db.data.vpnAccounts && db.data.vpnAccounts[id]) {
+        db.data.vpnAccounts[id] = [];
+        cleared = true;
+    }
+    
+    if (cleared) {
+        db.save();
+        res.json({ success: true, message: 'All stock cleared' });
+    } else {
+        res.json({ success: true, message: 'No stock to clear' }); // Still return success since it's already empty
     }
 });
 

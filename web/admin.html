@@ -992,7 +992,7 @@
                                 <i class="fas fa-envelope text-red-400 text-lg"></i>
                             </div>
                         </div>
-                        <h3 class="text-gray-400 text-xs font-bold uppercase tracking-wider">Gmails</h3>
+                        <h3 class="text-gray-400 text-xs font-bold uppercase tracking-wider">Total Mails</h3>
                         <div class="text-xl font-bold mt-1" id="dash-gmails">...</div>
                     </div>
 
@@ -1047,7 +1047,7 @@
                 
                 <!-- Usage Monitoring Row -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <!-- Gmail Usage Monitoring -->
+                    <!-- Mail Usage Monitoring -->
                     <div class="glass-card p-6 rounded-2xl cursor-pointer hover:bg-white/5 transition-all border border-red-500/20" onclick="nav('emailpool')">
                         <div class="flex items-center justify-between mb-4">
                             <div class="flex items-center gap-3">
@@ -1055,8 +1055,8 @@
                                     <i class="fas fa-envelope-open-text text-red-400 text-xl"></i>
                                 </div>
                                 <div>
-                                    <h3 class="text-white font-bold text-lg">Gmail Usage</h3>
-                                    <p class="text-xs text-gray-500">Active mail accounts in pool</p>
+                                    <h3 class="text-white font-bold text-lg">Mail Usage</h3>
+                                    <p class="text-xs text-gray-500">Active email accounts in pool</p>
                                 </div>
                             </div>
                             <div class="text-3xl font-bold text-red-400" id="dash-gmails-monitor">...</div>
@@ -4482,113 +4482,7 @@
 
                     <!-- Items Grid - Box Style with Item Count -->
                     <div id="serviceItemsGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        <!-- Demo Items - Will be loaded dynamically -->
-                        <!-- Virtual Cards Category Items -->
-                        <div class="service-item-box bg-gradient-to-br from-orange-500/20 to-red-600/20 border border-orange-500/30 rounded-xl p-4 cursor-pointer hover:scale-105 transition-all group"
-                            data-item="gemini" data-category="virtual-cards"
-                            onclick="openItemManageModal('gemini', 'Gemini Card', 'virtual-cards')">
-                            <div class="flex items-center gap-3 mb-3">
-                                <div class="w-10 h-10 rounded-lg bg-orange-500/30 flex items-center justify-center">
-                                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Google_Gemini_logo.svg/60px-Google_Gemini_logo.svg.png"
-                                        class="w-6 h-6 object-contain"
-                                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
-                                    <i class="fas fa-robot text-orange-400 hidden"></i>
-                                </div>
-                                <span class="font-bold text-white">Gemini Card</span>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span class="text-xs text-gray-400">API Keys</span>
-                                <span
-                                    class="item-count-badge px-2 py-1 bg-orange-500/30 text-orange-400 rounded-full text-xs font-bold"
-                                    data-item="gemini">5 Cards</span>
-                            </div>
-                        </div>
-
-                        <div class="service-item-box bg-gradient-to-br from-blue-500/20 to-purple-600/20 border border-blue-500/30 rounded-xl p-4 cursor-pointer hover:scale-105 transition-all group"
-                            data-item="chatgpt" data-category="virtual-cards"
-                            onclick="openItemManageModal('chatgpt', 'ChatGPT', 'virtual-cards')">
-                            <div class="flex items-center gap-3 mb-3">
-                                <div class="w-10 h-10 rounded-lg bg-blue-500/30 flex items-center justify-center">
-                                    <i class="fas fa-comment-dots text-blue-400 text-lg"></i>
-                                </div>
-                                <span class="font-bold text-white">ChatGPT</span>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span class="text-xs text-gray-400">AI Access</span>
-                                <span
-                                    class="item-count-badge px-2 py-1 bg-blue-500/30 text-blue-400 rounded-full text-xs font-bold"
-                                    data-item="chatgpt">3 Cards</span>
-                            </div>
-                        </div>
-
-                        <div class="service-item-box bg-gradient-to-br from-green-500/20 to-emerald-600/20 border border-green-500/30 rounded-xl p-4 cursor-pointer hover:scale-105 transition-all group"
-                            data-item="4jibit" data-category="virtual-cards"
-                            onclick="openItemManageModal('4jibit', '4jibit', 'virtual-cards')">
-                            <div class="flex items-center gap-3 mb-3">
-                                <div class="w-10 h-10 rounded-lg bg-green-500/30 flex items-center justify-center">
-                                    <i class="fas fa-image text-green-400 text-lg"></i>
-                                </div>
-                                <span class="font-bold text-white">4jibit</span>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span class="text-xs text-gray-400">Image Gen</span>
-                                <span
-                                    class="item-count-badge px-2 py-1 bg-green-500/30 text-green-400 rounded-full text-xs font-bold"
-                                    data-item="4jibit">8 Cards</span>
-                            </div>
-                        </div>
-
-                        <!-- VPN Services Category Items -->
-                        <div class="service-item-box bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border border-cyan-500/30 rounded-xl p-4 cursor-pointer hover:scale-105 transition-all group hidden"
-                            data-item="surfshark" data-category="vpn"
-                            onclick="openItemManageModal('surfshark', 'Surfshark VPN', 'vpn')">
-                            <div class="flex items-center gap-3 mb-3">
-                                <div class="w-10 h-10 rounded-lg bg-cyan-500/30 flex items-center justify-center">
-                                    <i class="fas fa-shield-alt text-cyan-400 text-lg"></i>
-                                </div>
-                                <span class="font-bold text-white">Surfshark</span>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span class="text-xs text-gray-400">VPN Access</span>
-                                <span
-                                    class="item-count-badge px-2 py-1 bg-cyan-500/30 text-cyan-400 rounded-full text-xs font-bold"
-                                    data-item="surfshark">12 Cards</span>
-                            </div>
-                        </div>
-
-                        <div class="service-item-box bg-gradient-to-br from-purple-500/20 to-pink-600/20 border border-purple-500/30 rounded-xl p-4 cursor-pointer hover:scale-105 transition-all group hidden"
-                            data-item="nordvpn" data-category="vpn"
-                            onclick="openItemManageModal('nordvpn', 'NordVPN', 'vpn')">
-                            <div class="flex items-center gap-3 mb-3">
-                                <div class="w-10 h-10 rounded-lg bg-purple-500/30 flex items-center justify-center">
-                                    <i class="fas fa-lock text-purple-400 text-lg"></i>
-                                </div>
-                                <span class="font-bold text-white">NordVPN</span>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span class="text-xs text-gray-400">VPN Access</span>
-                                <span
-                                    class="item-count-badge px-2 py-1 bg-purple-500/30 text-purple-400 rounded-full text-xs font-bold"
-                                    data-item="nordvpn">7 Cards</span>
-                            </div>
-                        </div>
-
-                        <div class="service-item-box bg-gradient-to-br from-yellow-500/20 to-orange-600/20 border border-yellow-500/30 rounded-xl p-4 cursor-pointer hover:scale-105 transition-all group hidden"
-                            data-item="protonvpn" data-category="vpn"
-                            onclick="openItemManageModal('protonvpn', 'Proton VPN', 'vpn')">
-                            <div class="flex items-center gap-3 mb-3">
-                                <div class="w-10 h-10 rounded-lg bg-yellow-500/30 flex items-center justify-center">
-                                    <i class="fas fa-user-secret text-yellow-400 text-lg"></i>
-                                </div>
-                                <span class="font-bold text-white">Proton VPN</span>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span class="text-xs text-gray-400">VPN Access</span>
-                                <span
-                                    class="item-count-badge px-2 py-1 bg-yellow-500/30 text-yellow-400 rounded-full text-xs font-bold"
-                                    data-item="protonvpn">4 Cards</span>
-                            </div>
-                        </div>
+                        <!-- Items will be loaded dynamically -->
                     </div>
 
                     <!-- Empty State -->
@@ -7840,7 +7734,7 @@
             const html = `
                             <div id="itemManageModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center;">
                                 <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:24px; max-width:400px; width:90%; position:relative;">
-                                    <h3 id="itemManageModalTitle" style="color:var(--text-main); font-weight:bold; font-size:18px; margin-bottom:16px;">Manage Item</h3>
+                                    <h3 id="itemManageModalTitle" style="color:var(--text-main); font-weight:bold; font-size:18px; margin-bottom:16px;">Manage Card</h3>
                                     <div style="display:flex; align-items:center; gap:16px; margin-bottom:20px;">
                                         <div id="itemManageIcon"></div>
                                         <div>
@@ -7855,7 +7749,7 @@
                                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
                                         <button onclick="editServiceItem()" style="padding:10px; border-radius:8px; background:#3b82f6; color:white; font-weight:bold;">Edit Info</button>
                                         <button onclick="clearItemData()" style="padding:10px; border-radius:8px; background:#ef4444; color:white; font-weight:bold;">Clear Data</button>
-                                        <button onclick="openAddStockModal()" style="grid-column: span 2; padding:10px; border-radius:8px; background:#22c55e; color:white; font-weight:bold;"><i class="fas fa-plus"></i> Add Stock Items</button>
+                                        <button onclick="openAddStockModal()" style="grid-column: span 2; padding:10px; border-radius:8px; background:#22c55e; color:white; font-weight:bold;"><i class="fas fa-plus"></i> Add Stock Cards</button>
                                         <button onclick="closeItemManageModal()" style="grid-column: span 2; padding:10px; border-radius:8px; background:#374151; color:white; font-weight:bold;">Close</button>
                                     </div>
                                 </div>
@@ -7900,7 +7794,7 @@
             const html = `
                             <div id="modal-addServiceItem" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center;">
                                 <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:24px; max-width:400px; width:90%; position:relative;">
-                                    <h3 style="color:var(--text-main); font-weight:bold; font-size:18px; margin-bottom:16px;">Add New Service Item</h3>
+                                    <h3 style="color:var(--text-main); font-weight:bold; font-size:18px; margin-bottom:16px;">Add New Service Card</h3>
                                     
                                     <label style="display:block; font-size:12px; color:var(--text-sub); margin-bottom:4px;">Service ID</label>
                                     <input type="text" id="svc-id" placeholder="e.g. netflix" style="width:100%; background:#1a1a2e; border:1px solid #333; color:#fff; padding:8px 12px; border-radius:8px; margin-bottom:12px;">
@@ -8128,19 +8022,32 @@
             }
         }
 
-        function clearItemData() {
+        async function clearItemData() {
             if (!currentManageItem) return;
-            if (!confirm('Are you sure? This will remove ALL items from ' + currentManageItem + '. This action cannot be undone!')) return;
+            if (!confirm('Are you sure? This will remove ALL cards from ' + currentManageItem + '. This action cannot be undone!')) return;
 
-            var badge = document.querySelector('.item-count-badge[data-item="' + currentManageItem + '"]');
-            if (badge) {
-                badge.textContent = '0 items';
+            try {
+                const res = await fetch('/api/admin/service-items/' + currentManageItem + '/clear', {
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    var badge = document.querySelector('.item-count-badge[data-item="' + currentManageItem + '"]');
+                    if (badge) {
+                        badge.textContent = '0 Cards';
+                    }
+
+                    document.getElementById('itemManageCount').textContent = '0';
+                    closeItemManageModal();
+                    showToast('All cards cleared successfully!');
+                    selectCategory(currentManageCategory);
+                } else {
+                    alert('Failed to clear: ' + data.message);
+                }
+            } catch (e) {
+                alert('Network error');
             }
-
-            document.getElementById('itemManageCount').textContent = '0';
-            closeItemManageModal();
-            showToast('All items cleared successfully!');
-            selectCategory(currentManageCategory);
         }
 
         async function deleteServiceItem() {
@@ -8391,6 +8298,7 @@
                 const data = await res.json();
 
                 if (data.success && data.services) {
+                    renderServiceItemsGrid(data.services);
                     updateServiceStockDisplay(data.services);
                     renderServiceItemsTable(data.services);
                 }
@@ -8419,14 +8327,14 @@
                 }
             });
 
-            // Update individual stock displays
-            const stock4jibit = document.getElementById('stock-4jibit');
-            const stockGemini = document.getElementById('stock-gemini');
-            const stockChatgpt = document.getElementById('stock-chatgpt');
-
-            if (stock4jibit) stock4jibit.textContent = stockMap['4jibit'] || 0;
-            if (stockGemini) stockGemini.textContent = stockMap['gemini'] || 0;
-            if (stockChatgpt) stockChatgpt.textContent = stockMap['chatgpt'] || 0;
+            // Update individual stock displays dynamically
+            document.querySelectorAll('.item-count-badge').forEach(badge => {
+                const itemId = badge.dataset.item;
+                if (itemId) {
+                    const count = stockMap[itemId] || 0;
+                    badge.textContent = count + ' Cards';
+                }
+            });
 
             // Update category totals (Show number of Cards/Services)
             const virtualCardsTotalStock = document.getElementById('virtualCardsTotalStock');
@@ -8629,6 +8537,50 @@
                     });
                 }
             });
+        }
+
+        function renderServiceItemsGrid(items) {
+            const grid = document.getElementById('serviceItemsGrid');
+            if (!grid) return;
+
+            // Generate HTML for all items
+            const html = items.map(item => {
+                // Determine section and color
+                const isVpn = item.section === 'vpn';
+                const isCards = item.section === 'cards' || item.id === 'gemini' || item.id === 'chatgpt' || item.id === '4jibit' || item.id === 'adobeexpress' || item.id === 'chatgptplus';
+                
+                const categoryId = isVpn ? 'vpn' : 'virtual-cards';
+                const colorTheme = isVpn ? 'blue' : 'orange';
+                const iconClass = isVpn ? 'fa-shield-alt' : 'fa-credit-card';
+                
+                // Hide initially unless it's the current selected category
+                const hiddenClass = (window.currentManageCategory === categoryId) ? '' : 'hidden';
+
+                return `
+                <div class="service-item-box bg-gradient-to-br from-${colorTheme}-500/20 to-${colorTheme}-600/20 border border-${colorTheme}-500/30 rounded-xl p-4 cursor-pointer hover:scale-105 transition-all group ${hiddenClass}"
+                    data-item="${item.id}" data-category="${categoryId}"
+                    onclick="openItemManageModal('${item.id}', '${item.name || item.id}', '${categoryId}')">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 rounded-lg bg-${colorTheme}-500/30 flex items-center justify-center">
+                            <i class="fas ${iconClass} text-${colorTheme}-400 text-lg"></i>
+                        </div>
+                        <span class="font-bold text-white">${item.name || item.id}</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-gray-400">${isVpn ? 'VPN Access' : 'Virtual Cards'}</span>
+                        <span
+                            class="item-count-badge px-2 py-1 bg-${colorTheme}-500/30 text-${colorTheme}-400 rounded-full text-xs font-bold"
+                            data-item="${item.id}">${item.stock || 0} Cards</span>
+                    </div>
+                </div>`;
+            }).join('');
+
+            grid.innerHTML = html;
+            
+            // Re-run selectCategory logic to ensure correct category totals and visibility
+            if (window.currentManageCategory) {
+                selectCategory(window.currentManageCategory);
+            }
         }
 
         function renderServiceItemsTable(items) {

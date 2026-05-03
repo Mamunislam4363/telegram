@@ -3920,9 +3920,9 @@ function updateProfileStatusIcons() {
             icon.style.display = 'none';
         } else if (userData.adminVerified) {
             icon.style.display = 'inline-block';
-            icon.className = 'fas fa-certificate'; // Unique badge shape
-            icon.style.color = '#fbbf24'; // Golden
-            icon.style.filter = 'drop-shadow(0 0 3px rgba(251, 191, 36, 0.5))';
+            icon.className = 'fas fa-check-circle'; // Facebook style tick
+            icon.style.color = '#1877F2'; // Facebook Blue
+            icon.style.filter = 'drop-shadow(0 0 2px rgba(24, 119, 242, 0.4))';
             icon.style.fontSize = '18px';
             icon.style.marginLeft = '4px';
             icon.title = 'Admin Verified Account';
@@ -9335,10 +9335,12 @@ async function loadApiKey() {
     const pageDisplay = document.getElementById('userApiKeyDisplay');
     const pageRegenBtn = document.getElementById('regenerateApiKeyBtn');
 
-    // 1. Initial State: Show Loading, Hide Banned
+    // 1. Initial State: Show Loading only if not already active
     if (modalBanned) modalBanned.style.display = 'none';
     if (pageBanned) pageBanned.style.display = 'none';
-    if (modalLoading) modalLoading.style.display = 'block';
+    if (!userData || !userData.apiKey) {
+        if (modalLoading) modalLoading.style.display = 'block';
+    }
 
     try {
         const userId = userData.id || (window.Telegram?.WebApp?.initDataUnsafe?.user?.id);
@@ -9348,7 +9350,12 @@ async function loadApiKey() {
         const data = await res.json();
 
         if (modalLoading) modalLoading.style.display = 'none';
-        if (!data || !data.success) return;
+        if (!data || !data.success) {
+            if (modalActive) modalActive.style.display = 'block';
+            if (pageActive) pageActive.style.display = 'block';
+            if (pageContent) pageContent.style.display = 'block';
+            return;
+        }
 
         // Handle Ban
         if (data.status === 'ban') {
@@ -9396,6 +9403,9 @@ async function loadApiKey() {
     } catch (e) {
         console.error('Unified Sync error:', e);
         if (modalLoading) modalLoading.style.display = 'none';
+        if (modalActive) modalActive.style.display = 'block';
+        if (pageActive) pageActive.style.display = 'block';
+        if (pageContent) pageContent.style.display = 'block';
     }
 }
 
