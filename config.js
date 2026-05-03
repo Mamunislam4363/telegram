@@ -30,14 +30,15 @@ module.exports = {
     MINI_APP_URL: process.env.APP_URL || process.env.MINI_APP_URL || 'https://autosverifybot-production.up.railway.app/',
 
     // Mandatory Channel & Group (IDs are preferred for stability)
-    // NOTE: Using usernames directly as env vars have invalid IDs
-    REQUIRED_CHANNEL: '@AutosVerify',
-    REQUIRED_GROUP: '@AutosVerifyCh',
-    REQUIRED_CHANNEL_NAME: '@AutosVerify',
-    REQUIRED_GROUP_NAME: '@AutosVerifyCh',
+    REQUIRED_CHANNEL: process.env.REQUIRED_CHANNEL_NAME || '@AutosVerify',
+    REQUIRED_GROUP: process.env.REQUIRED_GROUP_NAME || '@AutosVerifyCh',
+    REQUIRED_CHANNEL_NAME: process.env.REQUIRED_CHANNEL_NAME || '@AutosVerify',
+    REQUIRED_GROUP_NAME: process.env.REQUIRED_GROUP_NAME || '@AutosVerifyCh',
+    REQUIRED_CHANNEL_ID: process.env.REQUIRED_CHANNEL_ID || '-1002088203586',
+    REQUIRED_GROUP_ID: process.env.REQUIRED_GROUP_ID || '-1002188442004',
 
     // Set to true to skip mandatory join check (if channels don't exist)
-    SKIP_MANDATORY_JOIN: true,
+    SKIP_MANDATORY_JOIN: process.env.SKIP_MANDATORY_JOIN === 'true',
 
     // Encryption Key for sensitive data in DB
     ENCRYPTION_KEY: process.env.ENCRYPTION_KEY || 'default_secret_key_32_bytes_long____',
