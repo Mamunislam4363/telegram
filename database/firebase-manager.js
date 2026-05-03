@@ -61,13 +61,28 @@ class FirebaseManager {
         if (!this.connected) return null;
         console.log('📡 Fetching data from Firebase...');
         try {
-            // Add a 20s timeout to the read operation (increased from 5s for stability on slow connections)
-            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Firebase read timeout')), 60000));
-            const dataPromise = this.db.ref('/').once('value');
-            
-            const snapshot = await Promise.race([dataPromise, timeoutPromise]);
+            // Increased timeout and added retry logic for slow connections
+            const fetchData = async (attempt = 1) => {
+                try {
+                    const timeoutPromise = new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('Firebase read timeout')), 90000)
+                    );
+                    const dataPromise = this.db.ref('/').once('value');
+                    const snapshot = await Promise.race([dataPromise, timeoutPromise]);
+                    return snapshot.val();
+                } catch (err) {
+                    if (attempt < 3 && (err.message.includes('timeout') || err.message.includes('ECONNRESET'))) {
+                        console.log(`🔄 Retrying Firebase fetch (Attempt ${attempt + 1})...`);
+                        await new Promise(r => setTimeout(r, 2000)); // Wait 2s before retry
+                        return await fetchData(attempt + 1);
+                    }
+                    throw err;
+                }
+            };
+
+            const data = await fetchData();
             console.log('✅ Firebase data fetched.');
-            return snapshot.val();
+            return data;
         } catch (error) {
             console.error('❌ Firebase Read Error:', error.message);
             throw error; // Throw so we don't accidentally migrate on timeout

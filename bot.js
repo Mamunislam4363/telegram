@@ -3,8 +3,12 @@ process.env.NTBA_FIX_350 = "1";
 
 // CRITICAL: Global Error Handlers to prevent crashes from network issues
 process.on('unhandledRejection', (reason, promise) => {
+    // Suppress common noisy network errors to keep logs clean
+    const msg = reason?.message || String(reason);
+    if (msg.includes('EFATAL') || msg.includes('ECONNRESET') || msg.includes('ETIMEDOUT') || msg.includes('ENOTFOUND')) {
+        return; 
+    }
     console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
-    // Don't exit, just log. This prevents the bot from crashing on transient network errors.
 });
 
 process.on('uncaughtException', (err) => {

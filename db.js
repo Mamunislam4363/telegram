@@ -308,7 +308,8 @@ const defaultData = {
         redeem_code: true,
         number_services: true,
         premiumMail: true,
-        home_premiumMail: true
+        home_premiumMail: true,
+        joinRequired: true
     },
     // Legit SMS Providers (Number Service Module)
     numberServices: {},

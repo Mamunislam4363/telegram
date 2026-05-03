@@ -7318,10 +7318,12 @@ app.post('/api/check-required-joins', async (req, res) => {
     const reqs = getVerificationRequirements();
 
     // 3. Real-time channel/group membership check (strict)
-    // Use configured requiredChannel/requiredGroup if present
+    // Use configured requiredChannel/requiredGroup with proper fallbacks
     const apiKeys = db.data.apiKeys || {};
-    const requiredChannel = (apiKeys.requiredChannel || '').toString().trim();
-    const requiredGroup = (apiKeys.requiredGroup || '').toString().trim();
+    const settings = db.data.settings || {};
+    
+    const requiredChannel = (apiKeys.requiredChannel || settings.requiredChannel || config.REQUIRED_CHANNEL_NAME || '@AutosVerify').toString().trim();
+    const requiredGroup = (apiKeys.requiredGroup || settings.requiredGroup || config.REQUIRED_GROUP_NAME || '@AutosVerifyCh').toString().trim();
 
     let channelJoined = user?.joinedChannel || user?.channelJoined || false;
     let groupJoined = user?.joinedGroup || user?.groupJoined || false;
