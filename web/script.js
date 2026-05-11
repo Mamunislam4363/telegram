@@ -2360,39 +2360,37 @@ async function claimAdReward() {
                 showPage('scratch');
                 initScratchCard();
             } else if (currentAdContext === 'task_verification' && activeTaskButton) {
-                // Task Ad Completed - Now show OPEN LINK button
-                activeTaskButton.textContent = 'OPEN LINK';
-                activeTaskButton.style.background = '#2563eb';
+                // Task Ad Completed - Now show VERIFY button (User request)
+                activeTaskButton.textContent = 'VERIFY';
+                activeTaskButton.style.background = '#eab308'; // Yellow for "Not yet opened"
                 activeTaskButton.style.display = 'block';
                 activeTaskButton.disabled = false;
                 
                 const currentTaskData = { ...activeTaskData }; // copy data
                 const currentBtn = activeTaskButton;
                 
+                let clickedOnce = false;
                 activeTaskButton.onclick = function () {
-                    window.open(currentTaskData.url, '_blank');
-                    
-                    // Now change to VERIFY
-                    currentBtn.textContent = 'VERIFY';
-                    currentBtn.style.background = '#22c55e';
-                    
-                    // Update onclick to verify
-                    currentBtn.onclick = function () {
+                    if (!clickedOnce) {
+                        window.open(currentTaskData.url, '_blank');
+                        clickedOnce = true;
+                        currentBtn.style.background = '#22c55e'; // Green for "Ready to verify"
+                        window.showToast("🔗 Link opened. Please complete the task and click VERIFY again.");
+                    } else {
                         completeTask(currentTaskData.taskId, currentTaskData.reward, currentBtn, currentTaskData.url);
-                    };
+                    }
                 };
 
-                // Timer to reset to START after 1 minute if not completed
+                // Timer to reset to START after 2 minutes if not completed
                 setTimeout(() => {
-                    if (currentBtn.textContent === 'VERIFY') {
+                    if (currentBtn.textContent === 'VERIFY' && !currentBtn.disabled && clickedOnce) {
                         currentBtn.textContent = 'START';
                         currentBtn.style.background = ''; // reset to default
                         currentBtn.onclick = function() {
                             startTask(currentBtn, currentTaskData.taskId, currentTaskData.url, currentTaskData.reward);
                         };
                     }
-                }, 60000); // 1 minute
-            } else if (currentAdContext === 'gift_claim' && pendingGiftId) {
+                }, 120000); // 2 minutes else if (currentAdContext === 'gift_claim' && pendingGiftId) {
                 // Gift Ad Completed - Now claim the gift
                 claimGiftReward(pendingGiftId);
             } else if (currentAdContext === 'watch_ad' || currentAdContext === 'zero_balance_trigger') {

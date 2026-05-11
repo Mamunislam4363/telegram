@@ -1116,7 +1116,9 @@ app.get('/api/user/sync/:userId', async (req, res) => {
         adminVerified: user.adminVerified || false,
         apiStatus: user.apiStatus || 'allow',
         apiKey: user.apiKey || '',
-        completedTasks: user.completedTasks || []
+        completedTasks: user.completedTasks || [],
+        lastClaim: user.lastDaily || 0,
+        dailyStreak: user.dailyStreak || 0
     });
 });
 
