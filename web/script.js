@@ -1781,8 +1781,22 @@ function startTask(button, taskId, url, reward) {
     }
     activeTaskData = { taskId, url, reward };
 
-    // Trigger ad flow
-    showAdAndEarn('task_verification');
+    // Immediately show VERIFY
+    button.textContent = 'VERIFY';
+    button.style.background = '#22c55e';
+    button.disabled = false;
+
+    const currentTaskData = { ...activeTaskData };
+    const currentBtn = button;
+
+    button.onclick = function () {
+        window.open(currentTaskData.url, '_blank');
+        
+        // Update onclick to actually verify on next click
+        currentBtn.onclick = function () {
+            completeTask(currentTaskData.taskId, currentTaskData.reward, currentBtn, currentTaskData.url);
+        };
+    };
 }
 
 // Complete task and claim reward
@@ -1840,11 +1854,8 @@ async function completeTask(taskId, reward, button, url) {
         } else {
             showToast(data.message || 'Verification failed');
             button.disabled = false;
-            button.textContent = 'START';
-            button.style.background = ''; // reset to default
-            button.onclick = function() {
-                startTask(button, taskId, url, reward);
-            };
+            button.textContent = 'VERIFY';
+            button.style.background = '#22c55e';
         }
     } catch (e) {
         console.error('Error completing task:', e);

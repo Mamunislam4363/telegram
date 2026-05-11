@@ -5634,6 +5634,7 @@
                 if (p === 'serverlogs' && typeof fetchServerLogs === 'function') fetchServerLogs();
                 if (p === 'broadcast' && typeof loadBroadcast === 'function') loadBroadcast();
                 if (p === 'support' && typeof loadSupportConversations === 'function') loadSupportConversations();
+                if (p === 'providers' && typeof loadProviders === 'function') loadProviders();
             } catch (e) {
                 console.error('[NAV] Pre-load error:', e);
             }

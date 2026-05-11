@@ -1,7 +1,7 @@
 {
   "users": {
     "123": {
-      "Gems": 2,
+      "Gems": 1,
       "adminVerified": false,
       "apiKey": "auto_verify_bk6RGdjslD6eimIcZoq5ud1InXWFL3mA",
       "apiKeyCreatedAt": 1778079142405,
@@ -16,36 +16,19 @@
         "virtualnumber",
         "store"
       ],
-      "balance": 5180,
+      "balance": 5190,
       "balance_Gems": 1,
-      "balance_tokens": 5180,
+      "balance_tokens": 5190,
       "blocked": false,
       "cardsPurchased": 0,
       "channelJoined": false,
-      "completedTasks": [
-        "task_youtube"
-      ],
+      "completedTasks": [],
       "country": "BD",
       "dailyStreak": 1,
       "failedVerifications": 0,
       "firstName": "Test",
       "groupJoined": false,
       "history": [
-        {
-          "type": "gmail_email",
-          "amount": -20,
-          "date": "2026-05-11T12:44:44.595Z",
-          "reward": "-20 Tokens",
-          "detail": "Mamunislam4.36.38.9.2@gmail.com"
-        },
-        {
-          "type": "mission_reward",
-          "amount": 10,
-          "reward": "+10 TC",
-          "asset": "TC",
-          "date": 1778503023832,
-          "detail": "Completed task: Youtube Channel"
-        },
         {
           "type": "ad_reward",
           "amount": 5,
@@ -296,13 +279,13 @@
       "joinedChannel": true,
       "joinedGroup": true,
       "language": "en",
-      "lastActive": 1778503008547,
+      "lastActive": 1778496016449,
       "lastDaily": 1778495256034,
       "lastName": "",
       "referralCode": "ref_95CMCD",
       "referralCount": 0,
       "successfulVerifications": 0,
-      "tokens": 5180,
+      "tokens": 5190,
       "usd": 0,
       "username": "TestUser",
       "verified": false,
@@ -3596,6 +3579,12 @@
   "emailPool": {
     "gmail": [
       {
+        "addedAt": 1777777316646,
+        "email": "Mamunislam4.36.38.9.2@gmail.com",
+        "note": "",
+        "status": "available"
+      },
+      {
         "addedAt": 1777777317064,
         "email": "Mamunislam4.36.3.892@gmail.com",
         "note": "",
@@ -4422,7 +4411,18 @@
       "vpnPlan": ""
     }
   },
-  "providers": {},
+  "providers": {
+    "mamunislam": {
+      "apiKey": "RlRTQjRSQoBBjnl2gXNSVGKFd2GGT5NGc4uMRImHmFh2lY5baWKZ",
+      "apiUrl": "http://147.135.212.197/crapi/had/viewstats",
+      "id": "mamunislam",
+      "name": "Mamunislam",
+      "priority": 0,
+      "status": "active",
+      "type": "sms",
+      "updatedAt": 1772887899508
+    }
+  },
   "broadcasts": [],
   "pendingDeposits": [],
   "cryptoMethods": {
@@ -4473,12 +4473,6 @@
     }
   },
   "emailPoolHistory": [
-    {
-      "email": "Mamunislam4.36.38.9.2@gmail.com",
-      "type": "gmail",
-      "assignedTo": "123",
-      "assignedAt": "2026-05-11T12:44:44.582Z"
-    },
     {
       "email": "Mamunislam4.36.38.92@gmail.com",
       "type": "gmail",
@@ -5113,15 +5107,6 @@
       "userId": "123",
       "createdAt": 1778076008580,
       "service": "temp"
-    },
-    "premium_gmail_1778503484595_123": {
-      "email": "Mamunislam4.36.38.9.2@gmail.com",
-      "password": null,
-      "provider": "gmail",
-      "sessionId": "Mamunislam4.36.38.9.2@gmail.com",
-      "token": "Mamunislam4.36.38.9.2@gmail.com",
-      "userId": "123",
-      "createdAt": 1778503484608
     }
   },
   "premiumMailSettings": {
