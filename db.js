@@ -965,10 +965,6 @@ class Database {
         const referrerBalance = this.getTokenBalance(referrer);
         this.setTokenBalance(referrer, referrerBalance + refBonus);
 
-        // Add welcome bonus to new user
-        const newUserBalance = this.getTokenBalance(newUser);
-        this.setTokenBalance(newUser, newUserBalance + refBonus);
-
         // Add to referrer's history (only once, not in addTransaction)
         if (!referrer.history) referrer.history = [];
         referrer.history.unshift({
@@ -982,21 +978,8 @@ class Database {
             userId: newUserId
         });
 
-        // Add to new user's history (only once)
-        if (!newUser.history) newUser.history = [];
-        newUser.history.unshift({
-            type: 'welcome_referral',
-            amount: refBonus,
-            currency: 'tokens',
-            date: Date.now(),
-            details: `Welcome bonus from referral`,
-            reward: `+${refBonus} TC`,
-            referrerId: referrerId
-        });
-
         // Add transaction record (global transactions only, no duplicate history)
         this.addTransaction(referrerId, 'referral', refBonus, 'TC', `Referral bonus from verified user #${newUserId}`, 'user-check');
-        this.addTransaction(newUserId, 'bonus', refBonus, 'TC', 'Welcome referral bonus - Verified', 'gift');
 
         this.save();
 

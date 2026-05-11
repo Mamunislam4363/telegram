@@ -802,6 +802,14 @@ bot.onText(/\/start/, async (msg) => {
             return;
         }
 
+        // PROCESS PENDING REFERRAL - If user is already a member and has a pending referrer
+        if (user.pendingReferrer) {
+            db.verifyReferral(userId);
+            user.pendingReferrer = null;
+            db.updateUser(user);
+            console.log(`[REFERRAL] Auto-verified referral for user ${userId} on start (already member)`);
+        }
+
         // Cleanup old persistent keyboards before sending the menu
         const cleanupMsg2 = await bot.sendMessage(chatId, "⏳ Initializing...", { reply_markup: { Remove_keyboard: true } });
         bot.deleteMessage(chatId, cleanupMsg2.message_id).catch(() => { });

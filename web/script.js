@@ -1236,7 +1236,7 @@ function calculateExchange(from, to, amount) {
 }
 
 function formatCurrencyAmount(amount, cur) {
-    if (cur === 'usd') return `$${(Math.round(amount * 1000) / 1000).toFixed(3)}`;
+    if (cur === 'usd') return `$${(Math.round(amount * 100) / 100).toFixed(2)}`;
     if (cur === 'tokens') return `${Math.floor(amount)} TOKENS`;
     if (cur === 'Gems') return `${Math.floor(amount * 10000) / 10000} Gems`;
     return `${amount}`;
@@ -1253,9 +1253,9 @@ function updateExchangeBalances() {
     const t = document.getElementById('exBalTokens');
     const j = document.getElementById('exBalGems');
     const u = document.getElementById('exBalUsd');
-    if (t) t.textContent = (userData.tokens || 0).toString();
-    if (j) j.textContent = (userData.Gems || 0).toString();
-    if (u) u.textContent = (Math.round((userData.usd || 0) * 1000) / 1000).toFixed(3);
+    if (t) t.textContent = formatCompact(userData.tokens || 0);
+    if (j) j.textContent = formatCompact(userData.Gems || 0);
+    if (u) u.textContent = (Math.round((userData.usd || 0) * 100) / 100).toFixed(2);
 }
 
 function updateExchangePreview() {
@@ -1286,7 +1286,7 @@ function updateExchangePreview() {
     });
 
     const maxVal = fromCur === 'tokens' ? (userData.tokens || 0) : fromCur === 'Gems' ? (userData.Gems || 0) : (userData.usd || 0);
-    if (fromHint) fromHint.textContent = `MAX: ${fromCur === 'usd' ? '$' + (Math.round(maxVal * 1000) / 1000).toFixed(3) : maxVal}`;
+    if (fromHint) fromHint.textContent = `MAX: ${fromCur === 'usd' ? '$' + (Math.round(maxVal * 100) / 100).toFixed(2) : formatCompact(maxVal)}`;
 
     const preview = calculateExchange(fromCur, toCur, isFinite(amt) ? amt : 0);
     if (!preview.success) {
@@ -1383,7 +1383,7 @@ function changeQty(delta) {
     const qtyEl = document.getElementById('checkoutQty');
     const totalEl = document.getElementById('checkoutTotal');
     if (qtyEl) qtyEl.textContent = checkoutQty;
-    if (totalEl) totalEl.textContent = '$' + (checkoutQty * checkoutUnitPrice).toFixed(3);
+    if (totalEl) totalEl.textContent = '$' + (checkoutQty * checkoutUnitPrice).toFixed(2);
 }
 
 function selectPayMethod(method) {
@@ -4082,7 +4082,7 @@ function formatCompact(num) {
     const shortValue = (num / Math.pow(1000, exp));
 
     // One decimal if it's not a whole number in compact view
-    const formatted = shortValue % 1 === 0 ? shortValue.toString() : shortValue.toFixed(1);
+    const formatted = Math.abs(shortValue % 1) < 0.01 ? Math.round(shortValue).toString() : shortValue.toFixed(1);
     return formatted + suffix;
 }
 
@@ -4098,14 +4098,12 @@ function renderBalances() {
     const formattedTokens = formatCompact(tokens);
     const formattedGems = formatCompact(gems);
     
-    let formattedUsd = '$0.000';
+    let formattedUsd = '$0.00';
     if (usd > 0) {
         if (usd >= 1000) {
             formattedUsd = '$' + formatCompact(usd);
-        } else if (usd % 1 === 0) {
-            formattedUsd = '$' + usd + '.000';
         } else {
-            formattedUsd = '$' + usd.toFixed(3);
+            formattedUsd = '$' + usd.toFixed(2);
         }
     }
 
@@ -4172,7 +4170,7 @@ function renderBalances() {
     const exGems = document.getElementById('exBalGems');
     if (exGems) exGems.textContent = (gems).toString();
     const exUsd = document.getElementById('exBalUsd');
-    if (exUsd) exUsd.textContent = usd > 0 ? (Math.round((usd) * 1000) / 1000).toFixed(3) : "0.000";
+    if (exUsd) exUsd.textContent = usd > 0 ? (Math.round((usd) * 100) / 100).toFixed(2) : "0.00";
 
     // Transfer page balances
     const tfTokens = document.getElementById('tfBalTokens');
@@ -4180,7 +4178,7 @@ function renderBalances() {
     const tfGems = document.getElementById('tfBalGems');
     if (tfGems) tfGems.textContent = (gems).toString();
     const tfUsd = document.getElementById('tfBalUsd');
-    if (tfUsd) tfUsd.textContent = usd > 0 ? (Math.round((usd) * 1000) / 1000).toFixed(3) : "0.000";
+    if (tfUsd) tfUsd.textContent = usd > 0 ? (Math.round((usd) * 100) / 100).toFixed(2) : "0.00";
 }
 
 
@@ -4291,7 +4289,7 @@ function payWithBalance() {
         window.showToast('Purchase request sent to server!');
     } else {
         if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
-        window.showToast('Insufficient Balance ($' + userData.usd.toFixed(3) + '). Please deposit funds.');
+        window.showToast('Insufficient Balance ($' + userData.usd.toFixed(2) + '). Please deposit funds.');
     }
 }
 
@@ -4546,7 +4544,7 @@ function renderShopItems() {
 
             // Fix price display to ensure $ if not present
             let priceDisp = item.price || '$0.00';
-            if (typeof priceDisp === 'number') priceDisp = '$' + priceDisp.toFixed(3);
+            if (typeof priceDisp === 'number') priceDisp = '$' + priceDisp.toFixed(2);
             else if (!priceDisp.includes('$') && !priceDisp.toLowerCase().includes('tc')) priceDisp = '$' + priceDisp;
 
             return `
@@ -4583,7 +4581,7 @@ function renderShopItems() {
 
         // Use $ for everything as requested
         let price = item.price || item.sellingPrice || 0;
-        let priceDisp = '$' + parseFloat(price).toFixed(3);
+        let priceDisp = '$' + parseFloat(price).toFixed(2);
         // if (item.itemType === 'Card') priceDisp = price + ' TC'; // User wants dollars now
 
         const cardHtml = `
@@ -5405,7 +5403,7 @@ function selectNumPlatform(el, platform) {
 
 function updateNumBalance() {
     const el = document.getElementById('numBalanceDisplay');
-    if (el) el.textContent = Math.max(0, userData.tokens || 0) + ' TC';
+    if (el) el.textContent = formatCompact(Math.max(0, userData.tokens || 0)) + ' TC';
 }
 
 // Number session tracking
@@ -5575,7 +5573,7 @@ function copyNumByValue(val) {
 }
 
 function cancelNumberBySessionId(sessionId) {
-    const idx = activeVirtualNumbers.findIndex(s => s.id === sessionId);
+    const idx = activeVirtualNumbers.findIndex(s => s.id == sessionId);
     if (idx !== -1) {
         const session = activeVirtualNumbers[idx];
         if (session.status === 'pending') {
@@ -6665,7 +6663,7 @@ function updateCheckoutQty(change) {
     const totalEl = document.getElementById('checkoutTotal');
 
     if (qtyEl) qtyEl.textContent = checkoutData.qty;
-    if (totalEl) totalEl.textContent = '$' + (checkoutData.qty * checkoutData.price).toFixed(3);
+    if (totalEl) totalEl.textContent = '$' + (checkoutData.qty * checkoutData.price).toFixed(2);
 }
 
 function selectCheckoutPM(method) {
@@ -8234,7 +8232,7 @@ function updateSellRewardPreview() {
         // User stated: "Profile's dollar system fix... Cards processed as tokens... Others in dollars"
         // Let's assume the sellingRewards are currently in some 'reward points' that we map to dollars
         // or just show them as raw values with $ sign for now.
-        preview.innerText = '$' + (reward / 10).toFixed(3); // Example mapping: 10 units = $1
+        preview.innerText = '$' + (reward / 10).toFixed(2); // Example mapping: 10 units = $1
     }
 }
 
