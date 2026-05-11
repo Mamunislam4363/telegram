@@ -1693,6 +1693,7 @@ async function loadUserTasks(silent = false) {
 
         container.innerHTML = data.tasks.map(task => {
             const isDone = completedSet.has(task.id);
+            const inProgress = IN_PROGRESS_TASKS[task.id];
             const icon = getTaskIcon(task.name, task.icon);
             const bg = getTaskBg(task.name);
             const border = getTaskBorder(task.name);
@@ -1713,7 +1714,10 @@ async function loadUserTasks(silent = false) {
                 </div>
                 ${isDone ?
                     '<button class="tcn-btn" style="background:#22c55e; color:white;"><i class="fas fa-check"></i></button>' :
-                    `<button class="tcn-btn" onclick="startTask(this, '${task.id}', '${task.url}', ${task.reward || 10})">START</button>`
+                    (inProgress === 'VERIFY' ?
+                        `<button class="tcn-btn" style="background:#22c55e; color:white;" onclick="completeTask('${task.id}', ${task.reward || 10}, this, '${task.url}')">VERIFY</button>` :
+                        `<button class="tcn-btn" onclick="startTask(this, '${task.id}', '${task.url}', ${task.reward || 10})">START</button>`
+                    )
                 }
             </div>`;
         }).join('');
@@ -1804,6 +1808,8 @@ async function completeTask(taskId, reward, button, url) {
             button.textContent = 'DONE';
             button.style.background = '#666';
             button.disabled = true;
+            
+            delete IN_PROGRESS_TASKS[taskId];
 
             if (data.newBalance !== undefined) {
                 userData.tokens = data.newBalance;
@@ -2364,6 +2370,10 @@ async function claimAdReward() {
                 activeTaskButton.textContent = 'VERIFY';
                 activeTaskButton.style.background = '#22c55e';
                 activeTaskButton.style.display = 'block';
+                
+                if (activeTaskData && activeTaskData.taskId) {
+                    IN_PROGRESS_TASKS[activeTaskData.taskId] = 'VERIFY';
+                }
                 activeTaskButton.disabled = false;
                 
                 const currentTaskData = { ...activeTaskData }; // copy data
@@ -9334,11 +9344,6 @@ function showWebAdminMessage(message) {
         const claimBtn = document.getElementById(`${overlayId}-claim`);
         if (claimBtn) {
             claimBtn.onclick = async () => {
-                const gifts = await fetch('/api/user/gifts?userId=' + userData.id).then(r => r.json()).catch(() => null);
-                const giftObj = gifts?.gifts?.find(g => g.id === message.giftId);
-                if (giftObj) {
-                    showGiftPopup(giftObj);
-                }
                 document.getElementById(overlayId)?.remove();
                 claimGiftReward(message.giftId);
             };

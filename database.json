@@ -16,21 +16,39 @@
         "virtualnumber",
         "store"
       ],
-      "balance": 5170,
+      "balance": 5190,
       "balance_Gems": 1,
-      "balance_tokens": 5170,
+      "balance_tokens": 5190,
       "blocked": false,
       "cardsPurchased": 0,
       "channelJoined": false,
-      "completedTasks": [
-        "task_youtube"
-      ],
+      "completedTasks": [],
       "country": "BD",
       "dailyStreak": 1,
       "failedVerifications": 0,
       "firstName": "Test",
       "groupJoined": false,
       "history": [
+        {
+          "type": "ad_reward",
+          "amount": 5,
+          "currency": "tokens",
+          "date": 1778496027816,
+          "detail": "Watched Ad"
+        },
+        {
+          "type": "ad_reward",
+          "amount": 5,
+          "currency": "tokens",
+          "date": 1778495373856,
+          "detail": "Watched Ad"
+        },
+        {
+          "type": "daily_bonus",
+          "amount": 10,
+          "streak": 1,
+          "date": 1778495256034
+        },
         {
           "type": "apikey_cost",
           "amount": -250,
@@ -258,16 +276,16 @@
       ],
       "id": 123,
       "joinedAt": 1777778414207,
-      "joinedChannel": false,
-      "joinedGroup": false,
+      "joinedChannel": true,
+      "joinedGroup": true,
       "language": "en",
-      "lastActive": 1778079215348,
-      "lastDaily": 1778041661693,
+      "lastActive": 1778496016449,
+      "lastDaily": 1778495256034,
       "lastName": "",
       "referralCode": "ref_95CMCD",
       "referralCount": 0,
       "successfulVerifications": 0,
-      "tokens": 5170,
+      "tokens": 5190,
       "usd": 0,
       "username": "TestUser",
       "verified": false,
@@ -375,11 +393,7 @@
       "blocked": false,
       "cardsPurchased": 0,
       "channelJoined": false,
-      "completedTasks": [
-        "task_telegram_group",
-        "task_youtube",
-        "task_telegram_channel"
-      ],
+      "completedTasks": [],
       "dailyStreak": 1,
       "failedVerifications": 0,
       "firstName": "xXx",
@@ -862,11 +876,7 @@
       "blocked": false,
       "cardsPurchased": 0,
       "channelJoined": false,
-      "completedTasks": [
-        "task_telegram_channel",
-        "task_telegram_group",
-        "task_youtube"
-      ],
+      "completedTasks": [],
       "country": "NP",
       "dailyStreak": 1,
       "failedVerifications": 0,
@@ -950,20 +960,6 @@
           "detail": "Completed task: Telegram Channel",
           "reward": "+11 TC",
           "type": "mission_reward"
-        },
-        {
-          "amount": 5,
-          "currency": "tokens",
-          "date": 1775545272440,
-          "detail": "Message reward",
-          "type": "chat_reward"
-        },
-        {
-          "amount": 100,
-          "date": 1775545262812,
-          "detail": "Welcome Bonus",
-          "reward": "+100 Tokens",
-          "type": "bonus"
         }
       ],
       "id": 5956541707,
@@ -1464,15 +1460,7 @@
       "cardsPurchased": 0,
       "dailyStreak": 0,
       "failedVerifications": 0,
-      "history": [
-        {
-          "amount": 100,
-          "date": 1775545306026,
-          "detail": "Welcome Bonus",
-          "reward": "+100 Tokens",
-          "type": "bonus"
-        }
-      ],
+      "history": [],
       "id": 7500282180,
       "joinedAt": 1775545306026,
       "language": "en",
@@ -1705,11 +1693,7 @@
       "blocked": false,
       "cardsPurchased": 0,
       "channelJoined": false,
-      "completedTasks": [
-        "task_telegram_channel",
-        "task_telegram_group",
-        "task_youtube"
-      ],
+      "completedTasks": [],
       "country": "BD",
       "dailyStreak": 1,
       "failedVerifications": 0,
@@ -4231,7 +4215,7 @@
       "keep": 30,
       "lastBackupAt": 1778059002506,
       "lastBackupFile": "auto_backup_1778059002506.json",
-      "nextBackupAt": 1778145360000
+      "nextBackupAt": 1778555760000
     },
     "gems": {
       "currentPrice": 1,
@@ -4274,6 +4258,7 @@
     "accountsShop": true,
     "cardsVcc": true,
     "joinRequired": true,
+    "requireTelegram": true,
     "home_verify": true,
     "home_mail": true,
     "home_number": true,
@@ -4323,7 +4308,6 @@
     "number_services": true,
     "redeem_code": true,
     "referral": true,
-    "requireTelegram": true,
     "studentMail": true,
     "support": true,
     "tasks": true,
@@ -4332,7 +4316,17 @@
   },
   "numberServices": {},
   "services": {},
-  "shopItems": {},
+  "shopItems": {
+    "gemini 1 day": {
+      "id": "gemini 1 day",
+      "name": "gemini 1 day",
+      "price": 1,
+      "imageUrl": "/uploads/media_1778496405422_534.jpg",
+      "bgColor": "#0d0d0d",
+      "btnColor": "#f59e0b",
+      "page": "deposit"
+    }
+  },
   "itemSales": {
     "sale_1773483150972_m90bd": {
       "accountLogo": "",

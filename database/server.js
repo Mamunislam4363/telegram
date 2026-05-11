@@ -4998,6 +4998,20 @@ app.post('/api/admin/tasks/seed-defaults', (req, res) => {
         }
     });
 
+    // Reset all tasks for all users so they can do them again
+    const allTaskIds = Object.keys(db.data.tasks || {});
+    let affectedUsers = 0;
+    
+    Object.values(db.data.users || {}).forEach(user => {
+        if (user.completedTasks) {
+            const initialLength = user.completedTasks.length;
+            user.completedTasks = user.completedTasks.filter(t => !allTaskIds.includes(t));
+            if (user.completedTasks.length < initialLength) {
+                affectedUsers++;
+            }
+        }
+    });
+
     // Remove old legacy task IDs that are no longer used
     const legacyIdsToRemove = ['tg_ch', 'telegram_channel'];
     legacyIdsToRemove.forEach(id => {
@@ -5009,7 +5023,7 @@ app.post('/api/admin/tasks/seed-defaults', (req, res) => {
     db.save();
     res.json({
         success: true,
-        message: `Added ${addedCount} new tasks, updated ${updatedCount} existing tasks.`,
+        message: `Added ${addedCount} new tasks, updated ${updatedCount} existing tasks. Reset for ${affectedUsers} users.`,
         totalTasks: Object.keys(db.data.tasks).length
     });
 });
