@@ -6,5 +6,3 @@ coverage/
 *.log
 .env*
 !.env.example
-database/serviceAccountKey.json
-database/credentials.json

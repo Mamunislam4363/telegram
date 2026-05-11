@@ -1,17 +1,19 @@
 // Service Worker for PWA - Advanced Caching Strategy
-const CACHE_NAME = 'gemini-wallet-v9';
-const STATIC_CACHE = 'static-v9';
-const DYNAMIC_CACHE = 'dynamic-v9';
+const CACHE_NAME = 'autoverify-v12';
+const STATIC_CACHE = 'static-v12';
+const DYNAMIC_CACHE = 'dynamic-v12';
 
 // Static assets to cache immediately
 const STATIC_ASSETS = [
     './',
     './index.html',
     './style.css',
-    './script.js?v=2.8',
-    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
+    './script.js',
+    './web-utils.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css',
     'https://telegram.org/js/telegram-web-app.js'
 ];
+
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {

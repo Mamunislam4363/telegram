@@ -15,7 +15,7 @@ const tiktokDownloader = { getInfo: async () => ({ error: 'Feature disabled' }),
 const facebookDownloader = { getInfo: async () => ({ error: 'Feature disabled' }), download: async () => ({ error: 'Feature disabled' }) };
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
 
 // CORS middleware - allow all origins for Telegram Mini App
 app.use((req, res, next) => {
@@ -35,7 +35,21 @@ app.use(express.json({ limit: '10mb' }));
 const db = require('../db');
 const config = require('../config');
 
-const openai = new OpenAI({ apiKey: config.OPENAI_API_KEY });
+let openai = null;
+function getOpenAI() {
+    if (openai) return openai;
+    if (!config.OPENAI_API_KEY) {
+        console.warn('⚠️ OPENAI_API_KEY is missing. AI features will be disabled.');
+        return null;
+    }
+    try {
+        openai = new OpenAI({ apiKey: config.OPENAI_API_KEY });
+        return openai;
+    } catch (e) {
+        console.error('❌ Failed to initialize OpenAI:', e.message);
+        return null;
+    }
+}
 
 // Helper function to get local IP address
 function getLocalIP() {
@@ -183,6 +197,14 @@ function isValidUserId(userId) {
     const numericId = typeof userId === 'number' ? userId : parseInt(userId);
     return !isNaN(numericId) && numericId > 0;
 }
+
+// API: System Version
+app.get('/api/version', (req, res) => {
+    const version = (db.data && db.data.settings && db.data.settings.systemVersion) || 1;
+    res.set('Cache-Control', 'no-store');
+    res.json({ version, ts: Date.now() });
+});
+
 
 // Request counter middleware
 app.use((req, res, next) => {
@@ -847,11 +869,44 @@ app.post('/api/admin/config', (req, res) => {
     });
 });
 
+// Helper: Delete all messages sent by a helper admin
+async function deleteHelperAdminMessages(userId) {
+    const user = await db.getUser(userId);
+    if (!user || !user.helperAdminMessages) return;
+    
+    const TelegramBot = require('node-telegram-bot-api');
+    const config = require('../config');
+    const botToken = config.TELEGRAM_BOT_TOKEN;
+    
+    if (!botToken) {
+        console.error('[HELPER ADMIN] Cannot delete messages: Bot token missing');
+        return;
+    }
+    
+    // Use global bot if available
+    const activeBot = bot || new TelegramBot(botToken, { polling: false });
+    
+    console.log(`[HELPER ADMIN] Deleting ${user.helperAdminMessages.length} messages for user ${userId}`);
+    
+    for (const msg of user.helperAdminMessages) {
+        try {
+            await activeBot.deleteMessage(msg.chatId, msg.messageId);
+            console.log(`[HELPER ADMIN] Deleted message ${msg.messageId} in chat ${msg.chatId}`);
+        } catch (e) {
+            console.error(`[HELPER ADMIN] Failed to delete message ${msg.messageId} in chat ${msg.chatId}: ${e.message}`);
+        }
+        await new Promise(r => setTimeout(r, 100));
+    }
+    
+    user.helperAdminMessages = [];
+    await db.updateUser(user);
+}
+
 // API: Update User Data (Admin)
 app.post('/api/admin/users/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
-        const { balance, tokens, referralCount, verified, Gems, usd, adminVerified, apiStatus } = req.body;
+        const { balance, tokens, referralCount, verified, Gems, usd, adminVerified, apiStatus, role } = req.body;
         const user = await db.getUser(userId);
         if (!user) return res.json({ success: false, message: 'User not found' });
 
@@ -872,11 +927,22 @@ app.post('/api/admin/users/:userId', async (req, res) => {
         if (adminVerified !== undefined) user.adminVerified = (adminVerified === true || adminVerified === 'true');
         if (apiStatus !== undefined) user.apiStatus = apiStatus;
 
+        if (role !== undefined) {
+            const oldRole = user.role || 'user';
+            user.role = role;
+            
+            // If role changed from helper_admin to user (disabled)
+            if (oldRole === 'helper_admin' && role === 'user') {
+                console.log(`[HELPER ADMIN] Disabling helper admin ${userId} and deleting messages...`);
+                await deleteHelperAdminMessages(userId);
+            }
+        }
+
         await db.updateUser(user);
         res.json({ success: true, message: 'User updated successfully' });
     } catch (error) {
         console.error('[ADMIN USER UPDATE ERROR]', error);
-        res.status(500).json({ success: false, message: 'Internal Server Error: ' + error.message });
+        res.json({ success: false, message: error.message });
     }
 });
 
@@ -895,12 +961,40 @@ app.get('/api/user/:userId', async (req, res) => {
         ...activeTasks[key]
     }));
 
+    // Resolve balances using db helpers for consistency
+    const tokenBalance = db.getTokenBalance(user);
+
     res.json({
         success: true,
+        user: {
+            id: user.id,
+            username: user.username || 'User',
+            firstName: user.firstName || '',
+            lastName: user.lastName || '',
+            photo_url: user.photo_url || '',
+            // Balances — use consistent field names matching frontend expectations
+            balance_tokens: tokenBalance,
+            tokens: tokenBalance,
+            gems: user.balance_Gems || user.Gems || 0,
+            Gems: user.balance_Gems || user.Gems || 0,
+            usd: user.usd || 0,
+            // Status fields
+            banned: user.banned || false,
+            verified: user.verified || false,
+            adminVerified: user.adminVerified || false,
+            apiKey: user.apiKey || null,
+            apiStatus: user.apiStatus || 'allow',
+            // Stats
+            invites: user.referralCount || 0,
+            dailyStreak: user.dailyStreak || 0,
+            completedTasks: user.tasksDone || [],
+            referralCode: db.getReferralCode(user.id),
+        },
+        // Legacy top-level fields for backward compat
         userId: user.id,
         username: user.username || 'User',
-        tokens: db.getTokenBalance(user),
-        Gems: user.Gems || 0,
+        tokens: tokenBalance,
+        Gems: user.balance_Gems || user.Gems || 0,
         invites: user.referralCount || 0,
         dailyStreak: user.dailyStreak || 0,
         completedTasks: user.tasksDone || [],
@@ -909,6 +1003,7 @@ app.get('/api/user/:userId', async (req, res) => {
         botUsername: (db.data.settings && db.data.settings.botUsername) || config.BOT_USERNAME || 'AutosVerify_bot'
     });
 });
+
 
 // API: Verify Task Completion
 app.post('/api/user/verify-task', async (req, res) => {
@@ -1002,6 +1097,27 @@ app.get('/api/crypto-coins', (req, res) => {
     } catch (e) {
         res.json({ success: false, coins: [] });
     }
+});
+
+// API: Fast Sync user data for polling
+app.get('/api/user/sync/:userId', async (req, res) => {
+    const userId = req.params.userId;
+    const user = await db.getUser(userId);
+    if (!user) return res.json({ success: false, message: 'User not found' });
+    
+    const tokenBalance = db.getTokenBalance(user);
+    
+    res.json({
+        success: true,
+        tokens: tokenBalance,
+        Gems: user.Gems || 0,
+        usd: user.usd || 0,
+        verified: user.verified || false,
+        adminVerified: user.adminVerified || false,
+        apiStatus: user.apiStatus || 'allow',
+        apiKey: user.apiKey || '',
+        completedTasks: user.completedTasks || []
+    });
 });
 
 // API: Register / Sync user from Telegram WebApp
@@ -1132,7 +1248,7 @@ app.post('/api/register', async (req, res) => {
         invites: user.referralCount || 0,
         lastClaim: user.lastDaily || 0,
         dailyStreak: user.dailyStreak || 0,
-        completedTasks: user.completedTasks || [],
+        completedTasks: user.tasksDone || user.completedTasks || [],
         verified: user.successfulVerifications > 0 || user.verified || false,
         adminVerified: user.adminVerified || false,
         apiStatus: user.apiStatus || 'allow',
@@ -1248,7 +1364,8 @@ app.get('/api/history/:userId', async (req, res) => {
 // API: Generate Quiz with AI
 app.get('/api/quiz/generate', async (req, res) => {
     try {
-        if (!config.OPENAI_API_KEY) {
+        const ai = getOpenAI();
+        if (!ai) {
             // No key configured; use fallback question
             return res.json({
                 success: true,
@@ -1257,7 +1374,7 @@ app.get('/api/quiz/generate', async (req, res) => {
                 correctIndex: 2
             });
         }
-        const completion = await openai.chat.completions.create({
+        const completion = await ai.chat.completions.create({
             model: config.OPENAI_MODEL || "gpt-3.5-turbo",
             messages: [
                 { role: "system", content: "You are a dynamic and engaging quiz master. Generate a fresh, unique, and medium-difficulty multiple choice question. It can be about science, history, movies, gaming, geography, or current technology. Ensure the question is interesting and not repetitive. Return ONLY a JSON object: { \"question\": \"text\", \"options\": [\"opt1\", \"opt2\", \"opt3\", \"opt4\"], \"correctIndex\": 0 }" }
@@ -1887,7 +2004,7 @@ app.post('/api/redeem', async (req, res) => {
 // Generate a random API key
 function generateApiKeyValue() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let key = 'sk_';
+    let key = 'auto_verify_';
     for (let i = 0; i < 32; i++) {
         key += chars.charAt(Math.floor(Math.random() * chars.length));
     }
@@ -1956,6 +2073,23 @@ app.post('/api/user/apikey/generate', async (req, res) => {
             return res.status(404).json({ success: false, message: 'User not found' });
         }
 
+        // Cost Management:
+        // Creation (No existing key) = 500 Gems
+        // Regeneration (Existing key) = 250 Gems
+        const isRegeneration = !!user.apiKey;
+        const cost = isRegeneration ? 250 : 500;
+        const currentGems = user.Gems || user.gems || 0;
+
+        if (currentGems < cost) {
+            return res.status(400).json({ 
+                success: false, 
+                message: `Insufficient gems. You need ${cost} gems to ${isRegeneration ? 'regenerate' : 'create'} an API key.` 
+            });
+        }
+
+        // Deduct gems
+        user.Gems = currentGems - cost;
+
         // Generate new API key
         const apiKey = generateApiKeyValue();
         user.apiKey = apiKey;
@@ -1968,6 +2102,16 @@ app.post('/api/user/apikey/generate', async (req, res) => {
 
         // Auto-approve all standard services for the new key
         user.approvedApiServices = ['balance', 'tempmail', 'premiummail', 'virtualnumber', 'store'];
+
+        // Record history
+        if (!user.history) user.history = [];
+        user.history.unshift({
+            type: 'apikey_cost',
+            amount: -cost,
+            reward: `${-cost} Gems`,
+            date: new Date().toISOString(),
+            detail: `${isRegeneration ? 'Regenerated' : 'Generated'} API key`
+        });
 
         // Save changes
         await db.updateUser(user, null, true);
@@ -2533,13 +2677,6 @@ app.post('/api/complete-task', async (req, res) => {
     }
 });
 
-// Helper: get users object
-function getUsersObj() { return db.data.users || {}; }
-function saveUsersObj(users) {
-    // Trigger Firebase save only - users object is already modified in place via getUsersObj() reference
-    // IMPORTANT: Do NOT assign db.data.users = users as this causes race conditions
-    db.save();
-}
 
 // API: Get Virtual Number Platforms (Sorted by Popularity)
 app.get('/api/number/platforms', (req, res) => {
@@ -2567,6 +2704,13 @@ app.get('/api/number/platforms', (req, res) => {
         }
     });
 
+    // Also include platforms from manual numbers
+    if (db.data.manualNumbers) {
+        db.data.manualNumbers.forEach(n => {
+            platformSet.add(n.platform);
+        });
+    }
+
     // Default platforms (strictly filtered to user request)
     const defaultPlatforms = requestedServices;
     if (platformSet.size === 0) {
@@ -2585,17 +2729,34 @@ app.get('/api/number/platforms', (req, res) => {
     };
 
     // Build platforms array with usage stats
-    const platforms = Array.from(platformSet).map(id => ({
-        id,
-        name: platformMeta[id]?.name || id.charAt(0).toUpperCase() + id.slice(1),
-        icon: platformMeta[id]?.icon || 'fas fa-mobile-alt',
-        color: platformMeta[id]?.color || '#f59e0b',
-        usage: stats[id] || 0,
-        countryCodes: platformCountryCodes[id] || ['1'] // Default to US
-    }));
+    const platforms = Array.from(platformSet).map(id => {
+        let availableCount = 0;
+        let availableCountries = [];
+        if (db.data.manualNumbers) {
+            const availableForPlatform = db.data.manualNumbers.filter(n => n.platform === id && n.status === 'available');
+            availableCount = availableForPlatform.length;
+            availableCountries = [...new Set(availableForPlatform.map(n => n.countryCode))];
+        }
 
-    // Sort by usage (popularity) - descending
-    platforms.sort((a, b) => b.usage - a.usage);
+        return {
+            id,
+            name: platformMeta[id]?.name || id.charAt(0).toUpperCase() + id.slice(1),
+            icon: platformMeta[id]?.icon || 'fas fa-mobile-alt',
+            color: platformMeta[id]?.color || '#f59e0b',
+            usage: stats[id] || 0,
+            availableCount: availableCount,
+            availableCountries: availableCountries,
+            isPopular: (db.data.popularPlatforms || []).includes(id),
+            countryCodes: platformCountryCodes[id] || ['1'] // Default to US
+        };
+    }).filter(p => p.availableCount > 0); // Only show platforms with available numbers
+
+    // Sort by isPopular first, then by usage
+    platforms.sort((a, b) => {
+        if (a.isPopular && !b.isPopular) return -1;
+        if (!a.isPopular && b.isPopular) return 1;
+        return b.usage - a.usage;
+    });
 
     res.json({
         success: true,
@@ -2676,40 +2837,9 @@ app.post('/api/number/generate', async (req, res) => {
         }
     }
 
-    // If no manual number, try real SMS provider via bot's apiGateway
+    // If no manual number, return error immediately (rely strictly on manual pool as requested)
     if (!number) {
-        try {
-            // Get country code for this platform from provider settings
-            let countryCode = req.body.countryCode || '1'; // Use user's selected country code
-            const providers = db.data.providers || {};
-            const smsProviders = Object.values(providers).filter(p => p.type === 'sms' && p.status === 'active');
-
-            for (const provider of smsProviders) {
-                if (provider.platforms && provider.platforms[platform] && provider.platforms[platform].length > 0) {
-                    countryCode = provider.platforms[platform][0];
-                    break;
-                }
-            }
-
-            const apiGateway = require('../services/api-gateway');
-            const result = await apiGateway.executeWithFailover('sms', async (provider) => {
-                const axios = require('axios');
-                const r = await axios.post(`${provider.apiUrl}/numbers`, {
-                    platform: platform.toLowerCase(),
-                    countryCode
-                }, {
-                    headers: { 'X-API-KEY': provider.apiKey }, timeout: 8000
-                });
-                return r.data;
-            });
-            if (result && result.number) number = result.number;
-        } catch (e) {
-            if (e.message !== 'SERVICE_UNAVAILABLE') {
-                console.error('[NUMBER] API error:', e.message);
-            } else {
-                console.warn(`[NUMBER] Service unavailable for ${platform}: No online providers found.`);
-            }
-        }
+        return res.json({ success: false, message: 'No numbers available for this platform/country in the pool.' });
     }
 
     if (!number) {
@@ -2766,14 +2896,25 @@ app.get('/api/number/otp', async (req, res) => {
             try {
                 const apiURL = manualNum.otpApi.replace('{number}', manualNum.number);
                 const response = await axios.get(apiURL, { timeout: 5000 });
+                const data = response.data;
                 let otp = null;
 
-                // Simple heuristic for OTP extraction from response
-                // If it's CSV or text, try to find a 4-6 digit number
-                const content = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
-                const match = content.match(/\d{4,6}/);
-                if (match) {
-                    otp = match[0];
+                if (typeof data === 'object' && data !== null) {
+                    // Try common field names if it's JSON
+                    otp = data.otp || data.code || data.otp_code || data.pin;
+                    if (otp) otp = String(otp);
+                }
+
+                if (!otp) {
+                    // Fallback to regex extraction
+                    const content = typeof data === 'string' ? data : JSON.stringify(data);
+                    const match = content.match(/\b\d{4,6}\b/); // Added word boundaries to avoid matching long numbers like IDs
+                    if (match) {
+                        otp = match[0];
+                    }
+                }
+
+                if (otp) {
                     session.otp = otp;
                     manualNum.otp = otp;
                     manualNum.status = 'finished';
@@ -2850,7 +2991,7 @@ app.post('/api/admin/mother-email/disconnect', (req, res) => {
         if (!type) return res.json({ success: false, message: 'Type required' });
 
         imapService.disconnect(type);
-        if (db.data.settings && db.data.adminSettings.motherEmailConfigs) {
+        if (db.data.adminSettings && db.data.adminSettings.motherEmailConfigs) {
             delete db.data.adminSettings.motherEmailConfigs[type];
             db.save();
         }
@@ -3058,22 +3199,53 @@ function assignEmailFromPool(type) {
 }
 
 // API: Generate Premium Email (Gmail, Hotmail) - ADMIN POOL ONLY
+const genLocks = new Set();
 app.post('/api/premium-emails/generate', async (req, res) => {
     const { userId, provider } = req.body;
-    const users = getUsersObj();
-    const user = users[userId];
-    if (!user) return res.json({ success: false, message: 'User not found' });
+    
+    // Sequential generation lock per user/provider
+    const lockKey = `gen_${userId}_${provider}`;
+    if (genLocks.has(lockKey)) {
+        return res.json({ success: false, message: 'Generation in progress. Please wait.' });
+    }
+    genLocks.add(lockKey);
 
-    const settings = db.getSettings();
-    const costs = settings.costs || {};
+    try {
+        const users = getUsersObj();
+        const user = users[userId];
+        if (!user) {
+            genLocks.delete(lockKey);
+            return res.json({ success: false, message: 'User not found' });
+        }
+
+        const settings = db.getSettings();
+        const costs = settings.costs || {};
     let tokenCost = 20;
     if (provider === 'gmail') tokenCost = costs.gmail || 20;
     else if (provider === 'hotmail') tokenCost = costs.hotmail || 25;
     else if (provider === 'student') tokenCost = costs.student || 50;
     else if (provider === 'temp') tokenCost = costs.tempmail || 10;
 
-    const userTokens = db.getTokenBalance(user);
-    if (userTokens < tokenCost) return res.json({ success: false, message: `Insufficient tokens. Need ${tokenCost} TC for ${provider}.` });
+    // Prevent double generation if already has a VERY fresh session (within 10 seconds)
+    // This helps with accidental double clicks or concurrent auto-generations
+    const now = Date.now();
+    if (db.data.mailSessions) {
+        const existingSession = Object.values(db.data.mailSessions).find(s => 
+            String(s.userId) === String(userId) && 
+            s.provider === provider && 
+            (now - (s.createdAt || 0)) < 10000
+        );
+        if (existingSession) {
+             return res.json({
+                success: true,
+                email: existingSession.email,
+                sessionId: Object.keys(db.data.mailSessions).find(k => db.data.mailSessions[k] === existingSession),
+                newBalance: db.getTokenBalance(user),
+                provider: existingSession.provider,
+                note: 'Restored recent session'
+            });
+        }
+    }
 
     let emailData = null;
 
@@ -3082,30 +3254,44 @@ app.post('/api/premium-emails/generate', async (req, res) => {
         const pool = db.data.emailPool?.[provider] || [];
         const available = pool.filter(e => !e.status || e.status === 'available');
         if (available.length === 0) {
-            return res.json({
-                success: false,
-                message: `❌ No ${provider.toUpperCase()} emails available. Admin needs to add more to the pool.`
+            try {
+                const generated = provider === 'gmail' ? await createGmailAccount() : await createHotmailAccount();
+                if (generated && generated.email) {
+                    emailData = {
+                        email: generated.email,
+                        password: generated.password || null,
+                        provider: `automation_${provider}`,
+                        sessionId: generated.sessionId || generated.email,
+                        token: generated.token || generated.email
+                    };
+                } else {
+                    return res.json({ success: false, message: `❌ No ${provider.toUpperCase()} emails available in pool and fallback failed.` });
+                }
+            } catch (e) {
+                console.error(`Automation fallback failed for ${provider}:`, e.message);
+                return res.json({ success: false, message: `❌ No ${provider.toUpperCase()} emails available in pool and fallback failed.` });
+            }
+        } else {
+            const poolEmail = available[0];
+            emailData = {
+                email: poolEmail.email,
+                password: poolEmail.password || null,
+                provider: `admin_pool_${provider}`,
+                sessionId: poolEmail.email,
+                token: poolEmail.email
+            };
+            // REMOVE from pool after assignment (admin sees it's been used)
+            db.data.emailPool[provider] = pool.filter(e => e.email !== poolEmail.email);
+            // Save usage record in admin history
+            if (!db.data.emailPoolHistory) db.data.emailPoolHistory = [];
+            db.data.emailPoolHistory.unshift({
+                email: poolEmail.email,
+                type: provider,
+                assignedTo: userId,
+                assignedAt: new Date().toISOString()
             });
+            db.save();
         }
-        const poolEmail = available[0];
-        emailData = {
-            email: poolEmail.email,
-            password: poolEmail.password || null,
-            provider: `admin_pool_${provider}`,
-            sessionId: poolEmail.email,
-            token: poolEmail.email
-        };
-        // REMOVE from pool after assignment (admin sees it's been used)
-        db.data.emailPool[provider] = pool.filter(e => e.email !== poolEmail.email);
-        // Save usage record in admin history
-        if (!db.data.emailPoolHistory) db.data.emailPoolHistory = [];
-        db.data.emailPoolHistory.unshift({
-            email: poolEmail.email,
-            type: provider,
-            assignedTo: userId,
-            assignedAt: new Date().toISOString()
-        });
-        db.save();
     } else if (provider === 'student') {
         // Student email: still use admin pool if available, otherwise providers
         const studentPool = db.data.emailPool?.['student'] || [];
@@ -3144,8 +3330,15 @@ app.post('/api/premium-emails/generate', async (req, res) => {
     // Deduct tokens
     db.setTokenBalance(user, db.getTokenBalance(user) - tokenCost);
     if (!user.history) user.history = [];
+    
+    let historyType = 'premium_email';
+    if(provider === 'gmail') historyType = 'gmail_email';
+    else if(provider === 'hotmail') historyType = 'hotmail_email';
+    else if(provider === 'student') historyType = 'student_email';
+    else if(provider === 'temp') historyType = 'temp_mail';
+
     user.history.unshift({
-        type: 'premium_email',
+        type: historyType,
         amount: -tokenCost,
         date: new Date().toISOString(),
         reward: `-${tokenCost} Tokens`,
@@ -3172,6 +3365,12 @@ app.post('/api/premium-emails/generate', async (req, res) => {
         newBalance: db.getTokenBalance(user),
         provider: emailData.provider
     });
+} catch (err) {
+    console.error("Gen Error:", err);
+    res.json({ success: false, message: err.message });
+} finally {
+    genLocks.delete(lockKey);
+}
 });
 
 
@@ -3262,8 +3461,8 @@ app.get('/api/premium-emails/inbox', async (req, res) => {
             from: m.from || 'Unknown',
             to: m.to || targetEmail,
             subject: m.subject || '(No Subject)',
-            body: (m.body || m.snippet || '').substring(0, 3000),
-            preview: (m.body || m.snippet || '').substring(0, 120),
+            body: m.body || m.snippet || '',
+            preview: String(m.body || m.snippet || '').substring(0, 120),
             otp: m.otp || (function(text) {
                 if (!text) return null;
                 // Exclude common false positives like Microsoft Redmond Zip (98052) or Google MV Zip (94043)
@@ -3288,9 +3487,20 @@ app.get('/api/premium-emails/inbox', async (req, res) => {
             snippet: (m.snippet || m.body || '').substring(0, 100)
         }));
 
+        // De-duplicate messages based on From, Subject and Snippet
+        const uniqueMessages = [];
+        const seen = new Set();
+        for (const msg of formatted) {
+            const key = `${msg.from}_${msg.subject}_${msg.snippet}`;
+            if (!seen.has(key)) {
+                seen.add(key);
+                uniqueMessages.push(msg);
+            }
+        }
+
         res.json({
             success: true,
-            messages: formatted,
+            messages: uniqueMessages,
             email: targetEmail
         });
     } catch (e) {
@@ -3326,54 +3536,88 @@ app.post('/api/mail/generate', async (req, res) => {
             // Hot Mail: ADMIN POOL ONLY - no website providers
             const poolEmail = assignEmailFromPool('hotmail');
             if (!poolEmail) {
-                return res.json({ success: false, message: 'No Hot Mail emails available. Please contact admin.' });
+                try {
+                    const generated = await createHotmailAccount();
+                    if (generated && generated.email) {
+                        emailData = {
+                            email: generated.email,
+                            password: generated.password || null,
+                            provider: 'automation_hotmail',
+                            sessionId: generated.sessionId || generated.email,
+                            token: generated.token || generated.email
+                        };
+                    } else {
+                        return res.json({ success: false, message: 'No Hot Mail emails available in pool and fallback failed.' });
+                    }
+                } catch (e) {
+                    console.error('Automation fallback failed for hotmail:', e.message);
+                    return res.json({ success: false, message: 'No Hot Mail emails available in pool and fallback failed.' });
+                }
+            } else {
+                emailData = {
+                    email: poolEmail.email,
+                    password: poolEmail.password || null,
+                    provider: 'admin_pool_hotmail',
+                    sessionId: poolEmail.email,
+                    token: poolEmail.email
+                };
+
+                // Remove from pool
+                db.data.emailPool['hotmail'] = db.data.emailPool['hotmail'].filter(e => e.email !== poolEmail.email);
+
+                // Add to history
+                if (!db.data.emailPoolHistory) db.data.emailPoolHistory = [];
+                db.data.emailPoolHistory.push({
+                    type: 'hotmail',
+                    email: poolEmail.email,
+                    assignedTo: userId,
+                    assignedAt: Date.now()
+                });
+                db.save();
             }
-            emailData = {
-                email: poolEmail.email,
-                password: poolEmail.password || null,
-                provider: 'admin_pool_hotmail',
-                sessionId: poolEmail.email,
-                token: poolEmail.email
-            };
-
-            // Remove from pool
-            db.data.emailPool['hotmail'] = db.data.emailPool['hotmail'].filter(e => e.email !== poolEmail.email);
-
-            // Add to history
-            if (!db.data.emailPoolHistory) db.data.emailPoolHistory = [];
-            db.data.emailPoolHistory.push({
-                type: 'hotmail',
-                email: poolEmail.email,
-                assignedTo: userId,
-                assignedAt: Date.now()
-            });
-            db.save();
         } else if (requestedService === 'gmail') {
             // Gmail: ADMIN POOL ONLY - no website providers
             const poolEmail = assignEmailFromPool('gmail');
             if (!poolEmail) {
-                return res.json({ success: false, message: 'No Gmail emails available. Please contact admin.' });
+                try {
+                    const generated = await createGmailAccount();
+                    if (generated && generated.email) {
+                        emailData = {
+                            email: generated.email,
+                            password: generated.password || null,
+                            provider: 'automation_gmail',
+                            sessionId: generated.sessionId || generated.email,
+                            token: generated.token || generated.email
+                        };
+                    } else {
+                        return res.json({ success: false, message: 'No Gmail emails available in pool and fallback failed.' });
+                    }
+                } catch (e) {
+                    console.error('Automation fallback failed for gmail:', e.message);
+                    return res.json({ success: false, message: 'No Gmail emails available in pool and fallback failed.' });
+                }
+            } else {
+                emailData = {
+                    email: poolEmail.email,
+                    password: poolEmail.password || null,
+                    provider: 'admin_pool_gmail',
+                    sessionId: poolEmail.email,
+                    token: poolEmail.email
+                };
+
+                // Remove from pool
+                db.data.emailPool['gmail'] = db.data.emailPool['gmail'].filter(e => e.email !== poolEmail.email);
+
+                // Add to history
+                if (!db.data.emailPoolHistory) db.data.emailPoolHistory = [];
+                db.data.emailPoolHistory.push({
+                    type: 'gmail',
+                    email: poolEmail.email,
+                    assignedTo: userId,
+                    assignedAt: Date.now()
+                });
+                db.save();
             }
-            emailData = {
-                email: poolEmail.email,
-                password: poolEmail.password || null,
-                provider: 'admin_pool_gmail',
-                sessionId: poolEmail.email,
-                token: poolEmail.email
-            };
-
-            // Remove from pool
-            db.data.emailPool['gmail'] = db.data.emailPool['gmail'].filter(e => e.email !== poolEmail.email);
-
-            // Add to history
-            if (!db.data.emailPoolHistory) db.data.emailPoolHistory = [];
-            db.data.emailPoolHistory.push({
-                type: 'gmail',
-                email: poolEmail.email,
-                assignedTo: userId,
-                assignedAt: Date.now()
-            });
-            db.save();
         } else if (requestedService === 'student') {
             const { createStudentEmailAccount } = require('../services/providers');
             emailData = await createStudentEmailAccount();
@@ -3392,8 +3636,14 @@ app.post('/api/mail/generate', async (req, res) => {
 
     db.setTokenBalance(user, db.getTokenBalance(user) - tokenCost);
     if (!user.history) user.history = [];
+
+    let historyType = 'temp_mail';
+    if(requestedService === 'student') historyType = 'student_email';
+    else if(requestedService === 'hotmail' || requestedService === 'hot') historyType = 'hotmail_email';
+    else if(requestedService === 'gmail' || requestedService === 'premium') historyType = 'gmail_email';
+
     user.history.unshift({
-        type: 'temp_mail',
+        type: historyType,
         amount: -tokenCost,
         date: new Date().toISOString(),
         reward: `-${tokenCost} Tokens`,
@@ -3448,8 +3698,22 @@ app.post('/api/mail/renew-custom', async (req, res) => {
         }
     }
 
+    // Fallback: search in active sessions (allows renewing automation emails)
     if (!emailData) {
-        return res.json({ success: false, message: 'Email not found. Only emails from our pool can be renewed.' });
+        const sessions = db.data.mailSessions || {};
+        const sessionData = Object.values(sessions).find(s => s.email && s.email.toLowerCase() === email.toLowerCase() && String(s.userId) === String(userId));
+        if (sessionData) {
+            emailData = {
+                email: sessionData.email,
+                provider: sessionData.provider,
+                sessionId: sessionData.sessionId || sessionData.token || sessionData.email,
+                token: sessionData.token
+            };
+        }
+    }
+
+    if (!emailData) {
+        return res.json({ success: false, message: 'Email not found. Only emails from our pool or your active sessions can be renewed.' });
     }
 
     // Deduct tokens
@@ -3477,6 +3741,42 @@ app.post('/api/mail/renew-custom', async (req, res) => {
     db.save();
 
     res.json({ success: true, email: emailData.email, sessionId, newBalance: db.getTokenBalance(user) });
+});
+
+app.get('/api/mail/active', async (req, res) => {
+    const userId = req.query.userId || req.headers['x-user-id'];
+    if (!userId) return res.json({ success: false, message: 'User ID required' });
+    
+    // 24-hour retention for gmail and hotmail (premium)
+    const activeSessions = {};
+    const now = Date.now();
+    const RETENTION_PERIOD = 24 * 60 * 60 * 1000; // 24 hours
+    
+    if (db.data.mailSessions) {
+        // Collect latest active session per service type
+        for (const [sessionId, session] of Object.entries(db.data.mailSessions)) {
+            if (String(session.userId) === String(userId)) {
+                if (now - session.createdAt < RETENTION_PERIOD) {
+                    const type = session.service || session.provider || 'temp';
+                    
+                    // For premium mails, pick the most recent session
+                    if (type === 'gmail' || type === 'hotmail' || type === 'premium' || type.startsWith('admin_pool_')) {
+                        if (!activeSessions[type] || session.createdAt > activeSessions[type].createdAt) {
+                            activeSessions[type] = {
+                                id: sessionId,
+                                sessionId: sessionId,
+                                email: session.email,
+                                type: type,
+                                createdAt: session.createdAt
+                            };
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    res.json({ success: true, activeSessions });
 });
 
 // API: Check Mail Inbox
@@ -3736,7 +4036,7 @@ app.post('/api/exchange/convert', (req, res) => {
     else if (to === 'usd') targetAmount = tokensBase / rates.usd_to_tokens;
 
     // Apply rounding
-    if (to === 'usd') targetAmount = Math.round(targetAmount * 100) / 100;
+    if (to === 'usd') targetAmount = Math.round(targetAmount * 1000) / 1000;
     else if (to === 'Gems') targetAmount = Math.floor(targetAmount * 10000) / 10000;
     else targetAmount = Math.floor(targetAmount);
 
@@ -3753,16 +4053,25 @@ app.post('/api/exchange/convert', (req, res) => {
     if (to === 'tokens') db.setTokenBalance(user, db.getTokenBalance(user) + amountAfterFee);
     else user[toField] = Math.max(0, (user[toField] || 0) + amountAfterFee);
 
-    // History record
+    // History record (Two transactions for minus and plus)
     if (!user.history) user.history = [];
+    
+    // 1. Transaction for Deduction (-)
     user.history.unshift({
         type: 'exchange',
-        from, to,
-        fromAmount: amt,
-        toAmount: amountAfterFee,
-        fee: exchangeFee,
-        feePercent: exchangeFeePercent,
-        date: Date.now()
+        amount: -amt,
+        currency: from === 'tokens' ? 'TC' : (from === 'Gems' ? 'Gems' : from.toUpperCase()),
+        date: Date.now(),
+        detail: `Exchanged ${amt} ${from.toUpperCase()} to ${to.toUpperCase()}`
+    });
+    
+    // 2. Transaction for Addition (+)
+    user.history.unshift({
+        type: 'exchange',
+        amount: amountAfterFee,
+        currency: to === 'tokens' ? 'TC' : (to === 'Gems' ? 'Gems' : to.toUpperCase()),
+        date: Date.now(),
+        detail: `Received from ${from.toUpperCase()} exchange`
     });
 
     saveUsersObj(users);
@@ -3801,8 +4110,8 @@ app.post('/api/user/transfer', async (req, res) => {
     // Calculate safely with floats
     const rawFee = (amount * transferFeePercent) / 100;
     // For tokens/Gems, ceil is okay. For USD, round to 2 decimals
-    const transferFee = asset === 'usd' ? (Math.ceil(rawFee * 100) / 100) : Math.ceil(rawFee);
-    const amountAfterFee = asset === 'usd' ? (amount - transferFee).toFixed(2) * 1 : (amount - transferFee);
+    const transferFee = asset === 'usd' ? (Math.ceil(rawFee * 1000) / 1000) : Math.ceil(rawFee);
+    const amountAfterFee = asset === 'usd' ? (amount - transferFee).toFixed(3) * 1 : (amount - transferFee);
 
     // Identify field names based on asset type
     let field = asset; // usd, Gems, tokens
@@ -3834,7 +4143,7 @@ app.post('/api/user/transfer', async (req, res) => {
     if (asset === 'tokens') {
         db.setTokenBalance(toUser, db.getTokenBalance(toUser) + amountAfterFee);
     } else if (asset === 'usd') {
-        toUser[toField] = parseFloat(((toUser[toField] || 0) + amountAfterFee).toFixed(2));
+        toUser[toField] = parseFloat(((toUser[toField] || 0) + amountAfterFee).toFixed(3));
     } else {
         toUser[toField] = (toUser[toField] || 0) + amountAfterFee;
     }
@@ -4065,7 +4374,7 @@ app.post('/api/admin/deposits/action', (req, res) => {
         }
 
         // Credit user with USD balance
-        user.usd = (user.usd || 0) + deposit.amount;
+        user.usd = parseFloat(((user.usd || 0) + deposit.amount).toFixed(3));
 
         // Add to history
         if (!user.history) user.history = [];
@@ -4119,7 +4428,7 @@ app.post('/api/admin/deposits/auto-approve', (req, res) => {
         if (deposit) {
             const user = users[deposit.userId];
             if (user) {
-                user.usd = (user.usd || 0) + deposit.amount;
+                user.usd = parseFloat(((user.usd || 0) + deposit.amount).toFixed(3));
                 if (!user.history) user.history = [];
                 user.history.unshift({
                     type: 'deposit',
@@ -4209,16 +4518,18 @@ app.get('/api/admin/stats', async (req, res) => {
         Object.values(db.data.vpnAccounts).forEach(arr => totalVpns += (arr ? arr.length : 0));
     }
 
-    // Sum all Cards
+    // Sum all Cards (Only for existing services)
     let totalCards = 0;
-    if (db.data.cards) {
-        Object.values(db.data.cards).forEach(arr => totalCards += (arr ? arr.length : 0));
+    if (db.data.cards && db.data.services) {
+        Object.keys(db.data.services).forEach(serviceId => {
+            const arr = db.data.cards[serviceId];
+            totalCards += (arr ? arr.length : 0);
+        });
     }
 
     // Count ALL Emails from Pool (Enhanced to include all categories)
     let gmailTotal = 0;
     let gmailUsed = 0;
-    let gmailAvailable = 0;
     
     if (db.data.emailPool) {
         Object.values(db.data.emailPool).forEach(pool => {
@@ -4227,10 +4538,19 @@ app.get('/api/admin/stats', async (req, res) => {
                 gmailUsed += pool.filter(e => e.assignedTo || e.status === 'used').length;
             }
         });
-        gmailAvailable = gmailTotal - gmailUsed;
     }
 
-    let gmailsUsed = gmailTotal; // Keep for legacy if needed
+    let gmailsUsed = 0;
+    // Count total unique mail sessions that have been generated from history
+    usersList.forEach(u => {
+        if (u.history) {
+            u.history.forEach(h => {
+                if (h.type && h.type.includes('mail')) {
+                    gmailsUsed++;
+                }
+            });
+        }
+    });
 
     // API Stats (Enhanced)
     let apiActiveKeys = 0;
@@ -4304,7 +4624,7 @@ app.get('/api/admin/stats', async (req, res) => {
         gmails: {
             total: gmailTotal,
             used: gmailUsed,
-            available: gmailAvailable,
+            available: gmailTotal - gmailUsed,
             percent: gmailTotal > 0 ? Math.round((gmailUsed / gmailTotal) * 100) : 0
         },
         api: {
@@ -5007,18 +5327,7 @@ app.get('/api/user/messages', async (req, res) => {
     if (!user) return res.json({ success: false, messages: [] });
 
     // Consolidate admin replies (from pendingWebMessages) and user messages
-    const replies = user.pendingWebMessages || [];
-    if (replies.length > 0) {
-        if (!user.supportMessages) user.supportMessages = [];
-        replies.forEach(r => {
-            user.supportMessages.push({
-                sender: 'admin',
-                message: r.message,
-                timestamp: r.timestamp
-            });
-        });
-        user.pendingWebMessages = []; // Clear pending
-    }
+    // (Deprecated old pendingWebMessages queue)
 
     res.json({ success: true, messages: user.supportMessages || [] });
 });
@@ -5038,12 +5347,17 @@ app.post('/api/admin/send-message', async (req, res) => {
             timestamp: new Date().toISOString()
         });
 
-        if (!user.pendingWebMessages) user.pendingWebMessages = [];
-        user.pendingWebMessages.push({
-            id: Date.now().toString(),
+        // Notifications System push
+        if (!user.notifications) user.notifications = [];
+        user.notifications.unshift({
+            id: Date.now().toString() + Math.random().toString(36).substring(7),
+            type: 'message',
+            title: 'New Message from Admin',
             message: message,
-            date: Date.now()
+            timestamp: new Date().toISOString(),
+            read: false
         });
+
         await db.updateUser(user);
     }
 
@@ -5084,14 +5398,17 @@ app.post('/api/admin/send-gift', async (req, res) => {
         claimed: false
     });
 
-    // Also add a pending web message notification (like message system)
-    if (!user.pendingWebMessages) user.pendingWebMessages = [];
-    user.pendingWebMessages.push({
+    if (!user.notifications) user.notifications = [];
+    user.notifications.unshift({
         id: 'gift-' + giftId,
-        message: `🎁 You received a gift! ${amount} ${currency === 'tokens' ? 'Tokens' : currency === 'Gems' ? 'Gems' : 'USD'}${note ? ' — ' + note : ''}`,
-        date: Date.now(),
-        isGift: true,
-        giftId: giftId
+        type: 'gift',
+        title: '🎁 You received a gift!',
+        message: `${amount} ${currency === 'tokens' ? 'Tokens' : currency === 'Gems' ? 'Gems' : 'USD'}${note ? ' — ' + note : ''}`,
+        timestamp: new Date().toISOString(),
+        read: false,
+        giftId: giftId,
+        currency: currency,
+        amount: parseFloat(amount)
     });
 
     await db.updateUser(user);
@@ -5108,6 +5425,48 @@ app.get('/api/user/gifts', async (req, res) => {
 
     const pendingGifts = (user.pendingGifts || []).filter(g => !g.claimed);
     res.json({ success: true, gifts: pendingGifts });
+});
+
+// API: User - Get Notifications
+app.get('/api/user/notifications', async (req, res) => {
+    const { userId } = req.query;
+    if (!userId) return res.json({ success: false, notifications: [] });
+
+    const user = await db.getUser(userId);
+    if (!user) return res.json({ success: false, notifications: [] });
+
+    // Mark gift notifications with claimed state
+    const notifs = (user.notifications || []).map(n => {
+        if (n.type === 'gift') {
+            const gift = (user.pendingGifts || []).find(g => g.id === n.giftId);
+            if (gift) {
+                n.claimed = gift.claimed;
+            } else {
+                n.claimed = true; // if missing, assume claimed
+            }
+        }
+        return n;
+    });
+
+    res.json({ success: true, notifications: notifs });
+});
+
+// API: User - Mark Notification Read
+app.post('/api/user/notifications/read', async (req, res) => {
+    const { userId, notificationId } = req.body;
+    if (!userId || !notificationId) return res.json({ success: false });
+
+    const user = await db.getUser(userId);
+    if (!user) return res.json({ success: false });
+
+    if (user.notifications) {
+        let n = user.notifications.find(n => n.id === notificationId);
+        if (n) {
+            n.read = true;
+            await db.updateUser(user);
+        }
+    }
+    res.json({ success: true });
 });
 
 // API: Claim Gift (after ad watch)
@@ -5132,7 +5491,7 @@ app.post('/api/gift/claim', async (req, res) => {
     } else if (currency === 'Gems') {
         user.Gems = (user.Gems || 0) + parseInt(amount);
     } else if (currency === 'usd') {
-        user.usd = parseFloat(((user.usd || 0) + parseFloat(amount)).toFixed(2));
+        user.usd = parseFloat(((user.usd || 0) + parseFloat(amount)).toFixed(3));
     }
 
     // Mark as claimed
@@ -5342,6 +5701,44 @@ app.post('/api/admin/db/wipe', async (req, res) => {
 // Duplicate database routes removed to resolve conflicts and prevent server restart loops.
 // The primary implementations remain active at lines 252-288.
 
+// API: Admin - Stats
+app.get('/api/admin/stats', async (req, res) => {
+    try {
+        const users = typeof getUsersObj === 'function' ? getUsersObj() : {};
+        const totalUsers = Object.keys(users).length;
+        
+        res.json({
+            success: true,
+            totalUsers: totalUsers,
+            activeToday: 0,
+            totalTokens: 0,
+            totalGems: 0,
+            totalUsdt: 0,
+            verifiedUsers: 0,
+            shopItems: 0,
+            accounts: 0,
+            gmailsUsed: 0,
+            totalVpns: 0,
+            totalCards: 0,
+            apiKeys: 0,
+            totalDeposits: 0,
+            totalWithdrawals: 0,
+            pendingDeposits: 0,
+            revenue: 0,
+            serviceCategories: 0,
+            totalServiceStock: 0,
+            lastBackup: 'Never',
+            gmails: { used: 0, total: 0 },
+            api: { activeKeys: 0, totalCalls: 0, activeUsers: 0 }
+        });
+    } catch (e) {
+        console.error('Error in /api/admin/stats:', e);
+        res.json({ success: false, message: e.message });
+    }
+});
+
+
+
 // API: Admin - Provider Management
 app.get('/api/admin/providers', (req, res) => {
     const providers = db.data.providers || {};
@@ -5478,7 +5875,14 @@ app.get('/api/admin/manual-numbers/summary', (req, res) => {
     list.forEach(n => {
         if (n.status === 'available') {
             const key = n.platform;
-            if (!summary[key]) summary[key] = { total: 0, countries: {}, hasOtpApi: false };
+            if (!summary[key]) {
+                summary[key] = { 
+                    total: 0, 
+                    countries: {}, 
+                    hasOtpApi: false,
+                    isPopular: (db.data.popularPlatforms || []).includes(key)
+                };
+            }
             summary[key].total++;
             summary[key].countries[n.countryCode] = (summary[key].countries[n.countryCode] || 0) + 1;
             if (n.otpApi) summary[key].hasOtpApi = true;
@@ -5486,6 +5890,22 @@ app.get('/api/admin/manual-numbers/summary', (req, res) => {
     });
 
     res.json({ success: true, summary });
+});
+
+app.post('/api/admin/platforms/toggle-popular', (req, res) => {
+    const { platform } = req.body;
+    if (!platform) return res.json({ success: false, message: 'Platform required' });
+
+    if (!db.data.popularPlatforms) db.data.popularPlatforms = [];
+
+    const index = db.data.popularPlatforms.indexOf(platform.toLowerCase());
+    if (index === -1) {
+        db.data.popularPlatforms.push(platform.toLowerCase());
+    } else {
+        db.data.popularPlatforms.splice(index, 1);
+    }
+
+    res.json({ success: true, isPopular: index === -1 });
 });
 
 app.get('/api/admin/manual-numbers', (req, res) => {
@@ -5672,6 +6092,60 @@ app.get('/api/admin/system/info', (req, res) => {
     res.json({ success: true, stats });
 });
 
+// API: Admin - Mass Gift
+app.post('/api/admin/mass-gift', async (req, res) => {
+    try {
+        const { asset, amount, messageFormat } = req.body;
+        if (!asset || !amount || amount <= 0) {
+            return res.json({ success: false, message: 'Invalid asset or amount' });
+        }
+
+        const users = await db.getUsers();
+        let affected = 0;
+        const giftId = 'gift_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+
+        for (const user of users) {
+            // DO NOT apply balances directly! User must claim it.
+
+            // Create a pending gift
+            if (!user.pendingGifts) user.pendingGifts = [];
+            user.pendingGifts.push({
+                id: giftId,
+                currency: asset === 'tokens' ? 'tokens' : (asset === 'gems' ? 'Gems' : 'usd'),
+                amount: amount,
+                claimed: false,
+                date: Date.now()
+            });
+
+            // Create a notification
+            if (!user.notifications) user.notifications = [];
+            
+            const assetLabel = asset === 'tokens' ? 'TC' : (asset === 'usd' ? '$' : 'Gems');
+            const amtStr = asset === 'usd' ? amount.toFixed(3) : amount;
+            let finalMsg = messageFormat || `🎁 You received a gift of {AMOUNT} {ASSET} from Admin!`;
+            finalMsg = finalMsg.replace(/\{AMOUNT\}/g, asset === 'usd' ? '$' + amtStr : amtStr)
+                               .replace(/\{ASSET\}/g, assetLabel);
+
+            user.notifications.unshift({
+                id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                type: 'gift',
+                title: 'Admin Gift',
+                message: finalMsg,
+                giftId: giftId,
+                date: Date.now(),
+                read: false
+            });
+
+            await db.updateUser(user);
+            affected++;
+        }
+        res.json({ success: true, affectedUsers: affected });
+    } catch (e) {
+        console.error('[MASS_GIFT]', e);
+        res.json({ success: false, message: 'Server error: ' + e.message });
+    }
+});
+
 // API: Admin - Get Broadcast History
 app.get('/api/admin/broadcasts', (req, res) => {
     try {
@@ -5685,9 +6159,67 @@ app.get('/api/admin/broadcasts', (req, res) => {
     }
 });
 
+// API: Admin - Delete Broadcast
+app.delete('/api/admin/broadcasts/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const broadcasts = db.data.broadcasts || [];
+        const index = broadcasts.findIndex(b => b.id === id);
+        
+        if (index === -1) {
+            return res.json({ success: false, message: 'Broadcast not found' });
+        }
+        
+        const broadcast = broadcasts[index];
+        
+        // Delete from Telegram if messages tracked
+        if (broadcast.telegramMessages && Array.isArray(broadcast.telegramMessages)) {
+            const TelegramBot = require('node-telegram-bot-api');
+            const config = require('../config');
+            const botToken = config.TELEGRAM_BOT_TOKEN;
+            
+            let activeBot = bot;
+            if (!activeBot && botToken) {
+                try {
+                    activeBot = new TelegramBot(botToken, { polling: false });
+                } catch (e) {
+                    console.error('[BROADCAST_DELETE] Failed to create bot:', e.message);
+                }
+            }
+            
+            if (activeBot) {
+                for (const msg of broadcast.telegramMessages) {
+                    try {
+                        await activeBot.deleteMessage(msg.chatId, msg.messageId);
+                        console.log(`[BROADCAST_DELETE] Deleted message ${msg.messageId} from ${msg.chatId}`);
+                    } catch (e) {
+                        console.error(`[BROADCAST_DELETE] Failed to delete from ${msg.chatId}:`, e.message);
+                        // Ignore failure (message might be too old or bot kicked)
+                    }
+                }
+            }
+        }
+        
+        // Remove from history
+        broadcasts.splice(index, 1);
+        db.data.broadcasts = broadcasts;
+        db.save();
+        
+        res.json({ success: true, message: 'Broadcast deleted from history and Telegram (if possible)' });
+    } catch (e) {
+        console.error('[BROADCAST_DELETE] Error:', e);
+        res.json({ success: false, message: 'Server error: ' + e.message });
+    }
+});
+
 // API: Admin - Advanced Broadcast
 app.post('/api/admin/broadcast', async (req, res) => {
     const { message, mediaType, mediaUrl, buttons, target } = req.body;
+    
+    // Track if requested by helper admin
+    const adminUserId = req.headers['x-user-id'];
+    const adminUser = adminUserId ? db.getUser(adminUserId) : null;
+    const isHelper = adminUser && adminUser.role === 'helper_admin';
 
     // Normalize UI targets to backend targets
     // UI: bot/group/channel/all
@@ -5706,6 +6238,36 @@ app.post('/api/admin/broadcast', async (req, res) => {
     let targetIds = [];
     const apiKeys = db.data.apiKeys || {};
     const requiredChannel = apiKeys.requiredChannel || '';
+
+    if (normalizedTarget === 'web') {
+        const users = await db.getUsers();
+        let successCount = 0;
+        for (let u of users) {
+             u.notifications = u.notifications || [];
+             u.notifications.unshift({
+                 id: Date.now().toString() + Math.random().toString(36).substring(7),
+                 type: 'broadcast',
+                 title: 'System Announcement',
+                 message: message || (mediaUrl ? '[Media Attached]' : ''),
+                 timestamp: new Date().toISOString(),
+                 read: false
+             });
+             await db.updateUser(u, null, true);
+             successCount++;
+        }
+        
+        // Save to broadcast history
+        if (!db.data.broadcasts) db.data.broadcasts = [];
+        db.data.broadcasts.push({
+            id: Date.now().toString(),
+            message, mediaType, mediaUrl, target: 'web',
+            sent: successCount, failed: 0,
+            createdAt: Date.now()
+        });
+        db.save();
+        
+        return res.json({ success: true, sent: successCount, failed: 0, total: users.length, channelSuccess: false, mainChannel: null, note: 'Sent exclusively to Web Panel notifications' });
+    }
 
     // Parse channel ID from requiredChannel (can be @username or -100xxx or https://t.me/xxx)
     let mainChannelId = null;
@@ -5733,7 +6295,7 @@ app.post('/api/admin/broadcast', async (req, res) => {
         } else {
             // Fallback: Get channels from database
             const groups = db.getGroups();
-            const onlyChannels = groups.filter(g => g.type === 'channel' || g.id.toString().startsWith('-100'));
+            const onlyChannels = groups.filter(g => g.type === 'channel');
             if (onlyChannels.length > 0) targetIds.push(...onlyChannels.map(g => g.id));
         }
     }
@@ -5742,7 +6304,7 @@ app.post('/api/admin/broadcast', async (req, res) => {
         // Only send to groups if explicitly selected (not when 'all' is selected)
         // Because if channel is linked to group, channel post will auto appear in group
         const groups = db.getGroups();
-        const onlyGroups = groups.filter(g => g.type !== 'channel' && !g.id.toString().startsWith('-100'));
+        const onlyGroups = groups.filter(g => g.type === 'group' || g.type === 'supergroup');
         if (onlyGroups.length > 0) targetIds.push(...onlyGroups.map(g => g.id));
     }
 
@@ -5757,7 +6319,7 @@ app.post('/api/admin/broadcast', async (req, res) => {
             targetIds.push(mainChannelId);
         } else {
             const groups = db.getGroups();
-            const onlyChannels = groups.filter(g => g.type === 'channel' || g.id.toString().startsWith('-100'));
+            const onlyChannels = groups.filter(g => g.type === 'channel');
             if (onlyChannels.length > 0) targetIds.push(...onlyChannels.map(g => g.id));
         }
     }
@@ -5765,7 +6327,15 @@ app.post('/api/admin/broadcast', async (req, res) => {
     // Unique IDs only
     targetIds = [...new Set(targetIds)];
 
-    if (targetIds.length === 0) return res.json({ success: false, message: 'No targets found' });
+    if (targetIds.length === 0 && normalizedTarget !== 'web') {
+        let msg = 'No targets found';
+        if (normalizedTarget === 'channels') {
+            msg = 'No channels found. Please add a channel in Group Management or set a required channel in API Management.';
+        } else if (normalizedTarget === 'groups') {
+            msg = 'No groups found. Please add a group in Group Management.';
+        }
+        return res.json({ success: false, message: msg });
+    }
 
     // Prepare Keyboard
     let reply_markup = undefined;
@@ -5843,7 +6413,7 @@ app.post('/api/admin/broadcast', async (req, res) => {
             }
         }
 
-        // Verify bot is working by getting bot info
+    // Verify bot is working by getting bot info
         try {
             const botInfo = await activeBot.getMe();
             console.log(`[BROADCAST] Bot verified: @${botInfo.username} (${botInfo.id})`);
@@ -5857,22 +6427,51 @@ app.post('/api/admin/broadcast', async (req, res) => {
 
         console.log(`[BROADCAST] Starting broadcast to ${targetIds.length} targets`);
 
+        const telegramMessages = [];
+
         for (const chatId of targetIds) {
             try {
                 console.log(`[BROADCAST] Sending to ${chatId}...`);
 
+                let sentMsg;
                 if (mediaType === 'photo' && actualMedia) {
-                    await activeBot.sendPhoto(chatId, actualMedia, { caption: message, reply_markup });
+                    sentMsg = await activeBot.sendPhoto(chatId, actualMedia, { caption: message, reply_markup });
                 } else if (mediaType === 'video' && actualMedia) {
-                    await activeBot.sendVideo(chatId, actualMedia, { caption: message, reply_markup });
+                    sentMsg = await activeBot.sendVideo(chatId, actualMedia, { caption: message, reply_markup });
                 } else {
-                    await activeBot.sendMessage(chatId, message || 'Broadcast', { reply_markup });
+                    sentMsg = await activeBot.sendMessage(chatId, message || 'Broadcast', { reply_markup });
                 }
                 successCount++;
+
+                if (sentMsg) {
+                    telegramMessages.push({ chatId, messageId: sentMsg.message_id });
+                }
+
+                // Track message if sent by helper admin
+                if (isHelper && sentMsg) {
+                    adminUser.helperAdminMessages = adminUser.helperAdminMessages || [];
+                    adminUser.helperAdminMessages.push({ chatId, messageId: sentMsg.message_id });
+                }
 
                 // Track if channel was successful
                 if (mainChannelId && String(chatId) === String(mainChannelId)) {
                     channelSuccess = true;
+                }
+
+                // If target is a user, add to their web notifications
+                const u = db.data.users && db.data.users[chatId];
+                if (u) {
+                    u.notifications = u.notifications || [];
+                    u.notifications.unshift({
+                        id: Date.now().toString() + Math.random().toString(36).substring(7),
+                        type: 'broadcast',
+                        title: 'System Announcement',
+                        message: message || (mediaUrl ? '[Media Attached]' : ''),
+                        timestamp: new Date().toISOString(),
+                        read: false
+                    });
+                    // We don't await updateUser here because it's in a loop, but memory is updated.
+                    // Actually, db.save() is better done once after the loop.
                 }
 
                 console.log(`[BROADCAST] ✓ Successfully sent to ${chatId}`);
@@ -5885,7 +6484,28 @@ app.post('/api/admin/broadcast', async (req, res) => {
             await new Promise(r => setTimeout(r, 50));
         }
 
+        if (isHelper) {
+            await db.updateUser(adminUser);
+        }
+
         console.log(`[BROADCAST] Complete: ${successCount} sent, ${failCount} failed out of ${targetIds.length}`);
+        
+        // Save to broadcast history
+        if (!db.data.broadcasts) db.data.broadcasts = [];
+        db.data.broadcasts.push({
+            id: Date.now().toString(),
+            message,
+            mediaType,
+            mediaUrl,
+            target: normalizedTarget,
+            sent: successCount,
+            failed: failCount,
+            createdAt: Date.now(),
+            telegramMessages: telegramMessages
+        });
+        
+        // Save any web notification updates
+        db.save();
 
         res.json({
             success: true,
@@ -6170,6 +6790,9 @@ app.post('/api/admin/settings', (req, res) => {
         if (gems.enabled !== undefined) db.data.adminSettings.gems.enabled = (gems.enabled === true || gems.enabled === 'true');
     }
 
+    db.save();
+    db.triggerSystemUpdate();
+    res.json({ success: true, message: 'Admin settings updated successfully' });
 });
 
 // API: Admin - Get API Keys
@@ -6275,7 +6898,8 @@ function getDefaultFeatureFlags() {
         premiumMail: true,
         accountsShop: true,
         cardsVcc: true,
-        joinRequired: false,
+        joinRequired: true,
+        requireTelegram: true,
 
         // Home service cards
         home_verify: true,
@@ -6323,7 +6947,6 @@ function getFeatureFlags() {
 
     // Include global requirement flags
     const flags = { ...db.data.featureFlags };
-    flags.requireTelegram = db.data.adminSettings?.requireTelegram !== false;
 
     return flags;
 }
@@ -6331,7 +6954,28 @@ function getFeatureFlags() {
 // Public endpoint: mini app fetches enabled/disabled features
 app.get('/api/features', (req, res) => {
     const flags = getFeatureFlags();
-    res.json({ success: true, features: flags });
+    
+    // Provide dynamic join requirements info
+    const apiKeys = db.data.apiKeys || {};
+    const requiredJoins = {
+        channel: {
+            id: apiKeys.requiredChannelId || config.REQUIRED_CHANNEL_ID || '-1002088203586',
+            username: (apiKeys.requiredChannel || config.REQUIRED_CHANNEL || '@AutosVerify').replace('@', ''),
+            name: '📢 AutosVerify Channel'
+        },
+        group: {
+            id: apiKeys.requiredGroupId || config.REQUIRED_GROUP_ID || '-1002188442004',
+            username: (apiKeys.requiredGroup || config.REQUIRED_GROUP || '@AutosVerifyCh').replace('@', ''),
+            name: '💬 AutosVerify Group'
+        }
+    };
+
+    res.set('Cache-Control', 'no-store');
+    res.json({ 
+        success: true, 
+        features: flags,
+        requiredJoins: requiredJoins
+    });
 });
 
 // Admin: get feature flags
@@ -6355,6 +6999,7 @@ app.post('/api/admin/features', (req, res) => {
 
     db.data.featureFlags = updated;
     db.save();
+    db.triggerSystemUpdate();
     res.json({ success: true, features: updated });
 });
 
@@ -7291,92 +7936,98 @@ app.post('/api/check-required-joins', async (req, res) => {
 
     const user = await db.getUser(userId);
 
-    // 1. Check if user is Admin Verified (Highest Tier - bypasses all join checks)
+    // 1. Check if user is Admin Verified
     if (user && user.adminVerified) {
         return res.json({
             success: true,
             allJoined: true,
             canProceed: true,
-            channelJoined: true,
-            groupJoined: true,
             verified: true,
             adminVerified: true,
-            message: 'Admin Verified - All Access Granted'
+            message: 'Admin Verified'
         });
     }
 
     // 2. Check verification requirements
     const reqs = getVerificationRequirements();
 
-    // 3. Real-time channel/group membership check (strict)
-    // Use configured requiredChannel/requiredGroup if present
+    // 3. Real-time strict membership check
     const apiKeys = db.data.apiKeys || {};
-    const requiredChannel = (apiKeys.requiredChannel || '').toString().trim();
-    const requiredGroup = (apiKeys.requiredGroup || '').toString().trim();
+    const channelId = apiKeys.requiredChannelId || config.REQUIRED_CHANNEL_ID;
+    const groupId = apiKeys.requiredGroupId || config.REQUIRED_GROUP_ID;
+    const channelName = apiKeys.requiredChannel || config.REQUIRED_CHANNEL;
+    const groupName = apiKeys.requiredGroup || config.REQUIRED_GROUP;
 
-    let channelJoined = user?.joinedChannel || user?.channelJoined || false;
-    let groupJoined = user?.joinedGroup || user?.groupJoined || false;
+    let channelJoined = true;
+    let groupJoined = true;
 
-    // If bot is available, verify membership in real-time
-    if (bot && (reqs.requireChannelJoin || reqs.requireGroupJoin)) {
-        const validStatuses = ['creator', 'administrator', 'member', 'restricted'];
-
-        if (reqs.requireChannelJoin && requiredChannel) {
+    if (bot) {
+        const checkMembership = async (chatId) => {
+            if (!chatId) return true;
             try {
-                const member = await bot.getChatMember(requiredChannel, userId);
-                channelJoined = validStatuses.includes(member.status);
+                const member = await bot.getChatMember(chatId, userId);
+                const valid = ['creator', 'administrator', 'member', 'restricted'];
+                return valid.includes(member.status);
             } catch (e) {
-                channelJoined = false;
+                if (e.message.includes('chat not found') || e.message.includes('PARTICIPANT_ID_INVALID')) {
+                    // Chat doesn't exist, ID is wrong, or user is unknown to bot - silence logging and apply fallback if skip is allowed
+                    return config.SKIP_MANDATORY_JOIN || false;
+                }
+                console.error(`[CHAT_CHECK] Error for ${chatId}:`, e.message);
+                return false;
+            }
+        };
+
+        if (reqs.requireChannelJoin) {
+            channelJoined = await checkMembership(channelId);
+            // If primary ID fails with 'chat not found', try the username fallback
+            if (!channelJoined && channelName && channelName !== channelId) {
+                channelJoined = await checkMembership(channelName);
+            }
+        }
+        if (reqs.requireGroupJoin) {
+            groupJoined = await checkMembership(groupId);
+            // If primary ID fails with 'chat not found', try the username fallback
+            if (!groupJoined && groupName && groupName !== groupId) {
+                groupJoined = await checkMembership(groupName);
             }
         }
 
-        if (reqs.requireGroupJoin && requiredGroup) {
-            try {
-                const member = await bot.getChatMember(requiredGroup, userId);
-                groupJoined = validStatuses.includes(member.status);
-            } catch (e) {
-                groupJoined = false;
+        // Update user record
+        if (user) {
+            user.joinedChannel = channelJoined;
+            user.joinedGroup = groupJoined;
+            
+            // Auto revoke if they left
+            if (!channelJoined || !groupJoined) {
+                user.verified = false;
             }
+            db.updateUser(user);
         }
-
-        // Persist join flags
-        user.joinedChannel = !!channelJoined;
-        user.channelJoined = !!channelJoined;
-        user.joinedGroup = !!groupJoined;
-        user.groupJoined = !!groupJoined;
-
-        // If user left any required join, revoke verification immediately
-        if ((reqs.requireChannelJoin && !channelJoined) || (reqs.requireGroupJoin && !groupJoined)) {
-            user.verified = false;
-        }
-
-        await db.updateUser(user);
     }
 
-    // 4. Compute verification status AFTER membership check
-    const verificationStatus = await checkUserVerificationRequirements(userId);
-
-    // If user meets requirements, mark verified
-    if (verificationStatus.met && !user.verified) {
+    // 4. Verification Check (optional, separate from join requirement)
+    const vStatus = await checkUserVerificationRequirements(userId);
+    
+    // Auto-verify if they meet full criteria and have joined chats
+    if (vStatus.met && channelJoined && groupJoined && user && !user.verified) {
         user.verified = true;
-        await db.updateUser(user);
-        console.log(`[AUTO VERIFY] User ${userId} automatically verified for meeting requirements`);
+        db.updateUser(user);
     }
 
-    // Determine if user can proceed
-    const allJoined = (!reqs.requireChannelJoin || channelJoined) && (!reqs.requireGroupJoin || groupJoined);
-    const canProceed = reqs.enabled ? verificationStatus.met : true;
+    // canProceed is ONLY based on join status (channel + group)
+    // Full verification requirements are a separate premium feature
+    const canProceed = channelJoined && groupJoined;
 
     res.json({
         success: true,
-        allJoined,
-        canProceed,
+        allJoined: channelJoined && groupJoined,
+        canProceed: canProceed,
         channelJoined,
         groupJoined,
         verified: user?.verified || false,
-        adminVerified: false,
-        requirements: verificationStatus,
-        message: canProceed ? 'Access granted' : 'Please complete verification requirements'
+        adminVerified: user?.adminVerified || false,
+        requirements: vStatus
     });
 });
 
@@ -7572,41 +8223,8 @@ app.get('/api/leaderboard', (req, res) => {
     const allUsersList = Object.values(db.data.users);
 
     if (type === 'earn') {
-        const _now = new Date();
-        const startOfWeek = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate() - _now.getDay()).getTime();
-        const startOfMonth = new Date(_now.getFullYear(), _now.getMonth(), 1).getTime();
-        const cutoffTime = period === 'month' ? startOfMonth : startOfWeek;
-
-        // Helper to calculate tokens earned strictly within the current cycle
-        const calculateScore = (u) => {
-            if (!u.history || u.history.length === 0) return 0;
-            // Sum only positive history entries (earnings) made past the cutoffTime
-            return u.history.reduce((sum, entry) => {
-                const isEarning = entry.amount && typeof entry.amount === 'number' && entry.amount > 0;
-
-                let entryTimestamp = 0;
-                if (entry.date) {
-                    if (typeof entry.date === 'string') {
-                        entryTimestamp = new Date(entry.date).getTime();
-                    } else if (typeof entry.date === 'number') {
-                        entryTimestamp = entry.date;
-                    }
-                } else if (entry.timestamp) {
-                    entryTimestamp = entry.timestamp;
-                }
-
-                const withinCycle = entryTimestamp >= cutoffTime;
-
-                // Allow "task" or "reward" types instead of hardcoding, but just >0 amounts is a good proxy for 'earnings'
-                if (isEarning && withinCycle && entry.type !== 'admin_deduction' && entry.type !== 'withdraw') {
-                    return sum + entry.amount;
-                }
-                return sum;
-            }, 0);
-        };
-
         const sortedEarners = [...allUsersList]
-            .map(u => ({ ...u, _cycleTokens: calculateScore(u) }))
+            .map(u => ({ ...u, _cycleTokens: db.getTokenBalance(u) }))
             .filter(u => u._cycleTokens > 0)
             .sort((a, b) => b._cycleTokens - a._cycleTokens);
 
@@ -7621,7 +8239,7 @@ app.get('/api/leaderboard', (req, res) => {
             const idx = sortedEarners.findIndex(u => String(u.id) === String(userId));
             userRank = idx >= 0 ? idx + 1 : null;
             const thisUser = db.data.users[String(userId)];
-            if (thisUser) userScore = calculateScore(thisUser);
+            if (thisUser) userScore = db.getTokenBalance(thisUser);
         }
     } else if (type === 'quiz') {
         const sortedQuizPlayers = [...allUsersList]
@@ -7642,37 +8260,8 @@ app.get('/api/leaderboard', (req, res) => {
             if (thisUser) userScore = thisUser.quizPoints || 0;
         }
     } else {
-        const _now = new Date();
-        const startOfWeek = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate() - _now.getDay()).getTime();
-        const startOfMonth = new Date(_now.getFullYear(), _now.getMonth(), 1).getTime();
-        const cutoffTime = period === 'month' ? startOfMonth : startOfWeek;
-
-        // Helper to calculate referrals made strictly within the current cycle
-        const calculateReferralScore = (u) => {
-            if (!u.history || u.history.length === 0) return 0;
-            // Sum counts for referral_reward entries within the timeframe
-            return u.history.reduce((count, entry) => {
-                let entryTimestamp = 0;
-                if (entry.date) {
-                    if (typeof entry.date === 'string') {
-                        entryTimestamp = new Date(entry.date).getTime();
-                    } else if (typeof entry.date === 'number') {
-                        entryTimestamp = entry.date;
-                    }
-                } else if (entry.timestamp) {
-                    entryTimestamp = entry.timestamp;
-                }
-
-                const withinCycle = entryTimestamp >= cutoffTime;
-                if (entry.type === 'referral_reward' && withinCycle) {
-                    return count + 1; // 1 referral = 1 entry
-                }
-                return count;
-            }, 0);
-        };
-
         const sortedReferrers = [...allUsersList]
-            .map(u => ({ ...u, _cycleReferrals: calculateReferralScore(u) }))
+            .map(u => ({ ...u, _cycleReferrals: u.referralCount || 0 }))
             .filter(u => u._cycleReferrals > 0)
             .sort((a, b) => b._cycleReferrals - a._cycleReferrals);
 
@@ -7687,7 +8276,7 @@ app.get('/api/leaderboard', (req, res) => {
             const idx = sortedReferrers.findIndex(u => String(u.id) === String(userId));
             userRank = idx >= 0 ? idx + 1 : null;
             const thisUser = db.data.users[String(userId)];
-            if (thisUser) userScore = calculateReferralScore(thisUser);
+            if (thisUser) userScore = thisUser.referralCount || 0;
         }
     }
 
@@ -7720,6 +8309,7 @@ app.get('/api/referrals/:userId', async (req, res) => {
     const referredUsers = (await Promise.all((user.referredUsers || []).map(async ref => {
         const refUser = await db.getUser(ref.userId);
         return {
+            userId: ref.userId,
             name: refUser ? (refUser.firstName || refUser.username || `User ${String(ref.userId).slice(-4)}`) : `User ${String(ref.userId).slice(-4)}`,
             photo_url: refUser ? (refUser.photoUrl || refUser.photo_url || null) : null,
             date: ref.date || Date.now(),
@@ -7742,6 +8332,47 @@ app.get('/api/referrals/:userId', async (req, res) => {
         referralCode: referralCode,
         referralLink: `https://t.me/${botUsername}?start=${referralCode}`
     });
+});
+
+
+// API: Proxy Telegram Avatar (so we don't expose bot token)
+app.get('/api/proxy-avatar', async (req, res) => {
+    const { userId } = req.query;
+    if (!userId) return res.status(400).send('userId required');
+    
+    try {
+        const botToken = process.env.TELEGRAM_BOT_TOKEN;
+        if (!botToken) return res.status(500).send('Bot token not configured');
+        
+        // Fetch user profile photos
+        const photosRes = await fetch(`https://api.telegram.org/bot${botToken}/getUserProfilePhotos?user_id=${userId}&limit=1`);
+        const photosData = await photosRes.json();
+        
+        if (photosData.ok && photosData.result.total_count > 0) {
+            const fileId = photosData.result.photos[0][0].file_id;
+            
+            // Get file path
+            const fileRes = await fetch(`https://api.telegram.org/bot${botToken}/getFile?file_id=${fileId}`);
+            const fileData = await fileRes.json();
+            
+            if (fileData.ok) {
+                const filePath = fileData.result.file_path;
+                const photoUrl = `https://api.telegram.org/file/bot${botToken}/${filePath}`;
+                
+                // Fetch image and send
+                const imgRes = await fetch(photoUrl);
+                const buffer = await imgRes.buffer();
+                res.set('Content-Type', imgRes.headers.get('content-type'));
+                res.send(buffer);
+                return;
+            }
+        }
+    } catch (e) {
+        console.error('Failed to proxy avatar:', e.message);
+    }
+    
+    // Fallback to 404 so frontend can use letter avatar
+    res.status(404).send('Not found');
 });
 
 
@@ -7996,9 +8627,9 @@ app.post('/api/user/item-sales/buy', async (req, res) => {
 
     // Deduction logic: Always USD as requested
     const balance = user.usd || 0;
-    if (balance < price) return res.json({ success: false, message: `Insufficient balance. Need $${price.toFixed(2)}.` });
+    if (balance < price) return res.json({ success: false, message: `Insufficient balance. Need $${price.toFixed(3)}.` });
 
-    user.usd = parseFloat((balance - price).toFixed(2));
+    user.usd = parseFloat((balance - price).toFixed(3));
     db.addTransaction(userId, 'service', price, 'USD', `Bought ${sale.itemType}: ${sale.accountName || sale.customName || sale.cardType}`, 'shopping-cart');
 
     // Process Purchase
@@ -8569,7 +9200,8 @@ if (false) {
 
 // --- AI SYSTEM MONITOR ----------------------------------------------------
 async function monitorSystemWithAI() {
-    if (!openai || !bot) return;
+    const ai = getOpenAI();
+    if (!ai || !bot) return;
 
     try {
         const users = Object.values(db.data.users || {});
@@ -8587,7 +9219,7 @@ async function monitorSystemWithAI() {
             }
         };
 
-        const completion = await openai.chat.completions.create({
+        const completion = await ai.chat.completions.create({
             model: "gpt-3.5-turbo",
             messages: [
                 { role: "system", content: "You are a professional security and system Auditor for a Telegram Bot ecosystem. Review the incoming stats JSON and look for patterns of fraud (suspiciously high balances), high failure rates in verifications, or low server memory. Return a concise bullet-point summary of any issues. If everything is optimal, return 'SYSTEM_HEALTHY'." },
@@ -8656,6 +9288,95 @@ async function cleanupExpiredItems() {
 setInterval(cleanupExpiredItems, 1000 * 60 * 60 * 6);
 // Also run on startup
 cleanupExpiredItems();
+
+// --- HISTORY AUTO-DELETE (OLDER THAN 2 DAYS) ---
+function cleanupOldHistory() {
+    const users = db.data.users || {};
+    const now = Date.now();
+    const TWO_DAYS = 2 * 24 * 60 * 60 * 1000;
+    let modified = false;
+    const ONE_DAY = 24 * 60 * 60 * 1000;
+
+    // 1. Cleanup User history and apiUsageHistory
+    for (const userId in users) {
+        const user = users[userId];
+        if (!user) continue;
+
+        // Cleanup main history
+        if (user.history && Array.isArray(user.history)) {
+            const originalLength = user.history.length;
+            user.history = user.history.filter(entry => {
+                let entryTimestamp = entry.date || entry.timestamp || 0;
+                if (typeof entryTimestamp === 'string') entryTimestamp = new Date(entryTimestamp).getTime();
+                return entryTimestamp > 0 ? (now - entryTimestamp) <= TWO_DAYS : true;
+            });
+            if (user.history.length !== originalLength) modified = true;
+        }
+
+        // Cleanup apiUsageHistory
+        if (user.apiUsageHistory && Array.isArray(user.apiUsageHistory)) {
+            const originalLength = user.apiUsageHistory.length;
+            user.apiUsageHistory = user.apiUsageHistory.filter(entry => {
+                let timestamp = entry.timestamp || entry.date || 0;
+                if (typeof timestamp === 'string') timestamp = new Date(timestamp).getTime();
+                return timestamp > 0 ? (now - timestamp) <= TWO_DAYS : true;
+            });
+            if (user.apiUsageHistory.length !== originalLength) modified = true;
+        }
+    }
+
+    // 2. Cleanup Mail Sessions older than 24h
+    if (db.data.mailSessions) {
+        const initialCount = Object.keys(db.data.mailSessions).length;
+        for (const [sid, session] of Object.entries(db.data.mailSessions)) {
+            const createdAt = session.createdAt || 0;
+            if (now - createdAt > ONE_DAY) {
+                delete db.data.mailSessions[sid];
+            }
+        }
+        if (Object.keys(db.data.mailSessions).length !== initialCount) modified = true;
+    }
+
+    // 3. Cleanup Email Pool History older than 24h (As requested by user)
+    if (db.data.emailPoolHistory && Array.isArray(db.data.emailPoolHistory)) {
+        const originalPoolHistLen = db.data.emailPoolHistory.length;
+        db.data.emailPoolHistory = db.data.emailPoolHistory.filter(h => {
+            const assignedAt = h.assignedAt || h.date || h.timestamp || 0;
+            let ts = (typeof assignedAt === 'string') ? new Date(assignedAt).getTime() : assignedAt;
+            return ts > 0 ? (now - ts) <= ONE_DAY : true;
+        });
+        if (db.data.emailPoolHistory.length !== originalPoolHistLen) modified = true;
+    }
+
+    // 4. Recycle Email Pool assignments older than 24h
+    if (db.data.emailPool) {
+        for (const type in db.data.emailPool) {
+            if (Array.isArray(db.data.emailPool[type])) {
+                db.data.emailPool[type].forEach(item => {
+                    const assignedAt = item.assignedAt;
+                    if (assignedAt) {
+                        let ts = (typeof assignedAt === 'string') ? new Date(assignedAt).getTime() : assignedAt;
+                        if (ts > 0 && (now - ts > ONE_DAY)) {
+                            item.assignedTo = null;
+                            item.assignedAt = null;
+                            modified = true;
+                        }
+                    }
+                });
+            }
+        }
+    }
+
+    if (modified) {
+        db.save();
+        console.log(`[CLEANUP] Deleted histories older than requested period.`);
+    }
+}
+
+// Check every hour (As requested for the pool logic)
+setInterval(cleanupOldHistory, 1000 * 60 * 60);
+// Also run on startup
+cleanupOldHistory();
 
 // API: Video Downloader - Download Video
 app.post('/api/video-downloader/download', async (req, res) => {
@@ -8995,49 +9716,6 @@ app.get('/api/admin/removebg-status', (req, res) => {
             remainingCredits: totalLimit - totalUsage
         }
     });
-});
-
-// ==========================================
-// MOTHER EMAIL (IMAP) ROUTES
-// ==========================================
-
-app.get('/api/admin/mother-email/status', (req, res) => {
-    res.json({ success: true, status: imapService.getStatus() });
-});
-
-app.post('/api/admin/mother-email/connect', async (req, res) => {
-    const { type, email, password, host, port } = req.body;
-    if (!type || !email || !password) return res.json({ success: false, message: 'Missing credentials' });
-
-    const config = { email, password, host, port };
-    const connected = await imapService.connect(type, config);
-
-    if (connected) {
-        // Save to DB for persistence
-        if (!db.data.adminSettings) db.data.adminSettings = {};
-        if (!db.data.adminSettings.motherEmailConfigs) db.data.adminSettings.motherEmailConfigs = {};
-        db.data.adminSettings.motherEmailConfigs[type] = config;
-        db.save();
-        res.json({ success: true, message: `Connected to ${type} mother email successfully` });
-    } else {
-        res.json({ success: false, message: `Failed to connect to ${type} mother email` });
-    }
-});
-
-app.post('/api/admin/mother-email/disconnect', (req, res) => {
-    const { type } = req.body;
-    imapService.disconnect(type);
-    res.json({ success: true, message: `Disconnected ${type} mother email` });
-});
-
-app.get('/api/mother-email/inbox', async (req, res) => {
-    const { type, sinceMinutes } = req.query;
-    try {
-        const messages = await imapService.fetchMessages(type, 50, parseInt(sinceMinutes) || 60);
-        res.json({ success: true, messages });
-    } catch (e) {
-        res.json({ success: false, message: e.message });
-    }
 });
 
 // ==========================================

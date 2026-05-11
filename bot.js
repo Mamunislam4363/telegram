@@ -33,54 +33,120 @@ const apiGateway = require('./services/api-gateway.js');
 const originalConsoleLog = console.log.bind(console);
 
 // Validate Config
-const token = config.TELEGRAM_BOT_TOKEN;
 const isValidToken = (t) => t && t !== 'YOUR_TELEGRAM_BOT_TOKEN_HERE' && t !== 'undefined' && t !== 'null' && t.trim() !== '';
 
-if (!isValidToken(token)) {
-    console.warn('⚠️ WARNING: TELEGRAM_BOT_TOKEN is missing or invalid. Bot functionality will be disabled, but Web Panel will still run.');
-}
+let bot = {
+    on: () => {},
+    onText: () => {},
+    getMe: () => Promise.resolve({ username: 'MockBot', id: 0 }),
+    sendMessage: () => Promise.resolve({}),
+    startPolling: () => Promise.resolve(),
+    setChatMenuButton: () => Promise.resolve(),
+    getChat: () => Promise.reject(new Error('No token')),
+    getChatMember: () => Promise.reject(new Error('No token')),
+    editMessageText: () => Promise.resolve({}),
+    answerCallbackQuery: () => Promise.resolve({})
+};
+let botOptions = {
+    polling: false, // Wait for DB load
+    polling_timeout: 30, // Increased for better stability
+    polling_options: {
+        interval: 2000, // Wait 2s between polls to reduce network strain
+        allowed_updates: [
+            'message',
+            'callback_query',
+            'chat_member',
+            'my_chat_member',
+            'inline_query'
+        ]
+    },
+    baseApiUrl: config.TELEGRAM_API_BASE || 'https://api.telegram.org'
+};
 
+// Start Polling ONLY after DB is ready (Unlocks Phase 1 & 2)
+db.dbReady.then(() => {
+    console.log("🚀 Database Ready (Firebase/Local). Starting Bot...");
+    
+    // Evaluate token priority: 1. ENV, 2. Database
+    const finalToken = config.TELEGRAM_BOT_TOKEN || (db.data && db.data.apiKeys && db.data.apiKeys.botToken);
+    
+    if (isValidToken(finalToken)) {
+        // Apply Proxy if enabled
+        if (config.USE_PROXY && config.PROXY_URL) {
+            console.log(`🌐 Using Proxy for Bot Connection: ${config.PROXY_URL}`);
+            if (config.PROXY_URL.startsWith('socks')) {
+                botOptions.request = {
+                    agent: new SocksProxyAgent(config.PROXY_URL)
+                };
+            } else {
+                botOptions.request = {
+                    proxy: config.PROXY_URL
+                };
+            }
+        }
 
-// SmtpLabs Integration
+        bot = new TelegramBot(finalToken, botOptions);
 
-// REVISING LOGIC BASED ON USER INPUT: "automatic give and work"
-// Most likely: GET https://api.smtp.dev/v1/account?token=... to get a new email?
-// OR, we just generate `random@smtp.dev` and check it?
-// Let's implement a 'random' generator first, then check via API.
+        // Inject bot into web server early
+        try {
+            const server = require('./database/server.js');
+            server.setBot(bot);
+        } catch (e) {
+            console.error('⚠️ [ERROR] Failed to set bot in server:', e.message);
+        }
 
-
-
-
-
-
+        bot.startPolling();
+        console.log('✅ Bot is now polling messages.');
+        
+        // Initialize all listeners
+        setupBotListeners();
+        
+    } else {
+        console.warn('⚠️ WARNING: TELEGRAM_BOT_TOKEN is missing or invalid in both ENV and DB. Bot functionality will be disabled.');
+        // Mock bot object to prevent crashes
+        bot = {
+            on: () => {},
+            onText: () => {},
+            getMe: () => Promise.resolve({ username: 'MockBot', id: 0 }),
+            sendMessage: () => Promise.resolve({}),
+            startPolling: () => Promise.resolve(),
+            setChatMenuButton: () => Promise.resolve(),
+            getChat: () => Promise.reject(new Error('No token')),
+            getChatMember: () => Promise.reject(new Error('No token')),
+            editMessageText: () => Promise.resolve({}),
+            answerCallbackQuery: () => Promise.resolve({})
+        };
+        
+        // Inject mock bot into server too
+        try {
+            const server = require('./database/server.js');
+            server.setBot(bot);
+        } catch (e) {}
+    }
+});
 
 // SMTP.DEV API Integration (Full Implementation)
 const SMTP_API_BASE = 'https://api.smtp.dev';
 const SMTP_API_KEY = config.SMTPLABS_API_KEY;
 
-// Helper: Extract OTP from text
-function extractOTP(text) {
+// Helper: Extract OTP from text — uses centralized robust extractor
+const { extractOTP: _robustExtractOTP } = require('./services/otp-extractor');
+function extractOTP(text, subject = '') {
     if (!text) return null;
-    // Look for 4-8 digit codes
-    const otpMatch = text.match(/\b\d{4,8}\b/);
-    return otpMatch ? otpMatch[0] : null;
+    const result = _robustExtractOTP(text, subject);
+    return result ? result.otp : null;
 }
 
-// Create a new email account via SMTP.DEV API
+
 // Create a new email account via API Gateway (Generic Email Provider)
 async function fetchSmtpLabsEmail() {
     try {
         const result = await apiGateway.executeWithFailover('email', async (provider) => {
             const randomUser = `user${Date.now()}${Math.floor(Math.random() * 1000)}`;
             const randomPass = `Pass${Date.now()}!`;
-
-            // Note: This logic assumes the provider supports creating @smtp.dev emails 
-            // OR the provider ignores the domain in the address field if strict.
-            // Ideally we query provider domains first, but for now we follow SMTP.DEV pattern.
             const domain = '@smtp.dev';
             const emailAddress = randomUser + domain;
 
-            // Execute Request
             const response = await axios.post(`${provider.apiUrl}/accounts`, {
                 address: emailAddress,
                 password: randomPass
@@ -107,17 +173,13 @@ async function fetchSmtpLabsEmail() {
             }
             throw new Error('Invalid API Response Structure');
         });
-
         return result;
-
     } catch (e) {
         console.error('Email Service Error:', e.message);
         return null;
     }
 }
 
-// Get OTP from email inbox
-// Get OTP from email inbox (Supports Multiple Providers)
 // Get OTP from email inbox (Supports Multiple Providers)
 async function getSmtpLabsOtp(email, accountId = null, mailboxId = null, providerId = null) {
     let apiBase = SMTP_API_BASE;
@@ -133,17 +195,14 @@ async function getSmtpLabsOtp(email, accountId = null, mailboxId = null, provide
 
     try {
         if (!email || !email.includes('@')) return null;
-
         const headers = { 'X-API-KEY': apiKey, 'Accept': 'application/json' };
 
-        // 1. Resolve Account ID
         if (!accountId) {
             const res = await axios.get(`${apiBase}/accounts?address=${email}`, { headers, timeout: 5000 });
             if (res.data?.member?.length > 0) accountId = res.data.member[0].id;
             else return null;
         }
 
-        // 2. Resolve Mailbox ID
         if (!mailboxId) {
             const res = await axios.get(`${apiBase}/accounts/${accountId}/mailboxes`, { headers, timeout: 5000 });
             const inbox = res.data?.member?.find(m => m.path === 'INBOX');
@@ -151,23 +210,16 @@ async function getSmtpLabsOtp(email, accountId = null, mailboxId = null, provide
             else return null;
         }
 
-        // 3. Get Messages
         const msgRes = await axios.get(`${apiBase}/accounts/${accountId}/mailboxes/${mailboxId}/messages`, { headers, timeout: 5000 });
-
         if (msgRes.data?.member?.length > 0) {
             const latestMsg = msgRes.data.member[0];
-
-            // 4. Fetch Full Message
             const fullRes = await axios.get(`${apiBase}/accounts/${accountId}/mailboxes/${mailboxId}/messages/${latestMsg.id}`, { headers, timeout: 5000 });
             const fullMsg = fullRes.data;
-
-            // Extract OTP
-            // Prefer Body Text > Subject
             const body = fullMsg.body?.text || '';
             const subject = fullMsg.subject || latestMsg.subject || '';
             const textContent = `${subject} ${body}`;
+            const otp = extractOTP(body, subject);
 
-            const otp = extractOTP(textContent);
 
             return {
                 otp: otp,
@@ -177,159 +229,81 @@ async function getSmtpLabsOtp(email, accountId = null, mailboxId = null, provide
                 fullMessage: textContent.substring(0, 500)
             };
         }
-
         return null;
-
     } catch (e) {
-        // console.error('SMTP OTP Fetch Error:', e.message);
         return null;
     }
 }
 
+function setupBotListeners() {
+    if (!bot) return;
 
-let bot;
-if (isValidToken(token)) {
-    const botOptions = {
-        polling: false, // Wait for DB load
-        polling_timeout: 30, // Increased for better stability
-        polling_options: {
-            interval: 2000, // Wait 2s between polls to reduce network strain
-            allowed_updates: [
-                'message',
-                'callback_query',
-                'chat_member',
-                'my_chat_member',
-                'inline_query'
-            ]
-        },
-        baseApiUrl: config.TELEGRAM_API_BASE || 'https://api.telegram.org'
-    };
+    // Suppress polling error logs with retry logic
+    let retryCount = 0;
+    let retryTimeout = null;
 
-    // Apply Proxy if enabled
-    if (config.USE_PROXY && config.PROXY_URL) {
-        console.log(`🌐 Using Proxy for Bot Connection: ${config.PROXY_URL}`);
-        if (config.PROXY_URL.startsWith('socks')) {
-            botOptions.request = {
-                agent: new SocksProxyAgent(config.PROXY_URL)
-            };
-        } else {
-            botOptions.request = {
-                proxy: config.PROXY_URL
-            };
-        }
-    }
+    bot.on('polling_error', (err) => {
+        // Only log actual errors, not conflict warnings (409)
+        if (err.code !== 'ETELEGRAM' || !err.message.includes('409')) {
+            const isNetworkError = err.message.includes('ECONNRESET') || 
+                                   err.message.includes('ETIMEDOUT') || 
+                                   err.message.includes('ECONNREFUSED') ||
+                                   err.message.includes('ENOTFOUND') ||
+                                   err.message.includes('socket disconnected') ||
+                                   err.message.includes('EHOSTUNREACH');
 
-    bot = new TelegramBot(token, botOptions);
-
-    // Inject bot into web server early
-    try {
-        const server = require('./database/server.js');
-        server.setBot(bot);
-    } catch (e) {
-        console.error('⚠️ [ERROR] Failed to set bot in server:', e.message);
-    }
-} else {
-    // Mock bot object to prevent crashes
-    bot = {
-        on: () => {},
-        onText: () => {},
-        getMe: () => Promise.resolve({ username: 'MockBot', id: 0 }),
-        sendMessage: () => Promise.resolve({}),
-        startPolling: () => Promise.resolve(),
-        setChatMenuButton: () => Promise.resolve(),
-        getChat: () => Promise.reject(new Error('No token')),
-        getChatMember: () => Promise.reject(new Error('No token')),
-        editMessageText: () => Promise.resolve({}),
-        answerCallbackQuery: () => Promise.resolve({})
-    };
-}
-
-// Start Polling ONLY after DB is ready (Unlocks Phase 1 & 2)
-db.dbReady.then(() => {
-    console.log("🚀 Database Ready (Firebase/Local). Starting Bot...");
-    bot.startPolling();
-
-    // Link Bot to Web Server for Broadcasts
-    try {
-        require('./database/server.js').setBot(bot);
-    } catch (e) {
-        console.error("⚠️ Server Bot Link Error:", e.message);
-    }
-
-}).catch(err => {
-    console.error("❌ Critical DB Init Error:", err);
-    // Fallback? Or crash?
-    // Start anyway with defaults if critical?
-    console.warn("⚠️ Starting empty bot due to DB error.");
-    bot.startPolling();
-});
-
-// Suppress polling error logs with retry logic
-let retryCount = 0;
-let retryTimeout = null;
-
-bot.on('polling_error', (err) => {
-    // Only log actual errors, not conflict warnings (409)
-    if (err.code !== 'ETELEGRAM' || !err.message.includes('409')) {
-        const isNetworkError = err.message.includes('ECONNRESET') || 
-                               err.message.includes('ETIMEDOUT') || 
-                               err.message.includes('ECONNREFUSED') ||
-                               err.message.includes('ENOTFOUND') ||
-                               err.message.includes('socket disconnected') ||
-                               err.message.includes('EHOSTUNREACH');
-
-        if (isNetworkError) {
-            retryCount++;
-            // Exponential backoff: 5s, 10s, 20s, 30s... max 1 minute
-            const delay = Math.min(60000, retryCount * 5000);
-            
-            console.log(`⚠️ Network issue: ${err.message}. Retrying in ${delay / 1000}s (Attempt ${retryCount})...`);
-            
-            if (err.message.includes('ENOTFOUND')) {
-                console.warn('💡 DNS Error: If this persists, Telegram might be blocked. Try setting USE_PROXY=true in config.js');
-            }
-
-            if (retryTimeout) clearTimeout(retryTimeout);
-            
-            retryTimeout = setTimeout(async () => {
-                try {
-                    console.log('🔄 Attempting to reconnect bot...');
-                    if (bot.isPolling()) {
-                        await bot.stopPolling();
-                        await new Promise(r => setTimeout(r, 1000));
-                    }
-                    await bot.startPolling();
-                    console.log('✅ Bot reconnected successfully.');
-                    retryCount = 0; // Reset count on success
-                } catch (e) {
-                    console.log('⚠️ Reconnection attempt failed:', e.message);
+            if (isNetworkError) {
+                retryCount++;
+                // Exponential backoff: 5s, 10s, 20s, 30s... max 1 minute
+                const delay = Math.min(60000, retryCount * 5000);
+                
+                console.log(`⚠️ Network issue: ${err.message}. Retrying in ${delay / 1000}s (Attempt ${retryCount})...`);
+                
+                if (err.message.includes('ENOTFOUND')) {
+                    console.warn('💡 DNS Error: If this persists, Telegram might be blocked. Try setting USE_PROXY=true in config.js');
                 }
-            }, delay);
-        } else {
-            console.log(`❌ Bot error: ${err.message}`);
+
+                if (retryTimeout) clearTimeout(retryTimeout);
+                
+                retryTimeout = setTimeout(async () => {
+                    try {
+                        console.log('🔄 Attempting to reconnect bot...');
+                        if (bot.isPolling()) {
+                            await bot.stopPolling();
+                            await new Promise(r => setTimeout(r, 1000));
+                        }
+                        await bot.startPolling();
+                        console.log('✅ Bot reconnected successfully.');
+                        retryCount = 0; // Reset count on success
+                    } catch (e) {
+                        console.log('⚠️ Reconnection attempt failed:', e.message);
+                    }
+                }, delay);
+            } else {
+                console.log(`❌ Bot error: ${err.message}`);
+            }
         }
-    }
-});
+    });
 
-// Reset retry count on successful message
-bot.on('message', () => { retryCount = 0; });
+    // Reset retry count on successful message
+    bot.on('message', () => { retryCount = 0; });
 
-// File logging disabled as requested by user
+    // File logging disabled as requested by user
 
-console.log('🤖 Telegram Verification Bot Started');
-console.log('📊 Activity: Bot is running and waiting for users...');
+    console.log('🤖 Telegram Verification Bot Started');
+    console.log('📊 Activity: Bot is running and waiting for users...');
 
-bot.getMe().then(me => {
-    console.log(`📊 Activity: Bot connected as @${me.username}`);
-    if (!db.data.settings) db.data.settings = {};
-    db.data.settings.botUsername = me.username;
-    db.save();
+    bot.getMe().then(me => {
+        console.log(`📊 Activity: Bot connected as @${me.username}`);
+        if (!db.data.settings) db.data.settings = {};
+        db.data.settings.botUsername = me.username;
+        db.save();
 
-    // Validate mandatory channels
-    validateMandatoryChannels();
-}).catch(err => {
-    // Silently handle connection errors
-});
+        // Validate mandatory channels
+        validateMandatoryChannels();
+    }).catch(err => {
+        // Silently handle connection errors
+    });
 
 // Validate mandatory channels on startup
 let channelsValidated = false;
@@ -391,7 +365,7 @@ async function validateMandatoryChannels() {
 // Helper: Check if membership check should be skipped
 function shouldSkipMembershipCheck() {
     // 1. Check hardcoded config (Emergency override)
-    if (config.SKIP_MANDATORY_JOIN) return true;
+    if (config.SKIP_MANDATORY_JOIN === true || config.SKIP_MANDATORY_JOIN === 'true') return true;
 
     // 2. Check dynamic database flag (Feature Flags from Admin Panel)
     const flags = db.data?.featureFlags || {};
@@ -556,33 +530,61 @@ async function checkMembership(userId) {
         // Get dynamic config from DB
         const apiKeys = db.data?.apiKeys || {};
         const settings = db.data?.settings || {};
-        const requiredChannel = apiKeys.requiredChannel || settings.requiredChannel || config.REQUIRED_CHANNEL;
-        const requiredGroup = apiKeys.requiredGroup || settings.requiredGroup || config.REQUIRED_GROUP;
+        
+        const requiredChannelId = apiKeys.requiredChannelId || config.REQUIRED_CHANNEL_ID;
+        const requiredChannelName = apiKeys.requiredChannel || settings.requiredChannel || config.REQUIRED_CHANNEL;
+        
+        const requiredGroupId = apiKeys.requiredGroupId || config.REQUIRED_GROUP_ID;
+        const requiredGroupName = apiKeys.requiredGroup || settings.requiredGroup || config.REQUIRED_GROUP;
 
         // Check channel membership
-        if (requiredChannel) {
+        if (requiredChannelId || requiredChannelName) {
             try {
-                const channelMember = await bot.getChatMember(requiredChannel, userId);
+                // Try ID first if it looks like one, otherwise use name
+                const targetChannel = requiredChannelId || requiredChannelName;
+                const channelMember = await bot.getChatMember(targetChannel, userId);
                 results.channel = validStatuses.includes(channelMember.status);
             } catch (error) {
                 results.channelError = error.message;
-                // If it's a network error or API error (not membership), log and fail-open if needed
-                console.log(`[MEMBERSHIP] Channel check for ${userId} (${requiredChannel}): ${error.message}`);
-                results.channel = false;
+                if ((error.message.includes('chat not found') || error.message.includes('PARTICIPANT_ID_INVALID')) && requiredChannelName && requiredChannelName !== requiredChannelId) {
+                    try {
+                        const channelMember = await bot.getChatMember(requiredChannelName, userId);
+                        results.channel = validStatuses.includes(channelMember.status);
+                    } catch (e2) {
+                        results.channel = (config.SKIP_MANDATORY_JOIN === true || config.SKIP_MANDATORY_JOIN === 'true');
+                    }
+                } else {
+                    if (!error.message.includes('chat not found') && !error.message.includes('PARTICIPANT_ID_INVALID')) {
+                        console.log(`[MEMBERSHIP] Channel check for ${userId} (${requiredChannelId}): ${error.message}`);
+                    }
+                    results.channel = (config.SKIP_MANDATORY_JOIN === true || config.SKIP_MANDATORY_JOIN === 'true');
+                }
             }
         } else {
             results.channel = true; // No channel required
         }
 
         // Check group membership
-        if (requiredGroup) {
+        if (requiredGroupId || requiredGroupName) {
             try {
-                const groupMember = await bot.getChatMember(requiredGroup, userId);
+                const targetGroup = requiredGroupId || requiredGroupName;
+                const groupMember = await bot.getChatMember(targetGroup, userId);
                 results.group = validStatuses.includes(groupMember.status);
             } catch (error) {
                 results.groupError = error.message;
-                console.log(`[MEMBERSHIP] Group check for ${userId} (${requiredGroup}): ${error.message}`);
-                results.group = false;
+                if ((error.message.includes('chat not found') || error.message.includes('PARTICIPANT_ID_INVALID')) && requiredGroupName && requiredGroupName !== requiredGroupId) {
+                    try {
+                        const groupMember = await bot.getChatMember(requiredGroupName, userId);
+                        results.group = validStatuses.includes(groupMember.status);
+                    } catch (e2) {
+                        results.group = (config.SKIP_MANDATORY_JOIN === true || config.SKIP_MANDATORY_JOIN === 'true');
+                    }
+                } else {
+                    if (!error.message.includes('chat not found') && !error.message.includes('PARTICIPANT_ID_INVALID')) {
+                        console.log(`[MEMBERSHIP] Group check for ${userId} (${requiredGroupId}): ${error.message}`);
+                    }
+                    results.group = (config.SKIP_MANDATORY_JOIN === true || config.SKIP_MANDATORY_JOIN === 'true');
+                }
             }
         } else {
             results.group = true; // No group required
@@ -664,9 +666,13 @@ function showMandatoryJoin(chatId, membership, msgId = null, isFirstTime = false
 
     // Add join buttons for missing items only
     missingItems.forEach(item => {
+        let url = item.name;
+        if (!url.startsWith('http')) {
+            url = `https://t.me/${url.replace('@', '')}`;
+        }
         buttons.push([{
             text: `Join ${item.label} ↗`,
-            url: `https://t.me/${item.name.replace('@', '')}`
+            url: url
         }]);
     });
 
@@ -862,7 +868,7 @@ bot.onText(/\/admin/, async (msg) => {
         return bot.sendMessage(chatId, "⚠️ *Admin Access Only*\n\nThis command is restricted to administrators only.", { parse_mode: 'Markdown' });
     }
 
-    const publicUrl = (process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`).trim();
+    const publicUrl = (process.env.PUBLIC_URL || `http://localhost:3000`).trim();
     const adminUrl = `${publicUrl}/admin`;
 
     const adminText = `👑 *Admin Panel Access*\n\n` +
@@ -897,7 +903,7 @@ async function sendMainMenu(chatId, user, msgFrom) {
     const apiKeys = db.data?.apiKeys || {};
 
     // Use admin panel configured URLs or fallbacks
-    const miniAppUrl = (apiKeys.miniAppUrl || settings.miniAppUrl || process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`).trim();
+    const miniAppUrl = (apiKeys.miniAppUrl || settings.miniAppUrl || process.env.PUBLIC_URL || `http://localhost:3000`).trim();
     const requiredChannel = apiKeys.requiredChannel || settings.requiredChannel || config.REQUIRED_CHANNEL || '@AutosVerify';
     const requiredGroup = apiKeys.requiredGroup || settings.requiredGroup || config.REQUIRED_GROUP || '@AutosVerifyCh';
     const requiredYoutube = apiKeys.requiredYoutube || settings.requiredYoutube || 'https://youtube.com/@MamunIslamyts';
@@ -916,6 +922,15 @@ async function sendMainMenu(chatId, user, msgFrom) {
     welcomeText = welcomeText.replace(/{name}/g, firstName);
 
     // Keyboard with admin-configurable links
+    let channelUrl = requiredChannel;
+    if (!channelUrl.startsWith('http')) {
+        channelUrl = `https://t.me/${channelUrl.replace('@', '')}`;
+    }
+    let groupUrl = requiredGroup;
+    if (!groupUrl.startsWith('http')) {
+        groupUrl = `https://t.me/${groupUrl.replace('@', '')}`;
+    }
+
     const keyboard = {
         reply_markup: {
             inline_keyboard: [
@@ -924,8 +939,8 @@ async function sendMainMenu(chatId, user, msgFrom) {
                     { text: '🔑 API Access', callback_data: 'view_api_key' },
                     { text: '📊 Profile', web_app: { url: miniAppUrl + '#profile' } }
                 ],
-                [{ text: '📢 Join Channel', url: `https://t.me/${requiredChannel.replace('@', '')}` }],
-                [{ text: '👥 Join Group', url: `https://t.me/${requiredGroup.replace('@', '')}` }],
+                [{ text: '📢 Join Channel', url: channelUrl }],
+                [{ text: '👥 Join Group', url: groupUrl }],
                 [{ text: '📺 YouTube Channel', url: requiredYoutube }]
             ]
         }
@@ -969,6 +984,28 @@ bot.on('my_chat_member', (update) => {
 // Update User Activity on Message (Any Type)
 bot.on('message', async (msg) => {
     if (msg.from && msg.from.id) db.updateUserActivity(msg.from.id);
+    
+    // Strict Membership Check for Private Chats
+    if (msg.chat && msg.chat.type === 'private' && (!msg.text || !msg.text.startsWith('/start'))) {
+        const userId = msg.from.id;
+        const user = db.getUser(userId);
+        
+        const settings = db.getSettings ? db.getSettings() : {};
+        const joinRequired = settings.joinRequired !== undefined ? settings.joinRequired : true;
+        
+        if (joinRequired && (!user || !user.verified)) {
+            const membership = await checkMembership(userId);
+            if (!membership.channel || !membership.group) {
+                showMandatoryJoin(userId, membership);
+                return; // Stop processing further
+            } else if (user) {
+                user.verified = true;
+                user.verifiedAt = new Date().toISOString();
+                db.updateUser(user);
+            }
+        }
+    }
+
     if (['group', 'supergroup', 'channel'].includes(msg.chat.type)) {
         db.saveGroup(msg.chat.id, msg.chat.title, msg.chat.type);
     }
@@ -1344,9 +1381,37 @@ bot.on('chat_member', async (update) => {
 
         if (!isRequiredChat) return; // Not a monitored chat
 
-        const leftStatuses = ['left', 'kicked', 'banned', 'restricted'];
-        if (!leftStatuses.includes(newStatus)) return; // User is still in (joined, etc)
-        if (newStatus === 'restricted' && update.new_chat_member.is_member) return; // Still member
+        const leftStatuses = ['left', 'kicked', 'banned'];
+        const joinStatuses = ['member', 'administrator', 'creator'];
+        const oldStatus = update.old_chat_member ? update.old_chat_member.status : null;
+
+        if (joinStatuses.includes(newStatus) && (!oldStatus || leftStatuses.includes(oldStatus))) {
+            // User JOINED!
+            console.log(`🎉 User ${userId} joined monitored chat: ${chatUsername}`);
+
+            const user = db.getUser(userId);
+            if (user) {
+                user.verified = true;
+                user.verifiedAt = new Date().toISOString();
+                db.updateUser(user);
+                console.log(`[VERIFICATION] User ${userId} marked as VERIFIED (joined ${chatUsername})`);
+
+                const botUsername = db.data.settings?.botUsername || 'YourBot';
+                const welcomeText = `🎉 **Welcome to our Channel!**\n\nThanks for joining **${chatUsername}**.\n\n🚀 You are now verified! Click below to open the bot and use all features!`;
+
+                bot.sendMessage(userId, welcomeText, {
+                    parse_mode: 'Markdown',
+                    reply_markup: {
+                        inline_keyboard: [
+                            [{ text: '💎 Open Bot', url: `https://t.me/${botUsername}?start=joined` }]
+                        ]
+                    }
+                }).catch(() => { });
+            }
+            return; // Done for join
+        }
+
+        if (!leftStatuses.includes(newStatus)) return; // Not leaving
 
         // User left or was kicked from a required chat - update status
         console.log(`🚨 User ${userId} left monitored chat: ${chatUsername}`);
@@ -1394,11 +1459,29 @@ bot.on('callback_query', async (query) => {
     // Update Activity
     if (query.from && query.from.id) db.updateUserActivity(query.from.id);
 
+    // Strict Membership Check
+    const userId = query.from.id;
+    const user = db.getUser(userId);
+    
+    const settings = db.getSettings ? db.getSettings() : {};
+    const joinRequired = settings.joinRequired !== undefined ? settings.joinRequired : true;
+    
+    if (joinRequired && (!user || !user.verified)) {
+        const membership = await checkMembership(userId);
+        if (!membership.channel || !membership.group) {
+            showMandatoryJoin(userId, membership);
+            return; // Stop processing further
+        } else if (user) {
+            user.verified = true;
+            user.verifiedAt = new Date().toISOString();
+            db.updateUser(user);
+        }
+    }
+
     // ----------------------------------------------------
     // DEBOUNCE LOGIC (Prevent Double Click)
     // ----------------------------------------------------
 
-    const userId = query.from.id;
     const now = Date.now();
     const lastTime = callbackThrottle.get(userId) || 0;
 
@@ -1522,7 +1605,7 @@ bot.on('callback_query', async (query) => {
 
             const msg = `⚙️ <b>Admin Panel</b>\n\nManage your bot from here:`;
 
-            const publicUrl = (process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`).trim();
+            const publicUrl = (process.env.PUBLIC_URL || `http://localhost:3000`).trim();
             const adminUrl = `${publicUrl}/admin`;
 
             bot.sendMessage(chatId, msg, {
@@ -1670,30 +1753,31 @@ function getPhoneCode(countryCode) {
 // Server is started via index.js for OAuth handling.
 
 // ==================== BROADCAST COMMAND ====================
-bot.onText(/\/broadcast (.+)/, async (msg, match) => {
-    const chatId = msg.chat.id;
-    const userId = msg.from.id;
+    bot.onText(/\/broadcast (.+)/, async (msg, match) => {
+        const chatId = msg.chat.id;
+        const userId = msg.from.id;
 
-    if (!isAdmin(userId)) return;
+        if (!isAdmin(userId)) return;
 
-    const message = match[1];
-    bot.sendMessage(chatId, `📢 Starting broadcast...`);
+        const message = match[1];
+        bot.sendMessage(chatId, `📢 Starting broadcast...`);
 
-    const users = db.getUsers();
-    const targetIds = Object.keys(users);
+        const users = db.getUsers();
+        const targetIds = Object.keys(users);
 
-    let sent = 0;
-    let failed = 0;
+        let sent = 0;
+        let failed = 0;
 
-    for (const tid of targetIds) {
-        try {
-            await bot.sendMessage(tid, message);
-            sent++;
-            await new Promise(r => setTimeout(r, 50)); // Rate limit 20msg/sec
-        } catch (e) {
-            failed++;
+        for (const tid of targetIds) {
+            try {
+                await bot.sendMessage(tid, message);
+                sent++;
+                await new Promise(r => setTimeout(r, 50)); // Rate limit 20msg/sec
+            } catch (e) {
+                failed++;
+            }
         }
-    }
 
-    bot.sendMessage(chatId, `✅ Broadcast Complete.\nSent: ${sent}\nFailed: ${failed}`);
-});
+        bot.sendMessage(chatId, `✅ Broadcast Complete.\nSent: ${sent}\nFailed: ${failed}`);
+    });
+}

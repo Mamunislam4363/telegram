@@ -1061,7 +1061,11 @@ body {
     align-items: center;
     justify-content: center;
     color: #3b82f6;
-    font-size: 20px;
+    font-size: 20px !important;
+}
+
+.activity-icon i {
+    font-size: 20px !important;
 }
 
 .activity-name {
@@ -2842,33 +2846,6 @@ body {
 /* Responsive breakpoints */
 @media (max-width: 480px) {
 
-    /* Collapse ALL 2-column grids to 1 column */
-    [style*="grid-template-columns:1fr 1fr"],
-    [style*="grid-template-columns: 1fr 1fr"],
-    .services-grid,
-    .earn-menu-grid {
-        grid-template-columns: 1fr !important;
-    }
-
-    /* Collapse 3-column grids to 2 columns, then 1 on very small */
-    [style*="grid-template-columns:repeat(3"],
-    [style*="grid-template-columns: repeat(3"],
-    [style*="grid-template-columns:1fr 1fr 1fr"],
-    [style*="grid-template-columns: 1fr 1fr 1fr"],
-    .daily-streak-grid {
-        grid-template-columns: repeat(2, 1fr) !important;
-    }
-
-    /* Mail action buttons - ensure they fit */
-    .mail-action-btn {
-        font-size: 10px !important;
-        padding: 10px 4px !important;
-    }
-
-    .mail-action-btn i {
-        font-size: 14px !important;
-    }
-
     /* Ensure all inputs and selects fit */
     input,
     select,
@@ -2895,15 +2872,6 @@ body {
 }
 
 @media (max-width: 360px) {
-
-    /* Collapse 3-column to 1 column on very small screens */
-    [style*="grid-template-columns:repeat(3"],
-    [style*="grid-template-columns: repeat(3"],
-    [style*="grid-template-columns:1fr 1fr 1fr"],
-    [style*="grid-template-columns: 1fr 1fr 1fr"],
-    .daily-streak-grid {
-        grid-template-columns: 1fr !important;
-    }
 
     /* Further reduce padding */
     .content-body {
@@ -2990,3 +2958,10 @@ button,
 }
 .pulse-btn { animation: pulse-shadow 2s infinite; }
 @keyframes pulse-shadow { 0% { box-shadow: 0 0 0 0 rgba(147, 51, 234, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(147, 51, 234, 0); } 100% { box-shadow: 0 0 0 0 rgba(147, 51, 234, 0); } }
+
+/* LIVE section pulsing green dot animation */
+@keyframes livePulse {
+    0%   { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+    70%  { box-shadow: 0 0 0 5px rgba(34, 197, 94, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}

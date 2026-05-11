@@ -2,9 +2,9 @@
   "users": {
     "123": {
       "Gems": 1,
-      "adminVerified": true,
-      "apiKey": "sk_evyuP41hf00tx7TG38Qxqu9TcaP9mSnf",
-      "apiKeyCreatedAt": 1777849058852,
+      "adminVerified": false,
+      "apiKey": "auto_verify_bk6RGdjslD6eimIcZoq5ud1InXWFL3mA",
+      "apiKeyCreatedAt": 1778079142405,
       "apiRevokedAt": 1777834360605,
       "apiStatus": "allow",
       "apiTotalCalls": 0,
@@ -16,9 +16,9 @@
         "virtualnumber",
         "store"
       ],
-      "balance": 5500,
+      "balance": 5170,
       "balance_Gems": 1,
-      "balance_tokens": 5500,
+      "balance_tokens": 5170,
       "blocked": false,
       "cardsPurchased": 0,
       "channelJoined": false,
@@ -26,11 +26,157 @@
         "task_youtube"
       ],
       "country": "BD",
-      "dailyStreak": 0,
+      "dailyStreak": 1,
       "failedVerifications": 0,
       "firstName": "Test",
       "groupJoined": false,
       "history": [
+        {
+          "type": "apikey_cost",
+          "amount": -250,
+          "reward": "-250 Gems",
+          "date": "2026-05-06T14:52:22.405Z",
+          "detail": "Regenerated API key"
+        },
+        {
+          "type": "apikey_cost",
+          "amount": -250,
+          "reward": "-250 Gems",
+          "date": "2026-05-06T14:40:28.182Z",
+          "detail": "Regenerated API key"
+        },
+        {
+          "type": "apikey_cost",
+          "amount": -250,
+          "reward": "-250 Gems",
+          "date": "2026-05-06T14:40:25.836Z",
+          "detail": "Regenerated API key"
+        },
+        {
+          "type": "apikey_generate",
+          "amount": 0,
+          "reward": "0 Tokens",
+          "date": "2026-05-06T14:32:07.802Z",
+          "detail": "Generated new API key"
+        },
+        {
+          "type": "temp_mail",
+          "amount": -10,
+          "date": "2026-05-06T14:00:08.580Z",
+          "reward": "-10 Tokens",
+          "detail": "xjt9j@deltajohnsons.com"
+        },
+        {
+          "type": "temp_mail",
+          "amount": -10,
+          "date": "2026-05-06T13:55:18.231Z",
+          "reward": "-10 Tokens",
+          "detail": "efweqf@deltajohnsons.com"
+        },
+        {
+          "type": "gmail_email",
+          "amount": -20,
+          "date": "2026-05-06T13:55:07.570Z",
+          "reward": "-20 Tokens",
+          "detail": "Mamunislam4.36.38.92@gmail.com"
+        },
+        {
+          "type": "gmail_email",
+          "amount": -20,
+          "date": "2026-05-06T13:54:56.855Z",
+          "reward": "-20 Tokens",
+          "detail": "Mamunislam4.36.389.2@gmail.com"
+        },
+        {
+          "type": "gmail_email",
+          "amount": -20,
+          "date": "2026-05-06T13:54:39.117Z",
+          "reward": "-20 Tokens",
+          "detail": "Mamunislam4.36.3892@gmail.com"
+        },
+        {
+          "type": "mail_renew",
+          "amount": -30,
+          "date": "2026-05-06T09:55:24.209Z",
+          "reward": "-30 Tokens",
+          "detail": "Renewed Mamunislam4.363.8.9.2@gmail.com"
+        },
+        {
+          "type": "mail_renew",
+          "amount": -30,
+          "date": "2026-05-06T09:39:59.186Z",
+          "reward": "-30 Tokens",
+          "detail": "Renewed Mamunislam4.363.8.92@gmail.com"
+        },
+        {
+          "type": "gmail_email",
+          "amount": -20,
+          "date": "2026-05-06T09:39:00.964Z",
+          "reward": "-20 Tokens",
+          "detail": "Mamunislam4.363.8.9.2@gmail.com"
+        },
+        {
+          "type": "apikey_generate",
+          "amount": 0,
+          "reward": "0 Tokens",
+          "date": "2026-05-06T08:03:45.225Z",
+          "detail": "Generated new API key"
+        },
+        {
+          "type": "daily_bonus",
+          "amount": 10,
+          "streak": 1,
+          "date": 1778041661693
+        },
+        {
+          "type": "student_email",
+          "amount": -50,
+          "date": "2026-05-06T04:01:11.746Z",
+          "reward": "-50 Tokens",
+          "detail": "student1778040071746263@edu.mail"
+        },
+        {
+          "type": "temp_mail",
+          "amount": -10,
+          "date": "2026-05-06T03:35:40.213Z",
+          "reward": "-10 Tokens",
+          "detail": "bnaf7i@deltajohnsons.com"
+        },
+        {
+          "type": "premium_email",
+          "amount": -20,
+          "date": "2026-05-06T03:35:31.676Z",
+          "reward": "-20 Tokens",
+          "detail": "Mamunislam4.363.8.92@gmail.com"
+        },
+        {
+          "type": "temp_mail",
+          "amount": -50,
+          "date": "2026-05-06T03:31:14.818Z",
+          "reward": "-50 Tokens",
+          "detail": "student1778038274818972@campus.edu"
+        },
+        {
+          "type": "premium_email",
+          "amount": -20,
+          "date": "2026-05-06T03:29:07.508Z",
+          "reward": "-20 Tokens",
+          "detail": "Mamunislam4.363.89.2@gmail.com"
+        },
+        {
+          "type": "support_contact",
+          "amount": 10,
+          "cost": 10,
+          "supportLoan": 0,
+          "date": 1778037977756
+        },
+        {
+          "type": "premium_email",
+          "amount": -20,
+          "date": "2026-05-06T03:25:08.211Z",
+          "reward": "-20 Tokens",
+          "detail": "Mamunislam4.363.892@gmail.com"
+        },
         {
           "amount": -20,
           "date": "2026-05-03T21:39:51.834Z",
@@ -115,16 +261,34 @@
       "joinedChannel": false,
       "joinedGroup": false,
       "language": "en",
-      "lastActive": 1777849125663,
-      "lastDaily": 0,
+      "lastActive": 1778079215348,
+      "lastDaily": 1778041661693,
       "lastName": "",
       "referralCode": "ref_95CMCD",
       "referralCount": 0,
       "successfulVerifications": 0,
-      "tokens": 5500,
+      "tokens": 5170,
       "usd": 0,
       "username": "TestUser",
-      "verified": true
+      "verified": false,
+      "supportLoan": 0,
+      "supportMessages": [
+        {
+          "sender": "admin",
+          "message": "Hello",
+          "timestamp": "2026-05-06T09:22:56.299Z"
+        }
+      ],
+      "notifications": [
+        {
+          "id": "177805937629995jwtu",
+          "type": "message",
+          "title": "New Message from Admin",
+          "message": "Hello",
+          "timestamp": "2026-05-06T09:22:56.299Z",
+          "read": false
+        }
+      ]
     },
     "12345": {
       "adminVerified": false,
@@ -2020,6 +2184,13 @@
       "lastActive": 1777777348822,
       "title": "Autos Verify",
       "type": "supergroup"
+    },
+    "-1002502678666": {
+      "addedAt": 1771418121015,
+      "id": -1002502678666,
+      "lastActive": 1777777348822,
+      "title": "Your Channel",
+      "type": "channel"
     }
   },
   "codes": {},
@@ -2096,7 +2267,8 @@
         "name": "Cryptocurrency (USDT TRC20)",
         "ratePerCredit": 0.01
       }
-    }
+    },
+    "systemVersion": 1778077435601
   },
   "tasks": {
     "task_telegram_channel": {
@@ -3423,48 +3595,6 @@
   "emailPool": {
     "gmail": [
       {
-        "addedAt": 1777777314588,
-        "email": "Mamunislam4.363.892@gmail.com",
-        "note": "",
-        "status": "available"
-      },
-      {
-        "addedAt": 1777777314847,
-        "email": "Mamunislam4.363.89.2@gmail.com",
-        "note": "",
-        "status": "available"
-      },
-      {
-        "addedAt": 1777777315097,
-        "email": "Mamunislam4.363.8.92@gmail.com",
-        "note": "",
-        "status": "available"
-      },
-      {
-        "addedAt": 1777777315346,
-        "email": "Mamunislam4.363.8.9.2@gmail.com",
-        "note": "",
-        "status": "available"
-      },
-      {
-        "addedAt": 1777777315596,
-        "email": "Mamunislam4.36.3892@gmail.com",
-        "note": "",
-        "status": "available"
-      },
-      {
-        "addedAt": 1777777315876,
-        "email": "Mamunislam4.36.389.2@gmail.com",
-        "note": "",
-        "status": "available"
-      },
-      {
-        "addedAt": 1777777316347,
-        "email": "Mamunislam4.36.38.92@gmail.com",
-        "note": "",
-        "status": "available"
-      },
-      {
         "addedAt": 1777777316646,
         "email": "Mamunislam4.36.38.9.2@gmail.com",
         "note": "",
@@ -3985,8 +4115,8 @@
     "gmailClientSecret": "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",
     "mainboardApiKey": "",
     "miniAppUrl": "https://autosverifybot-production-3042.up.railway.app/",
-    "requiredChannel": "",
-    "requiredGroup": "",
+    "requiredChannel": "-1002516230551",
+    "requiredGroup": "-1002502678666",
     "requiredYoutube": "",
     "smtpLabsKey": "smtplabs_SQGEMA1yD2cEgFJFJn38Uh7dGcDydAWYut7R7RzZQD3Hbvox",
     "supportLink": "",
@@ -4099,9 +4229,9 @@
       "enabled": true,
       "intervalHours": 6,
       "keep": 30,
-      "lastBackupAt": 1777778170591,
-      "lastBackupFile": "auto_backup_1777778170591.json",
-      "nextBackupAt": 1777864560000
+      "lastBackupAt": 1778059002506,
+      "lastBackupFile": "auto_backup_1778059002506.json",
+      "nextBackupAt": 1778145360000
     },
     "gems": {
       "currentPrice": 1,
@@ -4143,7 +4273,7 @@
     "premiumMail": true,
     "accountsShop": true,
     "cardsVcc": true,
-    "joinRequired": false,
+    "joinRequired": true,
     "home_verify": true,
     "home_mail": true,
     "home_number": true,
@@ -4193,7 +4323,7 @@
     "number_services": true,
     "redeem_code": true,
     "referral": true,
-    "requireTelegram": false,
+    "requireTelegram": true,
     "studentMail": true,
     "support": true,
     "tasks": true,
@@ -4349,6 +4479,48 @@
     }
   },
   "emailPoolHistory": [
+    {
+      "email": "Mamunislam4.36.38.92@gmail.com",
+      "type": "gmail",
+      "assignedTo": "123",
+      "assignedAt": "2026-05-06T13:55:07.570Z"
+    },
+    {
+      "email": "Mamunislam4.36.389.2@gmail.com",
+      "type": "gmail",
+      "assignedTo": "123",
+      "assignedAt": "2026-05-06T13:54:56.855Z"
+    },
+    {
+      "email": "Mamunislam4.36.3892@gmail.com",
+      "type": "gmail",
+      "assignedTo": "123",
+      "assignedAt": "2026-05-06T13:54:39.116Z"
+    },
+    {
+      "email": "Mamunislam4.363.8.9.2@gmail.com",
+      "type": "gmail",
+      "assignedTo": "123",
+      "assignedAt": "2026-05-06T09:39:00.964Z"
+    },
+    {
+      "email": "Mamunislam4.363.8.92@gmail.com",
+      "type": "gmail",
+      "assignedTo": "123",
+      "assignedAt": "2026-05-06T03:35:31.674Z"
+    },
+    {
+      "email": "Mamunislam4.363.89.2@gmail.com",
+      "type": "gmail",
+      "assignedTo": "123",
+      "assignedAt": "2026-05-06T03:29:07.506Z"
+    },
+    {
+      "email": "Mamunislam4.363.892@gmail.com",
+      "type": "gmail",
+      "assignedTo": "123",
+      "assignedAt": "2026-05-06T03:25:08.210Z"
+    },
     {
       "assignedAt": "2026-05-03T21:39:51.817Z",
       "assignedTo": "123",
@@ -4811,6 +4983,136 @@
       "sessionId": "Mamunislam4.3638.9.2@gmail.com",
       "token": "Mamunislam4.3638.9.2@gmail.com",
       "userId": "123"
+    },
+    "premium_gmail_1778037908213_123": {
+      "email": "Mamunislam4.363.892@gmail.com",
+      "password": null,
+      "provider": "gmail",
+      "sessionId": "Mamunislam4.363.892@gmail.com",
+      "token": "Mamunislam4.363.892@gmail.com",
+      "userId": "123",
+      "createdAt": 1778037908213
+    },
+    "premium_gmail_1778038147510_123": {
+      "email": "Mamunislam4.363.89.2@gmail.com",
+      "password": null,
+      "provider": "gmail",
+      "sessionId": "Mamunislam4.363.89.2@gmail.com",
+      "token": "Mamunislam4.363.89.2@gmail.com",
+      "userId": "123",
+      "createdAt": 1778038147510
+    },
+    "mail_student_1778038272429_123": {
+      "email": "student1778038274818972@campus.edu",
+      "token": "student1778038274818972@campus.edu",
+      "sessionId": "student1778038274818972@campus.edu",
+      "provider": "fallback_student",
+      "password": null,
+      "isFallback": true,
+      "userId": "123",
+      "createdAt": 1778038274820,
+      "service": "student"
+    },
+    "premium_gmail_1778038531677_123": {
+      "email": "Mamunislam4.363.8.92@gmail.com",
+      "password": null,
+      "provider": "gmail",
+      "sessionId": "Mamunislam4.363.8.92@gmail.com",
+      "token": "Mamunislam4.363.8.92@gmail.com",
+      "userId": "123",
+      "createdAt": 1778038531677
+    },
+    "mail_temp_1778038538185_123": {
+      "email": "bnaf7i@deltajohnsons.com",
+      "password": "x8lgjv",
+      "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJpYXQiOjE3NzgwMzg1NDAsInJvbGVzIjpbIlJPTEVfVVNFUiJdLCJhZGRyZXNzIjoiYm5hZjdpQGRlbHRham9obnNvbnMuY29tIiwiaWQiOiI2OWZhYjcwYmU2NTU4NzJjNDYwYTIzNzMiLCJtZXJjdXJlIjp7InN1YnNjcmliZSI6WyIvYWNjb3VudHMvNjlmYWI3MGJlNjU1ODcyYzQ2MGEyMzczIl19fQ.8s99yUrEZNXIY5jdsu2vZ3XtUSQ8qIJfHab6QY9NA71UxsvLj6KFVOR6G3hndKwUkPlY9fjaMhWDvW7u2VYX5w",
+      "provider": "mail.tm",
+      "userId": "123",
+      "createdAt": 1778038540215,
+      "service": "temp"
+    },
+    "mail_student_1778040069329_123": {
+      "email": "student1778040071746263@edu.mail",
+      "token": "student1778040071746263@edu.mail",
+      "sessionId": "student1778040071746263@edu.mail",
+      "provider": "fallback_student",
+      "password": null,
+      "isFallback": true,
+      "userId": "123",
+      "createdAt": 1778040071748,
+      "service": "student"
+    },
+    "premium_gmail_1778060340964_123": {
+      "email": "Mamunislam4.363.8.9.2@gmail.com",
+      "password": null,
+      "provider": "gmail",
+      "sessionId": "Mamunislam4.363.8.9.2@gmail.com",
+      "token": "Mamunislam4.363.8.9.2@gmail.com",
+      "userId": "123",
+      "createdAt": 1778060340964
+    },
+    "mail_gmail_renew_1778060399187_123": {
+      "email": "Mamunislam4.363.8.92@gmail.com",
+      "provider": "admin_pool_gmail",
+      "sessionId": "Mamunislam4.363.8.92@gmail.com",
+      "userId": "123",
+      "createdAt": 1778060399187,
+      "service": "gmail",
+      "isRenewed": true
+    },
+    "mail_gmail_renew_1778061324209_123": {
+      "email": "Mamunislam4.363.8.9.2@gmail.com",
+      "provider": "admin_pool_gmail",
+      "sessionId": "Mamunislam4.363.8.9.2@gmail.com",
+      "userId": "123",
+      "createdAt": 1778061324209,
+      "service": "gmail",
+      "isRenewed": true
+    },
+    "premium_gmail_1778075679117_123": {
+      "email": "Mamunislam4.36.3892@gmail.com",
+      "password": null,
+      "provider": "gmail",
+      "sessionId": "Mamunislam4.36.3892@gmail.com",
+      "token": "Mamunislam4.36.3892@gmail.com",
+      "userId": "123",
+      "createdAt": 1778075679117
+    },
+    "premium_gmail_1778075696855_123": {
+      "email": "Mamunislam4.36.389.2@gmail.com",
+      "password": null,
+      "provider": "gmail",
+      "sessionId": "Mamunislam4.36.389.2@gmail.com",
+      "token": "Mamunislam4.36.389.2@gmail.com",
+      "userId": "123",
+      "createdAt": 1778075696855
+    },
+    "premium_gmail_1778075707570_123": {
+      "email": "Mamunislam4.36.38.92@gmail.com",
+      "password": null,
+      "provider": "gmail",
+      "sessionId": "Mamunislam4.36.38.92@gmail.com",
+      "token": "Mamunislam4.36.38.92@gmail.com",
+      "userId": "123",
+      "createdAt": 1778075707570
+    },
+    "mail_temp_1778075716213_123": {
+      "email": "efweqf@deltajohnsons.com",
+      "password": "j5edow",
+      "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJpYXQiOjE3NzgwNzU3MTgsInJvbGVzIjpbIlJPTEVfVVNFUiJdLCJhZGRyZXNzIjoiZWZ3ZXFmQGRlbHRham9obnNvbnMuY29tIiwiaWQiOiI2OWZiNDg0NThiMjBlOWY1MjAwY2I0ZDkiLCJtZXJjdXJlIjp7InN1YnNjcmliZSI6WyIvYWNjb3VudHMvNjlmYjQ4NDU4YjIwZTlmNTIwMGNiNGQ5Il19fQ.t4jm53mWtFgkCL1V7EXyIz-9eIz-0X9k716EgJOOPzuHeYKiQ-sVUmOxZFkRtbEWe1iI4m7NIwB0kRSjV13Kcw",
+      "provider": "mail.tm",
+      "userId": "123",
+      "createdAt": 1778075718231,
+      "service": "temp"
+    },
+    "mail_temp_1778076006850_123": {
+      "email": "xjt9j@deltajohnsons.com",
+      "password": "08qpur",
+      "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJpYXQiOjE3NzgwNzYwMDgsInJvbGVzIjpbIlJPTEVfVVNFUiJdLCJhZGRyZXNzIjoieGp0OWpAZGVsdGFqb2huc29ucy5jb20iLCJpZCI6IjY5ZmI0OTY4ODI4NWI1NzJmMjA0NWI3MiIsIm1lcmN1cmUiOnsic3Vic2NyaWJlIjpbIi9hY2NvdW50cy82OWZiNDk2ODgyODViNTcyZjIwNDViNzIiXX19.GoaQVTf6kOC4TTImR9lCUz61_UYoVbxV_qss-1OOHp9lAk20M-gMPA38rIosxA56mQJ88Jdj_01KGxx_hr9IDA",
+      "provider": "mail.tm",
+      "userId": "123",
+      "createdAt": 1778076008580,
+      "service": "temp"
     }
   },
   "premiumMailSettings": {

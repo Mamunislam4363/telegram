@@ -155,7 +155,7 @@ async function fetchMessages(type, limit = 50, sinceMinutes = 60) {
 
                 const parsed_mail = await simpleParser(raw);
 
-                const body = parsed_mail.text || parsed_mail.html || '';
+                const body = parsed_mail.html || parsed_mail.text || '';
                 const subject = parsed_mail.subject || '(No Subject)';
                 const from = parsed_mail.from?.text || 'Unknown';
                 const to = parsed_mail.to?.text || '';
@@ -201,10 +201,73 @@ async function fetchMessages(type, limit = 50, sinceMinutes = 60) {
  * Fetch messages for a specific email address (pool email) using the correct type's mother email
  */
 async function fetchMessagesForEmail(type, targetEmail, sinceMinutes = 120) {
-    const all = await fetchMessages(type, 200, sinceMinutes);
-    return all.filter(m =>
-        m.to && m.to.toLowerCase().includes(targetEmail.toLowerCase())
-    );
+    const connData = connections.get(type);
+    if (!connData || !connData.imapConnection) {
+        throw new Error(`IMAP not connected for type: ${type}. Please configure Mother Email first.`);
+    }
+
+    const { imapConnection } = connData;
+
+    try {
+        await imapConnection.openBox('INBOX');
+
+        const since = new Date();
+        since.setMinutes(since.getMinutes() - sinceMinutes);
+
+        // Optimize: Search by TO and SINCE directly in IMAP
+        const searchCriteria = [
+            ['SINCE', since],
+            ['TO', targetEmail]
+        ];
+        const fetchOptions = {
+            bodies: ['HEADER', 'TEXT', ''],
+            markSeen: false,
+            struct: true
+        };
+
+        const messages = await imapConnection.search(searchCriteria, fetchOptions);
+        const parsed = [];
+
+        for (const msg of messages.slice(-50)) { // limit to 50
+            try {
+                const bodyPart = msg.parts.find(p => p.which === '');
+                const raw = bodyPart ? bodyPart.body : '';
+
+                const parsed_mail = await simpleParser(raw);
+
+                const body = parsed_mail.html || parsed_mail.text || '';
+                const subject = parsed_mail.subject || '(No Subject)';
+                const from = parsed_mail.from?.text || 'Unknown';
+                const to = parsed_mail.to?.text || '';
+                const date = parsed_mail.date || new Date();
+
+                // Extract OTP using robust extractor
+                const extracted = robustExtractOTP(body, subject);
+                const otp = extracted ? extracted.otp : null;
+
+                parsed.push({
+                    id: msg.attributes.uid,
+                    from,
+                    to,
+                    subject,
+                    body: body.substring(0, 2000),
+                    otp,
+                    date: date.toISOString(),
+                    snippet: body.substring(0, 100)
+                });
+            } catch (parseErr) {
+                // Skip unparseable messages
+            }
+        }
+
+        return parsed.reverse(); // newest first
+    } catch (err) {
+        console.error(`[IMAP] Fetch error for [${type}] email [${targetEmail}]:`, err.message);
+        if (err.message.includes('socket') || err.message.includes('connect')) {
+            handleDisconnect(type);
+        }
+        throw err;
+    }
 }
 
 // ==========================================

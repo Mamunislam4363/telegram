@@ -8,16 +8,21 @@ const databaseModule = require('./database/server.js');
 const { app } = databaseModule;
 const db = require('./db.js');
 
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
 
 async function startServer() {
   // Wait for database to be ready
   console.log('⏳ Waiting for database readiness...');
   try {
-    await db.dbReady;
+    const dbTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('DB_TIMEOUT')), 15000));
+    await Promise.race([db.dbReady, dbTimeout]);
     console.log('✅ Database is ready.');
   } catch (e) {
-    console.error('⚠️ Database failed to initialize properly:', e);
+    if (e.message === 'DB_TIMEOUT') {
+        console.warn('⚠️ Database readiness timed out after 15s. Starting server anyway...');
+    } else {
+        console.error('⚠️ Database failed to initialize properly:', e);
+    }
   }
 
   // The 'app' from database/server.js already has API routes defined and serves the 'web' directory.

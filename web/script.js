@@ -220,15 +220,42 @@ var tg = window.Telegram?.WebApp || {
 tg.ready();
 tg.expand();
 
+// REAL-TIME UPDATES - Poll for admin-pushed version changes (every 30s)
+let currentSystemVersion = 0;
+setInterval(async () => {
+    try {
+        const r = await fetch('/api/version', { cache: 'no-store' });
+        if (!r.ok) return;
+        const d = await r.json();
+        if (d.version) {
+            if (currentSystemVersion && d.version > currentSystemVersion) {
+                console.log('[VERSION] New server version detected, reloading...');
+                window.location.reload();
+            }
+            currentSystemVersion = d.version;
+        }
+    } catch(e) {}
+}, 30000);
+
+
+if (tg.BackButton && tg.BackButton.onClick) {
+    tg.BackButton.onClick(goBack);
+}
+
 // Global fetch override to handle network errors gracefully
 const originalFetch = window.fetch;
 window.fetch = function () {
     return originalFetch.apply(this, arguments).catch(err => {
         console.error('Global Fetch error:', err);
-        return {
-            json: () => Promise.resolve({ success: false, message: 'Network error. Please check your internet connection.' }),
-            ok: false
-        };
+        return new Response(JSON.stringify({ 
+            success: false, 
+            error: 'Network error', 
+            message: 'Network error. Please check your internet connection.' 
+        }), {
+            status: 503,
+            statusText: 'Service Unavailable',
+            headers: { 'Content-Type': 'application/json' }
+        });
     });
 };
 
@@ -283,21 +310,30 @@ var userData = {
 // FEATURE FLAGS (Button Management)
 var featureFlags = null;
 function applyFeatureFlagsToHome() {
-    const ids = [
-        { key: 'home_verify', el: 'verifyServiceCard' },
-        { key: 'home_mail', el: 'mailServiceCard' },
-        { key: 'home_number', el: 'numberServiceCard' },
-        { key: 'home_gemini', el: 'geminiServiceCard' },
-        { key: 'home_chatgpt', el: 'chatgptServiceCard' },
-        { key: 'home_premiumMail', el: 'emailServiceCard' },
-        { key: 'home_hotMail', el: 'hotMailCard' },
-        { key: 'home_studentMail', el: 'studentMailCard' }
+    const mappings = [
+        { key: 'home_verify', selector: '[onclick="nav(\'verify\')"]' },
+        { key: 'home_mail', selector: '[onclick="nav(\'emailMenu\')"]' },
+        { key: 'home_number', selector: '[onclick="nav(\'numberService\')"]' },
+        { key: 'home_accountsShop', selector: '[onclick="nav(\'itemSell\')"]' },
+        { key: 'home_videoDownload', selector: '[onclick="nav(\'videoDownload\')"]' },
+        { key: 'home_aiPhoto', selector: '[onclick="nav(\'aiPhotoGenerator\')"]' },
+        { key: 'home_aiVideo', selector: '[onclick="nav(\'aiVideoGenerator\')"]' },
+        { key: 'home_bgRemover', selector: '[onclick="nav(\'bgRemover\')"]' },
+        { key: 'dailyCheckin', selector: '[onclick="nav(\'daily\')"]' },
+        { key: 'tasksSystem', selector: '[onclick="nav(\'tasks\')"]' },
+        { key: 'referralSystem', selector: '[onclick="nav(\'invite\')"]' },
+        { key: 'exchange', selector: '[onclick="nav(\'earnMenuPage\')"]' },
+        { key: 'home_vpn', selector: '[onclick="nav(\'vpnServices\')"]' },
+        { key: 'home_vcc', selector: '[onclick="nav(\'vccCards\')"]' },
+        { key: 'home_accounts', selector: '[onclick="nav(\'services\')"]' },
+        { key: 'home_gemini', selector: '[onclick="nav(\'geminiVerification\')"]' }
     ];
-    ids.forEach(item => {
-        const el = document.getElementById(item.el);
-        if (!el) return;
-        const enabled = !featureFlags || featureFlags[item.key] !== false;
-        el.style.display = enabled ? '' : 'none';
+    mappings.forEach(item => {
+        const els = document.querySelectorAll(item.selector);
+        els.forEach(el => {
+            const enabled = !featureFlags || featureFlags[item.key] !== false;
+            el.style.display = enabled ? '' : 'none';
+        });
     });
 }
 
@@ -538,6 +574,7 @@ const PAGE_TITLES = {
     'vpnServices': 'VPN SERVICES',
     'admin': 'ADMIN PANEL',
     'history': 'HISTORY',
+    'notifications': 'NOTIFICATIONS',
     'leaderboard': 'LEADERBOARD',
     'earnedLeaderboard': 'LEADERBOARD',
     'referralLeaderboard': 'LEADERBOARD',
@@ -596,12 +633,24 @@ function showPage(targetId) {
     }
     if (targetId === 'earn') targetId = 'earnMenu';
 
-    // Handle back button visibility
+    const mainTabs = ['home', 'tasks', 'shop', 'invite', 'profile'];
+    // Handle back button visibility & Bottom Navigation bar
     if (targetId === 'home') {
-        tg.BackButton.hide();
+        if (tg.BackButton && tg.BackButton.hide) tg.BackButton.hide();
     } else {
-        tg.BackButton.show();
-        tg.BackButton.onClick(() => goBack());
+        if (tg.BackButton && tg.BackButton.show) tg.BackButton.show();
+    }
+
+    const bottomNav = document.querySelector('.bottom-nav');
+    const mainScroll = document.getElementById('mainScroll');
+    if (bottomNav && mainScroll) {
+        if (mainTabs.includes(targetId)) {
+            bottomNav.style.display = 'flex';
+            mainScroll.style.paddingBottom = '130px';
+        } else {
+            bottomNav.style.display = 'none';
+            mainScroll.style.paddingBottom = '20px';
+        }
     }
 
     // Hide ALL pages including home
@@ -658,7 +707,7 @@ function showPage(targetId) {
         } else {
             targetPage.style.display = 'block';
         }
-        setTimeout(() => targetPage.classList.add('active'), 20);
+        targetPage.classList.add('active');
 
         // Restore scroll position (so Back keeps you at the same place)
         const mainScroll = document.getElementById('mainScroll');
@@ -683,6 +732,7 @@ function showPage(targetId) {
     if (targetId === 'earnedLeaderboard') renderEarnedLeaderboard();
     if (targetId === 'quizLeaderboard') renderQuizLeaderboard();
     if (targetId === 'apiKey') loadApiKey();
+    if (targetId === 'notifications') loadNotifications();
 
     if (targetId === 'profile') {
         const apiKeyItem = document.getElementById('profileApiKeyItem');
@@ -867,6 +917,10 @@ function showPage(targetId) {
     if (targetId === 'history') {
         loadRecentActivity(); // Refresh from server
     }
+    // Refresh Notifications when entering notifications page
+    if (targetId === 'notifications') {
+        loadNotifications();
+    }
     // Refresh Item Sales when entering item sell page
     if (targetId === 'itemSell') {
         loadMySales();
@@ -890,7 +944,7 @@ function showPage(targetId) {
     const headerStatus = document.getElementById('headerStatus');
 
     // Define service pages that need simple header
-    const servicePages = ['profile', 'services', 'numberService', 'mailService', 'premiumMail', 'emailMenu',
+    const servicePages = ['profile', 'notifications', 'services', 'numberService', 'mailService', 'premiumMail', 'emailMenu',
         'emailService', 'vccCards', 'vpnServices', 'accountsStore', 'serviceGenerate',
         'geminiProduct', 'chatgptProduct', 'checkout', 'deposit', 'shop', 'itemSell',
         'exchange', 'binancePay', 'faucetPay', 'history', 'redeem',
@@ -973,7 +1027,7 @@ function showPage(targetId) {
     else if (['tasks', 'earn', 'earnMenu', 'daily'].includes(targetId)) activeNavGroup = 'tasks';
     else if (['shop', 'exchange', 'deposit', 'binancePay', 'faucetPay', 'geminiProduct', 'chatgptProduct', 'services', 'numberService', 'mailService', 'emailMenu', 'emailService', 'vccCards', 'vpnServices', 'accountsStore', 'accountDetail', 'serviceGenerate', 'checkout'].includes(targetId)) activeNavGroup = 'shop';
     else if (['invite', 'leaderboard'].includes(targetId)) activeNavGroup = 'invite';
-    else if (['profile', 'history', 'redeem', 'transfer', 'support', 'verify', 'geminiVerification', 'admin', 'quizLeaderboard'].includes(targetId)) activeNavGroup = 'profile';
+    else if (['profile', 'history', 'notifications', 'redeem', 'transfer', 'support', 'verify', 'geminiVerification', 'admin', 'quizLeaderboard'].includes(targetId)) activeNavGroup = 'profile';
 
     const activeItem = document.querySelector(`.bottom-nav [data-page="${activeNavGroup}"]`);
     if (activeItem) activeItem.classList.add('active');
@@ -1034,37 +1088,53 @@ function exchangeTokens() {
         return;
     }
 
-    if (!confirm('Confirm exchange of ' + formatCurrencyAmount(amt, fromCur) + ' to ' + formatCurrencyAmount(preview.toAmount, toCur) + '?')) return;
-
-    fetch('/api/exchange/convert', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: userData.id, from: fromCur, to: toCur, amount: amt })
-    })
-        .then(r => r.json())
-        .then(res => {
-            if (!res.success) {
-                window.showToast(res.message || 'Exchange failed.');
-                return;
-            }
-
-            // Sync balances from response
-            if (typeof res.tokens === 'number') userData.tokens = Math.max(0, res.tokens);
-            if (typeof res.Gems === 'number') userData.Gems = Math.max(0, res.Gems);
-            userData.usd = (res.usd !== undefined && res.usd !== null) ? res.usd : 0;
-            renderBalances();
-            loadRecentActivity(); // Refresh history after exchange
-            updateExchangeBalances();
-            updateExchangePreview();
-
-            // Save to history locally
-            saveExchangeHistory(fromCur, toCur, amt, res.toAmount ?? preview.toAmount);
-
-            window.showToast('✅ EXCHANGE SUCCESSFUL\n\n' + formatCurrencyAmount(amt, fromCur) + ' ➔ ' + formatCurrencyAmount(res.toAmount ?? preview.toAmount, toCur));
+    const overlay = document.createElement('div');
+    overlay.style = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;";
+    overlay.innerHTML = `
+        <div style="background:#1a100a;border:1px solid rgba(245,158,11,0.3);border-radius:16px;padding:24px;width:100%;max-width:320px;text-align:center;">
+            <div style="color:#ef4444;font-size:36px;margin-bottom:16px;"><i class="fas fa-exclamation-triangle"></i></div>
+            <h3 style="color:#fff;margin:0 0 12px 0;font-size:20px;">Confirm Exchange</h3>
+            <p style="color:rgba(255,255,255,0.7);font-size:14px;margin-bottom:24px;line-height:1.5;">Exchange of ${formatCurrencyAmount(amt, fromCur)} to ${formatCurrencyAmount(preview.toAmount, toCur)}?</p>
+            <div style="display:flex;gap:10px;">
+                <button id="cancelExBtn" style="flex:1;padding:14px;border-radius:12px;border:none;background:rgba(255,255,255,0.1);color:#fff;font-weight:bold;cursor:pointer;">CANCEL</button>
+                <button id="confirmExBtn" style="flex:1;padding:14px;border-radius:12px;border:none;background:#22c55e;color:#fff;font-weight:bold;cursor:pointer;">CONFIRM</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    document.getElementById('cancelExBtn').onclick = () => overlay.remove();
+    document.getElementById('confirmExBtn').onclick = () => {
+        overlay.remove();
+        fetch('/api/exchange/convert', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: userData.id, from: fromCur, to: toCur, amount: amt })
         })
-        .catch(() => {
-            window.showToast('Network error. Please try again.');
-        });
+            .then(r => r.json())
+            .then(res => {
+                if (!res.success) {
+                    window.showToast(res.message || 'Exchange failed.');
+                    return;
+                }
+
+                // Sync balances from response
+                if (typeof res.tokens === 'number') userData.tokens = Math.max(0, res.tokens);
+                if (typeof res.Gems === 'number') userData.Gems = Math.max(0, res.Gems);
+                userData.usd = (res.usd !== undefined && res.usd !== null) ? res.usd : 0;
+                renderBalances();
+                loadRecentActivity(); // Refresh history after exchange
+                updateExchangeBalances();
+                updateExchangePreview();
+
+                // Save to history locally
+                saveExchangeHistory(fromCur, toCur, amt, res.toAmount ?? preview.toAmount);
+
+                window.showToast('✅ EXCHANGE SUCCESSFUL\n\n' + formatCurrencyAmount(amt, fromCur) + ' ➔ ' + formatCurrencyAmount(res.toAmount ?? preview.toAmount, toCur));
+            })
+            .catch(() => {
+                window.showToast('Network error. Please try again.');
+            });
+    };
 }
 
 function saveExchangeHistory(from, to, fAmt, tAmt) {
@@ -1166,7 +1236,7 @@ function calculateExchange(from, to, amount) {
 }
 
 function formatCurrencyAmount(amount, cur) {
-    if (cur === 'usd') return `$${(Math.round(amount * 100) / 100).toFixed(2)}`;
+    if (cur === 'usd') return `$${(Math.round(amount * 1000) / 1000).toFixed(3)}`;
     if (cur === 'tokens') return `${Math.floor(amount)} TOKENS`;
     if (cur === 'Gems') return `${Math.floor(amount * 10000) / 10000} Gems`;
     return `${amount}`;
@@ -1185,7 +1255,7 @@ function updateExchangeBalances() {
     const u = document.getElementById('exBalUsd');
     if (t) t.textContent = (userData.tokens || 0).toString();
     if (j) j.textContent = (userData.Gems || 0).toString();
-    if (u) u.textContent = (Math.round((userData.usd || 0) * 100) / 100).toFixed(2);
+    if (u) u.textContent = (Math.round((userData.usd || 0) * 1000) / 1000).toFixed(3);
 }
 
 function updateExchangePreview() {
@@ -1216,7 +1286,7 @@ function updateExchangePreview() {
     });
 
     const maxVal = fromCur === 'tokens' ? (userData.tokens || 0) : fromCur === 'Gems' ? (userData.Gems || 0) : (userData.usd || 0);
-    if (fromHint) fromHint.textContent = `MAX: ${fromCur === 'usd' ? '$' + (Math.round(maxVal * 100) / 100).toFixed(2) : maxVal}`;
+    if (fromHint) fromHint.textContent = `MAX: ${fromCur === 'usd' ? '$' + (Math.round(maxVal * 1000) / 1000).toFixed(3) : maxVal}`;
 
     const preview = calculateExchange(fromCur, toCur, isFinite(amt) ? amt : 0);
     if (!preview.success) {
@@ -1313,7 +1383,7 @@ function changeQty(delta) {
     const qtyEl = document.getElementById('checkoutQty');
     const totalEl = document.getElementById('checkoutTotal');
     if (qtyEl) qtyEl.textContent = checkoutQty;
-    if (totalEl) totalEl.textContent = '$' + (checkoutQty * checkoutUnitPrice).toFixed(2);
+    if (totalEl) totalEl.textContent = '$' + (checkoutQty * checkoutUnitPrice).toFixed(3);
 }
 
 function selectPayMethod(method) {
@@ -1588,17 +1658,19 @@ function submitPayment() {
 const IN_PROGRESS_TASKS = {};
 
 // Fetch and render tasks from API
-async function loadUserTasks() {
+async function loadUserTasks(silent = false) {
     const container = document.getElementById('tasksListContainer');
     if (!container) return;
 
-    // Fast feedback: show skeleton or "Loading..." instantly
-    container.innerHTML = `
-        <div style="display:flex; flex-direction:column; gap:10px; width:100%;">
-            <div class="skeleton-task" style="height:80px; background:rgba(255,255,255,0.05); border-radius:15px; animation:pulse 1.5s infinite;"></div>
-            <div class="skeleton-task" style="height:80px; background:rgba(255,255,255,0.05); border-radius:15px; animation:pulse 1.5s infinite; animation-delay:0.2s;"></div>
-            <div class="skeleton-task" style="height:80px; background:rgba(255,255,255,0.05); border-radius:15px; animation:pulse 1.5s infinite; animation-delay:0.4s;"></div>
-        </div>`;
+    // Fast feedback: show skeleton or "Loading..." instantly only if not silent
+    if (!silent) {
+        container.innerHTML = `
+            <div style="display:flex; flex-direction:column; gap:10px; width:100%;">
+                <div class="skeleton-task" style="height:80px; background:rgba(255,255,255,0.05); border-radius:15px; animation:pulse 1.5s infinite;"></div>
+                <div class="skeleton-task" style="height:80px; background:rgba(255,255,255,0.05); border-radius:15px; animation:pulse 1.5s infinite; animation-delay:0.2s;"></div>
+                <div class="skeleton-task" style="height:80px; background:rgba(255,255,255,0.05); border-radius:15px; animation:pulse 1.5s infinite; animation-delay:0.4s;"></div>
+            </div>`;
+    }
 
     try {
         const res = await fetch('/api/admin/tasks');
@@ -1707,7 +1779,7 @@ function startTask(button, taskId, url, reward) {
 }
 
 // Complete task and claim reward
-async function completeTask(taskId, reward, button) {
+async function completeTask(taskId, reward, button, url) {
     try {
         if (!button) return;
         button.disabled = true;
@@ -1759,13 +1831,21 @@ async function completeTask(taskId, reward, button) {
         } else {
             showToast(data.message || 'Verification failed');
             button.disabled = false;
-            button.textContent = 'VERIFY';
+            button.textContent = 'START';
+            button.style.background = ''; // reset to default
+            button.onclick = function() {
+                startTask(button, taskId, url, reward);
+            };
         }
     } catch (e) {
         console.error('Error completing task:', e);
         if (button) {
             button.disabled = false;
-            button.textContent = 'VERIFY';
+            button.textContent = 'START';
+            button.style.background = ''; // reset to default
+            button.onclick = function() {
+                startTask(button, taskId, url, reward);
+            };
         }
         showToast('Network error verifying task');
     }
@@ -2277,18 +2357,46 @@ async function claimAdReward() {
                 showPage('scratch');
                 initScratchCard();
             } else if (currentAdContext === 'task_verification' && activeTaskButton) {
-                // Task Ad Completed - Now show VERIFY button
-                activeTaskButton.textContent = 'VERIFY';
-                activeTaskButton.style.background = '#22c55e';
+                // Task Ad Completed - Now show OPEN LINK button
+                activeTaskButton.textContent = 'OPEN LINK';
+                activeTaskButton.style.background = '#2563eb';
                 activeTaskButton.style.display = 'block';
                 activeTaskButton.disabled = false;
+                
+                const currentTaskData = { ...activeTaskData }; // copy data
+                const currentBtn = activeTaskButton;
+                
                 activeTaskButton.onclick = function () {
-                    completeTask(activeTaskData.taskId, activeTaskData.reward, activeTaskButton);
-                    window.open(activeTaskData.url, '_blank');
+                    window.open(currentTaskData.url, '_blank');
+                    
+                    // Now change to VERIFY
+                    currentBtn.textContent = 'VERIFY';
+                    currentBtn.style.background = '#22c55e';
+                    
+                    // Update onclick to verify
+                    currentBtn.onclick = function () {
+                        completeTask(currentTaskData.taskId, currentTaskData.reward, currentBtn, currentTaskData.url);
+                    };
                 };
+
+                // Timer to reset to START after 1 minute if not completed
+                setTimeout(() => {
+                    if (currentBtn.textContent === 'VERIFY') {
+                        currentBtn.textContent = 'START';
+                        currentBtn.style.background = ''; // reset to default
+                        currentBtn.onclick = function() {
+                            startTask(currentBtn, currentTaskData.taskId, currentTaskData.url, currentTaskData.reward);
+                        };
+                    }
+                }, 60000); // 1 minute
             } else if (currentAdContext === 'gift_claim' && pendingGiftId) {
                 // Gift Ad Completed - Now claim the gift
                 claimGiftReward(pendingGiftId);
+            } else if (currentAdContext === 'watch_ad' || currentAdContext === 'zero_balance_trigger') {
+                // Ensure user goes back to the home page or previous active page to prevent blank screen
+                if (!currentPage || document.querySelectorAll('.page.active').length === 0) {
+                    showPage('home');
+                }
             }
         } else {
             window.showToast(data.message || 'Error claiming ad reward');
@@ -2713,7 +2821,7 @@ function renderPodiumLeaderboard(type, period, ids) {
     const nowMs = Date.now();
     let fetchPromise;
 
-    if (window._leaderboardCache[cacheKey] && nowMs - window._leaderboardCache[cacheKey].time < 30000) {
+    if (window._leaderboardCache[cacheKey] && nowMs - window._leaderboardCache[cacheKey].time < 2000) {
         // Use cached data
         fetchPromise = Promise.resolve(window._leaderboardCache[cacheKey].data);
     } else {
@@ -2866,10 +2974,15 @@ function renderPodiumLeaderboard(type, period, ids) {
             const pointsToNext = '--'; // Difficult to calculate without full data points, maybe just mock or omit. Let's omit subtitle or say "Complete tasks to earn points" if rank is '-'
 
             let actionWord = type === 'earn' ? 'earning' : type === 'quiz' ? 'playing' : 'referring';
-            let gainWord = type === 'earn' ? 'earn points' : type === 'quiz' ? 'answer correctly' : 'gain referrals';
             let subtitleHtml = `<div style="font-size: 11px; color: rgba(255,255,255,0.5);">Keep ${actionWord} to climb the ranks!</div>`;
             if (userRank === '-' || data.userRank > 100) {
-                subtitleHtml = `<div style="font-size: 11px; color: rgba(255,255,255,0.5);">Complete tasks and ${gainWord} to enter.</div>`;
+                if (type === 'refer') {
+                    subtitleHtml = `<div style="font-size: 11px; color: rgba(255,255,255,0.5);">Invite friends to enter the leaderboard.</div>`;
+                } else if (type === 'earn') {
+                    subtitleHtml = `<div style="font-size: 11px; color: rgba(255,255,255,0.5);">Complete tasks and earn tokens to enter.</div>`;
+                } else {
+                    subtitleHtml = `<div style="font-size: 11px; color: rgba(255,255,255,0.5);">Play quiz to enter the leaderboard.</div>`;
+                }
             }
 
             personalRankEl.innerHTML = `
@@ -2910,7 +3023,7 @@ function renderGenericLeaderboard(type, listId) {
     const nowMs = Date.now();
     let fetchPromise;
 
-    if (window._leaderboardGenericCache[cacheKey] && nowMs - window._leaderboardGenericCache[cacheKey].time < 30000) {
+    if (window._leaderboardGenericCache[cacheKey] && nowMs - window._leaderboardGenericCache[cacheKey].time < 2000) {
         // Use cached data
         fetchPromise = Promise.resolve(window._leaderboardGenericCache[cacheKey].data);
     } else {
@@ -3030,19 +3143,20 @@ function renderReferralHistory() {
             container.innerHTML = data.referrals.map(h => {
                 const date = new Date(h.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                 const time = new Date(h.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                // ✅ FIX: Show profile photo if available, else colored initial avatar
+                const avatarUrl = h.photo_url || `/api/proxy-avatar?userId=${h.userId}`;
+                const avatarHtml = `<img src="${avatarUrl}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid var(--border-color)" onerror="this.outerHTML='<div style=\'width:36px;height:36px;background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#000;font-weight:800;font-size:14px;\'>${h.name.charAt(0).toUpperCase()}</div>'">`;
                 return `
                 <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid var(--border-color)">
                     <div style="display:flex; gap:10px; align-items:center">
-                        <div style="width:32px; height:32px; background:#333; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700">
-                            ${h.name.charAt(0)}
-                        </div>
+                        ${avatarHtml}
                         <div>
                             <div style="font-size:13px; font-weight:700; color:var(--text-main)">${h.name}</div>
                             <div style="font-size:10px; color:var(--text-sub)">${date} • ${time}</div>
                         </div>
                     </div>
                     <div style="text-align:right">
-                        <div style="font-size:10px; color:${h.status === 'Active' ? '#22c55e' : '#f59e0b'}">${h.status}</div>
+                        <div style="font-size:10px; color:${h.status === 'Verified' ? '#22c55e' : '#f59e0b'}">${h.status}</div>
                         <div style="font-size:12px; font-weight:800; color:var(--text-main)">${h.reward} T</div>
                     </div>
                 </div>
@@ -3428,21 +3542,27 @@ async function registerAndFetchUser() {
     }
 
     try {
-        const res = await fetch('/api/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                userId: userData.id,
-                firstName: _tgUser.first_name || '',
-                lastName: _tgUser.last_name || '',
-                username: _tgUser.username || '',
-                photo_url: _tgUser.photo_url || '',
-                referrer: referrer
-            })
-        });
+        let res;
+        if (window._isRegistered) {
+            res = await fetch(`/api/user/sync/${userData.id}`);
+        } else {
+            res = await fetch('/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: userData.id,
+                    firstName: _tgUser.first_name || '',
+                    lastName: _tgUser.last_name || '',
+                    username: _tgUser.username || '',
+                    photo_url: _tgUser.photo_url || '',
+                    referrer: referrer
+                })
+            });
+        }
         const data = await res.json();
 
         if (data.success) {
+            window._isRegistered = true; // Mark as registered after first success
             // Sync from server
             userData.tokens = data.tokens || data.balance_tokens || 0;
             userData.Gems = data.Gems || data.gems || 0;
@@ -3457,6 +3577,15 @@ async function registerAndFetchUser() {
                 if (data.apiKey) {
                     userData.apiKey = data.apiKey;
                     console.log("[API_SYNC] Synced key from server:", data.apiKey.substring(0, 8) + '...');
+                    const modalDisplay = document.getElementById('modalApiKeyDisplay');
+                    const pageDisplay = document.getElementById('userApiKeyDisplay');
+                    if (modalDisplay && modalDisplay.value !== data.apiKey) modalDisplay.value = data.apiKey;
+                    if (pageDisplay && pageDisplay.value !== data.apiKey) pageDisplay.value = data.apiKey;
+                    
+                    const modalRegenBtn = document.getElementById('modalRegenBtn');
+                    const pageRegenBtn = document.getElementById('regenerateApiKeyBtn');
+                    if (modalRegenBtn) { modalRegenBtn.innerHTML = '<i class="fas fa-sync-alt"></i> GENERATE KEY'; modalRegenBtn.classList.remove('pulse-btn'); }
+                    if (pageRegenBtn) { pageRegenBtn.innerHTML = '<i class="fas fa-sync-alt"></i> GENERATE KEY'; pageRegenBtn.classList.remove('pulse-btn'); }
                 } else {
                     // Server returned null. ONLY wipe if we don't have one locally 
                     // OR if we want to trust server's empty state after a delay.
@@ -3492,6 +3621,7 @@ async function registerAndFetchUser() {
             applyProfilePhoto(userData.photo_url);
             renderBalances();
             loadRecentActivity(); // Load real activity data
+            loadNotifications(); // Load user notifications
 
             // Visibility of Admin Menu
             const adminMenuItem = document.getElementById('adminMenuItem');
@@ -3503,14 +3633,14 @@ async function registerAndFetchUser() {
             }
 
             // Show any pending Web Messages from Admin Reply
-            if (data.webMessages && data.webMessages.length > 0) {
-                data.webMessages.forEach(msg => {
-                    showWebAdminMessage(msg);
-                });
-            }
+            // Removed direct popup to respect notification center routing
+
+            // Sync user notifications list & unread badge
+            loadNotifications();
         } else {
             applyProfilePhoto(_tgUser.photo_url || '');
             renderBalances();
+            loadNotifications();
         }
     } catch (err) {
         console.warn('Register API error (offline?):', err);
@@ -3526,7 +3656,7 @@ function fetchUserData() { registerAndFetchUser(); }
 function loadRecentActivity() {
     if (!userData.id || userData.id === 0) return;
 
-    fetch(`/api/history/${userData.id}`)
+    fetch(`/api/history/${userData.id}?t=${Date.now()}`)
         .then(r => r.json())
         .then(data => {
             if (data.success && data.history) {
@@ -3544,6 +3674,7 @@ function loadRecentActivity() {
         });
 }
 
+
 function renderFullHistory() {
     const list = document.getElementById('fullHistoryList');
     const empty = document.getElementById('historyEmptyState');
@@ -3558,16 +3689,24 @@ function renderFullHistory() {
     list.style.display = 'block';
     empty.style.display = 'none';
 
-    const POS_TYPES = new Set(['transfer_in', 'redeem', 'daily_bonus', 'ad_reward', 'mission_reward', 'quiz_reward', 'bonus', 'deposit', 'gift_claimed', 'gift']);
-    const NEG_TYPES = new Set(['transfer_out', 'account_purchase', 'mail', 'temp_mail', 'premium_mail', 'number', 'exchange_out', 'support_contact']);
+    const POS_TYPES = new Set(['transfer_in', 'redeem', 'daily_bonus', 'ad_reward', 'mission_reward', 'quiz_reward', 'bonus', 'deposit', 'gift_claimed', 'gift', 'apikey_generate']);
+    const NEG_TYPES = new Set(['transfer_out', 'account_purchase', 'mail', 'temp_mail', 'temp_email', 'premium_mail', 'premium_email', 'hotmail_email', 'student_email', 'gmail_email', 'mail_renew', 'number', 'exchange_out', 'support_contact']);
 
     const typeConfig = {
+        'apikey_generate': { icon: 'fas fa-key', color: '#9333ea', name: 'API Key Generated' },
+        'apikey_cost': { icon: 'fas fa-gem', color: '#ec4899', name: 'API Key Cost' },
         'ad_reward': { icon: 'fas fa-play', color: '#f59e0b', name: 'Watch and Earn' },
         'mission_reward': { icon: 'fas fa-check-circle', color: '#22c55e', name: 'Task Completed' },
         'account_purchase': { icon: 'fas fa-shopping-cart', color: '#3b82f6', name: 'Account Purchase' },
         'mail': { icon: 'fas fa-envelope', color: '#ef4444', name: 'Email Generated' },
         'temp_mail': { icon: 'fas fa-envelope-open', color: '#ef4444', name: 'Temp Mail' },
+        'temp_email': { icon: 'fas fa-envelope-open', color: '#ef4444', name: 'Temp Mail' },
         'premium_mail': { icon: 'fas fa-crown', color: '#f59e0b', name: 'Premium Mail' },
+        'premium_email': { icon: 'fas fa-crown', color: '#f59e0b', name: 'Premium Mail' },
+        'hotmail_email': { icon: 'fab fa-microsoft', color: '#3b82f6', name: 'Hotmail Access' },
+        'student_email': { icon: 'fas fa-graduation-cap', color: '#10b981', name: 'Student Mail' },
+        'gmail_email': { icon: 'fab fa-google', color: '#ef4444', name: 'Gmail Access' },
+        'mail_renew': { icon: 'fas fa-sync', color: '#3b82f6', name: 'Email Renewed' },
         'number': { icon: 'fas fa-phone', color: '#9333ea', name: 'Virtual Number' },
         'quiz_reward': { icon: 'fas fa-question-circle', color: '#f59e0b', name: 'Quiz Reward' },
         'deposit': { icon: 'fas fa-wallet', color: '#22c55e', name: 'Deposit' },
@@ -3584,24 +3723,17 @@ function renderFullHistory() {
     };
 
     list.innerHTML = userData.history.map(item => {
-        let config = typeConfig[item.type];
-        if (!config) {
-            if (item.type === 'temp_mail') {
-                config = typeConfig['temp_mail'] || { icon: 'fas fa-envelope-open', color: '#ef4444', name: 'Temp Mail' };
-            } else if (item.type === 'premium_mail') {
-                config = typeConfig['premium_mail'] || { icon: 'fas fa-crown', color: '#f59e0b', name: 'Premium Mail' };
-            } else {
-                config = { icon: 'fas fa-check', color: '#9ca3af', name: item.type || 'Activity' };
-            }
-        }
+        const itemType = (item.type || '').toLowerCase();
+        let config = typeConfig[itemType] || { icon: 'fas fa-check', color: '#9ca3af', name: item.type || 'Activity' };
+
         const dateObj = item.date ? new Date(item.date) : new Date();
         const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         const timeStr = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
         const reward = item.reward || '';
         const detail = item.detail || '';
         const amt = Number(item.amount || 0);
-        const isNeg = NEG_TYPES.has(item.type) || (!POS_TYPES.has(item.type) && amt < 0);
-        const isPos = POS_TYPES.has(item.type) || (!NEG_TYPES.has(item.type) && amt > 0);
+        const isNeg = NEG_TYPES.has(itemType) || (!POS_TYPES.has(itemType) && amt < 0);
+        const isPos = POS_TYPES.has(itemType) || (!NEG_TYPES.has(itemType) && amt > 0);
         const asset = item.asset || item.currency || 'TC';
 
         const displayValue = (reward || ((item.amount !== undefined && item.amount !== null) ? ((isNeg ? '-' : (isPos ? '+' : '')) + formatCompact(Math.abs(amt)) + ' ' + (item.asset || item.currency || 'TC').toUpperCase()) : ''));
@@ -3692,6 +3824,8 @@ function renderRecentActivity(history) {
     if (!container) return;
 
     const typeConfig = {
+        'apikey_generate': { icon: 'fas fa-key', color: '#9333ea', name: 'API Key Generated' },
+        'apikey_cost': { icon: 'fas fa-key', color: '#ec4899', name: 'API Key Cost' },
         'ad_reward': { icon: 'fas fa-play', color: '#f59e0b', name: 'Watch and Earn' },
         'mission_reward': { icon: 'fas fa-check-circle', color: '#22c55e', name: 'Task Completed' },
         'account_purchase': { icon: 'fas fa-shopping-cart', color: '#3b82f6', name: 'Account Purchase' },
@@ -3703,6 +3837,7 @@ function renderRecentActivity(history) {
         'hotmail_email': { icon: 'fab fa-microsoft', color: '#3b82f6', name: 'Hotmail Access' },
         'student_email': { icon: 'fas fa-graduation-cap', color: '#10b981', name: 'Student Mail' },
         'gmail_email': { icon: 'fab fa-google', color: '#ef4444', name: 'Gmail Access' },
+        'mail_renew': { icon: 'fas fa-sync', color: '#3b82f6', name: 'Email Renewed' },
         'number': { icon: 'fas fa-phone', color: '#9333ea', name: 'Virtual Number' },
         'redeem': { icon: 'fas fa-ticket-alt', color: '#22c55e', name: 'Code Redeemed' },
         'daily_bonus': { icon: 'fas fa-gift', color: '#fbbf24', name: 'Daily Bonus' },
@@ -3713,7 +3848,9 @@ function renderRecentActivity(history) {
         'bonus': { icon: 'fas fa-gift', color: '#fbbf24', name: 'Welcomes' },
         'gift_claimed': { icon: 'fas fa-gift', color: '#f59e0b', name: 'Gift Claimed' },
         'gift': { icon: 'fas fa-gift', color: '#f59e0b', name: 'Gift' },
-        'support_contact': { icon: 'fas fa-headset', color: '#f59e0b', name: 'Support Contact' }
+        'support_contact': { icon: 'fas fa-headset', color: '#f59e0b', name: 'Support Contact' },
+        'scratch_reward': { icon: 'fas fa-eraser', color: '#10b981', name: 'Scratch Reward' },
+        'quiz_reward': { icon: 'fas fa-lightbulb', color: '#3b82f6', name: 'Quiz Reward' }
     };
 
     if (!history || history.length === 0) {
@@ -3727,30 +3864,21 @@ function renderRecentActivity(history) {
     }
 
     container.innerHTML = history.map(item => {
-        // Fallback or explicit mapping logic
-        let config = typeConfig[item.type];
-        if (!config) {
-            if (item.type === 'temp_mail') {
-                config = typeConfig['temp_mail'] || { icon: 'fas fa-envelope-open', color: '#ef4444', name: 'Temp Mail' };
-            } else if (item.type === 'premium_mail') {
-                config = typeConfig['premium_mail'] || { icon: 'fas fa-crown', color: '#f59e0b', name: 'Premium Mail' };
-            } else {
-                config = { icon: 'fas fa-check', color: '#9ca3af', name: item.type || 'Activity' };
-            }
-        }
+        const itemType = (item.type || '').toLowerCase();
+        let config = typeConfig[itemType] || { icon: 'fas fa-check', color: '#9ca3af', name: item.type || 'Activity' };
 
         const date = item.date ? new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
         const time = item.date ? new Date(item.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '';
-        const POS_TYPES = new Set(['transfer_in', 'redeem', 'daily_bonus', 'ad_reward', 'mission_reward', 'quiz_reward', 'bonus', 'deposit', 'gift_claimed', 'gift']);
-        const NEG_TYPES = new Set(['transfer_out', 'account_purchase', 'mail', 'number', 'support_contact', 'premium_email', 'temp_email', 'hotmail_email', 'student_email', 'gmail_email', 'premium_mail', 'temp_mail']);
+        const POS_TYPES = new Set(['transfer_in', 'redeem', 'daily_bonus', 'ad_reward', 'mission_reward', 'quiz_reward', 'bonus', 'deposit', 'gift_claimed', 'gift', 'apikey_generate']);
+        const NEG_TYPES = new Set(['transfer_out', 'account_purchase', 'mail', 'number', 'support_contact', 'premium_email', 'temp_email', 'hotmail_email', 'student_email', 'gmail_email', 'premium_mail', 'temp_mail', 'mail_renew']);
         // Fix: For mail type, if amount is 0 or missing, use mailCost from config
         let rawAmount = item.amount;
-        if ((item.type === 'mail' || item.type === 'email' || config.name?.includes('Mail')) && (!rawAmount || rawAmount === 0)) {
+        if ((itemType === 'mail' || itemType === 'email' || config.name?.includes('Mail')) && (!rawAmount || rawAmount === 0)) {
             rawAmount = window.appCostConfig?.mailCost || 10;
         }
         const amt = Number(rawAmount || 0);
-        const isNeg = NEG_TYPES.has(item.type) || (!POS_TYPES.has(item.type) && amt < 0);
-        const isPos = POS_TYPES.has(item.type) || (!NEG_TYPES.has(item.type) && amt > 0);
+        const isNeg = NEG_TYPES.has(itemType) || (!POS_TYPES.has(itemType) && amt < 0);
+        const isPos = POS_TYPES.has(itemType) || (!NEG_TYPES.has(itemType) && amt > 0);
         const asset = item.asset || item.currency || 'TC';
 
         let rewardDisplay = '';
@@ -3969,7 +4097,17 @@ function renderBalances() {
 
     const formattedTokens = formatCompact(tokens);
     const formattedGems = formatCompact(gems);
-    const formattedUsd = usd >= 1000 ? '$' + formatCompact(usd) : '$' + usd.toFixed(2);
+    
+    let formattedUsd = '$0.000';
+    if (usd > 0) {
+        if (usd >= 1000) {
+            formattedUsd = '$' + formatCompact(usd);
+        } else if (usd % 1 === 0) {
+            formattedUsd = '$' + usd + '.000';
+        } else {
+            formattedUsd = '$' + usd.toFixed(3);
+        }
+    }
 
     // 1. Update Profile Stats
     const elTc = document.getElementById('prof-tc');
@@ -4027,6 +4165,22 @@ function renderBalances() {
     // VCC Cards (TC)
     const vccBal = document.getElementById('vccCardsBalanceDisplay');
     if (vccBal) vccBal.innerText = formattedTokens + ' TC';
+
+    // Exchange page balances
+    const exTokens = document.getElementById('exBalTokens');
+    if (exTokens) exTokens.textContent = (tokens).toString();
+    const exGems = document.getElementById('exBalGems');
+    if (exGems) exGems.textContent = (gems).toString();
+    const exUsd = document.getElementById('exBalUsd');
+    if (exUsd) exUsd.textContent = usd > 0 ? (Math.round((usd) * 1000) / 1000).toFixed(3) : "0.000";
+
+    // Transfer page balances
+    const tfTokens = document.getElementById('tfBalTokens');
+    if (tfTokens) tfTokens.textContent = (tokens).toString();
+    const tfGems = document.getElementById('tfBalGems');
+    if (tfGems) tfGems.textContent = (gems).toString();
+    const tfUsd = document.getElementById('tfBalUsd');
+    if (tfUsd) tfUsd.textContent = usd > 0 ? (Math.round((usd) * 1000) / 1000).toFixed(3) : "0.000";
 }
 
 
@@ -4075,21 +4229,37 @@ async function transferTokens() {
 
     // Confirmation
     const assetNames = { tokens: 'Tokens', usd: 'USD', Gems: 'Gems' };
-    if (!confirm(`Are you sure you want to transfer ${amount} ${assetNames[assetType]} to User #${targetUserId}?`)) return;
+    
+    const overlay = document.createElement('div');
+    overlay.style = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;";
+    overlay.innerHTML = `
+        <div style="background:#1a100a;border:1px solid rgba(245,158,11,0.3);border-radius:16px;padding:24px;width:100%;max-width:320px;text-align:center;">
+            <div style="color:#ef4444;font-size:36px;margin-bottom:16px;"><i class="fas fa-exclamation-triangle"></i></div>
+            <h3 style="color:#fff;margin:0 0 12px 0;font-size:20px;">Confirm Transfer</h3>
+            <p style="color:rgba(255,255,255,0.7);font-size:14px;margin-bottom:24px;line-height:1.5;">Transfer ${amount} ${assetNames[assetType]} to User #${targetUserId}?</p>
+            <div style="display:flex;gap:10px;">
+                <button id="cancelTrxBtn" style="flex:1;padding:14px;border-radius:12px;border:none;background:rgba(255,255,255,0.1);color:#fff;font-weight:bold;cursor:pointer;">CANCEL</button>
+                <button id="confirmTrxBtn" style="flex:1;padding:14px;border-radius:12px;border:none;background:#22c55e;color:#fff;font-weight:bold;cursor:pointer;">CONFIRM</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    document.getElementById('cancelTrxBtn').onclick = () => overlay.remove();
+    document.getElementById('confirmTrxBtn').onclick = async () => {
+        overlay.remove();
+        try {
+            const response = await fetch('/api/user/transfer', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    fromUserId: userData.id,
+                    toUserId: targetUserId,
+                    amount: amount,
+                    asset: assetType
+                })
+            });
 
-    try {
-        const response = await fetch('/api/user/transfer', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                fromUserId: userData.id,
-                toUserId: targetUserId,
-                amount: amount,
-                asset: assetType
-            })
-        });
-
-        const res = await response.json();
+            const res = await response.json();
         if (res.success) {
             window.showToast(res.message || "Transfer successful!", "success");
             // Update local user data
@@ -4112,6 +4282,7 @@ async function transferTokens() {
         console.error("Transfer error:", e);
         window.showToast("Server error during transfer.");
     }
+    };
 }
 
 function payWithBalance() {
@@ -4120,7 +4291,7 @@ function payWithBalance() {
         window.showToast('Purchase request sent to server!');
     } else {
         if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
-        window.showToast('Insufficient Balance ($' + userData.usd.toFixed(2) + '). Please deposit funds.');
+        window.showToast('Insufficient Balance ($' + userData.usd.toFixed(3) + '). Please deposit funds.');
     }
 }
 
@@ -4183,24 +4354,58 @@ async function loadAppCostConfig() {
 
 // Global state syncer for real-time updates from admin
 var _lastSyncTime = 0;
+var _lastUserSyncTime = 0;
+
 async function smartSync(force = false) {
     const now = Date.now();
-    if (!force && now - _lastSyncTime < 15000) return; // Minimum 15s between syncs
+    if (!force && now - _lastSyncTime < 5000) return; // Minimum 5s between syncs (was 2s)
 
     _lastSyncTime = now;
-    console.log('[SYNC] Refreshing platform config...');
 
-    return Promise.allSettled([
+    // Always sync admin config (features, services, costs)
+    const adminSyncPromises = [
         typeof loadFeatureFlags === 'function' ? loadFeatureFlags() : Promise.resolve(),
         typeof syncAdminData === 'function' ? syncAdminData() : Promise.resolve()
-    ]).then(results => {
-        const anySuccess = results.some(r => r.status === 'fulfilled');
-        if (anySuccess) console.log('[SYNC] Platform data updated');
-    }).catch(err => console.warn('[SYNC] Sync failed:', err));
+    ];
+
+    // Sync user balance every 15 seconds for real-time balance updates
+    if (force || (now - _lastUserSyncTime > 15000)) {
+        _lastUserSyncTime = now;
+        if (userData.id && userData.id !== 0) {
+            adminSyncPromises.push(
+                fetch(`/api/user/${userData.id}?t=${now}`, { cache: 'no-store' })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success && data.user) {
+                            const u = data.user;
+                            // Only update if server value differs (prevent flicker)
+                            if (typeof u.balance_tokens === 'number') userData.tokens = Math.max(0, u.balance_tokens);
+                            if (typeof u.gems === 'number') userData.Gems = Math.max(0, u.gems);
+                            if (typeof u.usd !== 'undefined') userData.usd = Math.max(0, u.usd || 0);
+                            if (typeof u.banned !== 'undefined') {
+                                userData.banned = u.banned;
+                                userStatus = u.banned ? 'banned' : 'active';
+                            }
+                            if (u.apiKey !== undefined) {
+                                if (u.apiKey) userData.apiKey = u.apiKey;
+                            }
+                            if (u.apiStatus) userData.apiStatus = u.apiStatus;
+                            renderBalances();
+                            // Persist to cache
+                            try { localStorage.setItem(`userData_${userData.id}`, JSON.stringify(userData)); } catch(e){}
+                        }
+                    })
+                    .catch(() => { /* silent – no network = keep cached */ })
+            );
+        }
+    }
+
+    return Promise.allSettled(adminSyncPromises).catch(() => {});
 }
 
-// Start auto-syncer (every 20 seconds for fast updates)
-setInterval(() => smartSync(), 20000);
+// Start auto-syncer (every 5 seconds – balanced for real-time feel without hammering server)
+setInterval(() => smartSync(), 5000);
+
 
 // Load cost config early so UI shows correct costs (email/ad reward, etc.)
 if (document.readyState === 'loading') {
@@ -4293,9 +4498,14 @@ function renderServicesList() {
     if (!list) return;
     const services = getServices();
     list.innerHTML = services.map(s => {
-        const iconHtml = s.imageUrl
-            ? `<img src="${s.imageUrl}" style="width:32px; height:32px; object-fit:contain;" onerror="this.parentElement.innerHTML='<i class=\\'${s.icon || 'fas fa-cog'}\\' style=\\'font-size:22px; color:#fff\\'></i>'">`
-            : `<i class="${s.icon || 'fas fa-cog'}" style="font-size:22px; color:#fff;"></i>`;
+        let iconHtml = '';
+        if (s.imageUrl) {
+            iconHtml = `<img src="${s.imageUrl}" style="width:32px; height:32px; object-fit:contain;" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-cog\\' style=\\'font-size:22px; color:#fff\\'></i>'">`;
+        } else if (s.icon && (s.icon.includes('/') || s.icon.includes('http'))) {
+            iconHtml = `<img src="${s.icon}" style="width:32px; height:32px; object-fit:contain;" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-cog\\' style=\\'font-size:22px; color:#fff\\'></i>'">`;
+        } else {
+            iconHtml = `<i class="${s.icon || 'fas fa-cog'}" style="font-size:22px; color:#fff;"></i>`;
+        }
         return `
         <div onclick="openService('${s.id}')"
             style="background:var(--bg-card); border-radius:18px; padding:16px 18px; display:flex; align-items:center; gap:16px; border:1px solid var(--border-color); cursor:pointer; transition:0.2s;"
@@ -4336,7 +4546,7 @@ function renderShopItems() {
 
             // Fix price display to ensure $ if not present
             let priceDisp = item.price || '$0.00';
-            if (typeof priceDisp === 'number') priceDisp = '$' + priceDisp.toFixed(2);
+            if (typeof priceDisp === 'number') priceDisp = '$' + priceDisp.toFixed(3);
             else if (!priceDisp.includes('$') && !priceDisp.toLowerCase().includes('tc')) priceDisp = '$' + priceDisp;
 
             return `
@@ -4373,7 +4583,7 @@ function renderShopItems() {
 
         // Use $ for everything as requested
         let price = item.price || item.sellingPrice || 0;
-        let priceDisp = '$' + parseFloat(price).toFixed(2);
+        let priceDisp = '$' + parseFloat(price).toFixed(3);
         // if (item.itemType === 'Card') priceDisp = price + ' TC'; // User wants dollars now
 
         const cardHtml = `
@@ -4586,22 +4796,50 @@ function copyToClipboard(elementId, button) {
     const element = document.getElementById(elementId);
     if (!element) return;
 
-    const text = element.textContent.trim();
+    let textToCopy = '';
 
-    // Copy to clipboard
-    navigator.clipboard.writeText(text).then(() => {
-        // Visual feedback - change icon to checkmark
-        const icon = button.querySelector('i');
-        if (icon) {
-            const originalClass = icon.className;
-            icon.className = 'fas fa-check';
-            icon.style.color = '#22c55e';
+    // Check if element is input/textarea or standard element
+    if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+        textToCopy = element.value;
+        element.select();
+        element.setSelectionRange(0, 99999); // For mobile devices
+    } else {
+        textToCopy = element.textContent.trim();
+    }
 
-            // Revert after 2 seconds
-            setTimeout(() => {
-                icon.className = originalClass;
-                icon.style.color = button.style.background === 'rgb(251, 191, 36)' ? '#000' : '#fbbf24';
-            }, 2000);
+    // Modern clipboard API with fallback
+    const copyPromise = navigator.clipboard ? 
+        navigator.clipboard.writeText(textToCopy) : 
+        new Promise((resolve, reject) => {
+            try {
+                // Fallback for older browsers
+                const textArea = document.createElement("textarea");
+                textArea.value = textToCopy;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand("copy");
+                document.body.removeChild(textArea);
+                resolve();
+            } catch (err) {
+                reject(err);
+            }
+        });
+
+    copyPromise.then(() => {
+        // Visual feedback if button provided
+        if (button) {
+            const icon = button.querySelector('i');
+            if (icon) {
+                const originalClass = icon.className;
+                icon.className = 'fas fa-check';
+                icon.style.color = '#22c55e';
+
+                // Revert after 2 seconds
+                setTimeout(() => {
+                    icon.className = originalClass;
+                    icon.style.color = ''; // Reset color
+                }, 2000);
+            }
         }
 
         // Show toast
@@ -4610,7 +4848,7 @@ function copyToClipboard(elementId, button) {
         }
 
         // Haptic feedback
-        if (tg.HapticFeedback) {
+        if (window.tg && tg.HapticFeedback) {
             tg.HapticFeedback.impactOccurred('light');
         }
     }).catch(() => {
@@ -5084,10 +5322,13 @@ function loadNumPlatforms() {
                 data.platforms.forEach((p, idx) => {
                     // Most popular (first item) gets selected by default if nothing selected
                     const isActive = idx === 0;
-                    if (isActive && !selectedNumPlatform) {
-                        selectedNumPlatform = p.id;
-                        // Update the selected service display
-                        updateSelectedService(p.id, p.name, p.icon, p.color);
+                    if (isActive) {
+                        if (!selectedNumPlatform) {
+                            selectedNumPlatform = p.id;
+                            updateSelectedService(p.id, p.name, p.icon, p.color);
+                        }
+                        // Update country dropdown for the default selected platform
+                        setTimeout(() => updateCountryDropdown(p.availableCountries), 100);
                     }
 
                     const btn = document.createElement('button');
@@ -5096,19 +5337,20 @@ function loadNumPlatforms() {
                         e.stopPropagation();
                         selectNumPlatform(btn, p.id);
                         updateSelectedService(p.id, p.name, p.icon, p.color);
+                        updateCountryDropdown(p.availableCountries);
                     };
                     btn.style.cssText = `background:${isActive ? 'rgba(147,51,234,0.15)' : 'var(--accent-bg)'}; border:2px solid ${isActive ? '#9333ea' : 'var(--border-color)'}; border-radius:12px; padding:12px 8px; display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer; position:relative; transition:all 0.2s;`;
 
-                    // Add "POPULAR" badge for first platform (most popular)
+                    // Add "POPULAR" badge for platforms marked as popular
                     let badge = '';
-                    if (idx === 0) {
+                    if (p.isPopular) {
                         badge = `<div style="position:absolute; top:-6px; right:-6px; background:#9333ea; color:#fff; font-size:8px; padding:2px 6px; border-radius:10px; font-weight:900;">🔥 POPULAR</div>`;
                     }
 
                     btn.innerHTML = `
                         ${badge}
                         <i class="${p.icon}" style="font-size:20px; color:${p.color};"></i>
-                        <span style="font-size:10px; font-weight:700; color:var(--text-main);">${p.name}</span>
+                        <span style="font-size:10px; font-weight:700; color:var(--text-main);">${p.name}${p.availableCount ? ` (${p.availableCount})` : ''}</span>
                     `;
                     list.appendChild(btn);
 
@@ -5116,6 +5358,39 @@ function loadNumPlatforms() {
                 });
             }
         }).catch(err => console.error('Error loading platforms:', err));
+}
+
+function updateCountryDropdown(availableCountries) {
+    const select = document.getElementById('numCountrySelect');
+    if (!select) return;
+
+    // Read full list from existing options first to preserve names and flags
+    if (!window._fullCountryOptions) {
+        window._fullCountryOptions = Array.from(select.options).map(opt => ({
+            value: opt.value,
+            text: opt.text
+        }));
+    }
+
+    select.innerHTML = '';
+    let added = 0;
+    window._fullCountryOptions.forEach(opt => {
+        if (availableCountries && availableCountries.includes(opt.value)) {
+            const newOpt = document.createElement('option');
+            newOpt.value = opt.value;
+            newOpt.text = opt.text;
+            select.appendChild(newOpt);
+            added++;
+        }
+    });
+
+    // If no countries available, show a placeholder
+    if (added === 0) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.text = 'No countries available';
+        select.appendChild(opt);
+    }
 }
 
 function selectNumPlatform(el, platform) {
@@ -5490,8 +5765,40 @@ function pollForOTP() {
 // Helper: Extract OTP from text
 function extractOtp(text) {
     if (!text) return null;
-    const otpMatch = text.match(/\b\d{4,8}\b/);
-    return otpMatch ? otpMatch[0] : null;
+    
+    // 1. Try common labels first
+    const patterns = [
+        /(?:code|otp|verification|pin|🔑|验证码)[:\s-]*([0-9]{4,8})/i,
+        /(?:is|密码为)[:\s-]*([0-9]{4,8})/i,
+        /([0-9]{4,8})(?:\s)*(?:is your|is the)/i
+    ];
+    
+    for (const p of patterns) {
+        const m = text.match(p);
+        if (m && m[1]) return m[1].trim();
+    }
+
+    // 2. Fallback to any 4-8 digit number (skip if preceded by a dot like in usernames)
+    const fallbackRegex = /(?:^|[^.])\b([0-9]{4,8})\b/g;
+    const matches = [];
+    let m;
+    while ((m = fallbackRegex.exec(text)) !== null) {
+        matches.push(m[1]);
+    }
+    if (matches.length === 0) return null;
+
+    const blacklist = ['98052', '94043', '98034', '94040', '95014', '2022', '2023', '2024', '2025', '2026'];
+    const filtered = matches.filter(m => !blacklist.includes(m));
+    if (filtered.length === 0) return null;
+
+    // Prefer 6 digits, then 4, then longest
+    const sixDigit = filtered.find(m => m.length === 6);
+    if (sixDigit) return sixDigit;
+    
+    const fourDigit = filtered.find(m => m.length === 4);
+    if (fourDigit) return fourDigit;
+
+    return filtered[0];
 }
 
 function copyNumResult() {
@@ -5722,15 +6029,21 @@ function generateTempMail(type) {
     if (!type) type = 'temp';
 
     // ✅ FIX: Premium/hotmail types must use premium email API, NOT temp mail API
+    // Clear any existing session so NEW EMAIL always generates fresh
     if (type === 'premium') {
+        // Clear session to force new email generation
+        mailSessions.premium = null;
+        window._isAutoGeneratingPremium = false;
         generatePremiumMail('gmail');
         return;
     }
     if (type === 'hot' || type === 'hotmail') {
+        mailSessions.hot = null;
         generatePremiumMail('hotmail');
         return;
     }
     if (type === 'student') {
+        mailSessions.student = null;
         generatePremiumMail('student');
         return;
     }
@@ -5888,9 +6201,29 @@ async function confirmRenewCustomEmail() {
         if (data.success) {
             window.showToast('✅ Email renewed successfully!', 'success');
 
-            // Set the new session
-            const type = currentRenewType === 'premium' ? 'premium' : (currentRenewType === 'hot' ? 'hot' : 'hotmail');
-            mailSessions[type] = data.sessionId;
+            // Set the new session properly
+            const type = currentRenewType === 'premium' ? 'premium' : (currentRenewType === 'hot' ? 'hot' : 'student');
+            
+            // Update session with new email
+            const newEmail = data.email || email; // email from input
+            mailSessions[type] = {
+                email: newEmail,
+                id: data.sessionId || (mailSessions[type]?.id),
+                type: currentPremiumTab || (type === 'premium' ? 'gmail' : type),
+                sessionId: data.sessionId || (mailSessions[type]?.sessionId)
+            };
+
+            // ✅ FIX: Only replace the email address in the UI, no page reload
+            const addrElId = type === 'premium' ? 'premiumMailAddr' : (type === 'hot' ? 'hotMailAddr' : 'studentMailAddr');
+            const addrEl = document.getElementById(addrElId);
+            if (addrEl) {
+                addrEl.textContent = newEmail;
+                addrEl.style.fontStyle = 'normal';
+                addrEl.style.opacity = '1';
+            }
+            renderBalances();
+            // Reload active emails to update the UI box
+            loadPremiumEmailsFromAdmin();
 
             // Update balance and start polling
             if (data.newBalance !== undefined) {
@@ -5983,6 +6316,21 @@ function refreshInbox(type) {
         });
 }
 
+function getTimeAgo(isoString) {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${diffDays}d ago`;
+}
+
 function renderInbox(emails, type, serverMsg = null) {
     const listEl = document.getElementById(type + "InboxList");
     const otpListEl = document.getElementById(type + "OtpList");
@@ -6015,28 +6363,10 @@ function renderInbox(emails, type, serverMsg = null) {
             }
         } else {
             const combined = ((email.subject || '') + " " + (email.body || email.preview || '')).toUpperCase();
-            const blacklist = ['98052', '94043', '98034', '94040', '95014'];
-            
-            // Try context first (High confidence)
-            const contextRegex = /(?:CODE|OTP|VERIF|PIN|PASS|SECURITY)\D*(\d{4,8})\b/i;
-            const contextMatch = combined.match(contextRegex);
-            
-            if (contextMatch && !blacklist.includes(contextMatch[1])) {
-                if (!otps.some(o => o.code === contextMatch[1])) {
-                    otps.push({ code: contextMatch[1], from: email.from || email.sender || 'Unknown' });
-                }
-            } else {
-                // Fallback to searching all digit sequences
-                const matches = combined.match(/\b\d{4,8}\b/g);
-                if (matches) {
-                    const filtered = matches.filter(m => !blacklist.includes(m));
-                    if (filtered.length > 0) {
-                        // Prioritize 6-digit codes as they are the standard for Microsoft/Google
-                        const bestMatch = filtered.find(m => m.length === 6) || filtered[0];
-                        if (!otps.some(o => o.code === bestMatch)) {
-                            otps.push({ code: bestMatch, from: email.from || email.sender || 'Unknown' });
-                        }
-                    }
+            const extracted = extractOtp(combined);
+            if (extracted) {
+                if (!otps.some(o => o.code === extracted)) {
+                    otps.push({ code: extracted, from: email.from || email.sender || 'Unknown' });
                 }
             }
         }
@@ -6048,19 +6378,19 @@ function renderInbox(emails, type, serverMsg = null) {
             // Get the most recent OTP (first in the list from newest email)
             const latestOtp = otps[0];
             otpListEl.innerHTML = `
-                <div class="otp-chip" style="padding: 8px 14px; height: 44px; display: flex; align-items: center; justify-content: space-between; background: rgba(16, 185, 129, 0.15); border: 1.5px solid rgba(16, 185, 129, 0.4); border-radius: 22px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <span style="font-size:11px; color:#10b981; font-weight:700; text-transform:uppercase;">Code</span>
-                        <span class="oc-code" style="font-size: 20px; font-weight: 800; color: #fff; letter-spacing: 1px; font-family: 'Courier New', monospace;">${latestOtp.code}</span>
+                <div class="otp-chip" style="padding: 10px 16px; height: 50px; display: flex; align-items: center; justify-content: space-between; background: rgba(34, 197, 94, 0.2); border: 2px solid #22c55e; border-radius: 12px; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2);">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span style="font-size:10px; color:#22c55e; font-weight:900; text-transform:uppercase; background:rgba(34,197,94,0.1); padding:2px 6px; border-radius:4px;">CODE</span>
+                        <span class="oc-code" style="font-size: 24px; font-weight: 900; color: #fff; letter-spacing: 2px; font-family: monospace;">${latestOtp.code}</span>
                     </div>
                     <button class="oc-copy" onclick="copyOtpFromChip(this, '${latestOtp.code}')" 
-                        style="width:28px; height:28px; border-radius:50%; background:#10b981; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3); margin-left:8px;">
-                        <i class="fas fa-copy" style="color:#fff; font-size:11px;"></i>
+                        style="width:36px; height:36px; border-radius:10px; background:#22c55e; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s; box-shadow: 0 2px 6px rgba(34, 197, 94, 0.3);">
+                        <i class="fas fa-copy" style="color:#000; font-size:14px;"></i>
                     </button>
                 </div>
             `;
         } else {
-            otpListEl.innerHTML = `<div style="font-size:11px; color:var(--text-sub); padding:10px; text-align:left;">No OTP yet</div>`;
+            otpListEl.innerHTML = `<div style="font-size:11px; color:var(--text-sub); padding:10px; text-align:left; font-style:italic;">Waiting for code...</div>`;
         }
     }
 
@@ -6071,7 +6401,7 @@ function renderInbox(emails, type, serverMsg = null) {
             <div class="ii-body" style="flex:1; min-width:0;">
                 <div class="ii-top" style="margin-bottom:2px; display:flex; justify-content:space-between; align-items:center;">
                     <div class="ii-sender" style="font-weight:800; color:#fff; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; min-width:0; padding-right:10px;">${email.from || email.sender || 'Unknown'}</div>
-                    <div class="ii-time" style="font-size:10px; opacity:0.6; flex-shrink:0;">${email.time || ''}</div>
+                    <div class="ii-time" style="font-size:10px; opacity:0.6; flex-shrink:0;">${email.time || getTimeAgo(email.date) || ''}</div>
                 </div>
                 <div class="ii-subject" style="font-size:11px; color:var(--text-sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; min-width:0;">${email.subject}</div>
             </div>
@@ -6249,9 +6579,20 @@ renderBalances();
 applyProfilePhoto(_tgUser.photo_url || ''); // Immediately show photo from Telegram
 // NOTE: registerAndFetchUser is now called inside DOMContentLoaded to prevent race conditions
 
-// Poll for balance updates (every 30s)
-setInterval(registerAndFetchUser, 30000);
-setInterval(syncAdminData, 30000);
+// Poll for balance updates (every 2s)
+setInterval(registerAndFetchUser, 2000);
+setInterval(syncAdminData, 2000);
+setInterval(() => {
+    if (currentPage === 'tasks') {
+        loadUserTasks(true); // pass true to indicate silent refresh so we don't show loaders
+    }
+    if (currentPage === 'admin') {
+        loadAdminMessages(); // silently refresh admin messages
+    }
+    if (currentPage === 'support' && typeof loadUserMessages === 'function') {
+        loadUserMessages();
+    }
+}, 3000);
 
 
 // ---- PURCHASE RECEIPT CLOSE ----
@@ -6304,7 +6645,7 @@ function checkEmailServicesAndNavigate() {
 // Fetch config on load (fetchEmailServiceConfig is defined below)
 if (typeof fetchEmailServiceConfig === 'function') fetchEmailServiceConfig();
 // Refresh config periodically
-setInterval(function () { if (typeof fetchEmailServiceConfig === 'function') fetchEmailServiceConfig(); }, 60000);
+setInterval(function () { if (typeof fetchEmailServiceConfig === 'function') fetchEmailServiceConfig(); }, 5000);
 
 // --------------------------------------------------------
 // CHECKOUT PAGE FUNCTIONS
@@ -6324,7 +6665,7 @@ function updateCheckoutQty(change) {
     const totalEl = document.getElementById('checkoutTotal');
 
     if (qtyEl) qtyEl.textContent = checkoutData.qty;
-    if (totalEl) totalEl.textContent = '$' + (checkoutData.qty * checkoutData.price).toFixed(2);
+    if (totalEl) totalEl.textContent = '$' + (checkoutData.qty * checkoutData.price).toFixed(3);
 }
 
 function selectCheckoutPM(method) {
@@ -6581,6 +6922,35 @@ async function loadPremiumEmailsFromAdmin() {
         addrEl.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>searching...';
     }
 
+    // Try to fetch active emails from server if local is not set
+    try {
+        const uid = (window.userData && window.userData.id) ? window.userData.id : 0;
+        if (uid && (!mailSessions || !mailSessions.premium || mailSessions.premium.type !== currentPremiumTab)) {
+            const res = await fetch('/api/mail/active?userId=' + uid);
+            const data = await res.json();
+            if (data.success && data.activeSessions) {
+                // Determine internal type mapping
+                let internalCheckType = currentPremiumTab; // 'gmail', 'hotmail', 'student'
+                if (internalCheckType === 'gmail') internalCheckType = 'gmail';
+                // Find matching active session block
+                let foundSession = data.activeSessions[internalCheckType] || data.activeSessions['admin_pool_' + internalCheckType];
+                if (!foundSession && internalCheckType === 'gmail') foundSession = data.activeSessions['premium'];
+                
+                if (foundSession) {
+                    if (!mailSessions) { mailSessions = { temp: null, premium: null }; }
+                    mailSessions.premium = {
+                        id: foundSession.id,
+                        email: foundSession.email,
+                        type: currentPremiumTab,
+                        sessionId: foundSession.sessionId
+                    };
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('Could not fetch active emails:', e);
+    }
+
     // Check if we have an existing session for this type
     if (mailSessions && mailSessions.premium && mailSessions.premium.type === currentPremiumTab) {
         assignedPremiumEmail = mailSessions.premium;
@@ -6588,22 +6958,43 @@ async function loadPremiumEmailsFromAdmin() {
         const emailStr = (typeof assignedPremiumEmail.email === 'object' && assignedPremiumEmail.email !== null)
             ? (assignedPremiumEmail.email.email || '')
             : (assignedPremiumEmail.email || '');
-        if (addrEl) addrEl.textContent = emailStr;
+        if (addrEl) {
+            if (emailStr) {
+                addrEl.textContent = emailStr;
+                addrEl.style.fontStyle = "normal";
+                addrEl.style.opacity = "1";
+            } else {
+                addrEl.innerHTML = '<span style="color:#94a3b8;">No Active Email</span>';
+            }
+        }
         loadPremiumEmailMessages(assignedPremiumEmail.id);
         return;
     }
 
-    // If no session, show "Generate" state
+    // If no session, wait a brief moment and auto-generate
     if (addrEl) {
-        addrEl.innerHTML = `Click to generate ${currentPremiumTab} mail`;
-        addrEl.style.cursor = 'pointer';
-        addrEl.onclick = () => generatePremiumMail(currentPremiumTab);
+        addrEl.innerHTML = '<i class="fas fa-circle-notch fa-spin" style="margin-right:8px;"></i>generating...';
     }
+    
+    // Prevent overlapping auto-generations
+    if (window._isAutoGeneratingPremium) return;
+    window._isAutoGeneratingPremium = true;
+
+    setTimeout(async () => {
+        try {
+            await autoGeneratePremiumMailWrapper();
+        } finally {
+            window._isAutoGeneratingPremium = false;
+        }
+    }, 500);
 }
 
 async function generatePremiumMail(provider) {
-    // NO demo mode - only real Gmail pool
-    const addrEl = document.getElementById('premiumMailAddr');
+    let addrElId = 'premiumMailAddr';
+    if (provider === 'hotmail') addrElId = 'hotMailAddr';
+    else if (provider === 'student') addrElId = 'studentMailAddr';
+
+    const addrEl = document.getElementById(addrElId);
     if (addrEl) {
         addrEl.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>generating...';
         addrEl.style.fontStyle = "italic";
@@ -6626,15 +7017,25 @@ async function generatePremiumMail(provider) {
                 ? (data.email.email || JSON.stringify(data.email))
                 : (data.email || '');
 
-            assignedPremiumEmail = {
+            let assignedPremiumEmail = {
                 id: data.sessionId,
                 email: emailStr,
                 type: provider || 'gmail'
             };
-            mailSessions.premium = assignedPremiumEmail;
+            
+            // Map the provider to the correct frontend type string usually used in mailSessions
+            let sessionType = 'premium';
+            if (provider === 'hotmail') sessionType = 'hot';
+            if (provider === 'student') sessionType = 'student';
+            
+            mailSessions[sessionType] = assignedPremiumEmail;
 
             if (addrEl) {
-                addrEl.textContent = emailStr;
+                if (emailStr) {
+                    addrEl.textContent = emailStr;
+                } else {
+                    addrEl.innerHTML = '<span style="color:#f87171;">Email generation failed.</span>';
+                }
                 addrEl.style.fontStyle = "normal";
                 addrEl.style.opacity = "1";
             }
@@ -6643,16 +7044,16 @@ async function generatePremiumMail(provider) {
                 renderBalances();
             }
 
-            refreshInbox('premium');
+            refreshInbox(sessionType);
             if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-            window.showToast('✅ Gmail generated successfully!');
+            window.showToast('✅ ' + (provider === 'hotmail' ? 'Hotmail' : (provider === 'student' ? 'Student Email' : 'Gmail')) + ' generated successfully!');
         } else {
             if (addrEl) {
-                addrEl.innerHTML = '<span style="color:#f87171;">' + (data.message || 'No Gmail available. Contact admin.') + '</span>';
+                addrEl.innerHTML = '<span style="color:#f87171;">' + (data.message || 'No email available.') + '</span>';
                 addrEl.style.fontStyle = "normal";
                 addrEl.style.opacity = "1";
             }
-            window.showToast('❌ ' + (data.message || 'No Gmail in pool. Admin needs to add more.'));
+            window.showToast('❌ ' + (data.message || 'No email in pool. Admin needs to add more.'));
         }
     } catch (e) {
         console.error('Error generating premium mail:', e);
@@ -6729,25 +7130,22 @@ function openPremiumMailDirect() {
     window._currentMailType = 'premium';
     updateMailBalance('premium');
 
-    // Check if email needs auto-generation
-    const session = mailSessions.premium;
-    if (!session || !session.email) {
-        setTimeout(() => {
-            autoGeneratePremiumMailWrapper();
-        }, 500);
-    } else {
-        const addrEl = document.getElementById('premiumMailAddr');
-        // Extract string in case email is stored as object
-        const emailStr = (typeof session.email === 'object' && session.email !== null)
-            ? (session.email.email || '')
-            : (session.email || '');
-        if (addrEl) addrEl.textContent = emailStr;
-        refreshInbox('premium');
-    }
+    // Make sure we select 'gmail' (the default) if no currentPremiumTab is set
+    if (!currentPremiumTab) currentPremiumTab = 'gmail';
+    
+    // We delegate completely to loadPremiumEmailsFromAdmin which will fetch active 
+    // sessions from the server, and only generate an email if none is found.
+    loadPremiumEmailsFromAdmin();
 }
 
-function autoGeneratePremiumMailWrapper() {
+async function autoGeneratePremiumMailWrapper() {
     if (checkZeroBalanceAdTrigger()) return;
+    
+    // Check if we already have an active session for this specific tab before generating
+    if (mailSessions && mailSessions.premium && mailSessions.premium.type === (currentPremiumTab || 'gmail')) {
+        return;
+    }
+
     const cost = parseInt(window.appCostConfig?.premiumMailCost) || 50;
 
     if (!userData.id || userData.id === 0) {
@@ -6758,10 +7156,7 @@ function autoGeneratePremiumMailWrapper() {
         return;
     }
 
-    if (Math.max(0, userData.tokens || 0) < cost) {
-        nav('earn');
-        return;
-    }
+    // Balance check removed to allow unlimited usage as requested
 
     const addrEl = document.getElementById('premiumMailAddr');
     if (addrEl) {
@@ -6770,7 +7165,7 @@ function autoGeneratePremiumMailWrapper() {
         addrEl.style.opacity = '0.7';
     }
 
-    generatePremiumMail('gmail', cost);
+    await generatePremiumMail(currentPremiumTab || 'gmail', cost);
 }
 
 function openHotmailDirect() {
@@ -7052,6 +7447,9 @@ async function checkRequiredJoins() {
 
 // Show join required modal
 function showJoinRequiredModal(missing) {
+    // SECURITY FIX: Do not show if feature is disabled
+    if (featureFlags && featureFlags.joinRequired === false) return;
+
     // Create modal if not exists
     let modal = document.getElementById('joinRequiredModal');
     if (!modal) {
@@ -7073,9 +7471,10 @@ function showJoinRequiredModal(missing) {
         document.body.appendChild(modal);
     }
 
-    const missingItems = [];
-    if (!missing.channelJoined) missingItems.push(REQUIRED_JOINS.channel);
-    if (!missing.groupJoined) missingItems.push(REQUIRED_JOINS.group);
+    const items = [
+        { ...REQUIRED_JOINS.channel, joined: missing.channelJoined },
+        { ...REQUIRED_JOINS.group, joined: missing.groupJoined }
+    ];
 
     modal.innerHTML = `
         <div style="
@@ -7093,39 +7492,48 @@ function showJoinRequiredModal(missing) {
             <p style="color: #aaa; margin-bottom: 25px; font-size: 14px;">
                 You must join our channel and group to use the web panel.
             </p>
-            <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
-                ${missingItems.map(item => `
-                    <a href="https://t.me/${item.username}" target="_blank" style="
-                        background: linear-gradient(135deg, #f59e0b, #d97706);
-                        color: #000;
-                        padding: 14px 20px;
-                        border-radius: 12px;
-                        text-decoration: none;
-                        font-weight: 600;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        gap: 8px;
-                    ">
-                        <span>Join ${item.name}</span>
-                        <span style="font-size: 18px;">→</span>
-                    </a>
-                `).join('')}
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+                ${items.map(item => {
+                    const isJoined = item.joined;
+                    const style = isJoined ? 
+                        'background: #333; color: #888; text-decoration: line-through; pointer-events: none; opacity: 0.6;' : 
+                        'background: linear-gradient(135deg, #f59e0b, #d97706); color: #000;';
+                    
+                    return `
+                        <a href="https://t.me/${item.username.replace('@', '')}" target="_blank" style="
+                            ${style}
+                            padding: 10px 15px;
+                            border-radius: 10px;
+                            text-decoration: ${isJoined ? 'line-through' : 'none'};
+                            font-weight: 700;
+                            font-size: 14px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 8px;
+                            transition: 0.2s;
+                        ">
+                            <span>Join ${item.name}</span>
+                            ${isJoined ? '<i class="fas fa-check-circle" style="font-size: 12px; color: #22c55e;"></i>' : '<i class="fas fa-external-link-alt" style="font-size: 12px;"></i>'}
+                        </a>
+                    `;
+                }).join('')}
             </div>
             <button onclick="verifyJoinsAndProceed()" style="
                 background: linear-gradient(135deg, #22c55e, #16a34a);
                 color: #fff;
                 border: none;
-                padding: 14px 30px;
-                border-radius: 12px;
-                font-weight: 600;
-                font-size: 16px;
+                padding: 12px 25px;
+                border-radius: 10px;
+                font-weight: 700;
+                font-size: 15px;
                 cursor: pointer;
                 width: 100%;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 gap: 8px;
+                transition: 0.2s;
             ">
                 <span>✓ I've Joined</span>
             </button>
@@ -7158,11 +7566,11 @@ async function verifyJoinsAndProceed() {
     } else {
         btn.innerHTML = '<span>✗ Not Joined Yet</span>';
         btn.style.background = '#ef4444';
+        
+        // Brief delay then update the modal UI to reflect which ones are now joined
         setTimeout(() => {
-            btn.innerHTML = '<span>✓ I\'ve Joined</span>';
-            btn.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
-            btn.disabled = false;
-        }, 2000);
+            showJoinRequiredModal(result);
+        }, 1500);
     }
 }
 
@@ -7171,16 +7579,33 @@ async function continueInitialization() {
     showPage('home');
     applyProfilePhoto(userData.photo_url || _tgUser.photo_url || '');
     renderBalances();
-    // NOTE: registerAndFetchUser is already called in DOMContentLoaded before join check
-    // Do NOT call it again here to prevent race conditions
+
+    // Load all app config data immediately on startup
+    await Promise.allSettled([
+        loadFeatureFlags(),
+        loadAppCostConfig(),
+        syncAdminData()
+    ]);
+
+    // Apply feature flags immediately after loading
+    applyFeatureFlagsToHome();
+
+    // Load broadcasts and email service config
     loadBroadcast();
     fetchEmailServiceConfig();
+
+    // Apply saved theme
     const savedTheme = localStorage.getItem('theme') || 'dark';
     document.body.setAttribute('data-theme', savedTheme);
     updateThemeIcon(savedTheme);
+
+    // Initialize virtual numbers
     if (typeof initActiveVirtualNumbers === 'function') initActiveVirtualNumbers();
 
-    // Check user verification status and show appropriate welcome
+    // Force a fresh user sync to ensure balances are up-to-date
+    smartSync(true);
+
+    // Check user verification status and show welcome toast
     try {
         const joinCheck = await checkRequiredJoins();
         if (joinCheck.adminVerified) {
@@ -7192,6 +7617,7 @@ async function continueInitialization() {
         // Silently ignore errors
     }
 }
+
 
 document.addEventListener('DOMContentLoaded', async function () {
     try {
@@ -7369,6 +7795,136 @@ function copyNumOtp(otp) {
 
 window.copyNumOtp = copyNumOtp;
 window.extractOtp = extractOtp;
+
+// =============================================
+// LIVE PAGES — Routing & Titles
+// =============================================
+PAGE_TITLES['live2fa']        = '2FA LIVE';
+PAGE_TITLES['liveInstagram']  = 'INSTAGRAM LIVE';
+PAGE_TITLES['liveFacebook']   = 'FACEBOOK LIVE';
+PAGE_TITLES['liveTiktok']     = 'TIKTOK LIVE';
+PAGE_TITLES['liveTwitter']    = 'TWITTER LIVE';
+PAGE_TITLES['liveThreads']    = 'THREADS LIVE';
+
+// =============================================
+// 2FA TOTP LIVE — START / RESTART Logic
+// =============================================
+var _twofaInterval = null;
+
+/**
+ * Minimal TOTP generator (RFC 6238 / Base32 HMAC-SHA1)
+ * Works in-browser without any library dependency.
+ */
+function generateTOTP(secretBase32) {
+    // Base32 decode
+    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+    const base32 = secretBase32.toUpperCase().replace(/\s/g,'').replace(/=/g,'');
+    let bits = '';
+    for (const c of base32) {
+        const idx = alphabet.indexOf(c);
+        if (idx < 0) continue;
+        bits += idx.toString(2).padStart(5, '0');
+    }
+    const bytes = [];
+    for (let i = 0; i + 8 <= bits.length; i += 8) {
+        bytes.push(parseInt(bits.slice(i, i + 8), 2));
+    }
+
+    // Counter = floor(epoch / 30)
+    const counter = Math.floor(Date.now() / 30000);
+    const msg = new Uint8Array(8);
+    let c = counter;
+    for (let i = 7; i >= 0; i--) { msg[i] = c & 0xff; c >>>= 8; }
+
+    // HMAC-SHA1 via SubtleCrypto (async – handled via Promise)
+    return window.crypto.subtle.importKey(
+        'raw', new Uint8Array(bytes), { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']
+    ).then(key => window.crypto.subtle.sign('HMAC', key, msg))
+     .then(sig => {
+        const h = new Uint8Array(sig);
+        const offset = h[19] & 0xf;
+        const code = (((h[offset] & 0x7f) << 24) |
+                      ((h[offset+1] & 0xff) << 16) |
+                      ((h[offset+2] & 0xff) << 8)  |
+                       (h[offset+3] & 0xff)) % 1000000;
+        return String(code).padStart(6, '0');
+     });
+}
+
+function start2faLive() {
+    const startBtn = document.getElementById('twofa-start-btn');
+    
+    // Toggle STOP functionality if already running
+    if (_twofaInterval) {
+        clearInterval(_twofaInterval);
+        _twofaInterval = null;
+        
+        if (startBtn) {
+            startBtn.innerHTML = '<i class="fas fa-play"></i> START';
+            startBtn.style.background = 'linear-gradient(135deg,#4f46e5,#7c3aed)';
+        }
+        
+        const result = document.getElementById('twofa-result');
+        const timer  = document.getElementById('twofa-timer');
+        if (result) result.textContent = '------';
+        if (timer)  timer.textContent  = 'Waiting...';
+        
+        window.showToast('🛑 2FA service stopped.');
+        return;
+    }
+    
+    const input = document.getElementById('twofa-input');
+    const secret = input ? input.value.trim() : '';
+    if (!secret) {
+        window.showToast('⚠️ Please enter a 2FA secret key first!');
+        return;
+    }
+
+    updateTwoFA(secret);
+    _twofaInterval = setInterval(() => updateTwoFA(secret), 1000);
+
+    // Update button states to STOP
+    if (startBtn) {
+        startBtn.innerHTML = '<i class="fas fa-stop"></i> STOP';
+        startBtn.style.background = 'linear-gradient(135deg,#dc2626,#ef4444)'; // Red for Stop
+    }
+    window.showToast('🚀 2FA service started.');
+}
+
+function copy2faCode() {
+    const result = document.getElementById('twofa-result');
+    const code = result ? result.textContent.trim() : '';
+    if (code && code !== '------' && code !== 'ERROR') {
+        navigator.clipboard.writeText(code).then(() => {
+            window.showToast('📋 Code copied to clipboard!');
+        }).catch(() => {
+            window.showToast('❌ Failed to copy!');
+        });
+    } else {
+        window.showToast('⚠️ No code to copy!');
+    }
+}
+
+function updateTwoFA(secret) {
+    const remaining = 30 - (Math.floor(Date.now() / 1000) % 30);
+    const timer = document.getElementById('twofa-timer');
+    if (timer) timer.textContent = `Refreshes in ${remaining}s`;
+
+    generateTOTP(secret)
+        .then(code => {
+            const result = document.getElementById('twofa-result');
+            if (result) result.textContent = code;
+        })
+        .catch(() => {
+            const result = document.getElementById('twofa-result');
+            if (result) result.textContent = 'ERROR';
+            if (timer)  timer.textContent  = 'Invalid secret key';
+        });
+}
+
+window.start2faLive   = start2faLive;
+window.copy2faCode    = copy2faCode;
+
 
 function copyOtpFromChip(btn, code) {
     if (!code) return;
@@ -7678,7 +8234,7 @@ function updateSellRewardPreview() {
         // User stated: "Profile's dollar system fix... Cards processed as tokens... Others in dollars"
         // Let's assume the sellingRewards are currently in some 'reward points' that we map to dollars
         // or just show them as raw values with $ sign for now.
-        preview.innerText = '$' + (reward / 10).toFixed(2); // Example mapping: 10 units = $1
+        preview.innerText = '$' + (reward / 10).toFixed(3); // Example mapping: 10 units = $1
     }
 }
 
@@ -8835,6 +9391,121 @@ function showWebAdminMessage(message) {
     }, 30000);
 }
 
+async function showGiftPopupFromId(giftId) {
+    if (!userData || !userData.id) return;
+    try {
+        const res = await fetch(`/api/user/gifts?userId=${userData.id}`);
+        const data = await res.json();
+        if (data.success && data.gifts) {
+            const giftObj = data.gifts.find(g => g.id === giftId);
+            if (giftObj) {
+                showGiftPopup(giftObj);
+            } else {
+                window.showToast("Gift already claimed or no longer available.");
+            }
+        }
+    } catch (e) {
+        window.showToast("Error loading gift details.");
+    }
+}
+
+// Notifications handling
+async function loadNotifications() {
+    if (!userData || !userData.id) return;
+    try {
+        const res = await fetch(`/api/user/notifications?userId=${userData.id}`);
+        const data = await res.json();
+        
+        const list = document.getElementById('notificationsList');
+        const empty = document.getElementById('notificationsEmptyState');
+        const badge = document.getElementById('notificationBadge');
+
+        if (data.success && data.notifications) {
+            const notifs = data.notifications;
+            const unreadCount = notifs.filter(n => !n.read).length;
+            
+            if (badge) {
+                if (unreadCount > 0) {
+                    badge.style.display = 'flex';
+                    badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+
+            if (notifs.length === 0) {
+                if (list) list.innerHTML = '';
+                if (empty) empty.style.display = 'block';
+            } else {
+                if (empty) empty.style.display = 'none';
+                if (list) {
+                    list.innerHTML = notifs.map(n => {
+                        const isUnread = !n.read;
+                        let icon = 'fa-bell';
+                        let color = '#a78bfa';
+                        let bg = 'rgba(139, 92, 246, 0.1)';
+                        let onClick = `markNotificationRead('${n.id}')`;
+                        
+                        if (n.type === 'gift') {
+                            icon = 'fa-gift';
+                            color = '#f59e0b';
+                            bg = 'rgba(245, 158, 11, 0.1)';
+                            if (!n.claimed) {
+                                onClick = `showGiftPopupFromId('${n.giftId}'); markNotificationRead('${n.id}');`;
+                            }
+                        } else if (n.type === 'message') {
+                            icon = 'fa-comment-alt';
+                            color = '#38bdf8';
+                            bg = 'rgba(56, 189, 248, 0.1)';
+                            onClick = `markNotificationRead('${n.id}'); nav('support');`;
+                        } else if (n.type === 'broadcast') {
+                            icon = 'fa-bullhorn';
+                            color = '#ec4899';
+                            bg = 'rgba(236, 72, 153, 0.1)';
+                        }
+                        
+                        return `
+                        <div onclick="${onClick}" style="background: ${isUnread ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.2)'}; border: 1px solid ${isUnread ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)'}; border-radius: 12px; padding: 16px; cursor: pointer; transition: all 0.2s; position: relative;">
+                            ${isUnread ? `<div style="position: absolute; top: 12px; right: 12px; width: 8px; height: 8px; background: #ef4444; border-radius: 50%;"></div>` : ''}
+                            <div style="display: flex; gap: 12px;">
+                                <div style="width: 40px; height: 40px; border-radius: 10px; background: ${bg}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                    <i class="fas ${icon}" style="color: ${color}; font-size: 18px;"></i>
+                                </div>
+                                <div style="flex: 1;">
+                                    <h4 style="color: #fff; font-size: 14px; font-weight: 700; margin: 0 0 4px 0;">${n.title || ''}</h4>
+                                    <p style="color: var(--text-sub); font-size: 13px; line-height: 1.4; margin: 0 0 8px 0; word-break: break-word;">${n.message || ''}</p>
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <span style="color: rgba(255,255,255,0.3); font-size: 11px;">${new Date(n.timestamp || n.date || Date.now()).toLocaleString()}</span>
+                                        ${n.type === 'gift' && !n.claimed ? `<span style="color: #f59e0b; font-size: 12px; font-weight: bold; background: rgba(245, 158, 11, 0.1); padding: 4px 8px; border-radius: 6px;">CLAIM NOW</span>` : ''}
+                                        ${n.type === 'gift' && n.claimed ? `<span style="color: #22c55e; font-size: 12px; font-weight: bold; opacity: 0.6;"><i class="fas fa-check"></i> CLAIMED</span>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        `;
+                    }).join('');
+                }
+            }
+        }
+    } catch (e) {
+        console.error('Failed to load notifications', e);
+    }
+}
+
+async function markNotificationRead(id) {
+    if (!userData || !userData.id) return;
+    try {
+        await fetch('/api/user/notifications/read', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: userData.id, notificationId: id })
+        });
+        loadNotifications(); // Reload to update UI
+    } catch (e) {
+        console.error('Failed to mark notification read', e);
+    }
+}
+
 // ==========================================
 // ADMIN PANEL LOGIC
 // ==========================================
@@ -8883,7 +9554,10 @@ async function saveAdminConfig() {
             })
         });
         const data = await res.json();
-        if (data.success) window.showToast('Config saved successfully!');
+        if (data.success) {
+            window.showToast('Config saved successfully!');
+            smartSync(true);
+        }
         else window.showToast(data.message || 'Error saving config');
     } catch (e) { window.showToast('Network error saving config'); }
 }
@@ -8934,6 +9608,18 @@ async function loadAdminMessages() {
 
 function renderAdminMessages(messages) {
     const list = document.getElementById('adminMessagesList');
+    
+    // Save current input values to prevent losing them during auto-refresh
+    const currentInputs = {};
+    if (list) {
+        const inputs = list.querySelectorAll('input[type="text"]');
+        inputs.forEach(inp => {
+            if (inp.id && inp.value) {
+                currentInputs[inp.id] = inp.value;
+            }
+        });
+    }
+
     if (!messages || Object.keys(messages).length === 0) {
         list.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-sub);">No active support threads</div>';
         return;
@@ -8942,6 +9628,7 @@ function renderAdminMessages(messages) {
     for (const uId in messages) {
         const userMsgs = messages[uId];
         const lastMsg = userMsgs[userMsgs.length - 1];
+        const savedValue = currentInputs['reply-to-' + uId] || '';
         html += `
             <div style="background:rgba(255,255,255,0.05); padding:15px; border-radius:15px; margin-bottom:10px;">
                 <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
@@ -8950,7 +9637,7 @@ function renderAdminMessages(messages) {
                 </div>
                 <div style="font-size:14px; margin-bottom:10px; opacity:0.8;">Last: ${lastMsg.message}</div>
                 <div style="display:flex; gap:8px;">
-                    <input type="text" id="reply-to-${uId}" placeholder="Type reply..." 
+                    <input type="text" id="reply-to-${uId}" placeholder="Type reply..." value="${savedValue.replace(/"/g, '&quot;')}"
                         style="flex:1; background:var(--bg-body); border:1px solid var(--border-color); color:var(--text-main); padding:8px; border-radius:8px; font-size:12px;">
                     <button onclick="replyToUser('${uId}')" 
                         style="background:var(--accent-color); color:#000; border:none; padding:8px 15px; border-radius:8px; font-weight:bold; font-size:12px;">SEND</button>
@@ -8958,7 +9645,29 @@ function renderAdminMessages(messages) {
             </div>
         `;
     }
-    list.innerHTML = html;
+    
+    // Check if anything actually changed besides inputs
+    // Wait, the new HTML includes the saved input values, so it's safe to just assign innerHTML
+    // but assignment breaks cursor focus. Let's just avoid re-rendering if no new messages.
+    // A simple hack: compare without input values. Or just re-render but focus might be lost. 
+    // To preserve focus, don't re-render if the last messages are identical.
+    
+    // Simple state tracking:
+    const newHtmlState = JSON.stringify(messages);
+    if (list.dataset.lastState !== newHtmlState) {
+        list.innerHTML = html;
+        list.dataset.lastState = newHtmlState;
+        
+        // Restore focus if needed? Actually let's just let it be. If a message comes in, focus is lost, but it's acceptable for a live admin panel.
+        // Re-apply focus to the right element if it was focused:
+        const activeId = document.activeElement ? document.activeElement.id : null;
+        if (activeId && currentInputs[activeId] !== undefined) {
+            setTimeout(() => {
+                const el = document.getElementById(activeId);
+                if (el) { el.focus(); el.selectionStart = el.value.length; }
+            }, 10);
+        }
+    }
 }
 
 async function replyToUser(targetUserId) {
@@ -9036,7 +9745,6 @@ async function pollJobResult(jobId, provider, onReady, maxTries) {
 async function generateAIPhoto() {
     var prompt = document.getElementById('aiPhotoPrompt').value.trim();
     var style = document.getElementById('aiPhotoStyle').value;
-    var ratio = document.getElementById('aiPhotoRatio').value;
     var btn = document.getElementById('aiPhotoBtn');
 
     if (!prompt) { window.showToast('Please enter a prompt!'); return; }
@@ -9052,7 +9760,7 @@ async function generateAIPhoto() {
         var res = await fetch('/api/ai/generate-photo', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: userData ? userData.id : 0, prompt: prompt, style: style, ratio: ratio })
+            body: JSON.stringify({ userId: userData ? userData.id : 0, prompt: prompt, style: style })
         });
         var data = await res.json();
         if (data.success) {
@@ -9081,7 +9789,6 @@ async function generateAIPhoto() {
 
 async function generateAIVideo() {
     var prompt = document.getElementById('aiVideoPrompt').value.trim();
-    var duration = document.getElementById('aiVideoDuration').value;
     var quality = document.getElementById('aiVideoQuality').value;
     var btn = document.getElementById('aiVideoBtn');
 
@@ -9097,7 +9804,7 @@ async function generateAIVideo() {
         var res = await fetch('/api/ai/generate-video', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: userData ? userData.id : 0, prompt: prompt, duration: parseInt(duration), quality: quality })
+            body: JSON.stringify({ userId: userData ? userData.id : 0, prompt: prompt, quality: quality })
         });
         var data = await res.json();
         if (data.success) {
@@ -9268,22 +9975,31 @@ window.downloadVideo = downloadVideo;
 
 // API KEY MANAGEMENT
 window.openApiManagementModal = async function () {
+    console.log('[API_UI] openApiManagementModal triggered');
     try {
         // If membership join gating is enabled, enforce it here too (not only on init)
-        if (typeof checkRequiredJoins === 'function' && typeof showJoinRequiredModal === 'function') {
+        if (featureFlags && featureFlags.joinRequired === true && typeof checkRequiredJoins === 'function' && typeof showJoinRequiredModal === 'function') {
+            console.log('[API_UI] Checking required joins...');
             try {
                 const joinCheck = await checkRequiredJoins();
+                console.log('[API_UI] joinCheck result:', joinCheck);
                 if (joinCheck && joinCheck.canProceed === false) {
+                    console.log('[API_UI] Join check failed, showing modal');
                     showJoinRequiredModal(joinCheck);
                     return;
                 }
+                console.log('[API_UI] Join check passed (or not needed)');
             } catch (e) {
+                console.error('[API_UI] Join check error:', e);
                 // If join check fails, don't hard-block API management UI
             }
         }
+        
+        console.log('[API_UI] Preparing to show API modal...');
 
         const modal = document.getElementById('apiManagementModal');
         if (modal) {
+            console.log('[API_UI] Found modal, showing...');
             const modalNoKey = document.getElementById('apiModalNoKey');
             const modalActive = document.getElementById('apiModalActive');
             const modalBanned = document.getElementById('apiModalBanned');
@@ -9308,6 +10024,8 @@ window.openApiManagementModal = async function () {
 
             modal.style.display = 'flex';
             loadApiKey(); // This will sync with server in background
+        } else {
+            console.error('[API_UI] Modal element not found!');
         }
     } catch (e) {
         console.error('[API_UI] openApiManagementModal error:', e);
@@ -9379,7 +10097,7 @@ async function loadApiKey() {
         if (pageActive) pageActive.style.display = 'block';
         if (pageContent) pageContent.style.display = 'block';
 
-        const buttonText = '<i class="fas fa-magic"></i> GENERATE NOW';
+        const buttonText = data.apiKey ? '<i class="fas fa-sync-alt"></i> GENERATE KEY' : '<i class="fas fa-magic"></i> GENERATE NOW';
         const displayValue = data.apiKey || '--- CLICK BELOW TO GENERATE ---';
 
         if (modalDisplay) modalDisplay.value = displayValue;
@@ -9412,7 +10130,6 @@ async function loadApiKey() {
 // Export to window for HTML onclick
 window.generateNewApiKey = async function (btnElement) {
     console.log('[API_UI] generateNewApiKey clicked');
-    window.showToast('⏳ Initializing Key Regeneration...');
     const btn = btnElement || document.getElementById('regenerateApiKeyBtn');
     const btnText = btn ? btn.textContent.trim().toUpperCase() : '';
     const isFirstTime = btnText.includes('GENERATE NOW');
@@ -9428,6 +10145,7 @@ window.generateNewApiKey = async function (btnElement) {
 
     const startRegen = async () => {
         try {
+            window.showToast('⏳ Initializing Key Regeneration...');
             console.log(`[API_UI] Starting generation for ${userId}. First time: ${isFirstTime}`);
             if (btn) {
                 btn.disabled = true;
@@ -9447,58 +10165,60 @@ window.generateNewApiKey = async function (btnElement) {
                 if (userData) userData.apiKey = data.apiKey;
                 try { localStorage.setItem(`userData_${userId}`, JSON.stringify(userData)); } catch (e) {}
 
-                // CRITICAL: Call loadApiKey to update the Unified UI (text, buttons, colors)
-                await loadApiKey();
+                // Immediate UI update 
+                const modalDisplay = document.getElementById('modalApiKeyDisplay');
+                const pageDisplay = document.getElementById('userApiKeyDisplay');
+                if (modalDisplay) modalDisplay.value = data.apiKey;
+                if (pageDisplay) pageDisplay.value = data.apiKey;
+
+                if (btn) {
+                    btn.innerHTML = '<i class="fas fa-sync-alt"></i> GENERATE KEY';
+                    btn.classList.remove('pulse-btn');
+                }
+
+                // Call loadApiKey to update the Unified UI parts
+                loadApiKey().catch(e => console.error(e));
+                loadRecentActivity(); // Refresh history
 
                 if (window.Telegram?.WebApp?.HapticFeedback) {
                     window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
                 }
             } else {
                 window.showToast('❌ Failed: ' + (data.message || 'Server error'));
+                if (btn) btn.innerHTML = originalContent; // Restore on failure
             }
         } catch (e) {
             console.error('[API_UI] Fatal Exception:', e);
             window.showToast('❌ ' + (e.message || 'Connection error.'));
+            if (btn) btn.innerHTML = originalContent; // Restore on failure
         } finally {
             if (btn) btn.disabled = false;
         }
     };
 
-    // Auto-proceed if the current button text suggests it's the first time
-    if (isFirstTime || btnText.includes('GENERATE')) {
+    // Auto-proceed if it's the first time
+    if (isFirstTime || !userData.apiKey) {
         startRegen();
     } else {
-        const confirmMsg = 'Confirm: Regenerate your API Key? Old one will stop working immediately.';
-        if (window.Telegram?.WebApp?.showConfirm) {
-            window.Telegram.WebApp.showConfirm(confirmMsg, (ok) => { if (ok) startRegen(); });
-        } else if (confirm(confirmMsg)) {
-            startRegen();
-        }
+        // Custom simple confirm for iframe/web fallback since confirm() is often blocked
+        const overlay = document.createElement('div');
+        overlay.style = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;";
+        overlay.innerHTML = `
+            <div style="background:#1a100a;border:1px solid rgba(245,158,11,0.3);border-radius:16px;padding:24px;width:100%;max-width:320px;text-align:center;">
+                <div style="color:#ef4444;font-size:36px;margin-bottom:16px;"><i class="fas fa-exclamation-triangle"></i></div>
+                <h3 style="color:#fff;margin:0 0 12px 0;font-size:20px;">Regenerate Key?</h3>
+                <p style="color:rgba(255,255,255,0.7);font-size:14px;margin-bottom:24px;line-height:1.5;">Your old API key will stop working immediately.</p>
+                <div style="display:flex;gap:10px;">
+                    <button id="cancelRegenBtn" style="flex:1;padding:14px;border-radius:12px;border:none;background:rgba(255,255,255,0.1);color:#fff;font-weight:bold;cursor:pointer;">CANCEL</button>
+                    <button id="confirmRegenBtn" style="flex:1;padding:14px;border-radius:12px;border:none;background:#ef4444;color:#fff;font-weight:bold;cursor:pointer;">REGENERATE</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        document.getElementById('cancelRegenBtn').onclick = () => overlay.remove();
+        document.getElementById('confirmRegenBtn').onclick = () => { overlay.remove(); startRegen(); };
     }
 };
-
-function copyToClipboard(elementId) {
-    const el = document.getElementById(elementId);
-    if (!el) return;
-
-    el.select();
-    el.setSelectionRange(0, 99999); // For mobile
-
-    try {
-        navigator.clipboard.writeText(el.value);
-        window.showToast('Copied to clipboard!');
-        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
-    } catch (err) {
-        // Fallback
-        const textArea = document.createElement("textarea");
-        textArea.value = el.value;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand("copy");
-        document.body.removeChild(textArea);
-        window.showToast('Copied!');
-    }
-}
 
 function showApiDocs() {
     const modal = document.getElementById('apiDocsModal');

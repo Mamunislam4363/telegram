@@ -22,10 +22,5 @@
     },
     "allowImportingTsExtensions": true,
     "noEmit": true
-  },
-  "exclude": [
-    "web",
-    "node_modules",
-    "dist"
-  ]
+  }
 }

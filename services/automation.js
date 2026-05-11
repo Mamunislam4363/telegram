@@ -1233,7 +1233,7 @@ class EmailNatorAutomation {
 
             return messages.map(msg => ({
                 ...msg,
-                otp: this.extractOTP(msg.body || msg.preview)
+                otp: this.extractOTP(msg.body || msg.preview, msg.subject || '')
             }));
         } catch (error) {
             console.error('❌ Get Inbox Error:', error.message);
@@ -1241,22 +1241,9 @@ class EmailNatorAutomation {
         }
     }
 
-    extractOTP(text) {
-        const patterns = [
-            /\b\d{6}\b/,
-            /\b\d{4,8}\b/,
-            /G-\d{6}/,
-            /(?:code|otp|verify)[\s:]*(\d{4,8})/i,
-            /Confirm your email[\s\w]*[:\s]+(\d{4,8})/i,
-            /Verify[\s\w]*[:\s]+(\d{4,8})/i,
-            /OTP[\s:]*(\d{4,8})/i
-        ];
-
-        for (const pattern of patterns) {
-            const match = text.match(pattern);
-            if (match) return match[1] || match[0];
-        }
-        return null;
+    extractOTP(text, subject = '') {
+        const result = robustExtractOTP(text, subject);
+        return result ? result.otp : null;
     }
 
     async close(emailData) {
@@ -1365,7 +1352,7 @@ class MailTickingAutomation {
 
             return messages.map(msg => ({
                 ...msg,
-                otp: this.extractOTP(msg.body || msg.preview)
+                otp: this.extractOTP(msg.body || msg.preview, msg.subject || '')
             }));
         } catch (error) {
             console.error('❌ Get Inbox Error:', error.message);
@@ -1373,20 +1360,9 @@ class MailTickingAutomation {
         }
     }
 
-    extractOTP(text) {
-        const patterns = [
-            /\b\d{6}\b/,
-            /G-\d{6}/,
-            /\b\d{4,8}\b/,
-            /(?:code|otp)[\s:]*(\d{4,8})/i,
-            /your code is (\d{4,8})/i
-        ];
-
-        for (const pattern of patterns) {
-            const match = text.match(pattern);
-            if (match) return match[1] || match[0];
-        }
-        return null;
+    extractOTP(text, subject = '') {
+        const result = robustExtractOTP(text, subject);
+        return result ? result.otp : null;
     }
 
     delay(ms) {
@@ -1482,7 +1458,7 @@ class SmailProAutomation {
 
             return messages.map(msg => ({
                 ...msg,
-                otp: this.extractOTP(msg.body || msg.preview)
+                otp: this.extractOTP(msg.body || msg.preview, msg.subject || '')
             }));
         } catch (error) {
             console.error('❌ Get Inbox Error:', error.message);
@@ -1490,19 +1466,9 @@ class SmailProAutomation {
         }
     }
 
-    extractOTP(text) {
-        const patterns = [
-            /\b\d{6}\b/,
-            /G-\d{6}/,
-            /\b\d{4,8}\b/,
-            /(?:code|otp)[\s:]*(\d{4,8})/i
-        ];
-
-        for (const pattern of patterns) {
-            const match = text.match(pattern);
-            if (match) return match[1] || match[0];
-        }
-        return null;
+    extractOTP(text, subject = '') {
+        const result = robustExtractOTP(text, subject);
+        return result ? result.otp : null;
     }
 
     delay(ms) {

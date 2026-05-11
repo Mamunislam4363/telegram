@@ -12,6 +12,7 @@ const defaultData = {
     settings: {
         dailyBonus: 50,
         refBonus: 50, // Updated to 50
+        systemVersion: Date.now(), // Real-time update tracker
         taskReward: 10,
         adReward: 5,
         zeroBalanceAdReward: 5,
@@ -368,7 +369,7 @@ function decrypt(text) {
 }
 
 
-const firebaseManager = require('./database/firebase-manager');
+const firebaseManager = require('./firebase-manager');
 
 class Database {
     constructor() {
@@ -402,7 +403,14 @@ class Database {
         console.log("🛠️ Starting Database Initialization...");
         // 1. Connect to Firebase
         console.log("🔥 Connecting to Firebase...");
-        await firebaseManager.connect();
+        try {
+            // Add a timeout to connection so the whole app doesn't hang if Firebase is unreachable
+            const connectionTimeout = new Promise(resolve => setTimeout(() => resolve(false), 10000));
+            const connectionAttempt = firebaseManager.connect();
+            await Promise.race([connectionAttempt, connectionTimeout]);
+        } catch (e) {
+            console.error("⚠️ Firebase connection attempt failed immediately:", e.message);
+        }
         console.log("✅ Firebase connection step completed.");
 
         // 2. Check Remote Data
@@ -513,16 +521,7 @@ class Database {
     async save(force = false) {
         if (!this.ready) return;
 
-        // Always keep the local cache for reliability.
-        try {
-            this.saveLocalBackup();
-        } catch (e) {
-            console.error("❌ Critical: Failed to save local backup:", e.message);
-        }
-
-        // Sync to Firebase (Primary)
-        if (!firebaseManager.connected) return;
-
+        // Sync to Firebase (Primary) and Local file debounced
         if (force) {
             // Immediate sync for critical data
             if (this._firebaseSaveTimer) {
@@ -531,9 +530,12 @@ class Database {
             }
             this._firebaseSavePending = false;
             try {
-                const payload = this._getFirebasePayload();
-                await firebaseManager.setData(payload);
-                console.log("🔥 [CRITICAL SAVE] Firebase sync forced.");
+                this.saveLocalBackup(); // Sync save on force
+                if (firebaseManager.connected) {
+                    const payload = this._getFirebasePayload();
+                    await firebaseManager.setData(payload);
+                    console.log("🔥 [CRITICAL SAVE] Firebase sync forced.");
+                }
             } catch (e) {
                 console.error("Firebase Force Sync Error:", e.message);
             }
@@ -554,16 +556,27 @@ class Database {
                 this._firebaseSavePending = false;
 
                 try {
-                    const payload = this._getFirebasePayload();
-                    if (payload) {
-                        await firebaseManager.setData(payload);
-                        console.log("🔥 Firebase sync completed.");
+                    // Do the local file write asynchronously so it doesn't block
+                    try {
+                        fs.writeFile(DB_FILE, JSON.stringify(this.data, null, 2), (err) => {
+                            if (err) console.error("❌ Failed to save local backup async:", err.message);
+                        });
+                    } catch (e) {
+                        console.error("❌ Failed to trigger async local backup:", e.message);
+                    }
+
+                    if (firebaseManager.connected) {
+                        const payload = this._getFirebasePayload();
+                        if (payload) {
+                            await firebaseManager.setData(payload);
+                            console.log("🔥 Firebase sync completed.");
+                        }
                     }
                 } catch (e) {
                     console.error("Firebase Sync Error:", e.message);
                 }
                 resolve();
-            }, 120);
+            }, 500); // Increased debounce to 500ms to batch operations better and perform faster I/O
         });
     }
 
@@ -609,6 +622,12 @@ class Database {
             log.status = 'solved';
             this.save();
         }
+    }
+
+    triggerSystemUpdate() {
+        if (!this.ready) return;
+        this.data.settings.systemVersion = Date.now();
+        this.save();
     }
 
     getUser(userId) {
@@ -788,8 +807,9 @@ class Database {
 
     // Helper: get canonical token balance
     getTokenBalance(user) {
-        if (user.tokens !== undefined) return user.tokens;
-        if (user.balance_tokens !== undefined) return user.balance_tokens;
+        // Prefer balance_tokens (canonical) → tokens → balance → 0
+        if (user.balance_tokens !== undefined && user.balance_tokens !== null) return user.balance_tokens;
+        if (user.tokens !== undefined && user.tokens !== null) return user.tokens;
         return user.balance || 0;
     }
 
@@ -801,12 +821,13 @@ class Database {
         user.balance = val;
     }
 
+
     addCredit(userId, amount, currency = 'Tokens') {
         const user = this.getUser(userId);
         if (!user) return 0;
 
         if (currency === 'USD' || currency === 'Dollars' || currency === 'usd') {
-            user.usd = parseFloat(((user.usd || 0) + parseFloat(amount)).toFixed(2));
+            user.usd = parseFloat(((user.usd || 0) + parseFloat(amount)).toFixed(3));
         } else {
             const current = this.getTokenBalance(user);
             this.setTokenBalance(user, current + parseInt(amount));

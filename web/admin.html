@@ -15,6 +15,16 @@
                 console.warn('Network issue caught:', event.reason);
             }
         });
+
+        // Override fetch to handle Live Server (port 5501)
+        const originalFetch = window.fetch;
+        window.fetch = function (url, options) {
+            if (typeof url === 'string' && url.startsWith('/api/admin')) {
+                const API_BASE = window.location.port === '5501' ? 'http://localhost:3000' : '';
+                url = API_BASE + url;
+            }
+            return originalFetch(url, options);
+        };
     </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -245,6 +255,10 @@
                 position: relative;
             }
         }
+    </style>
+    <style>
+        .page { display: none; }
+        .page.active { display: block; }
     </style>
 </head>
 
@@ -1550,6 +1564,17 @@
                             </select>
                         </div>
 
+                        <!-- Helper Admin Field -->
+                        <div class="mb-4">
+                            <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Helper Admin
+                                Access</label>
+                            <select id="editUserRole"
+                                class="w-full bg-black/30 border border-white/10 p-3 rounded-xl text-white">
+                                <option value="off">Off</option>
+                                <option value="allow">Allow</option>
+                            </select>
+                        </div>
+
                         <!-- API Key Management Section -->
                         <div id="apiKeySection" class="mb-6 p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl hidden">
                             <div class="flex items-center justify-between mb-2">
@@ -1711,8 +1736,8 @@
                             <tr>
                                 <th>Code</th>
                                 <th>Amount</th>
-                                <th>Used</th>
                                 <th>Remaining</th>
+                                <th>Available</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
@@ -2105,20 +2130,24 @@
                         <div class="flex items-center justify-between mb-6">
                             <h3 class="font-bold flex items-center gap-2"><i
                                     class="fas fa-phone-alt text-orange-400"></i> MANUAL NUMBER POOL</h3>
-                            <button onclick="openAddNumberModal()"
-                                class="gold-gradient text-black px-4 py-2 rounded-xl font-bold text-sm">
-                                <i class="fas fa-plus mr-1"></i> ADD NUMBER
-                            </button>
+                            <div class="flex gap-2">
+                                <button onclick="openLiveSessionsModal()"
+                                    class="bg-blue-500/20 text-blue-400 border border-blue-500/30 px-4 py-2 rounded-xl font-bold text-sm hover:bg-blue-500/30 transition-all">
+                                    <i class="fas fa-bolt mr-1"></i> LIVE SESSIONS
+                                </button>
+                                <button onclick="openAddNumberModal()"
+                                    class="gold-gradient text-black px-4 py-2 rounded-xl font-bold text-sm">
+                                    <i class="fas fa-plus mr-1"></i> ADD NUMBER
+                                </button>
+                            </div>
                         </div>
                         <div class="overflow-x-auto">
                             <table id="manualNumbersTable" class="w-full">
                                 <thead>
                                     <tr class="text-gray-400 text-xs border-b border-white/10">
-                                        <th class="pb-3 text-left">NUMBER</th>
+                                        <th class="pb-3 text-left">AVAILABLE NUMBERS</th>
                                         <th class="pb-3 text-left">PLATFORM</th>
                                         <th class="pb-3 text-left">STATUS</th>
-                                        <th class="pb-3 text-left">OTP</th>
-                                        <th class="pb-3 text-right">ACTION</th>
                                     </tr>
                                 </thead>
                                 <tbody id="manualNumbersBody">
@@ -2172,6 +2201,36 @@
                     </div>
                 </div>
 
+                <!-- Live Sessions Modal -->
+                <div id="liveSessionsModal" class="modal-overlay">
+                    <div class="modal-body glass-card p-6 rounded-2xl max-w-4xl w-full">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="font-bold flex items-center gap-2">
+                                <i class="fas fa-bolt text-blue-400"></i> LIVE SESSIONS
+                            </h3>
+                            <button onclick="closeModal('liveSessionsModal')" class="text-gray-400 hover:text-white">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto max-h-[60vh]">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="text-gray-400 text-xs border-b border-white/10">
+                                        <th class="pb-3 text-left">NUMBER</th>
+                                        <th class="pb-3 text-left">PLATFORM</th>
+                                        <th class="pb-3 text-left">STATUS</th>
+                                        <th class="pb-3 text-left">OTP</th>
+                                        <th class="pb-3 text-right">ACTION</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="liveSessionsBody">
+                                    <!-- Rows will be loaded dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Add Manual Number Modal -->
                 <div id="addNumberModal" class="modal-overlay">
                     <div class="modal-body glass-card p-6 rounded-2xl">
@@ -2216,6 +2275,7 @@
                                         <option value="27">South Africa (+27)</option>
                                         <option value="234">Nigeria (+234)</option>
                                         <option value="254">Kenya (+254)</option>
+                                        <option value="251">Ethiopia (+251)</option>
                                         <option value="233">Ghana (+233)</option>
                                         <option value="20">Egypt (+20)</option>
                                         <option value="966">Saudi Arabia (+966)</option>
@@ -3174,6 +3234,7 @@
                                 <option value="group">Group</option>
                                 <option value="channel" selected>Channel</option>
                                 <option value="all">All (Bot + Channel)</option>
+                                <option value="web">Web Panel only</option>
                             </select>
                         </div>
 
@@ -3226,6 +3287,46 @@
                     </div>
                 </div>
 
+                <!-- Mass Gift Section -->
+                <div class="glass-card p-4 md:p-8 rounded-2xl max-w-3xl mx-auto mt-8">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center text-amber-400">
+                            <i class="fas fa-gift text-2xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-bold">Mass Gift / Reward</h2>
+                            <p class="text-gray-400 text-sm">Send tokens, gems, or USD directly to all registered users simultaneously.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-6">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Reward Asset</label>
+                                <select id="mass-gift-asset" class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white">
+                                    <option value="tokens">Tokens (TC)</option>
+                                    <option value="gems">Gems</option>
+                                    <option value="usd">USD ($)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Amount</label>
+                                <input id="mass-gift-amount" type="number" step="any" placeholder="e.g. 100" class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white" />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Message Format</label>
+                            <input id="mass-gift-message" type="text" placeholder="You received a gift of {AMOUNT} {ASSET} from Admin!" class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white" />
+                            <p class="text-xs text-gray-500 mt-2">Use {AMOUNT} and {ASSET} placeholders.</p>
+                        </div>
+                        
+                        <button id="btn-mass-gift" onclick="sendMassGift()" class="w-full py-4 bg-amber-500 hover:bg-amber-400 text-white rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(245,158,11,0.3)]">
+                            <i class="fas fa-parachute-box"></i> SEND MASS GIFT TO ALL USERS
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Broadcast History Section -->
                 <div class="mt-8 pt-6 border-t border-white/10">
                     <h3 class="text-lg font-bold mb-4">Broadcast History</h3>
@@ -3251,7 +3352,7 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- MoneyTag -->
                     <div class="glass-card p-4 md:p-6 rounded-2xl border border-white/10">
                         <div class="flex items-center gap-3 mb-4">
@@ -3584,39 +3685,15 @@
                                 <label class="text-xs text-gray-400 uppercase font-bold block mb-1">SMS
                                     API
                                     URL</label>
-                                <input id="smsApiUrl" type="text" placeholder="https://api.sms-provider.com/send"
+                                <input id="smsApiUrl" type="text" value="http://203.161.58.20:3001/api/functions/agent-api" placeholder="https://api.sms-provider.com/send"
                                     class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
                             </div>
                             <div class="mb-4">
                                 <label class="text-xs text-gray-400 uppercase font-bold block mb-1">API
                                     Key/Auth
                                     Token</label>
-                                <input id="smsApiKey" type="password" placeholder="Enter your SMS provider API key"
+                                <input id="smsApiKey" type="password" value="sk_80cfe3004fbb25849371126620e193aa4a4ee09e371df1eb8d224acc69bcaf96" placeholder="Enter your SMS provider API key"
                                     class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
-                            </div>
-                            <div class="mb-4">
-                                <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Account
-                                    SID (if
-                                    required)</label>
-                                <input id="smsAccountSid" type="text"
-                                    placeholder="e.g. ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
-                            </div>
-                            <div class="mb-4">
-                                <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Sender
-                                    Number /
-                                    From</label>
-                                <input id="smsSenderNumber" type="text" placeholder="e.g. +1234567890 or YourBrand"
-                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
-                            </div>
-                            <div class="mb-4">
-                                <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Supported
-                                    Country
-                                    Codes</label>
-                                <input id="smsCountryCodes" type="text" placeholder="e.g. US, UK, CA, BD, IN"
-                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
-                                <p class="text-xs text-gray-500 mt-1">Comma-separated country codes
-                                </p>
                             </div>
                             <div class="mb-4">
                                 <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Cost
@@ -4523,6 +4600,8 @@
     </div>
 
     <script>
+        let activeAdminSection = 'dashboard';
+        
         // DEBUG: Check if modals exist
         console.log('[DEBUG] Checking modals on load...');
         console.log('[DEBUG] modal-createCode:', document.getElementById('modal-createCode'));
@@ -4532,12 +4611,6 @@
         const style = document.createElement('style');
         style.textContent = '.page.active { display: block !important; }';
         document.head.appendChild(style);
-
-        // TEMP DEBUG: Force display
-        setTimeout(() => {
-            const p = document.getElementById('page-broadcast');
-            if (p) { p.style.display = 'block'; p.classList.add('active'); console.log('[DEBUG] Forced broadcast visibility'); }
-        }, 2000);
 
         // Global error handler - shows errors on screen
         window.onerror = function (msg, url, line, col, error) {
@@ -4668,12 +4741,19 @@
                         container.innerHTML = '<p class="text-gray-400 text-sm">No broadcasts yet</p>';
                     } else {
                         container.innerHTML = broadcasts.map(b => `
-                                        <div class="glass-card p-4 rounded-xl mb-3 overflow-hidden"><div class="flex justify-between items-start w-full gap-2">
+                                        <div class="glass-card p-4 rounded-xl mb-3 overflow-hidden">
+                                            <div class="flex justify-between items-start w-full gap-2">
                                                 <div>
                                                     <p class="font-medium">${b.message || 'No message'}</p>
                                                     <p class="text-sm text-gray-400">${new Date(b.createdAt).toLocaleString()}</p>
+                                                    <p class="text-xs text-gray-500">Target: ${b.target || 'N/A'}</p>
                                                 </div>
-                                                <span class="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-400">${b.status || 'Sent'}</span>
+                                                <div class="flex items-center gap-2">
+                                                    <span class="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-400">${b.status || 'Sent'}</span>
+                                                    <button onclick="deleteBroadcast('${b.id}')" class="text-red-400 hover:text-red-300 p-1" title="Delete from history and Telegram">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     `).join('');
@@ -4686,6 +4766,26 @@
                 if (container) {
                     container.innerHTML = '<p class="text-gray-400 text-sm">No broadcasts yet</p>';
                 }
+            }
+        }
+
+        async function deleteBroadcast(id) {
+            if (!confirm('Are you sure you want to delete this broadcast? It will be removed from history and deleted from Telegram channels (if possible).')) return;
+            
+            try {
+                const res = await fetch(`/api/admin/broadcasts/${id}`, {
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(data.message || 'Broadcast deleted');
+                    loadBroadcast(); // Reload list
+                } else {
+                    alert('Failed: ' + data.message);
+                }
+            } catch (e) {
+                console.error('[Broadcast] Delete error:', e);
+                alert('Connection error');
             }
         }
 
@@ -4776,7 +4876,7 @@
                                     </div>
                                     <div>
                                         <div class="font-bold text-sm">${item.name}</div>
-                                        <div class="text-xs text-green-400 font-bold">$${parseFloat(item.price || 0).toFixed(2)}</div>
+                                        <div class="text-xs text-green-400 font-bold">$${parseFloat(item.price || 0).toFixed(3)}</div>
                                     </div>
                                 </div>
                                 <div class="flex gap-2">
@@ -5172,8 +5272,11 @@
                 requiredGroup: document.getElementById('api-group-link')?.value || '',
                 requiredYoutube: document.getElementById('api-youtube-link')?.value || '',
                 supportLink: document.getElementById('api-support-link')?.value || '',
-                welcomeMessage: document.getElementById('api-welcome-msg')?.value || ''
+                welcomeMessage: document.getElementById('api-welcome-msg')?.value || '',
+                adReward: document.getElementById('api-ad-reward')?.value || '5'
             };
+
+            console.log('[ADMIN] Saving Settings:', payload);
             try {
                 const res = await fetch('/api/admin/apikeys', {
                     method: 'POST',
@@ -5357,7 +5460,7 @@
                     const statUsd = document.getElementById('stat-usd-revenue');
                     if (statRewards) statRewards.textContent = totalRewards + ' TC';
                     if (statCosts) statCosts.textContent = totalCosts + ' TC';
-                    if (statUsd) statUsd.textContent = '$' + usdRevenue.toFixed(2);
+                    if (statUsd) statUsd.textContent = '$' + usdRevenue.toFixed(3);
                     // Selling Rewards
                     const sr = data.sellingRewards || {};
                     document.getElementById('reward-gmail').value = sr.gmail || 0;
@@ -5538,6 +5641,7 @@
 
         function nav(p) {
             console.log('[NAV] Navigating to:', p);
+            activeAdminSection = p;
 
             try {
                 if (p === 'serverlogs' && typeof fetchServerLogs === 'function') fetchServerLogs();
@@ -5559,10 +5663,10 @@
                 }
             });
 
-            // Hide all pages
+            // Robust Hide All
             document.querySelectorAll('.page').forEach(el => {
                 el.classList.remove('active');
-                el.style.display = 'none';
+                el.style.setProperty('display', 'none', 'important');
             });
 
             // Unified Services Mapping
@@ -5582,7 +5686,7 @@
             console.log('[NAV] Target:', target);
             if (target) {
                 target.classList.add('active');
-                target.style.display = 'block';
+                target.style.setProperty('display', 'block', 'important');
             } else {
                 console.error('[NAV] Page not found: page-' + p + ' or ' + p);
                 // Fallback show dashboard if page missing
@@ -6180,6 +6284,47 @@
             }
         }
 
+        async function sendMassGift() {
+            const asset = document.getElementById('mass-gift-asset').value;
+            const amount = parseFloat(document.getElementById('mass-gift-amount').value);
+            let messageFormat = document.getElementById('mass-gift-message').value.trim();
+            const btn = document.getElementById('btn-mass-gift');
+            
+            if (isNaN(amount) || amount <= 0) {
+                alert('Please enter a valid amount.');
+                return;
+            }
+            if (!messageFormat) {
+                const assetLabel = asset === 'tokens' ? 'TC' : (asset === 'usd' ? '$' : 'Gems');
+                const amtStr = asset === 'usd' ? amount.toFixed(3) : amount;
+                messageFormat = `🎁 You received a gift of ${asset === 'usd' ? '$' : ''}${amtStr} ${assetLabel} from Admin!`;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SENDING...';
+
+            fetch('/api/admin/mass-gift', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ asset, amount, messageFormat })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`Mass gift sent to ${data.affectedUsers} users!`);
+                    document.getElementById('mass-gift-amount').value = '';
+                    document.getElementById('mass-gift-message').value = '';
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(err => alert('Network error: ' + err.message))
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-parachute-box"></i> SEND MASS GIFT TO ALL USERS';
+            });
+        }
+
         // INIT
         function init() {
             loadAdminStats();
@@ -6487,7 +6632,7 @@
 
         function formatUsdDisplay(usd) {
             const v = Number(usd || 0);
-            return v === 0 ? '$0' : ('$' + v.toFixed(2));
+            return v === 0 ? '$0.000' : ('$' + v.toFixed(3));
         }
 
         function loadUsers() {
@@ -6499,7 +6644,8 @@
                 .then(data => {
                     if (!data.success) return;
                     allUsersData = data.users;
-                    renderUsersTable(allUsersData);
+                    // Retain search filter if any
+                    filterUsers();
                 })
                 .catch(() => {
                     if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-center text-red-400 py-8">Failed to load</td></tr>';
@@ -6658,7 +6804,7 @@
                         'verification': '✅', 'daily': '📅', 'redeem': '🎁', 'tasks': '📋',
                         'referral': '👥', 'number': '📱', 'mail': '📧', 'email': '📧',
                         'gmail': '📧', 'deposit': '💰', 'transfer': '💸', 'support': '🎧',
-                        'service': '⚡', 'purchase': '🛒', 'bonus': '🎉'
+                        'service': '⚡', 'purchase': '🛒', 'bonus': '🎉', 'apikey_generate': '🔑'
                     };
                     historyList.innerHTML = history.slice(0, 50).map(h => {
                         const icon = typeIcon[h.type] || '📌';
@@ -6706,6 +6852,10 @@
             // Set API Status
             document.getElementById('editUserApiStatus').value = u.apiStatus || 'allow';
 
+            // Set Helper Admin Role
+            const roleEl = document.getElementById('editUserRole');
+            if (roleEl) roleEl.value = u.role || 'off';
+
             // Check if user has API key and show/hide section
             const apiKeySection = document.getElementById('apiKeySection');
             if (apiKeySection) {
@@ -6738,8 +6888,9 @@
             const usd = parseFloat(document.getElementById('editUserUSD').value) || 0;
             const status = document.getElementById('editUserVerified').value;
             const apiStatus = document.getElementById('editUserApiStatus').value;
+            const role = document.getElementById('editUserRole') ? document.getElementById('editUserRole').value : 'off';
 
-            console.log('[ADMIN] Saving user changes:', { userId, tokens, gems, usd, status, apiStatus });
+            console.log('[ADMIN] Saving user changes:', { userId, tokens, gems, usd, status, apiStatus, role });
 
             const payload = {
                 tokens: tokens,
@@ -6748,7 +6899,8 @@
                 usd: usd,
                 verified: (status === 'verified' || status === 'admin'),
                 adminVerified: (status === 'admin'),
-                apiStatus: apiStatus
+                apiStatus: apiStatus,
+                role: role
             };
 
             fetch(`/api/admin/users/${userId}`, {
@@ -6936,9 +7088,9 @@
                     return `
             <tr>
                 <td class="font-mono text-orange-400">${c.code}</td>
-                <td>${c.amount}</td>
-                <td>${used}</td>
-                <td>${remaining}</td>
+                <td>${typeof formatCompact === 'function' ? formatCompact(c.amount) : c.amount}</td>
+                <td>${typeof formatCompact === 'function' ? formatCompact(used) : used}</td>
+                <td>${typeof formatCompact === 'function' ? formatCompact(remaining) : remaining}</td>
                 <td><button onclick="deleteCode('${c.code}')" class="text-red-400 hover:text-red-300"><i
                             class="fas fa-trash"></i></button></td>
             </tr>`;
@@ -7100,13 +7252,22 @@
                     if (cat === 'cards') cat = 'virtual-cards';
                     const colorClass = s.color || 'from-blue-500/20 to-purple-600/20';
 
+                    let iconHtml = '';
+                    if (s.imageUrl) {
+                        iconHtml = `<img src="${s.imageUrl}" style="width:24px; height:24px; object-fit:contain;" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-cube text-white text-lg\\'></i>'">`;
+                    } else if (s.icon && (s.icon.includes('/') || s.icon.includes('http'))) {
+                        iconHtml = `<img src="${s.icon}" style="width:24px; height:24px; object-fit:contain;" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-cube text-white text-lg\\'></i>'">`;
+                    } else {
+                        iconHtml = `<i class="fas ${s.icon || 'fa-cube'} text-white text-lg"></i>`;
+                    }
+
                     return `
                                 <div class="service-item-box bg-gradient-to-br ${colorClass} border border-white/10 rounded-xl p-4 cursor-pointer hover:scale-105 transition-all group"
                                     data-item="${s.id}" data-category="${cat}"
                                     onclick="openItemManageModal('${s.id}', '${s.name}', '${cat}')">
                                     <div class="flex items-center gap-3 mb-3">
                                         <div class="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center">
-                                            <i class="fas ${s.icon || 'fa-cube'} text-white text-lg"></i>
+                                            ${iconHtml}
                                         </div>
                                         <span class="font-bold text-white">${s.name}</span>
                                     </div>
@@ -7616,7 +7777,7 @@
                     return;
                 }
 
-                area.innerHTML = messages.map(m => {
+                const newHtml = messages.map(m => {
                     const isUser = m.sender === 'user';
                     return `
                                         <div class="flex ${isUser ? 'justify-start' : 'justify-end'}">
@@ -7629,9 +7790,12 @@
                                     `;
                 }).join('') + '<div id="chat-bottom"></div>';
 
-                // Scroll to bottom
-                const bottom = document.getElementById('chat-bottom');
-                if (bottom) bottom.scrollIntoView({ behavior: 'smooth' });
+                if (area.innerHTML !== newHtml) {
+                    area.innerHTML = newHtml;
+                    // Scroll to bottom
+                    const bottom = document.getElementById('chat-bottom');
+                    if (bottom) bottom.scrollIntoView({ behavior: 'smooth' });
+                }
             } catch (e) {
                 console.error('Error loading chat messages:', e);
             }
@@ -7691,6 +7855,7 @@
 
         // Select category and show its items
         function selectCategory(categoryId) {
+            window.currentManageCategory = categoryId;
             // Update tab styles
             document.querySelectorAll('.category-tab').forEach(tab => {
                 if (tab.dataset.category === categoryId) {
@@ -7822,8 +7987,14 @@
                                     
                                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px;">
                                         <div>
-                                            <label style="display:block; font-size:12px; color:var(--text-sub); margin-bottom:4px;">Icon Element</label>
-                                            <input type="text" id="svc-icon" placeholder="fa-cube" style="width:100%; background:#1a1a2e; border:1px solid #333; color:#fff; padding:8px 12px; border-radius:8px;">
+                                            <label style="display:block; font-size:12px; color:var(--text-sub); margin-bottom:4px;">Icon Class or Image URL</label>
+                                            <div style="display:flex; gap:8px;">
+                                                <input type="text" id="svc-icon" placeholder="fa-cube or http..." style="flex:1; min-width:0; background:#1a1a2e; border:1px solid #333; color:#fff; padding:8px 12px; border-radius:8px;">
+                                                <label for="svc-icon-upload" style="cursor:pointer; background:#374151; border-radius:8px; padding:8px 12px; display:flex; align-items:center; color:#fff;">
+                                                    <i class="fas fa-upload"></i>
+                                                </label>
+                                                <input type="file" id="svc-icon-upload" style="display:none;" onchange="uploadAdminImage(this, 'svc-icon')" accept="image/*">
+                                            </div>
                                         </div>
                                         <div>
                                             <label style="display:block; font-size:12px; color:var(--text-sub); margin-bottom:4px;">Color Tailwind</label>
@@ -8092,12 +8263,14 @@
                                     <label style="display:block; font-size:12px; color:var(--text-sub); margin-bottom:4px;">Description</label>
                                     <input type="text" id="categoryDesc" placeholder="e.g. Reliable VPS servers" style="width:100%; background:#1a1a2e; border:1px solid #333; color:#fff; padding:8px 12px; border-radius:8px; margin-bottom:12px;">
                                     
-                                    <label style="display:block; font-size:12px; color:var(--text-sub); margin-bottom:4px;">Icon Class</label>
-                                    <input type="text" id="categoryIcon" placeholder="fa-server" style="width:100%; background:#1a1a2e; border:1px solid #333; color:#fff; padding:8px 12px; border-radius:8px; margin-bottom:20px;">
-                                    
-                                    <label style="display:block; font-size:12px; color:var(--text-sub); margin-bottom:4px; display:none;">Category Logo (optional)</label>
-                                    <input type="file" id="categoryLogo" onchange="previewCategoryLogo(this)" style="display:none; width:100%; margin-bottom:12px; background:#1a1a2e; color:#fff; padding:8px; border-radius:8px;">
-                                    <div id="categoryLogoPreview" style="width:64px; height:64px; border-radius:8px; display:none; background:#1a1a2e; margin-bottom:20px;"></div>
+                                    <label style="display:block; font-size:12px; color:var(--text-sub); margin-bottom:4px;">Icon Class or Image URL</label>
+                                    <div style="display:flex; gap:8px; margin-bottom:20px;">
+                                        <input type="text" id="categoryIcon" placeholder="fa-server or http..." style="flex:1; background:#1a1a2e; border:1px solid #333; color:#fff; padding:8px 12px; border-radius:8px;">
+                                        <label for="categoryIconUpload" style="cursor:pointer; background:#374151; border-radius:8px; padding:8px 12px; display:flex; align-items:center; color:#fff;">
+                                            <i class="fas fa-upload"></i>
+                                        </label>
+                                        <input type="file" id="categoryIconUpload" onchange="uploadAdminImage(this, 'categoryIcon')" style="display:none;" accept="image/*">
+                                    </div>
 
                                     <div style="display:flex; gap:12px; justify-content:flex-end;">
                                         <button onclick="closeCategoryModal()" style="padding:10px 16px; border-radius:8px; background:#374151; color:white; font-weight:bold;">Cancel</button>
@@ -8198,7 +8371,8 @@
         }
 
         // Save category
-        function saveCategory() {
+        async function saveCategory() {
+            const idInput = document.getElementById('categoryId').value.trim();
             const name = document.getElementById('categoryName').value.trim();
             const desc = document.getElementById('categoryDesc').value.trim();
             const icon = document.getElementById('categoryIcon').value.trim() || 'fa-box';
@@ -8208,26 +8382,63 @@
                 return;
             }
 
-            const categoryId = name.toLowerCase().replace(/\s+/g, '-');
-
-            categoryData[categoryId] = {
+            const categoryId = idInput || name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+            const newCatData = {
+                categoryId: categoryId,
                 name: name,
                 desc: desc || 'Category description',
                 icon: icon,
                 color: 'purple'
             };
 
-            const tabsContainer = document.getElementById('categoryTabs');
-            const newTab = document.createElement('div');
-            newTab.className = 'flex items-center gap-2 px-4 py-2 bg-black/20 text-gray-400 rounded-lg cursor-pointer category-tab';
-            newTab.dataset.category = categoryId;
-            newTab.onclick = function () { selectCategory(categoryId); };
-            newTab.innerHTML = '<i class="fas ' + icon + '"></i><span>' + name + '</span>';
-            tabsContainer.appendChild(newTab);
+            try {
+                let res;
+                if (idInput && categoryData[idInput]) {
+                    // Update existing
+                    res = await fetch(`/api/admin/service-categories/${idInput}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(newCatData)
+                    });
+                } else {
+                    // Create new
+                    res = await fetch(`/api/admin/service-categories`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(newCatData)
+                    });
+                }
+                const data = await res.json();
+                if (data.success) {
+                    categoryData[categoryId] = newCatData;
+                    
+                    if (idInput) {
+                        const tab = document.querySelector(`.category-tab[data-category="${idInput}"]`);
+                        if (tab) {
+                            tab.dataset.category = categoryId;
+                            tab.innerHTML = '<i class="fas ' + icon + '"></i><span>' + name + '</span>';
+                        }
+                    } else {
+                        const tabsContainer = document.getElementById('categoryTabs');
+                        if (tabsContainer) {
+                            const newTab = document.createElement('div');
+                            newTab.className = 'flex items-center gap-2 px-4 py-2 bg-black/20 text-gray-400 rounded-lg cursor-pointer category-tab';
+                            newTab.dataset.category = categoryId;
+                            newTab.onclick = function () { selectCategory(categoryId); };
+                            newTab.innerHTML = '<i class="fas ' + icon + '"></i><span>' + name + '</span>';
+                            tabsContainer.appendChild(newTab);
+                        }
+                    }
 
-            closeCategoryModal();
-            selectCategory(categoryId);
-            alert('Category "' + name + '" added successfully!');
+                    closeCategoryModal();
+                    selectCategory(categoryId);
+                    if (typeof showToast === 'function') showToast('Category saved successfully!');
+                } else {
+                    alert('Save failed: ' + data.message);
+                }
+            } catch (err) {
+                alert('Connection error');
+            }
         }
 
         // Edit current category
@@ -9039,7 +9250,7 @@
             }
 
             tbody.innerHTML = groups.map(g => {
-                const isChannel = g.type === 'channel' || g.id.toString().startsWith('-100');
+                const isChannel = g.type === 'channel';
                 const typeIcon = isChannel ? '<i class="fas fa-broadcast-tower text-green-400"></i>'
                     : '<i class="fas fa-users text-blue-400"></i>';
                 const typeLabel = isChannel ? 'Channel' : 'Group';
@@ -9076,27 +9287,26 @@
 
         function updateGroupStats(groups) {
             const total = groups.length;
-            const channels = groups.filter(g => g.type === 'channel' ||
-                g.id.toString().startsWith('-100')).length;
-            const totalMembers = groups.reduce((acc, g) => acc + (parseInt(g.memberCount) || 0),
-                0);
-            const activeToday = groups.filter(g => g.lastActivity && (Date.now() -
-                g.lastActivity) < 24 * 60 * 60 * 1000).length; document.getElementById('group-total').textContent = total;
+            const channels = groups.filter(g => g.type === 'channel').length;
+            const totalMembers = groups.reduce((acc, g) => acc + (parseInt(g.memberCount) || 0), 0);
+            const activeToday = groups.filter(g => g.lastActivity && (Date.now() - g.lastActivity) < 24 * 60 * 60 * 1000).length; 
+            
+            document.getElementById('group-total').textContent = total;
             document.getElementById('channel-total').textContent = channels;
             document.getElementById('group-members').textContent = totalMembers.toLocaleString();
             document.getElementById('group-active').textContent = activeToday;
-        } function filterGroups(type) {
-            if
-                (type === 'all') { renderGroupsTable(allGroupsData); } else if (type === 'channel') {
-                    const
-                        channels = allGroupsData.filter(g => g.type ===
-                            'channel' || g.id.toString().startsWith('-100'));
-                    renderGroupsTable(channels);
-                } else if (type === 'group') {
-                    const groups = allGroupsData.filter(g => g.type !== 'channel' &&
-                        !g.id.toString().startsWith('-100'));
-                    renderGroupsTable(groups);
-                }
+        } 
+
+        function filterGroups(type) {
+            if (type === 'all') { 
+                renderGroupsTable(allGroupsData); 
+            } else if (type === 'channel') {
+                const channels = allGroupsData.filter(g => g.type === 'channel');
+                renderGroupsTable(channels);
+            } else if (type === 'group') {
+                const groups = allGroupsData.filter(g => g.type !== 'channel');
+                renderGroupsTable(groups);
+            }
         }
 
         function renderGroupSettings(settings) {
@@ -9659,7 +9869,8 @@
                             'transfer_out': 'Transfer Out',
                             'redeem': 'Redeem Code',
                             'bonus': 'Welcome Bonus',
-                            'deposit': 'Deposit'
+                            'deposit': 'Deposit',
+                            'apikey_generate': 'API Key Generate'
                         };
                         topServiceNameEl.textContent = serviceDisplayNames[topService.type] ||
                             topService.type.replace('_', ' ');
@@ -10089,33 +10300,38 @@
                         <td class="py-2 px-3 capitalize">${s.name}</td>
                         <td class="py-2 px-3 text-right font-mono text-gray-300">${s.count}</td>
                         <td class="py-2 px-3 text-right font-mono text-orange-400">
-                            ${s.revenue.toFixed(2)} TC</td>
+                            ${Math.floor(s.revenue)} TC</td>
                     </tr>
                     `).join('');
 
-            // Calculate top referrers from user data
-            const allUsers = Object.values(userData);
-            const referrers = allUsers
-                .filter(u => (u.referralCount || 0) > 0)
-                .map(u => ({
-                    name: u.firstName || u.username || `User ${String(u.id).slice(-4)}`,
-                    refs: u.referralCount || 0,
-                    tokens: u.tokens || 0
-                }))
-                .sort((a, b) => b.refs - a.refs)
-                .slice(0, 10);
-
-            document.getElementById('lbReferrersBody').innerHTML = referrers.map((u, i) => `
-                    <tr class="border-b border-white/5 hover:bg-white/5">
-                        <td class="py-2 px-3 font-bold ${i < 3 ? 'text-yellow-400' : 'text-gray-400'}">
-                            ${i + 1}</td>
-                        <td class="py-2 px-3">${u.name}</td>
-                        <td class="py-2 px-3 text-right font-mono text-yellow-400 font-bold">
-                            ${u.refs}</td>
-                        <td class="py-2 px-3 text-right font-mono text-white">
-                            ${u.tokens.toLocaleString()} TC</td>
-                    </tr>
-                    `).join('') || '<tr> <td colspan = "4" class="text-center py-4 text-gray-500 text-xs" > No referrers yet</td> </tr> ';
+            // Fetch top referrers from API
+            fetch('/api/leaderboard?type=refer')
+                .then(r => r.json())
+                .then(data => {
+                    const tbody = document.getElementById('lbReferrersBody');
+                    if (!tbody) return;
+                    
+                    if (data.success && data.top && data.top.length > 0) {
+                        tbody.innerHTML = data.top.slice(0, 10).map((u, i) => `
+                            <tr class="border-b border-white/5 hover:bg-white/5">
+                                <td class="py-2 px-3 font-bold ${i < 3 ? 'text-yellow-400' : 'text-gray-400'}">
+                                    ${i + 1}</td>
+                                <td class="py-2 px-3">${u.name}</td>
+                                <td class="py-2 px-3 text-right font-mono text-yellow-400 font-bold">
+                                    ${u.score}</td>
+                                <td class="py-2 px-3 text-right font-mono text-white">
+                                    ID: ${String(u.id).slice(-4)}</td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        tbody.innerHTML = '<tr> <td colspan = "4" class="text-center py-4 text-gray-500 text-xs" > No referrers yet</td> </tr> ';
+                    }
+                })
+                .catch(e => {
+                    console.warn('Error loading referrers leaderboard:', e);
+                    const tbody = document.getElementById('lbReferrersBody');
+                    if (tbody) tbody.innerHTML = '<tr> <td colspan = "4" class="text-center py-4 text-red-400 text-xs" > ❌ Error loading data</td> </tr> ';
+                });
         }
 
         // PROVIDERS MANAGEMENT - NEW SYSTEM
@@ -11447,7 +11663,7 @@
                 if (!body) return;
 
                 if (data.numbers.length === 0) {
-                    body.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-500">No manual numbers added yet</td></tr>';
+                    body.innerHTML = '<tr><td colspan="3" class="text-center py-8 text-gray-500">No manual numbers added yet</td></tr>';
                     document.getElementById('stats-total-numbers').textContent = '0';
                     document.getElementById('stats-available-numbers').textContent = '0';
                     return;
@@ -11456,33 +11672,29 @@
                 document.getElementById('stats-total-numbers').textContent = data.numbers.length;
                 document.getElementById('stats-available-numbers').textContent = data.numbers.filter(n => n.status === 'available').length;
 
-                body.innerHTML = data.numbers.map(n => `
-                                    <tr class="border-b border-white/5 hover:bg-white/5 transition-all">
-                                        <td class="py-4 font-bold text-white">${n.number}</td>
-                                        <td class="py-4 font-medium text-gray-400">
-                                            <div class="flex flex-col">
-                                                <span class="capitalize text-white">${n.platform}</span>
-                                                <span class="text-[10px] text-gray-500 uppercase font-bold">Code: ${n.countryCode || 'N/A'}</span>
-                                            </div>
-                                        </td>
-                                        <td class="py-4">
-                                            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${n.status === 'available' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">
-                                                ${n.status.toUpperCase()}
-                                            </span>
-                                        </td>
-                                        <td class="py-4">
-                                            <div class="flex items-center gap-2">
-                                                <span class="font-mono text-orange-400 font-bold">${n.otp || '---'}</span>
-                                                <button onclick="openOtpModal('${n.id}')" class="text-xs text-blue-400 hover:underline">Edit</button>
-                                            </div>
-                                        </td>
-                                        <td class="py-4 text-right">
-                                            <button onclick="deleteManualNumber('${n.id}')" class="w-8 h-8 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all flex items-center justify-center ml-auto">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                `).join('');
+                // Group by platform
+                const groups = {};
+                data.numbers.forEach(n => {
+                    if (!groups[n.platform]) {
+                        groups[n.platform] = { platform: n.platform, count: 0, total: 0 };
+                    }
+                    groups[n.platform].total++;
+                    if (n.status === 'available') {
+                        groups[n.platform].count++;
+                    }
+                });
+
+                body.innerHTML = Object.values(groups).map(g => `
+                    <tr class="border-b border-white/5 hover:bg-white/5 transition-all">
+                        <td class="py-4 font-bold text-white">${g.count} / ${g.total}</td>
+                        <td class="py-4 font-medium text-gray-400 capitalize">${g.platform}</td>
+                        <td class="py-4">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${g.count > 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">
+                                ${g.count > 0 ? 'ACTIVE' : 'INACTIVE'}
+                            </span>
+                        </td>
+                    </tr>
+                `).join('');
                 await loadPoolSummary();
             } catch (e) {
                 console.error('Error fetching numbers:', e);
@@ -11517,6 +11729,9 @@
                                                         <span class="text-[10px] text-orange-400 font-bold">${info.total} Available Numbers</span>
                                                     </div>
                                                     <div class="flex gap-2">
+                                                        <button onclick="togglePopularPlatform('${platform}')" class="w-8 h-8 ${info.isPopular ? 'bg-yellow-500/20 text-yellow-400' : 'bg-white/5 text-gray-400'} border border-white/5 rounded-lg flex items-center justify-center hover:bg-yellow-500/20 transition-colors" title="Toggle Popular">
+                                                            <i class="fas fa-fire text-xs"></i>
+                                                        </button>
                                                         <button onclick="editPoolGroup('${platform}')" class="w-8 h-8 bg-blue-500/10 border border-blue-500/20 rounded-lg flex items-center justify-center text-blue-400 hover:bg-blue-500/20 transition-colors" title="Add numbers">
                                                             <i class="fas fa-plus text-xs"></i>
                                                         </button>
@@ -11536,6 +11751,68 @@
                     }).join('');
                 }
             } catch (e) { console.error('Summary error:', e); }
+        }
+
+        async function togglePopularPlatform(platform) {
+            try {
+                const res = await fetch('/api/admin/platforms/toggle-popular', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ platform })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    loadPoolSummary(); // Reload to update button color
+                }
+            } catch (e) {
+                console.error('Error toggling popular platform:', e);
+            }
+        }
+
+        async function openLiveSessionsModal() {
+            document.getElementById('liveSessionsModal').style.display = 'flex';
+            await loadLiveSessions();
+        }
+
+        async function loadLiveSessions() {
+            try {
+                const res = await fetch('/api/admin/manual-numbers');
+                const data = await res.json();
+                if (!data.success) return;
+
+                const body = document.getElementById('liveSessionsBody');
+                if (!body) return;
+
+                if (data.numbers.length === 0) {
+                    body.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-500">No manual numbers added yet</td></tr>';
+                    return;
+                }
+
+                body.innerHTML = data.numbers.map(n => `
+                    <tr class="border-b border-white/5 hover:bg-white/5 transition-all">
+                        <td class="py-4 font-bold text-white">${n.number}</td>
+                        <td class="py-4 font-medium text-gray-400 capitalize">${n.platform}</td>
+                        <td class="py-4">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${n.status === 'available' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">
+                                ${n.status.toUpperCase()}
+                            </span>
+                        </td>
+                        <td class="py-4">
+                            <div class="flex items-center gap-2">
+                                <span class="font-mono text-orange-400 font-bold">${n.otp || '---'}</span>
+                                <button onclick="openOtpModal('${n.id}')" class="text-xs text-blue-400 hover:underline">Edit</button>
+                            </div>
+                        </td>
+                        <td class="py-4 text-right">
+                            <button onclick="deleteManualNumber('${n.id}'); setTimeout(loadLiveSessions, 500);" class="w-8 h-8 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all flex items-center justify-center ml-auto">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                console.error('Error fetching live sessions:', e);
+            }
         }
 
         function openAddNumberModal() {
@@ -12275,7 +12552,7 @@
             if (pageId === 'broadcast') loadBroadcast();
             if (pageId === 'groups') loadGroupSettings();
             if (pageId === 'shopmanage') loadShopManage();
-            if (pageId === 'services') loadServices();
+            if (pageId === 'services') loadServiceItems();
             if (pageId === 'database') loadDatabaseManagement();
             if (pageId === 'cards') loadCards();
             
@@ -12316,6 +12593,16 @@
             // Load mother email status on start
             setTimeout(loadMotherEmailStatus, 1000);
         });
+        // Auto Refresh logic for admin chat
+        setInterval(() => {
+            if (activeAdminSection === 'support') {
+                if (currentChatUserId) {
+                    loadChatMessages(currentChatUserId);
+                } else {
+                    loadSupportConversations();
+                }
+            }
+        }, 3000);
     </script>
 
     <!-- Global Email Inbox Modal -->
