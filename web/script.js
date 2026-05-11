@@ -1236,7 +1236,10 @@ function calculateExchange(from, to, amount) {
 }
 
 function formatCurrencyAmount(amount, cur) {
-    if (cur === 'usd') return `$${(Math.round(amount * 100) / 100).toFixed(2)}`;
+    if (cur === 'usd') {
+        const val = Math.round(amount * 100) / 100;
+        return val === 0 ? '$0' : `$${val.toFixed(2)}`;
+    }
     if (cur === 'tokens') return `${Math.floor(amount)} TOKENS`;
     if (cur === 'Gems') return `${Math.floor(amount * 10000) / 10000} Gems`;
     return `${amount}`;
@@ -4098,7 +4101,7 @@ function renderBalances() {
     const formattedTokens = formatCompact(tokens);
     const formattedGems = formatCompact(gems);
     
-    let formattedUsd = '$0.00';
+    let formattedUsd = '$0';
     if (usd > 0) {
         if (usd >= 1000) {
             formattedUsd = '$' + formatCompact(usd);
