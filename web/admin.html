@@ -1736,8 +1736,8 @@
                             <tr>
                                 <th>Code</th>
                                 <th>Amount</th>
+                                <th>Used</th>
                                 <th>Remaining</th>
-                                <th>Available</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
@@ -2449,7 +2449,7 @@
                                     <select id="currency-quiz"
                                         class="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs">
                                         <option value="token">Tokens</option>
-                                        <option value="gem">Gems</option>
+                                        <option value="Gems">Gems</option>
                                         <option value="usd">USD</option>
                                     </select>
                                 </div>
@@ -2464,7 +2464,7 @@
                                     <select id="currency-space"
                                         class="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs">
                                         <option value="token">Tokens</option>
-                                        <option value="gem">Gems</option>
+                                        <option value="Gems">Gems</option>
                                         <option value="usd">USD</option>
                                     </select>
                                 </div>
@@ -2479,7 +2479,7 @@
                                     <select id="currency-invite"
                                         class="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs">
                                         <option value="token">Tokens</option>
-                                        <option value="gem">Gems</option>
+                                        <option value="Gems">Gems</option>
                                         <option value="usd">USD</option>
                                         <option value="both">Both</option>
                                     </select>
@@ -2497,7 +2497,7 @@
                                     <select id="currency-welcome"
                                         class="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs">
                                         <option value="token">Tokens</option>
-                                        <option value="gem">Gems</option>
+                                        <option value="Gems">Gems</option>
                                         <option value="usd">USD</option>
                                         <option value="both">Both</option>
                                     </select>
@@ -2513,7 +2513,7 @@
                                     <select id="currency-adreward"
                                         class="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs">
                                         <option value="token">Tokens</option>
-                                        <option value="gem">Gems</option>
+                                        <option value="Gems">Gems</option>
                                         <option value="usd">USD</option>
                                     </select>
                                 </div>
@@ -2528,7 +2528,7 @@
                                     <select id="currency-zerobalance"
                                         class="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs">
                                         <option value="token">Tokens</option>
-                                        <option value="gem">Gems</option>
+                                        <option value="Gems">Gems</option>
                                         <option value="usd">USD</option>
                                     </select>
                                 </div>
@@ -2543,7 +2543,7 @@
                                     <select id="currency-task"
                                         class="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs">
                                         <option value="token">Tokens</option>
-                                        <option value="gem">Gems</option>
+                                        <option value="Gems">Gems</option>
                                         <option value="usd">USD</option>
                                     </select>
                                 </div>
@@ -2558,7 +2558,7 @@
                                     <select id="currency-daily"
                                         class="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs">
                                         <option value="token">Tokens</option>
-                                        <option value="gem">Gems</option>
+                                        <option value="Gems">Gems</option>
                                         <option value="usd">USD</option>
                                     </select>
                                 </div>
@@ -2582,7 +2582,7 @@
                                     <select id="currency-tempmail"
                                         class="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs">
                                         <option value="token">Tokens</option>
-                                        <option value="gem">Gems</option>
+                                        <option value="Gems">Gems</option>
                                     </select>
                                 </div>
                                 <input type="number" id="conf-tempmail" placeholder="10"
@@ -2595,7 +2595,7 @@
                                     <select id="currency-gmail"
                                         class="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs">
                                         <option value="token">Tokens</option>
-                                        <option value="gem">Gems</option>
+                                        <option value="Gems">Gems</option>
                                     </select>
                                 </div>
                                 <input type="number" id="conf-gmail" placeholder="20"
@@ -2608,7 +2608,7 @@
                                     <select id="currency-hotmail"
                                         class="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs">
                                         <option value="token">Tokens</option>
-                                        <option value="gem">Gems</option>
+                                        <option value="Gems">Gems</option>
                                     </select>
                                 </div>
                                 <input type="number" id="conf-hotmail" placeholder="25"
@@ -2621,7 +2621,7 @@
                                     <select id="currency-student"
                                         class="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs">
                                         <option value="token">Tokens</option>
-                                        <option value="gem">Gems</option>
+                                        <option value="Gems">Gems</option>
                                     </select>
                                 </div>
                                 <input type="number" id="conf-student" placeholder="50"
@@ -2636,6 +2636,90 @@
                                 <input type="number" id="conf-renew-mail" placeholder="30"
                                     class="w-full bg-black/40 border border-white/10 focus:border-yellow-500 rounded-lg p-2.5 text-yellow-400">
                             </div>
+                            <!-- 2FA Live Cost -->
+                            <div class="bg-black/20 rounded-lg p-4 border border-white/5">
+                                <div class="flex justify-between items-center mb-2">
+                                    <label class="text-sm font-semibold text-gray-300">2FA Live</label>
+                                    <select id="currency-live2fa"
+                                        class="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs">
+                                        <option value="token">Tokens</option>
+                                        <option value="Gems">Gems</option>
+                                        <option value="usd">USD</option>
+                                    </select>
+                                </div>
+                                <input type="number" id="conf-live2fa" placeholder="1"
+                                    class="w-full bg-black/40 border border-white/10 focus:border-cyan-500 rounded-lg p-2.5">
+                            </div>
+                            <!-- Instagram Live Cost -->
+                            <div class="bg-black/20 rounded-lg p-4 border border-white/5">
+                                <div class="flex justify-between items-center mb-2">
+                                    <label class="text-sm font-semibold text-gray-300">Instagram Live</label>
+                                    <select id="currency-liveInstagram"
+                                        class="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs">
+                                        <option value="token">Tokens</option>
+                                        <option value="Gems">Gems</option>
+                                        <option value="usd">USD</option>
+                                    </select>
+                                </div>
+                                <input type="number" id="conf-liveInstagram" placeholder="1"
+                                    class="w-full bg-black/40 border border-white/10 focus:border-cyan-500 rounded-lg p-2.5">
+                            </div>
+                            <!-- Facebook Live Cost -->
+                            <div class="bg-black/20 rounded-lg p-4 border border-white/5">
+                                <div class="flex justify-between items-center mb-2">
+                                    <label class="text-sm font-semibold text-gray-300">Facebook Live</label>
+                                    <select id="currency-liveFacebook"
+                                        class="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs">
+                                        <option value="token">Tokens</option>
+                                        <option value="Gems">Gems</option>
+                                        <option value="usd">USD</option>
+                                    </select>
+                                </div>
+                                <input type="number" id="conf-liveFacebook" placeholder="1"
+                                    class="w-full bg-black/40 border border-white/10 focus:border-cyan-500 rounded-lg p-2.5">
+                            </div>
+                            <!-- TikTok Live Cost -->
+                            <div class="bg-black/20 rounded-lg p-4 border border-white/5">
+                                <div class="flex justify-between items-center mb-2">
+                                    <label class="text-sm font-semibold text-gray-300">TikTok Live</label>
+                                    <select id="currency-liveTiktok"
+                                        class="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs">
+                                        <option value="token">Tokens</option>
+                                        <option value="Gems">Gems</option>
+                                        <option value="usd">USD</option>
+                                    </select>
+                                </div>
+                                <input type="number" id="conf-liveTiktok" placeholder="1"
+                                    class="w-full bg-black/40 border border-white/10 focus:border-cyan-500 rounded-lg p-2.5">
+                            </div>
+                            <!-- Twitter Live Cost -->
+                            <div class="bg-black/20 rounded-lg p-4 border border-white/5">
+                                <div class="flex justify-between items-center mb-2">
+                                    <label class="text-sm font-semibold text-gray-300">Twitter Live</label>
+                                    <select id="currency-liveTwitter"
+                                        class="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs">
+                                        <option value="token">Tokens</option>
+                                        <option value="Gems">Gems</option>
+                                        <option value="usd">USD</option>
+                                    </select>
+                                </div>
+                                <input type="number" id="conf-liveTwitter" placeholder="1"
+                                    class="w-full bg-black/40 border border-white/10 focus:border-cyan-500 rounded-lg p-2.5">
+                            </div>
+                            <!-- Threads Live Cost -->
+                            <div class="bg-black/20 rounded-lg p-4 border border-white/5">
+                                <div class="flex justify-between items-center mb-2">
+                                    <label class="text-sm font-semibold text-gray-300">Threads Live</label>
+                                    <select id="currency-liveThreads"
+                                        class="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs">
+                                        <option value="token">Tokens</option>
+                                        <option value="Gems">Gems</option>
+                                        <option value="usd">USD</option>
+                                    </select>
+                                </div>
+                                <input type="number" id="conf-liveThreads" placeholder="1"
+                                    class="w-full bg-black/40 border border-white/10 focus:border-cyan-500 rounded-lg p-2.5">
+                            </div>
                             <!-- Virtual Number -->
                             <div class="bg-black/20 rounded-lg p-4 border border-white/5">
                                 <div class="flex justify-between items-center mb-2">
@@ -2643,27 +2727,13 @@
                                     <select id="currency-number"
                                         class="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs">
                                         <option value="token">Tokens</option>
-                                        <option value="gem">Gems</option>
+                                        <option value="Gems">Gems</option>
                                     </select>
                                 </div>
                                 <input type="number" id="conf-number" placeholder="100"
                                     class="w-full bg-black/40 border border-white/10 focus:border-cyan-500 rounded-lg p-2.5">
                             </div>
-                            <!-- Mini App Verification -->
-                            <div class="bg-black/20 rounded-lg p-4 border border-white/5">
-                                <div class="flex justify-between items-center mb-2">
-                                    <label class="text-sm font-semibold text-gray-300">Mini App
-                                        Verify</label>
-                                    <select id="currency-verification"
-                                        class="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs">
-                                        <option value="token">Tokens</option>
-                                        <option value="gem">Gems</option>
-                                        <option value="usd">USD</option>
-                                    </select>
-                                </div>
-                                <input type="number" id="conf-verification" placeholder="25"
-                                    class="w-full bg-black/40 border border-white/10 focus:border-cyan-500 rounded-lg p-2.5">
-                            </div>
+
                             <!-- Transfer Fee -->
                             <div class="bg-black/20 rounded-lg p-4 border border-white/5">
                                 <div class="flex justify-between items-center mb-2">
@@ -2672,7 +2742,7 @@
                                     <select id="currency-transfer"
                                         class="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs">
                                         <option value="token">Tokens</option>
-                                        <option value="gem">Gems</option>
+                                        <option value="Gems">Gems</option>
                                         <option value="usd">USD</option>
                                     </select>
                                 </div>
@@ -2687,7 +2757,7 @@
                                     <select id="currency-support"
                                         class="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs">
                                         <option value="token">Tokens</option>
-                                        <option value="gem">Gems</option>
+                                        <option value="Gems">Gems</option>
                                         <option value="usd">USD</option>
                                     </select>
                                 </div>
@@ -2711,7 +2781,7 @@
                                     <select id="currency-aiphoto"
                                         class="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs">
                                         <option value="token">Tokens</option>
-                                        <option value="gem">Gems</option>
+                                        <option value="Gems">Gems</option>
                                         <option value="usd">USD</option>
                                     </select>
                                 </div>
@@ -2725,7 +2795,7 @@
                                     <select id="currency-aivideo"
                                         class="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs">
                                         <option value="token">Tokens</option>
-                                        <option value="gem">Gems</option>
+                                        <option value="Gems">Gems</option>
                                         <option value="usd">USD</option>
                                     </select>
                                 </div>
@@ -2739,40 +2809,15 @@
                                     <select id="currency-bgremove"
                                         class="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs">
                                         <option value="token">Tokens</option>
-                                        <option value="gem">Gems</option>
+                                        <option value="Gems">Gems</option>
                                         <option value="usd">USD</option>
                                     </select>
                                 </div>
                                 <input type="number" id="conf-bgremove" placeholder="15"
                                     class="w-full bg-black/40 border border-white/10 focus:border-purple-500 rounded-lg p-2.5">
                             </div>
-                            <div class="bg-black/20 rounded-lg p-4 border border-white/5">
-                                <div class="flex justify-between items-center mb-2">
-                                    <label class="text-sm font-semibold text-gray-300">Gemini
-                                        Pro</label>
-                                    <select id="currency-gemini"
-                                        class="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs">
-                                        <option value="token">Tokens</option>
-                                        <option value="gem">Gems</option>
-                                        <option value="usd">USD</option>
-                                    </select>
-                                </div>
-                                <input type="number" id="conf-gemini" placeholder="10"
-                                    class="w-full bg-black/40 border border-white/10 focus:border-purple-500 rounded-lg p-2.5">
-                            </div>
-                            <div class="bg-black/20 rounded-lg p-4 border border-white/5">
-                                <div class="flex justify-between items-center mb-2">
-                                    <label class="text-sm font-semibold text-gray-300">ChatGPT</label>
-                                    <select id="currency-chatgpt"
-                                        class="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs">
-                                        <option value="token">Tokens</option>
-                                        <option value="gem">Gems</option>
-                                        <option value="usd">USD</option>
-                                    </select>
-                                    <input type="number" id="conf-chatgpt" placeholder="15"
-                                        class="w-full bg-black/40 border border-white/10 focus:border-purple-500 rounded-lg p-2.5">
-                                </div>
-                            </div>
+
+
                         </div>
 
                         <!-- Selling Rewards -->
@@ -5381,6 +5426,21 @@
                     if (document.getElementById('conf-tempmail')) document.getElementById('conf-tempmail').value = c.tempMailCost || 0;
                     if (document.getElementById('conf-student')) document.getElementById('conf-student').value = c.studentEmailCost || 0;
                     if (document.getElementById('conf-renew-mail')) document.getElementById('conf-renew-mail').value = c.renewMailCost || 30;
+                    if (document.getElementById('conf-live2fa')) document.getElementById('conf-live2fa').value = c.live2fa || 10;
+                    if (document.getElementById('conf-liveInstagram')) document.getElementById('conf-liveInstagram').value = c.liveInstagram || 10;
+                    if (document.getElementById('conf-liveFacebook')) document.getElementById('conf-liveFacebook').value = c.liveFacebook || 10;
+                    if (document.getElementById('conf-liveTiktok')) document.getElementById('conf-liveTiktok').value = c.liveTiktok || 10;
+                    if (document.getElementById('conf-liveTwitter')) document.getElementById('conf-liveTwitter').value = c.liveTwitter || 10;
+                    if (document.getElementById('conf-liveThreads')) document.getElementById('conf-liveThreads').value = c.liveThreads || 10;
+
+                    // Load Currencies
+                    if (document.getElementById('currency-live2fa')) document.getElementById('currency-live2fa').value = c.live2faCurrency || 'token';
+                    if (document.getElementById('currency-liveInstagram')) document.getElementById('currency-liveInstagram').value = c.liveInstagramCurrency || 'token';
+                    if (document.getElementById('currency-liveFacebook')) document.getElementById('currency-liveFacebook').value = c.liveFacebookCurrency || 'token';
+                    if (document.getElementById('currency-liveTiktok')) document.getElementById('currency-liveTiktok').value = c.liveTiktokCurrency || 'token';
+                    if (document.getElementById('currency-liveTwitter')) document.getElementById('currency-liveTwitter').value = c.liveTwitterCurrency || 'token';
+                    if (document.getElementById('currency-liveThreads')) document.getElementById('currency-liveThreads').value = c.liveThreadsCurrency || 'token';
+
                     document.getElementById('conf-verification').value = c.verificationCost || 0;
                     document.getElementById('conf-number').value = c.numberCost || 0;
                     // Additional Service Costs
@@ -5464,101 +5524,112 @@
         }
 
         async function saveAllCosts() {
+            const getValue = (id, fallback = 0) => {
+                const el = document.getElementById(id);
+                return el ? (parseInt(el.value) || fallback) : undefined;
+            };
+            const getFloatValue = (id, fallback = 0) => {
+                const el = document.getElementById(id);
+                return el ? (parseFloat(el.value) || fallback) : undefined;
+            };
+            const getStringValue = (id) => {
+                const el = document.getElementById(id);
+                return el ? el.value : undefined;
+            };
+
             const payload = {
-                quizReward: parseInt(document.getElementById('conf-quiz').value) || 0,
-                spaceReward: parseInt(document.getElementById('conf-space').value) || 0,
-                inviteBonus: parseInt(document.getElementById('conf-invite').value) || 0,
-                welcomeBonus: parseInt(document.getElementById('conf-welcome').value) || 0,
-                adReward: parseInt(document.getElementById('conf-adreward').value) || 0,
-                zeroBalanceAdReward: document.getElementById('conf-zerobalance-adreward') ?
-                    (parseInt(document.getElementById('conf-zerobalance-adreward').value) || 0) : undefined,
-                taskReward: parseInt(document.getElementById('conf-taskreward').value) || 0,
+                quizReward: getValue('conf-quiz'),
+                spaceReward: getValue('conf-space'),
+                inviteBonus: getValue('conf-invite'),
+                welcomeBonus: getValue('conf-welcome'),
+                adReward: getValue('conf-adreward'),
+                zeroBalanceAdReward: getValue('conf-zerobalance-adreward'),
+                taskReward: getValue('conf-taskreward'),
+                
                 // System Costs
-                premiumEmailCost: document.getElementById('conf-premium-email-cost') ?
-                    parseInt(document.getElementById('conf-premium-email-cost').value) || 0 : undefined,
-                transferFee: parseInt(document.getElementById('conf-transfer').value) || 0,
-                supportCost: parseInt(document.getElementById('conf-support').value) || 0,
-                gmailCost: parseInt(document.getElementById('conf-gmail').value) || 0,
-                hotmailCost: document.getElementById('conf-hotmail') ? (parseInt(document.getElementById('conf-hotmail').value) || 0) : undefined,
-                tempMailCost: document.getElementById('conf-tempmail') ? (parseInt(document.getElementById('conf-tempmail').value) || 0) : undefined,
-                studentEmailCost: document.getElementById('conf-student') ? (parseInt(document.getElementById('conf-student').value) || 0) : undefined,
-                renewMailCost: document.getElementById('conf-renew-mail') ? (parseInt(document.getElementById('conf-renew-mail').value) || 30) : undefined,
-                verificationCost: parseInt(document.getElementById('conf-verification').value) || 0,
-                numberCost: parseInt(document.getElementById('conf-number').value) || 0,
-                // Additional Service Costs
-                geminiCost: document.getElementById('conf-gemini') ?
-                    parseInt(document.getElementById('conf-gemini').value) || 0 : undefined,
-                chatgptCost: document.getElementById('conf-chatgpt') ?
-                    parseInt(document.getElementById('conf-chatgpt').value) || 0 : undefined,
-                spotifyCost: document.getElementById('conf-spotify') ?
-                    parseInt(document.getElementById('conf-spotify').value) || 0 : undefined,
-                youtubeCost: document.getElementById('conf-youtube') ?
-                    parseInt(document.getElementById('conf-youtube').value) || 0 : undefined,
-                teacherCost: document.getElementById('conf-teacher') ?
-                    parseInt(document.getElementById('conf-teacher').value) || 0 : undefined,
-                militaryCost: document.getElementById('conf-military') ?
-                    parseInt(document.getElementById('conf-military').value) || 0 : undefined,
+                premiumEmailCost: getValue('conf-premium-email-cost'),
+                transferFee: getValue('conf-transfer'),
+                supportCost: getValue('conf-support'),
+                gmailCost: getValue('conf-gmail'),
+                hotmailCost: getValue('conf-hotmail'),
+                tempMailCost: getValue('conf-tempmail'),
+                studentEmailCost: getValue('conf-student'),
+                renewMailCost: getValue('conf-renew-mail', 30),
+                
+                live2faCost: getValue('conf-live2fa'),
+                liveInstagramCost: getValue('conf-liveInstagram'),
+                liveFacebookCost: getValue('conf-liveFacebook'),
+                liveTiktokCost: getValue('conf-liveTiktok'),
+                liveTwitterCost: getValue('conf-liveTwitter'),
+                liveThreadsCost: getValue('conf-liveThreads'),
+                
+                live2faCurrency: getStringValue('currency-live2fa'),
+                liveInstagramCurrency: getStringValue('currency-liveInstagram'),
+                liveFacebookCurrency: getStringValue('currency-liveFacebook'),
+                liveTiktokCurrency: getStringValue('currency-liveTiktok'),
+                liveTwitterCurrency: getStringValue('currency-liveTwitter'),
+                liveThreadsCurrency: getStringValue('currency-liveThreads'),
+                
+                verificationCost: getValue('conf-verification'),
+                numberCost: getValue('conf-number'),
+                
+                geminiCost: getValue('conf-gemini'),
+                chatgptCost: getValue('conf-chatgpt'),
+                spotifyCost: getValue('conf-spotify'),
+                youtubeCost: getValue('conf-youtube'),
+                teacherCost: getValue('conf-teacher'),
+                militaryCost: getValue('conf-military'),
 
                 // USD costs
-                accountsUSD: document.getElementById('conf-accounts-usd') ?
-                    parseFloat(document.getElementById('conf-accounts-usd').value) || 0 : undefined,
-                vpnUSD: document.getElementById('conf-vpn-usd') ?
-                    parseFloat(document.getElementById('conf-vpn-usd').value) || 0 : undefined,
-                vccUSD: document.getElementById('conf-vcc-usd') ?
-                    parseFloat(document.getElementById('conf-vcc-usd').value) || 0 : undefined,
-                premiumMailUSD: document.getElementById('conf-premium-mail-usd') ?
-                    parseFloat(document.getElementById('conf-premium-mail-usd').value) || 0 : undefined,
+                accountsUSD: getFloatValue('conf-accounts-usd'),
+                vpnUSD: getFloatValue('conf-vpn-usd'),
+                vccUSD: getFloatValue('conf-vcc-usd'),
+                premiumMailUSD: getFloatValue('conf-premium-mail-usd'),
 
                 // Credit Exchange Rates
-                cryptoRate: document.getElementById('conf-crypto-rate') ?
-                    parseFloat(document.getElementById('conf-crypto-rate').value) || 0.01 : undefined,
-                bkashRate: document.getElementById('conf-bkash-rate') ?
-                    parseFloat(document.getElementById('conf-bkash-rate').value) || 1 : undefined,
-                nagadRate: document.getElementById('conf-nagad-rate') ?
-                    parseFloat(document.getElementById('conf-nagad-rate').value) || 1 : undefined,
+                cryptoRate: getFloatValue('conf-crypto-rate', 0.01),
+                bkashRate: getFloatValue('conf-bkash-rate', 1),
+                nagadRate: getFloatValue('conf-nagad-rate', 1),
 
                 // Exchange Rates (USD/Tokens/Gems)
-                usdToToken: document.getElementById('conf-usd-to-token') ?
-                    parseInt(document.getElementById('conf-usd-to-token').value) || 100 : undefined,
-                gemToToken: document.getElementById('conf-gem-to-token') ?
-                    parseInt(document.getElementById('conf-gem-to-token').value) || 100 : undefined,
-                tokenToGem: document.getElementById('conf-token-to-gem') ?
-                    parseFloat(document.getElementById('conf-token-to-gem').value) || 1 : undefined,
-                takaToGem: document.getElementById('conf-taka-to-gem') ?
-                    parseInt(document.getElementById('conf-taka-to-gem').value) || 100 : undefined,
-                platformFee: document.getElementById('conf-platform-fee') ?
-                    parseInt(document.getElementById('conf-platform-fee').value) || 20 : undefined,
+                usdToToken: getValue('conf-usd-to-token', 100),
+                gemToToken: getValue('conf-gem-to-token', 100),
+                tokenToGem: getFloatValue('conf-token-to-gem', 1),
+                takaToGem: getValue('conf-taka-to-gem', 100),
+                platformFee: getValue('conf-platform-fee', 20),
 
                 // Card Prices
-                geminiCardPrice: document.getElementById('conf-card-gemini') ?
-                    parseInt(document.getElementById('conf-card-gemini').value) || 0 : undefined,
-                chatgptCardPrice: document.getElementById('conf-card-chatgpt') ?
-                    parseInt(document.getElementById('conf-card-chatgpt').value) || 0 : undefined,
-                spotifyCardPrice: document.getElementById('conf-card-spotify') ?
-                    parseInt(document.getElementById('conf-card-spotify').value) || 0 : undefined,
+                geminiCardPrice: getValue('conf-card-gemini'),
+                chatgptCardPrice: getValue('conf-card-chatgpt'),
+                spotifyCardPrice: getValue('conf-card-spotify'),
 
                 // VPN Prices
-                nordvpnPrice: document.getElementById('conf-vpn-nord') ?
-                    parseInt(document.getElementById('conf-vpn-nord').value) || 0 : undefined,
-                expressvpnPrice: document.getElementById('conf-vpn-express') ?
-                    parseInt(document.getElementById('conf-vpn-express').value) || 0 : undefined,
-                surfsharkPrice: document.getElementById('conf-vpn-surf') ?
-                    parseInt(document.getElementById('conf-vpn-surf').value) || 0 : undefined,
-                cyberghostPrice: document.getElementById('conf-vpn-cyber') ?
-                    parseInt(document.getElementById('conf-vpn-cyber').value) || 0 : undefined,
-                protonvpnPrice: document.getElementById('conf-vpn-proton') ?
-                    parseInt(document.getElementById('conf-vpn-proton').value) || 0 : undefined,
+                nordvpnPrice: getValue('conf-vpn-nord'),
+                expressvpnPrice: getValue('conf-vpn-express'),
+                surfsharkPrice: getValue('conf-vpn-surf'),
+                cyberghostPrice: getValue('conf-vpn-cyber'),
+                protonvpnPrice: getValue('conf-vpn-proton'),
 
                 sellingRewards: {
-                    gmail: parseInt(document.getElementById('reward-gmail').value) || 0,
-                    tiktok: parseInt(document.getElementById('reward-tiktok').value) || 0,
-                    facebook: parseInt(document.getElementById('reward-facebook').value) || 0,
-                    telegram: parseInt(document.getElementById('reward-telegram').value) || 0,
-                    discord: parseInt(document.getElementById('reward-discord').value) || 0,
-                    other: parseInt(document.getElementById('reward-other').value) || 0,
-                    '2faMultiplier': parseFloat(document.getElementById('reward-2fa-mult').value) || 1.1
+                    gmail: getValue('reward-gmail'),
+                    tiktok: getValue('reward-tiktok'),
+                    facebook: getValue('reward-facebook'),
+                    telegram: getValue('reward-telegram'),
+                    discord: getValue('reward-discord'),
+                    other: getValue('reward-other'),
+                    '2faMultiplier': getFloatValue('reward-2fa-mult', 1.1)
                 }
             };
+
+            // Remove undefined fields
+            Object.keys(payload).forEach(key => {
+                if (payload[key] === undefined) delete payload[key];
+            });
+
+            const btn = document.querySelector('button[onclick="saveAllCosts()"]');
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Saving...';
 
             try {
                 const res = await fetch('/api/admin/costs', {
@@ -5568,12 +5639,24 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    alert('✅ All costs and rewards saved successfully!');
+                    btn.innerHTML = '<i class="fas fa-check mr-2"></i> Saved!';
+                    btn.classList.remove('bg-orange-500');
+                    btn.classList.add('bg-green-500');
+                    setTimeout(() => {
+                        btn.innerHTML = originalHtml;
+                        btn.classList.remove('bg-green-500');
+                        btn.classList.add('bg-orange-500');
+                        btn.disabled = false;
+                    }, 2000);
                 } else {
                     alert('❌ Error: ' + data.message);
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
                 }
             } catch (e) {
                 alert('⚠ Network error saving costs');
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
             }
         }
 
@@ -7071,14 +7154,14 @@
                 if (!tbody) return;
                 tbody.innerHTML = (data.codes || []).map(c => {
                     const used = c.used || 0;
-                    const maxUses = c.maxUses || 100;
-                    const remaining = maxUses - used;
+                    const maxUses = c.maxUses || 0;
+                    const remaining = maxUses > 0 ? (maxUses - used) : 'Unlimited';
                     return `
             <tr>
                 <td class="font-mono text-orange-400">${c.code}</td>
                 <td>${typeof formatCompact === 'function' ? formatCompact(c.amount) : c.amount}</td>
                 <td>${typeof formatCompact === 'function' ? formatCompact(used) : used}</td>
-                <td>${typeof formatCompact === 'function' ? formatCompact(remaining) : remaining}</td>
+                <td>${typeof remaining === 'number' && typeof formatCompact === 'function' ? formatCompact(remaining) : remaining}</td>
                 <td><button onclick="deleteCode('${c.code}')" class="text-red-400 hover:text-red-300"><i
                             class="fas fa-trash"></i></button></td>
             </tr>`;
@@ -8141,6 +8224,11 @@
                 '<label style="display:block; color:var(--text-sub); font-size:12px; margin-bottom:4px;">Price (TC)</label>' +
                 '<input type="number" id="editItem-price" style="width:100%; background:#1a1a2e; border:1px solid #333; color:white; padding:10px; border-radius:8px;">' +
                 '</div>' +
+                '<div style="margin-bottom:12px;">' +
+                '<label style="display:block; color:var(--text-sub); font-size:12px; margin-bottom:4px;">Icon</label>' +
+                '<input type="file" id="editItem-icon-file" style="width:100%; background:#1a1a2e; border:1px solid #333; color:white; padding:10px; border-radius:8px;">' +
+                '<input type="hidden" id="editItem-icon-url">' +
+                '</div>' +
                 '<div style="margin-bottom:20px;">' +
                 '<label style="display:block; color:var(--text-sub); font-size:12px; margin-bottom:4px;">Description</label>' +
                 '<textarea id="editItem-desc" style="width:100%; background:#1a1a2e; border:1px solid #333; color:white; padding:10px; border-radius:8px; height:80px;"></textarea>' +
@@ -8159,25 +8247,62 @@
             var name = document.getElementById('editItem-name').value;
             var price = document.getElementById('editItem-price').value;
             var desc = document.getElementById('editItem-desc').value;
+            
+            var fileInput = document.getElementById('editItem-icon-file');
+            var iconUrl = document.getElementById('editItem-icon-url').value;
+            
+            const btn = event.target;
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Saving...';
+
+            if (fileInput && fileInput.files.length > 0) {
+                var formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                
+                try {
+                    var uploadRes = await fetch('/api/admin/upload-media', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    var uploadData = await uploadRes.json();
+                    if (uploadData.success) {
+                        iconUrl = uploadData.url;
+                    } else {
+                        alert('Failed to upload icon: ' + uploadData.message);
+                        btn.innerHTML = originalHtml;
+                        btn.disabled = false;
+                        return;
+                    }
+                } catch (e) {
+                    alert('Network error uploading icon');
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
+                    return;
+                }
+            }
 
             try {
                 var res = await fetch('/api/admin/services/update', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: id, name: name, price: price, desc: desc })
+                    body: JSON.stringify({ id: id, name: name, price: price, desc: desc, icon: iconUrl })
                 });
                 var data = await res.json();
                 if (data.success) {
                     alert('Item updated successfully!');
                     document.getElementById('editItemModal').style.display = 'none';
                     loadServiceItems();
-                    document.getElementById('itemManageModalTitle').textContent = 'Manage ' + name;
-                    document.getElementById('itemManageName').textContent = name;
+                    if (document.getElementById('itemManageModalTitle')) document.getElementById('itemManageModalTitle').textContent = 'Manage ' + name;
+                    if (document.getElementById('itemManageName')) document.getElementById('itemManageName').textContent = name;
                 } else {
                     alert('Error: ' + data.message);
                 }
             } catch (e) {
-                alert('Network error');
+                alert('Network error saving item');
+            } finally {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
             }
         }
 
@@ -8769,7 +8894,7 @@
                         <span class="text-xs text-gray-400">${isVpn ? 'VPN Access' : 'Virtual Cards'}</span>
                         <span
                             class="item-count-badge px-2 py-1 bg-${colorTheme}-500/30 text-${colorTheme}-400 rounded-full text-xs font-bold"
-                            data-item="${item.id}">${item.stock || 0} Cards</span>
+                            data-item="${item.id}">${typeof formatCompact === 'function' ? formatCompact(item.stock || 0) : (item.stock || 0)} Cards</span>
                     </div>
                 </div>`;
             }).join('');
@@ -12153,8 +12278,14 @@
                 ['gmail', 'hotmail'].forEach(type => {
                     const av = document.getElementById(`pool-${type}-available`);
                     const as = document.getElementById(`pool-${type}-assigned`);
-                    if (av) av.textContent = (stats[type] && stats[type].available) || 0;
-                    if (as) as.textContent = (stats[type] && stats[type].totalUsed) || 0;
+                    if (av) {
+                        const val = (stats[type] && stats[type].available) || 0;
+                        av.textContent = typeof formatCompact === 'function' ? formatCompact(val) : val;
+                    }
+                    if (as) {
+                        const val = (stats[type] && stats[type].totalUsed) || 0;
+                        as.textContent = typeof formatCompact === 'function' ? formatCompact(val) : val;
+                    }
                 });
             } catch (e) {}
         }
@@ -12371,6 +12502,15 @@
                 const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 const fullDate = date.toLocaleString();
                 
+                const textForPlatform = ((m.from || '') + ' ' + (m.subject || '') + ' ' + (m.body || m.snippet || '')).toLowerCase();
+                let platform = 'Others';
+                if (textForPlatform.includes('facebook')) platform = 'Facebook';
+                else if (textForPlatform.includes('tiktok')) platform = 'TikTok';
+                else if (textForPlatform.includes('instagram')) platform = 'Instagram';
+                else if (textForPlatform.includes('google')) platform = 'Google';
+                
+                const cleanSnippet = (m.snippet || m.body || '').replace(/<[^>]*>?/gm, '').trim();
+                
                 return `
                     <tr class="border-b border-white/5 hover:bg-white/5 transition-all">
                         <td class="py-3 px-4">
@@ -12396,8 +12536,12 @@
                         </td>
                         <td class="py-3 px-4">
                             <div class="max-w-md">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400 uppercase">${platform}</span>
+                                    <span class="text-[10px] text-gray-500">${fullDate}</span>
+                                </div>
                                 <div class="text-xs text-white font-bold truncate mb-1">${m.subject || '(No Subject)'}</div>
-                                <div class="text-[10px] text-gray-400 line-clamp-2 leading-relaxed">${m.body || m.snippet || ''}</div>
+                                <div class="text-[10px] text-gray-400 line-clamp-2 leading-relaxed">${cleanSnippet}</div>
                             </div>
                         </td>
                     </tr>

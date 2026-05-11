@@ -53,7 +53,7 @@ function showRedeemSuccessModal(rewardAmount) {
                 </div>
                 <h3 style="color: #22c55e; font-size: 24px; margin: 0 0 10px 0; font-weight: 700;">Successful!</h3>
                 <p style="color: #fff; font-size: 16px; margin: 0 0 8px 0;">You received</p>
-                <p style="color: #22c55e; font-size: 32px; margin: 0 0 20px 0; font-weight: 800;">+${rewardAmount} Tokens</p>
+                <p style="color: #22c55e; font-size: 32px; margin: 0 0 20px 0; font-weight: 800;">+${typeof formatCompact === 'function' ? formatCompact(rewardAmount) : rewardAmount} Tokens</p>
                 <button onclick="closeRedeemModal()" style="
                     background: #22c55e;
                     color: white;
@@ -3710,7 +3710,7 @@ function renderFullHistory() {
     empty.style.display = 'none';
 
     const POS_TYPES = new Set(['transfer_in', 'redeem', 'daily_bonus', 'ad_reward', 'mission_reward', 'quiz_reward', 'bonus', 'deposit', 'gift_claimed', 'gift', 'apikey_generate']);
-    const NEG_TYPES = new Set(['transfer_out', 'account_purchase', 'mail', 'temp_mail', 'temp_email', 'premium_mail', 'premium_email', 'hotmail_email', 'student_email', 'gmail_email', 'mail_renew', 'number', 'exchange_out', 'support_contact']);
+    const NEG_TYPES = new Set(['transfer_out', 'account_purchase', 'mail', 'temp_mail', 'temp_email', 'premium_mail', 'premium_email', 'hotmail_email', 'student_email', 'gmail_email', 'mail_renew', 'number', 'exchange_out', 'support_contact', 'live2fa', 'liveinstagram', 'livefacebook', 'livetiktok', 'livetwitter', 'livethreads']);
 
     const typeConfig = {
         'apikey_generate': { icon: 'fas fa-key', color: '#9333ea', name: 'API Key Generated' },
@@ -3739,7 +3739,13 @@ function renderFullHistory() {
         'gift': { icon: 'fas fa-gift', color: '#f59e0b', name: 'Gift' },
         'exchange': { icon: 'fas fa-exchange-alt', color: '#06b6d4', name: 'Exchanged' },
         'verification': { icon: 'fas fa-shield-alt', color: '#10b981', name: 'Verification' },
-        'support_contact': { icon: 'fas fa-headset', color: '#f59e0b', name: 'Support Contact' }
+        'support_contact': { icon: 'fas fa-headset', color: '#f59e0b', name: 'Support Contact' },
+        'live2fa': { icon: 'fas fa-shield-alt', color: '#22c55e', name: '2FA Live' },
+        'liveinstagram': { icon: 'fab fa-instagram', color: '#ec4899', name: 'Instagram Live' },
+        'livefacebook': { icon: 'fab fa-facebook-f', color: '#1877f2', name: 'Facebook Live' },
+        'livetiktok': { icon: 'fab fa-tiktok', color: '#69c9d0', name: 'TikTok Live' },
+        'livetwitter': { icon: 'fab fa-x-twitter', color: '#000000', name: 'Twitter Live' },
+        'livethreads': { icon: 'fab fa-threads', color: '#000000', name: 'Threads Live' }
     };
 
     list.innerHTML = userData.history.map(item => {
@@ -3870,7 +3876,13 @@ function renderRecentActivity(history) {
         'gift': { icon: 'fas fa-gift', color: '#f59e0b', name: 'Gift' },
         'support_contact': { icon: 'fas fa-headset', color: '#f59e0b', name: 'Support Contact' },
         'scratch_reward': { icon: 'fas fa-eraser', color: '#10b981', name: 'Scratch Reward' },
-        'quiz_reward': { icon: 'fas fa-lightbulb', color: '#3b82f6', name: 'Quiz Reward' }
+        'quiz_reward': { icon: 'fas fa-lightbulb', color: '#3b82f6', name: 'Quiz Reward' },
+        'live2fa': { icon: 'fas fa-shield-alt', color: '#22c55e', name: '2FA Live' },
+        'liveinstagram': { icon: 'fab fa-instagram', color: '#ec4899', name: 'Instagram Live' },
+        'livefacebook': { icon: 'fab fa-facebook-f', color: '#1877f2', name: 'Facebook Live' },
+        'livetiktok': { icon: 'fab fa-tiktok', color: '#69c9d0', name: 'TikTok Live' },
+        'livetwitter': { icon: 'fab fa-x-twitter', color: '#000000', name: 'Twitter Live' },
+        'livethreads': { icon: 'fab fa-threads', color: '#000000', name: 'Threads Live' }
     };
 
     if (!history || history.length === 0) {
@@ -3890,7 +3902,7 @@ function renderRecentActivity(history) {
         const date = item.date ? new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
         const time = item.date ? new Date(item.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '';
         const POS_TYPES = new Set(['transfer_in', 'redeem', 'daily_bonus', 'ad_reward', 'mission_reward', 'quiz_reward', 'bonus', 'deposit', 'gift_claimed', 'gift', 'apikey_generate']);
-        const NEG_TYPES = new Set(['transfer_out', 'account_purchase', 'mail', 'number', 'support_contact', 'premium_email', 'temp_email', 'hotmail_email', 'student_email', 'gmail_email', 'premium_mail', 'temp_mail', 'mail_renew']);
+        const NEG_TYPES = new Set(['transfer_out', 'account_purchase', 'mail', 'number', 'support_contact', 'premium_email', 'temp_email', 'hotmail_email', 'student_email', 'gmail_email', 'premium_mail', 'temp_mail', 'mail_renew', 'live2fa', 'liveinstagram', 'livefacebook', 'livetiktok', 'livetwitter', 'livethreads']);
         // Fix: For mail type, if amount is 0 or missing, use mailCost from config
         let rawAmount = item.amount;
         if ((itemType === 'mail' || itemType === 'email' || config.name?.includes('Mail')) && (!rawAmount || rawAmount === 0)) {
@@ -4167,6 +4179,25 @@ function renderBalances() {
     // Hotmail (TC)
     const hotMailBal = document.getElementById('hotMailBalanceDisplay');
     if (hotMailBal) hotMailBal.innerText = formattedTokens + ' TC';
+    
+    // Live Services Balance Displays
+    const live2faBal = document.getElementById('live2faBalanceDisplay');
+    if (live2faBal) live2faBal.innerText = formattedTokens + ' TC';
+    
+    const liveInstaBal = document.getElementById('liveInstagramBalanceDisplay');
+    if (liveInstaBal) liveInstaBal.innerText = formattedTokens + ' TC';
+    
+    const liveFbBal = document.getElementById('liveFacebookBalanceDisplay');
+    if (liveFbBal) liveFbBal.innerText = formattedTokens + ' TC';
+    
+    const liveTiktokBal = document.getElementById('liveTiktokBalanceDisplay');
+    if (liveTiktokBal) liveTiktokBal.innerText = formattedTokens + ' TC';
+    
+    const liveTwitterBal = document.getElementById('liveTwitterBalanceDisplay');
+    if (liveTwitterBal) liveTwitterBal.innerText = formattedTokens + ' TC';
+    
+    const liveThreadsBal = document.getElementById('liveThreadsBalanceDisplay');
+    if (liveThreadsBal) liveThreadsBal.innerText = formattedTokens + ' TC';
 
     // Student Mail (TC)
     const studentMailBal = document.getElementById('studentMailBalanceDisplay');
@@ -4483,6 +4514,20 @@ function syncAdminData() {
                 localStorage.setItem('adminCosts', JSON.stringify(data.costs));
                 // Update global config if needed
                 window.ADMIN_CONFIG = data.costs;
+                
+                const c = data.costs || {};
+                const getCurrencyLabel = (val) => {
+                    if (val === 'Gems' || val === 'gem') return 'Gems';
+                    if (val === 'usd' || val === 'USD') return 'USD';
+                    return 'TC';
+                };
+
+                if (document.getElementById('cost-live2fa')) document.getElementById('cost-live2fa').innerText = `${c.live2fa || 10} ${getCurrencyLabel(c.live2faCurrency)} / Request`;
+                if (document.getElementById('cost-liveInstagram')) document.getElementById('cost-liveInstagram').innerText = `${c.liveInstagram || 10} ${getCurrencyLabel(c.liveInstagramCurrency)} / Request`;
+                if (document.getElementById('cost-liveFacebook')) document.getElementById('cost-liveFacebook').innerText = `${c.liveFacebook || 10} ${getCurrencyLabel(c.liveFacebookCurrency)} / Request`;
+                if (document.getElementById('cost-liveTiktok')) document.getElementById('cost-liveTiktok').innerText = `${c.liveTiktok || 10} ${getCurrencyLabel(c.liveTiktokCurrency)} / Request`;
+                if (document.getElementById('cost-liveTwitter')) document.getElementById('cost-liveTwitter').innerText = `${c.liveTwitter || 10} ${getCurrencyLabel(c.liveTwitterCurrency)} / Request`;
+                if (document.getElementById('cost-liveThreads')) document.getElementById('cost-liveThreads').innerText = `${c.liveThreads || 10} ${getCurrencyLabel(c.liveThreadsCurrency)} / Request`;
             }
         });
 
@@ -7887,7 +7932,20 @@ function start2faLive() {
         if (result) result.textContent = '------';
         if (timer)  timer.textContent  = 'Waiting...';
         
-        window.showToast('🛑 2FA service stopped.');
+        const copyBtn = document.getElementById('twofa-restart-btn');
+        if (copyBtn) {
+            copyBtn.innerHTML = '<i class="fas fa-paste"></i> PASTE';
+            copyBtn.onclick = pasteFromClipboard;
+        }
+        
+        const input = document.getElementById('twofa-input');
+        if (input) {
+            input.value = '';
+            const clearBtn = document.getElementById('twofa-clear-btn');
+            if (clearBtn) clearBtn.style.display = 'none';
+        }
+        
+        window.showToast('🛑 2FA service stopped and data cleared.');
         return;
     }
     
@@ -7898,15 +7956,55 @@ function start2faLive() {
         return;
     }
 
-    updateTwoFA(secret);
-    _twofaInterval = setInterval(() => updateTwoFA(secret), 1000);
-
-    // Update button states to STOP
-    if (startBtn) {
-        startBtn.innerHTML = '<i class="fas fa-stop"></i> STOP';
-        startBtn.style.background = 'linear-gradient(135deg,#dc2626,#ef4444)'; // Red for Stop
+    // Call server to deduct tokens
+    if (!userData || !userData.id) {
+        window.showToast('⚠️ User data not found. Please reload.');
+        return;
     }
-    window.showToast('🚀 2FA service started.');
+
+    if (startBtn) startBtn.disabled = true;
+
+    fetch('/api/generate/live2fa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: userData.id })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (startBtn) startBtn.disabled = false;
+        
+        if (!data.success) {
+            window.showToast(`❌ ${data.message}`);
+            return;
+        }
+
+        // Success! Tokens deducted. Start service.
+        updateTwoFA(secret);
+        _twofaInterval = setInterval(() => updateTwoFA(secret), 1000);
+
+        // Update button states to STOP
+        if (startBtn) {
+            startBtn.innerHTML = '<i class="fas fa-stop"></i> STOP';
+            startBtn.style.background = 'linear-gradient(135deg,#dc2626,#ef4444)'; // Red for Stop
+        }
+        
+        const copyBtn = document.getElementById('twofa-restart-btn');
+        if (copyBtn) {
+            copyBtn.innerHTML = '<i class="fas fa-copy"></i> COPY';
+            copyBtn.onclick = copy2faCode;
+        }
+        
+        window.showToast('🚀 2FA service started.');
+        
+        // Refresh balance and history
+        if (typeof checkUserStatus === 'function') checkUserStatus();
+        if (typeof loadRecentActivity === 'function') loadRecentActivity();
+    })
+    .catch(err => {
+        if (startBtn) startBtn.disabled = false;
+        window.showToast('❌ Failed to start service. Try again.');
+        console.error(err);
+    });
 }
 
 function copy2faCode() {
@@ -7922,6 +8020,40 @@ function copy2faCode() {
         window.showToast('⚠️ No code to copy!');
     }
 }
+
+function pasteFromClipboard() {
+    navigator.clipboard.readText().then(text => {
+        const input = document.getElementById('twofa-input');
+        if (input) {
+            input.value = text;
+            const btn = document.getElementById('twofa-clear-btn');
+            if (btn) btn.style.display = text ? 'block' : 'none';
+        }
+        window.showToast('📋 Pasted from clipboard!');
+    }).catch(err => {
+        window.showToast('❌ Failed to read clipboard!');
+        console.error(err);
+    });
+}
+
+function toggleClearBtn(input) {
+    const btn = document.getElementById('twofa-clear-btn');
+    if (btn) {
+        btn.style.display = input.value ? 'block' : 'none';
+    }
+}
+
+function clearTwoFAInput() {
+    const input = document.getElementById('twofa-input');
+    if (input) {
+        input.value = '';
+        toggleClearBtn(input);
+    }
+}
+
+window.pasteFromClipboard = pasteFromClipboard;
+window.toggleClearBtn = toggleClearBtn;
+window.clearTwoFAInput = clearTwoFAInput;
 
 function updateTwoFA(secret) {
     const remaining = 30 - (Math.floor(Date.now() / 1000) % 30);

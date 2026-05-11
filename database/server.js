@@ -182,12 +182,12 @@ function getUsersObj() {
     return db.data.users;
 }
 
-function saveUsersObj(users) {
+function saveUsersObj(users, force = false) {
     // Trigger Firebase save only - users object is already modified in place via getUsersObj() reference
     // IMPORTANT: Do NOT assign db.data.users = users as this causes race conditions
     // where concurrent saves wipe out data added between getUsersObj() and saveUsersObj()
     if (typeof db.save === 'function') {
-        db.save();
+        db.save(force);
     }
 }
 
@@ -756,11 +756,10 @@ app.delete('/api/admin/codes/:code', async (req, res) => {
     // First, remove this code from all users' redeemed arrays
     const users = await db.getUsers();
     let usersUpdated = 0;
-    for (const userId in users) {
-        const user = users[userId];
+    for (const user of users) {
         if (user.redeemed && user.redeemed.includes(code)) {
             user.redeemed = user.redeemed.filter(c => c !== code);
-            await db.saveUser(userId, user);
+            await db.updateUser(user);
             usersUpdated++;
         }
     }
@@ -938,7 +937,7 @@ app.post('/api/admin/users/:userId', async (req, res) => {
             }
         }
 
-        await db.updateUser(user);
+        await db.updateUser(user, null, true);
         res.json({ success: true, message: 'User updated successfully' });
     } catch (error) {
         console.error('[ADMIN USER UPDATE ERROR]', error);
@@ -1806,13 +1805,27 @@ app.post('/api/generate/:service', (req, res) => {
     const settings = db.getSettings();
     const cost = (settings.costs && settings.costs[service]) || 10;
 
-    const userTokens = db.getTokenBalance(user);
-    if (userTokens < cost) {
-        return res.json({ success: false, message: `Insufficient tokens. Need ${cost} TC.` });
+    const currency = settings.costs[`${service}Currency`] || 'token';
+    
+    if (currency === 'Gems' || currency === 'gem') {
+        const userGems = user.Gems || 0;
+        if (userGems < cost) {
+            return res.json({ success: false, message: `Insufficient Gems. Need ${cost} Gems.` });
+        }
+        user.Gems = (user.Gems || 0) - cost;
+    } else if (currency === 'usd' || currency === 'USD') {
+        const userUsd = user.usd || 0;
+        if (userUsd < cost) {
+            return res.json({ success: false, message: `Insufficient USD. Need $${cost}.` });
+        }
+        user.usd = (user.usd || 0) - cost;
+    } else {
+        const userTokens = db.getTokenBalance(user);
+        if (userTokens < cost) {
+            return res.json({ success: false, message: `Insufficient tokens. Need ${cost} TC.` });
+        }
+        db.setTokenBalance(user, db.getTokenBalance(user) - cost);
     }
-
-    // Deduct tokens
-    db.setTokenBalance(user, db.getTokenBalance(user) - cost);
 
     // Add to history
     if (!user.history) user.history = [];
@@ -1925,8 +1938,8 @@ app.post('/api/redeem', async (req, res) => {
         }
 
         // Check max uses
-        const currentUses = codeData.uses || 0;
-        const maxUses = codeData.maxUses || 0;
+        const currentUses = codeData.redeemedBy ? codeData.redeemedBy.length : 0;
+        const maxUses = codeData.maxUses || codeData.uses || 0;
         if (maxUses > 0 && currentUses >= maxUses) {
             return res.json({ success: false, message: 'Code has reached maximum uses' });
         }
@@ -1964,9 +1977,25 @@ app.post('/api/redeem', async (req, res) => {
         user.redeemed.push(code);
 
         // Increment code usage count
-        codeData.uses = (codeData.uses || 0) + 1;
+        codeData.uses = (codeData.redeemedBy ? codeData.redeemedBy.length : 0) + 1;
         if (!codeData.redeemedBy) codeData.redeemedBy = [];
         codeData.redeemedBy.push(userId);
+
+        // Auto-delete if reached max uses
+        const maxLimit = codeData.maxUses || 0;
+        if (maxLimit > 0 && codeData.uses >= maxLimit) {
+            delete codes[code];
+            console.log(`[REDEEM] Code '${code}' reached max uses and was automatically deleted.`);
+            
+            // Remove this code from all users' redeemed arrays to allow re-claiming if recreated
+            const users = await db.getUsers();
+            for (const uId in users) {
+                const u = users[uId];
+                if (u.redeemed && u.redeemed.includes(code)) {
+                    u.redeemed = u.redeemed.filter(c => c !== code);
+                }
+            }
+        }
 
         // Save settings back
         settings.codes = codes;
@@ -3527,8 +3556,27 @@ app.post('/api/mail/generate', async (req, res) => {
     else if (requestedService === 'hotmail' || requestedService === 'hot') tokenCost = costs.hotmail || 25;
     else if (requestedService === 'student') tokenCost = costs.student || 50;
 
-    const mailTokens = db.getTokenBalance(user);
-    if (mailTokens < tokenCost) return res.json({ success: false, message: `Insufficient tokens. Need ${tokenCost} TC for ${requestedService}.` });
+    let currency = 'token';
+    if (requestedService === 'gmail' || requestedService === 'premium') currency = costs.gmailCurrency || 'token';
+    else if (requestedService === 'hotmail' || requestedService === 'hot') currency = costs.hotmailCurrency || 'token';
+    else if (requestedService === 'student') currency = costs.studentCurrency || 'token';
+    else currency = costs.tempmailCurrency || 'token';
+    
+    // Balance check based on currency
+    if (currency === 'Gems' || currency === 'gem') {
+        const userGems = user.Gems || 0;
+        if (userGems < tokenCost) {
+            return res.json({ success: false, message: `Insufficient Gems. Need ${tokenCost} Gems for ${requestedService}.` });
+        }
+    } else if (currency === 'usd' || currency === 'USD') {
+        const userUsd = user.usd || 0;
+        if (userUsd < tokenCost) {
+            return res.json({ success: false, message: `Insufficient USD. Need $${tokenCost} for ${requestedService}.` });
+        }
+    } else {
+        const mailTokens = db.getTokenBalance(user);
+        if (mailTokens < tokenCost) return res.json({ success: false, message: `Insufficient tokens. Need ${tokenCost} TC for ${requestedService}.` });
+    }
 
     let emailData = null;
     const sessionId = 'mail_' + requestedService + '_' + Date.now() + '_' + userId;
@@ -3636,7 +3684,14 @@ app.post('/api/mail/generate', async (req, res) => {
         return res.json({ success: false, message: 'Email not available. Please try again later or contact admin.' });
     }
 
-    db.setTokenBalance(user, db.getTokenBalance(user) - tokenCost);
+    if (currency === 'Gems' || currency === 'gem') {
+        user.Gems = (user.Gems || 0) - tokenCost;
+    } else if (currency === 'usd' || currency === 'USD') {
+        user.usd = (user.usd || 0) - tokenCost;
+    } else {
+        db.setTokenBalance(user, db.getTokenBalance(user) - tokenCost);
+    }
+    
     if (!user.history) user.history = [];
 
     let historyType = 'temp_mail';
@@ -3644,11 +3699,13 @@ app.post('/api/mail/generate', async (req, res) => {
     else if(requestedService === 'hotmail' || requestedService === 'hot') historyType = 'hotmail_email';
     else if(requestedService === 'gmail' || requestedService === 'premium') historyType = 'gmail_email';
 
+    const curLabel = (currency === 'Gems' || currency === 'gem') ? 'Gems' : ((currency === 'usd' || currency === 'USD') ? 'USD' : 'Tokens');
+
     user.history.unshift({
         type: historyType,
         amount: -tokenCost,
         date: new Date().toISOString(),
-        reward: `-${tokenCost} Tokens`,
+        reward: `-${tokenCost} ${curLabel}`,
         detail: emailData.email
     });
     saveUsersObj(users);
@@ -4076,7 +4133,7 @@ app.post('/api/exchange/convert', (req, res) => {
         detail: `Received from ${from.toUpperCase()} exchange`
     });
 
-    saveUsersObj(users);
+    saveUsersObj(users, true);
     res.json({
         success: true,
         message: `Successfully exchanged ${amt} ${from} to ${amountAfterFee} ${to} (Fee: ${exchangeFee} ${to} - ${exchangeFeePercent}%)`,
@@ -4530,17 +4587,20 @@ app.get('/api/admin/stats', async (req, res) => {
     }
 
     // Count ALL Emails from Pool (Enhanced to include all categories)
+    const pool = db.data.emailPool || {};
+    const history = db.data.emailPoolHistory || [];
+    
     let gmailTotal = 0;
     let gmailUsed = 0;
     
-    if (db.data.emailPool) {
-        Object.values(db.data.emailPool).forEach(pool => {
-            if (Array.isArray(pool)) {
-                gmailTotal += pool.length;
-                gmailUsed += pool.filter(e => e.assignedTo || e.status === 'used').length;
-            }
-        });
-    }
+    ['gmail', 'hotmail', 'student'].forEach(t => {
+        const typePool = pool[t] || [];
+        const available = typePool.filter(e => !e.status || e.status === 'available').length;
+        const used = history.filter(h => h.type === t).length;
+        
+        gmailTotal += (available + used);
+        gmailUsed += used;
+    });
 
     let gmailsUsed = 0;
     // Count total unique mail sessions that have been generated from history
@@ -5150,6 +5210,18 @@ app.get('/api/admin/costs', (req, res) => {
             youtubeCost: costs.youtube || 50,
             teacherCost: costs.teacher || 100,
             militaryCost: costs.military || 100,
+            live2fa: costs.live2fa || 10,
+            liveInstagram: costs.liveInstagram || 10,
+            liveFacebook: costs.liveFacebook || 10,
+            liveTiktok: costs.liveTiktok || 10,
+            liveTwitter: costs.liveTwitter || 10,
+            liveThreads: costs.liveThreads || 10,
+            live2faCurrency: costs.live2faCurrency || 'token',
+            liveInstagramCurrency: costs.liveInstagramCurrency || 'token',
+            liveFacebookCurrency: costs.liveFacebookCurrency || 'token',
+            liveTiktokCurrency: costs.liveTiktokCurrency || 'token',
+            liveTwitterCurrency: costs.liveTwitterCurrency || 'token',
+            liveThreadsCurrency: costs.liveThreadsCurrency || 'token',
 
             // USD Costs
             accountsUSD: costs.accountsUSD || 1.00,
@@ -5208,6 +5280,18 @@ app.get('/api/public/costs', (req, res) => {
             gmailCost: costs.gmail || 0,
             verificationCost: costs.verification || 0,
             numberCost: costs.number || 0,
+            live2fa: costs.live2fa || 10,
+            liveInstagram: costs.liveInstagram || 10,
+            liveFacebook: costs.liveFacebook || 10,
+            liveTiktok: costs.liveTiktok || 10,
+            liveTwitter: costs.liveTwitter || 10,
+            liveThreads: costs.liveThreads || 10,
+            live2faCurrency: costs.live2faCurrency || 'token',
+            liveInstagramCurrency: costs.liveInstagramCurrency || 'token',
+            liveFacebookCurrency: costs.liveFacebookCurrency || 'token',
+            liveTiktokCurrency: costs.liveTiktokCurrency || 'token',
+            liveTwitterCurrency: costs.liveTwitterCurrency || 'token',
+            liveThreadsCurrency: costs.liveThreadsCurrency || 'token',
             usdToToken: settings.usdToToken || 100,
             gemToToken: settings.gemToToken || 100,
             tokenToGem: settings.tokenToGem || 1,
@@ -5275,6 +5359,18 @@ app.post('/api/admin/costs', (req, res) => {
     if (payload.youtubeCost !== undefined) db.data.settings.costs.youtube = parseInt(payload.youtubeCost);
     if (payload.teacherCost !== undefined) db.data.settings.costs.teacher = parseInt(payload.teacherCost);
     if (payload.militaryCost !== undefined) db.data.settings.costs.military = parseInt(payload.militaryCost);
+    if (payload.live2faCost !== undefined) db.data.settings.costs.live2fa = parseInt(payload.live2faCost);
+    if (payload.liveInstagramCost !== undefined) db.data.settings.costs.liveInstagram = parseInt(payload.liveInstagramCost);
+    if (payload.liveFacebookCost !== undefined) db.data.settings.costs.liveFacebook = parseInt(payload.liveFacebookCost);
+    if (payload.liveTiktokCost !== undefined) db.data.settings.costs.liveTiktok = parseInt(payload.liveTiktokCost);
+    if (payload.liveTwitterCost !== undefined) db.data.settings.costs.liveTwitter = parseInt(payload.liveTwitterCost);
+    if (payload.liveThreadsCost !== undefined) db.data.settings.costs.liveThreads = parseInt(payload.liveThreadsCost);
+    if (payload.live2faCurrency !== undefined) db.data.settings.costs.live2faCurrency = payload.live2faCurrency;
+    if (payload.liveInstagramCurrency !== undefined) db.data.settings.costs.liveInstagramCurrency = payload.liveInstagramCurrency;
+    if (payload.liveFacebookCurrency !== undefined) db.data.settings.costs.liveFacebookCurrency = payload.liveFacebookCurrency;
+    if (payload.liveTiktokCurrency !== undefined) db.data.settings.costs.liveTiktokCurrency = payload.liveTiktokCurrency;
+    if (payload.liveTwitterCurrency !== undefined) db.data.settings.costs.liveTwitterCurrency = payload.liveTwitterCurrency;
+    if (payload.liveThreadsCurrency !== undefined) db.data.settings.costs.liveThreadsCurrency = payload.liveThreadsCurrency;
 
     // USD Costs
     if (payload.accountsUSD !== undefined) db.data.settings.costs.accountsUSD = parseFloat(payload.accountsUSD);
@@ -5301,7 +5397,7 @@ app.post('/api/admin/costs', (req, res) => {
         db.data.sellingRewards = { ...db.data.sellingRewards, ...payload.sellingRewards };
     }
 
-    db.save();
+    db.save(true);
     res.json({ success: true, message: 'All cost configurations saved successfully' });
 });
 
@@ -5446,10 +5542,16 @@ app.get('/api/user/gifts', async (req, res) => {
 // API: User - Get Notifications
 app.get('/api/user/notifications', async (req, res) => {
     const { userId } = req.query;
+    console.log(`[GET_NOTIFICATIONS] Requested for user: ${userId}`);
     if (!userId) return res.json({ success: false, notifications: [] });
 
     const user = await db.getUser(userId);
-    if (!user) return res.json({ success: false, notifications: [] });
+    if (!user) {
+        console.log(`[GET_NOTIFICATIONS] User not found: ${userId}`);
+        return res.json({ success: false, notifications: [] });
+    }
+    
+    console.log(`[GET_NOTIFICATIONS] Found ${user.notifications ? user.notifications.length : 0} notifications for user: ${userId}`);
 
     // Mark gift notifications with claimed state
     const notifs = (user.notifications || []).map(n => {
@@ -6117,10 +6219,12 @@ app.post('/api/admin/mass-gift', async (req, res) => {
         }
 
         const users = await db.getUsers();
+        const userArray = Object.values(users);
+        console.log(`[MASS_GIFT] Found ${userArray.length} users for mass gift.`);
         let affected = 0;
         const giftId = 'gift_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
 
-        for (const user of users) {
+        for (const user of userArray) {
             // DO NOT apply balances directly! User must claim it.
 
             // Create a pending gift
@@ -6257,8 +6361,10 @@ app.post('/api/admin/broadcast', async (req, res) => {
 
     if (normalizedTarget === 'web') {
         const users = await db.getUsers();
+        const userArray = Object.values(users);
+        console.log(`[BROADCAST] Found ${userArray.length} users for web broadcast.`);
         let successCount = 0;
-        for (let u of users) {
+        for (let u of userArray) {
              u.notifications = u.notifications || [];
              u.notifications.unshift({
                  id: Date.now().toString() + Math.random().toString(36).substring(7),
@@ -6282,7 +6388,7 @@ app.post('/api/admin/broadcast', async (req, res) => {
         });
         db.save();
         
-        return res.json({ success: true, sent: successCount, failed: 0, total: users.length, channelSuccess: false, mainChannel: null, note: 'Sent exclusively to Web Panel notifications' });
+        return res.json({ success: true, sent: successCount, failed: 0, total: userArray.length, channelSuccess: false, mainChannel: null, note: 'Sent exclusively to Web Panel notifications' });
     }
 
     // Parse channel ID from requiredChannel (can be @username or -100xxx or https://t.me/xxx)
@@ -7180,7 +7286,8 @@ app.get('/api/admin/services', (req, res) => {
     // Convert services to array
     const servicesList = Object.values(services).map(s => ({
         ...s,
-        section: db.getServiceSection(s.id)
+        section: db.getServiceSection(s.id),
+        imageUrl: db.data.serviceIcons?.[s.id] || s.imageUrl || ''
     }));
 
     // Convert shopItems to array (if they haven't been merged into services yet)
@@ -7188,7 +7295,8 @@ app.get('/api/admin/services', (req, res) => {
         id: i.id,
         name: i.name,
         price: i.price || 0,
-        section: i.section || 'shop'
+        section: i.section || 'shop',
+        imageUrl: db.data.serviceIcons?.[i.id] || i.imageUrl || ''
     }));
 
     // Add legacy items if they are missing
@@ -7196,7 +7304,13 @@ app.get('/api/admin/services', (req, res) => {
     if (db.data.cardPrices) {
         Object.entries(db.data.cardPrices).forEach(([id, price]) => {
             if (!services[id] && !shopItems[id]) {
-                legacyItems.push({ id, name: db.data.serviceNames?.[id] || id.toUpperCase(), price, section: 'cards' });
+                legacyItems.push({ 
+                    id, 
+                    name: db.data.serviceNames?.[id] || id.toUpperCase(), 
+                    price, 
+                    section: 'cards',
+                    imageUrl: db.data.serviceIcons?.[id] || ''
+                });
             }
         });
     }
@@ -7430,7 +7544,7 @@ app.post('/api/admin/services/items', (req, res) => {
 
 // Admin: Update service item details
 app.post('/api/admin/services/update', (req, res) => {
-    const { id, name, price, desc } = req.body;
+    const { id, name, price, desc, icon } = req.body;
     if (!id) return res.json({ success: false, message: 'Missing item ID' });
 
     // Update names if available
@@ -7445,11 +7559,19 @@ app.post('/api/admin/services/update', (req, res) => {
         if (db.data.vpnPrices) db.data.vpnPrices[id] = p;
     }
 
-    // Descriptions (could be stored in a new map or as part of a general service metadata)
-    if (!db.data.serviceDescriptions) db.data.serviceDescriptions = {};
-    if (desc !== undefined) db.data.serviceDescriptions[id] = desc;
+    // Update icon
+    if (icon) {
+        db.data.serviceIcons = db.data.serviceIcons || {};
+        db.data.serviceIcons[id] = icon;
+    }
 
-    db.save();
+    // Update description
+    if (desc !== undefined) {
+        db.data.serviceDescriptions = db.data.serviceDescriptions || {};
+        db.data.serviceDescriptions[id] = desc;
+    }
+
+    db.save(true); // Force save
     res.json({ success: true });
 });
 

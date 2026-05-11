@@ -39,7 +39,13 @@ const defaultData = {
             tempmail: 10,
             student: 50,
             number: 15,
-            renewmail: 30
+            renewmail: 30,
+            live2fa: 10,
+            liveInstagram: 1,
+            liveFacebook: 1,
+            liveTiktok: 1,
+            liveTwitter: 1,
+            liveThreads: 1
         },
         transferCost: 5, // Default transfer fee
         supportCost: 10
@@ -2111,7 +2117,8 @@ class Database {
 
         this.data.settings.codes[code] = {
             amount: amount,
-            uses: uses,
+            maxUses: uses,
+            uses: 0,
             createdAt: Date.now(),
             redeemedBy: []
         };
