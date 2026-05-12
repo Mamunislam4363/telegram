@@ -291,7 +291,7 @@ body {
 }
 
 .mi-sub {
-    font-size: 8px;
+    font-size: 10px;
     font-weight: 600;
     color: var(--text-sub);
     margin-bottom: 2px;
@@ -525,7 +525,7 @@ body {
 }
 
 .nav-label {
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.5px;
     text-transform: uppercase;
@@ -1388,7 +1388,7 @@ body {
 }
 
 .daily-card-day {
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 800;
     color: var(--text-sub);
     text-transform: uppercase;
@@ -1849,7 +1849,7 @@ body {
 }
 
 .card-field label {
-    font-size: 8px;
+    font-size: 10px;
     color: rgba(255, 255, 255, 0.5);
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -1893,7 +1893,7 @@ body {
 }
 
 .billing-label {
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 800;
     color: var(--text-sub);
     text-transform: uppercase;

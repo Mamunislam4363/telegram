@@ -234,7 +234,7 @@ setInterval(async () => {
             }
             currentSystemVersion = d.version;
         }
-    } catch(e) {}
+    } catch (e) { }
 }, 30000);
 
 
@@ -247,10 +247,10 @@ const originalFetch = window.fetch;
 window.fetch = function () {
     return originalFetch.apply(this, arguments).catch(err => {
         console.error('Global Fetch error:', err);
-        return new Response(JSON.stringify({ 
-            success: false, 
-            error: 'Network error', 
-            message: 'Network error. Please check your internet connection.' 
+        return new Response(JSON.stringify({
+            success: false,
+            error: 'Network error',
+            message: 'Network error. Please check your internet connection.'
         }), {
             status: 503,
             statusText: 'Service Unavailable',
@@ -548,14 +548,18 @@ function nav(p) {
         return;
     }
 
-    // Always push to history stack
-    historyStack.push(p);
+    // Push to history stack only if it's different from current
+    if (historyStack.length === 0 || historyStack[historyStack.length - 1] !== p) {
+        historyStack.push(p);
+    }
 
     // All navigation now goes through showPage
     showPage(p);
 }
 
 const PAGE_TITLES = {
+    'cardDetail': 'CARD DETAILS',
+    'chatgpt': 'CHATGPT DETAILS',
     'home': 'AUTOVERIFY',
     'tasks': 'TASKS',
     'earn': 'EARN REWARDS',
@@ -733,6 +737,35 @@ function showPage(targetId) {
     if (targetId === 'quizLeaderboard') renderQuizLeaderboard();
     if (targetId === 'apiKey') loadApiKey();
     if (targetId === 'notifications') loadNotifications();
+
+    // Reset card pages to initial state when shown
+    if (targetId === 'chatgpt') {
+        const chatgptSecuredArea = document.getElementById('chatgptSecuredArea');
+        if (chatgptSecuredArea) chatgptSecuredArea.style.display = 'none';
+        const chatgptGenBtn = document.getElementById('chatgptGeneratorBtn');
+        if (chatgptGenBtn) {
+            chatgptGenBtn.innerHTML = 'GENERATE NOW <i class="fas fa-bolt"></i>';
+            chatgptGenBtn.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+        }
+    }
+    if (targetId === 'gemini') {
+        const geminiSecuredArea = document.getElementById('geminiSecuredArea');
+        if (geminiSecuredArea) geminiSecuredArea.style.display = 'none';
+        const geminiGenBtn = document.getElementById('geminiGeneratorBtn');
+        if (geminiGenBtn) {
+            geminiGenBtn.innerHTML = 'GENERATE NOW <i class="fas fa-bolt"></i>';
+            geminiGenBtn.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+        }
+    }
+    if (targetId === 'cardDetail') {
+        const securedArea = document.getElementById('securedArea');
+        if (securedArea) securedArea.style.display = 'none';
+        const genBtn = document.getElementById('generatorBtn');
+        if (genBtn) {
+            genBtn.innerHTML = 'GENERATE NOW <i class="fas fa-bolt"></i>';
+            genBtn.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+        }
+    }
 
     if (targetId === 'profile') {
         const apiKeyItem = document.getElementById('profileApiKeyItem');
@@ -1578,38 +1611,149 @@ async function submitCryptoDeposit() {
 }
 
 let activeLocalPayMethod = 'bkash';
+let paymentPlatforms = [];
+
+// Load payment platforms from API
+async function loadPaymentPlatforms() {
+    try {
+        const res = await fetch('/api/payment-platforms');
+        const data = await res.json();
+        if (data.success && data.platforms && data.platforms.length > 0) {
+            paymentPlatforms = data.platforms;
+        }
+    } catch (e) {
+        console.error('Error loading payment platforms:', e);
+    }
+    renderPaymentPlatforms();
+}
+
+// Render payment platforms in the UI
+function renderPaymentPlatforms() {
+    const container = document.getElementById('localPaymentMethodsGrid');
+    if (!container) return;
+
+    if (paymentPlatforms.length === 0) {
+        container.innerHTML = '<div style="text-align:center; color:var(--text-sub); padding:20px;">No payment methods available</div>';
+        updateLocalPaymentButtons();
+        return;
+    }
+
+    container.innerHTML = paymentPlatforms.map((platform, index) => `
+        <div onclick="selectLocalMethod('${platform.name.toLowerCase().replace(' ', '')}')" class="pm-method-card" data-method="${platform.name.toLowerCase().replace(' ', '')}" style="
+            background:var(--bg-card);
+            border:1px solid var(--border-color);
+            border-radius:16px;
+            padding:16px;
+            cursor:pointer;
+            transition:all 0.3s;
+            ${index === 0 ? 'border-color:#e1147e;' : ''}
+        ">
+            <div style="display:flex; align-items:center; gap:12px;">
+                ${platform.logo ? `<img src="${platform.logo}" alt="${platform.name}" style="width:40px; height:40px; border-radius:10px; object-fit:contain;">` : `<div style="width:40px; height:40px; border-radius:10px; background:linear-gradient(135deg,#e1147e,#f7931e); display:flex; align-items:center; justify-content:center;"><i class="fas fa-mobile-alt" style="color:#fff; font-size:18px;"></i></div>`}
+                <div>
+                    <div style="font-size:14px; font-weight:700; color:var(--text-main);">${platform.name}</div>
+                    <div style="font-size:11px; color:var(--text-sub);">${platform.number || 'Contact for number'}</div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    // Update the hardcoded buttons as well
+    updateLocalPaymentButtons();
+}
+
+function updateLocalPaymentButtons() {
+    const btnBkash = document.getElementById('btnBkash');
+    const btnNagad = document.getElementById('btnNagad');
+
+    if (paymentPlatforms.length >= 2) {
+        const bkashPlatform = paymentPlatforms.find(p => p.name.toLowerCase().includes('bkash'));
+        const nagadPlatform = paymentPlatforms.find(p => p.name.toLowerCase().includes('nagad'));
+
+        if (btnBkash && bkashPlatform) {
+            btnBkash.textContent = bkashPlatform.name;
+        }
+        if (btnNagad && nagadPlatform) {
+            btnNagad.textContent = nagadPlatform.name;
+        }
+    } else {
+        // Reset buttons to default when no platforms
+        if (btnBkash) {
+            btnBkash.textContent = 'bKash';
+            btnBkash.style.background = 'rgba(255,255,255,0.05)';
+            btnBkash.style.opacity = '0.6';
+            btnBkash.style.border = '1px solid rgba(255,255,255,0.1)';
+        }
+        if (btnNagad) {
+            btnNagad.textContent = 'Nagad';
+            btnNagad.style.background = 'rgba(255,255,255,0.05)';
+            btnNagad.style.opacity = '0.6';
+            btnNagad.style.border = '1px solid rgba(255,255,255,0.1)';
+        }
+
+        // Clear payment number display
+        const nameLabel = document.getElementById('localPaymentMethodName');
+        const numberLabel = document.getElementById('localPaymentNumber');
+        if (nameLabel) nameLabel.innerText = 'SELECT PAYMENT METHOD';
+        if (numberLabel) numberLabel.innerText = 'No number available';
+    }
+}
 
 function selectLocalMethod(method) {
+    if (paymentPlatforms.length === 0) {
+        window.showToast('No payment methods available. Please contact admin.');
+        return;
+    }
+
     activeLocalPayMethod = method;
+    const platform = paymentPlatforms.find(p => p.name.toLowerCase().replace(' ', '') === method) || paymentPlatforms[0];
+
     const btnBkash = document.getElementById('btnBkash');
     const btnNagad = document.getElementById('btnNagad');
     const nameLabel = document.getElementById('localPaymentMethodName');
     const numberLabel = document.getElementById('localPaymentNumber');
     const submitBtn = document.getElementById('btnLocalSubmit');
 
-    if (method === 'bkash') {
-        btnBkash.style.background = '#e1147e';
-        btnBkash.style.opacity = '1';
-        btnBkash.style.border = 'none';
+    // Reset all method cards
+    document.querySelectorAll('.pm-method-card').forEach(card => {
+        card.style.borderColor = 'var(--border-color)';
+    });
 
-        btnNagad.style.background = 'rgba(255,255,255,0.05)';
-        btnNagad.style.opacity = '0.6';
-        btnNagad.style.border = '1px solid rgba(255,255,255,0.1)';
+    // Highlight selected method card
+    const selectedCard = document.querySelector(`.pm-method-card[data-method="${method}"]`);
+    if (selectedCard) {
+        selectedCard.style.borderColor = '#e1147e';
+    }
 
-        nameLabel.innerText = 'BKASH NUMBER (PERSONAL)';
-        numberLabel.innerText = '01700000000'; // Set default or dynamic Bkash num here
+    if (method.includes('bkash') || (platform && platform.name.toLowerCase().includes('bkash'))) {
+        if (btnBkash) {
+            btnBkash.style.background = '#e1147e';
+            btnBkash.style.opacity = '1';
+            btnBkash.style.border = 'none';
+        }
+        if (btnNagad) {
+            btnNagad.style.background = 'rgba(255,255,255,0.05)';
+            btnNagad.style.opacity = '0.6';
+            btnNagad.style.border = '1px solid rgba(255,255,255,0.1)';
+        }
+
+        if (nameLabel) nameLabel.innerText = `${platform ? platform.name.toUpperCase() : 'BKASH'} NUMBER`;
+        if (numberLabel) numberLabel.innerText = platform ? platform.number : 'No number available';
         if (submitBtn) submitBtn.style.background = 'linear-gradient(135deg,#e1147e,#f7931e)';
     } else {
-        btnNagad.style.background = '#f7931e';
-        btnNagad.style.opacity = '1';
-        btnNagad.style.border = 'none';
+        if (btnNagad) {
+            btnNagad.style.background = '#f7931e';
+            btnNagad.style.opacity = '1';
+            btnNagad.style.border = 'none';
+        }
+        if (btnBkash) {
+            btnBkash.style.background = 'rgba(255,255,255,0.05)';
+            btnBkash.style.opacity = '0.6';
+            btnBkash.style.border = '1px solid rgba(255,255,255,0.1)';
+        }
 
-        btnBkash.style.background = 'rgba(255,255,255,0.05)';
-        btnBkash.style.opacity = '0.6';
-        btnBkash.style.border = '1px solid rgba(255,255,255,0.1)';
-
-        nameLabel.innerText = 'NAGAD NUMBER (PERSONAL)';
-        numberLabel.innerText = '01800000000'; // Set default or dynamic Nagad num here
+        if (nameLabel) nameLabel.innerText = `${platform ? platform.name.toUpperCase() : 'NAGAD'} NUMBER`;
+        if (numberLabel) numberLabel.innerText = platform ? platform.number : 'No number available';
         if (submitBtn) submitBtn.style.background = 'linear-gradient(135deg,#f7931e,#e1147e)';
     }
 }
@@ -1685,8 +1829,14 @@ async function loadUserTasks(silent = false) {
                     <i class="fas fa-inbox" style="font-size:32px; margin-bottom:10px;"></i>
                     <p>No tasks available</p>
                 </div>`;
+            const taskCountBadge = document.getElementById('taskCountBadge');
+            if (taskCountBadge) taskCountBadge.textContent = '0 tasks';
             return;
         }
+
+        // Update task count badge
+        const taskCountBadge = document.getElementById('taskCountBadge');
+        if (taskCountBadge) taskCountBadge.textContent = `${data.tasks.length} tasks`;
 
         // Render tasks
         const completedSet = new Set(userData.completedTasks || []);
@@ -1781,22 +1931,8 @@ function startTask(button, taskId, url, reward) {
     }
     activeTaskData = { taskId, url, reward };
 
-    // Immediately show VERIFY
-    button.textContent = 'VERIFY';
-    button.style.background = '#22c55e';
-    button.disabled = false;
-
-    const currentTaskData = { ...activeTaskData };
-    const currentBtn = button;
-
-    button.onclick = function () {
-        window.open(currentTaskData.url, '_blank');
-        
-        // Update onclick to actually verify on next click
-        currentBtn.onclick = function () {
-            completeTask(currentTaskData.taskId, currentTaskData.reward, currentBtn, currentTaskData.url);
-        };
-    };
+    // Run Ad first as requested by user
+    showAdAndEarn('task_verification');
 }
 
 // Complete task and claim reward
@@ -1822,7 +1958,7 @@ async function completeTask(taskId, reward, button, url) {
             button.textContent = 'DONE';
             button.style.background = '#666';
             button.disabled = true;
-            
+
             delete IN_PROGRESS_TASKS[taskId];
 
             if (data.newBalance !== undefined) {
@@ -1863,7 +1999,7 @@ async function completeTask(taskId, reward, button, url) {
             button.disabled = false;
             button.textContent = 'START';
             button.style.background = ''; // reset to default
-            button.onclick = function() {
+            button.onclick = function () {
                 startTask(button, taskId, url, reward);
             };
         }
@@ -2377,34 +2513,38 @@ async function claimAdReward() {
                 showPage('scratch');
                 initScratchCard();
             } else if (currentAdContext === 'task_verification' && activeTaskButton) {
-                // Task Ad Completed - Now show OPEN LINK button
+                // Task Ad Completed - Now show VERIFY button on Tasks page
                 activeTaskButton.textContent = 'VERIFY';
                 activeTaskButton.style.background = '#22c55e';
                 activeTaskButton.style.display = 'block';
-                
+
                 if (activeTaskData && activeTaskData.taskId) {
                     IN_PROGRESS_TASKS[activeTaskData.taskId] = 'VERIFY';
                 }
                 activeTaskButton.disabled = false;
-                
+
                 const currentTaskData = { ...activeTaskData }; // copy data
                 const currentBtn = activeTaskButton;
-                
+
+                // Set the click handler for the VERIFY button on Tasks page
                 activeTaskButton.onclick = function () {
-                    window.open(currentTaskData.url, '_blank');
-                    
-                    // Update onclick to actually verify on next click
-                    currentBtn.onclick = function () {
-                        completeTask(currentTaskData.taskId, currentTaskData.reward, currentBtn, currentTaskData.url);
-                    };
+                    // This will check membership and complete task!
+                    completeTask(currentTaskData.taskId, currentTaskData.reward, currentBtn, currentTaskData.url);
                 };
+
+                // Open the Task Link immediately when user clicks CLAIM REWARD in ad overlay
+                if (window.Telegram?.WebApp?.openLink) {
+                    window.Telegram.WebApp.openLink(currentTaskData.url);
+                } else {
+                    window.open(currentTaskData.url, '_blank');
+                }
 
                 // Timer to reset to START after 1 minute if not completed
                 setTimeout(() => {
                     if (currentBtn.textContent === 'VERIFY') {
                         currentBtn.textContent = 'START';
                         currentBtn.style.background = ''; // reset to default
-                        currentBtn.onclick = function() {
+                        currentBtn.onclick = function () {
                             startTask(currentBtn, currentTaskData.taskId, currentTaskData.url, currentTaskData.reward);
                         };
                     }
@@ -3540,7 +3680,6 @@ async function registerAndFetchUser() {
                 if (userData.completedTasks) {
                     userData.completedTasks.forEach(tid => { IN_PROGRESS_TASKS[tid] = 'completed'; });
                 }
-                renderBalances();
             }
         } catch (e) { console.warn("Cache error", e); }
     }
@@ -3590,7 +3729,7 @@ async function registerAndFetchUser() {
             userData.verified = data.verified || false;
             userData.adminVerified = data.adminVerified || false;
             userData.apiStatus = data.apiStatus || 'allow';
-            
+
             // SOFT API KEY SYNC: Trust the server if it explicitly sends a key, 
             // but NEVER wipe a local key if the server just says null (could be sync lag).
             if (data.hasOwnProperty('apiKey')) {
@@ -3601,7 +3740,7 @@ async function registerAndFetchUser() {
                     const pageDisplay = document.getElementById('userApiKeyDisplay');
                     if (modalDisplay && modalDisplay.value !== data.apiKey) modalDisplay.value = data.apiKey;
                     if (pageDisplay && pageDisplay.value !== data.apiKey) pageDisplay.value = data.apiKey;
-                    
+
                     const modalRegenBtn = document.getElementById('modalRegenBtn');
                     const pageRegenBtn = document.getElementById('regenerateApiKeyBtn');
                     if (modalRegenBtn) { modalRegenBtn.innerHTML = '<i class="fas fa-sync-alt"></i> GENERATE KEY'; modalRegenBtn.classList.remove('pulse-btn'); }
@@ -3752,6 +3891,38 @@ function renderFullHistory() {
         const itemType = (item.type || '').toLowerCase();
         let config = typeConfig[itemType] || { icon: 'fas fa-check', color: '#9ca3af', name: item.type || 'Activity' };
 
+        let imageUrl = '';
+        // Customize account purchase to show specific service name and icon
+        if (itemType === 'account_purchase' && item.category) {
+            config = { ...config }; // Clone
+            config.name = item.category.toUpperCase() + ' Card';
+
+            const adminCards = JSON.parse(localStorage.getItem('adminCards') || '[]');
+            const card = adminCards.find(c => c.id.toLowerCase() === item.category.toLowerCase());
+            if (card && card.imageUrl) {
+                imageUrl = card.imageUrl;
+            } else {
+
+                const catLower = item.category.toLowerCase();
+                if (catLower.includes('gemini')) {
+                    config.icon = 'fas fa-gem';
+                    config.color = '#38bdf8'; // Cyan color as in CSS
+                } else if (catLower.includes('spotify')) {
+                    config.icon = 'fab fa-spotify';
+                    config.color = '#1db954';
+                } else if (catLower.includes('youtube')) {
+                    config.icon = 'fab fa-youtube';
+                    config.color = '#ff0000';
+                } else if (catLower.includes('netflix')) {
+                    config.icon = 'fas fa-film';
+                    config.color = '#e50914';
+                } else if (catLower.includes('chatgpt')) {
+                    config.icon = 'fas fa-robot';
+                    config.color = '#10b981';
+                }
+            }
+        }
+
         const dateObj = item.date ? new Date(item.date) : new Date();
         const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         const timeStr = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
@@ -3767,8 +3938,8 @@ function renderFullHistory() {
         return `
         <div class="activity-card" style="margin-bottom:12px;">
             <div class="activity-left">
-                <div class="activity-icon" style="background:rgba(255,255,255,0.05); color:${config.color}">
-                    <i class="${config.icon}"></i>
+                <div class="activity-icon" style="width:40px; height:40px; background:rgba(255,255,255,0.05); color:${config.color}; display:flex; align-items:center; justify-content:center; border-radius:50%;">
+                    ${imageUrl ? `<img src="${imageUrl}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">` : `<i class="${config.icon}" style="font-size:18px;"></i>`}
                 </div>
                 <div class="activity-info">
                     <div class="activity-name">${config.name}</div>
@@ -3899,6 +4070,38 @@ function renderRecentActivity(history) {
         const itemType = (item.type || '').toLowerCase();
         let config = typeConfig[itemType] || { icon: 'fas fa-check', color: '#9ca3af', name: item.type || 'Activity' };
 
+        let imageUrl = '';
+        // Customize account purchase to show specific service name and icon
+        if (itemType === 'account_purchase' && item.category) {
+            config = { ...config }; // Clone
+            config.name = item.category.toUpperCase() + ' Card';
+
+            const adminCards = JSON.parse(localStorage.getItem('adminCards') || '[]');
+            const card = adminCards.find(c => c.id.toLowerCase() === item.category.toLowerCase());
+            if (card && card.imageUrl) {
+                imageUrl = card.imageUrl;
+            } else {
+
+                const catLower = item.category.toLowerCase();
+                if (catLower.includes('gemini')) {
+                    config.icon = 'fas fa-gem';
+                    config.color = '#38bdf8'; // Cyan color as in CSS
+                } else if (catLower.includes('spotify')) {
+                    config.icon = 'fab fa-spotify';
+                    config.color = '#1db954';
+                } else if (catLower.includes('youtube')) {
+                    config.icon = 'fab fa-youtube';
+                    config.color = '#ff0000';
+                } else if (catLower.includes('netflix')) {
+                    config.icon = 'fas fa-film';
+                    config.color = '#e50914';
+                } else if (catLower.includes('chatgpt')) {
+                    config.icon = 'fas fa-robot';
+                    config.color = '#10b981';
+                }
+            }
+        }
+
         const date = item.date ? new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
         const time = item.date ? new Date(item.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '';
         const POS_TYPES = new Set(['transfer_in', 'redeem', 'daily_bonus', 'ad_reward', 'mission_reward', 'quiz_reward', 'bonus', 'deposit', 'gift_claimed', 'gift', 'apikey_generate']);
@@ -3923,8 +4126,8 @@ function renderRecentActivity(history) {
         return `
         <div class="activity-card">
             <div class="activity-left">
-                <div class="activity-icon" style="background:rgba(255,255,255,0.05); color:${config.color}">
-                    <i class="${config.icon}"></i>
+                <div class="activity-icon" style="width:40px; height:40px; background:rgba(255,255,255,0.05); color:${config.color}; display:flex; align-items:center; justify-content:center; border-radius:50%;">
+                    ${imageUrl ? `<img src="${imageUrl}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">` : `<i class="${config.icon}" style="font-size:18px;"></i>`}
                 </div>
                 <div class="activity-info">
                     <div class="activity-name">${config.name}</div>
@@ -4129,7 +4332,7 @@ function renderBalances() {
 
     const formattedTokens = formatCompact(tokens);
     const formattedGems = formatCompact(gems);
-    
+
     let formattedUsd = '$0';
     if (usd > 0) {
         if (usd >= 1000) {
@@ -4179,23 +4382,23 @@ function renderBalances() {
     // Hotmail (TC)
     const hotMailBal = document.getElementById('hotMailBalanceDisplay');
     if (hotMailBal) hotMailBal.innerText = formattedTokens + ' TC';
-    
+
     // Live Services Balance Displays
     const live2faBal = document.getElementById('live2faBalanceDisplay');
     if (live2faBal) live2faBal.innerText = formattedTokens + ' TC';
-    
+
     const liveInstaBal = document.getElementById('liveInstagramBalanceDisplay');
     if (liveInstaBal) liveInstaBal.innerText = formattedTokens + ' TC';
-    
+
     const liveFbBal = document.getElementById('liveFacebookBalanceDisplay');
     if (liveFbBal) liveFbBal.innerText = formattedTokens + ' TC';
-    
+
     const liveTiktokBal = document.getElementById('liveTiktokBalanceDisplay');
     if (liveTiktokBal) liveTiktokBal.innerText = formattedTokens + ' TC';
-    
+
     const liveTwitterBal = document.getElementById('liveTwitterBalanceDisplay');
     if (liveTwitterBal) liveTwitterBal.innerText = formattedTokens + ' TC';
-    
+
     const liveThreadsBal = document.getElementById('liveThreadsBalanceDisplay');
     if (liveThreadsBal) liveThreadsBal.innerText = formattedTokens + ' TC';
 
@@ -4278,7 +4481,7 @@ async function transferTokens() {
 
     // Confirmation
     const assetNames = { tokens: 'Tokens', usd: 'USD', Gems: 'Gems' };
-    
+
     const overlay = document.createElement('div');
     overlay.style = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;";
     overlay.innerHTML = `
@@ -4309,28 +4512,28 @@ async function transferTokens() {
             });
 
             const res = await response.json();
-        if (res.success) {
-            window.showToast(res.message || "Transfer successful!", "success");
-            // Update local user data
-            if (res.newBalances) {
-                userData.tokens = res.newBalances.tokens;
-                userData.Gems = res.newBalances.Gems;
-                userData.usd = res.newBalances.usd;
-                renderBalances();
-                loadRecentActivity(); // Refresh history after transfer
+            if (res.success) {
+                window.showToast(res.message || "Transfer successful!", "success");
+                // Update local user data
+                if (res.newBalances) {
+                    userData.tokens = res.newBalances.tokens;
+                    userData.Gems = res.newBalances.Gems;
+                    userData.usd = res.newBalances.usd;
+                    renderBalances();
+                    loadRecentActivity(); // Refresh history after transfer
+                }
+                // Clear inputs
+                document.getElementById('transferToUser').value = '';
+                document.getElementById('transferAmount').value = '';
+                // Nav back to profile
+                setTimeout(() => nav('profile'), 2000);
+            } else {
+                window.showToast(res.message || "Transfer failed.");
             }
-            // Clear inputs
-            document.getElementById('transferToUser').value = '';
-            document.getElementById('transferAmount').value = '';
-            // Nav back to profile
-            setTimeout(() => nav('profile'), 2000);
-        } else {
-            window.showToast(res.message || "Transfer failed.");
+        } catch (e) {
+            console.error("Transfer error:", e);
+            window.showToast("Server error during transfer.");
         }
-    } catch (e) {
-        console.error("Transfer error:", e);
-        window.showToast("Server error during transfer.");
-    }
     };
 }
 
@@ -4430,6 +4633,7 @@ async function smartSync(force = false) {
                             // Only update if server value differs (prevent flicker)
                             if (typeof u.balance_tokens === 'number') userData.tokens = Math.max(0, u.balance_tokens);
                             if (typeof u.gems === 'number') userData.Gems = Math.max(0, u.gems);
+                            else if (typeof u.Gems === 'number') userData.Gems = Math.max(0, u.Gems);
                             if (typeof u.usd !== 'undefined') userData.usd = Math.max(0, u.usd || 0);
                             if (typeof u.banned !== 'undefined') {
                                 userData.banned = u.banned;
@@ -4441,7 +4645,7 @@ async function smartSync(force = false) {
                             if (u.apiStatus) userData.apiStatus = u.apiStatus;
                             renderBalances();
                             // Persist to cache
-                            try { localStorage.setItem(`userData_${userData.id}`, JSON.stringify(userData)); } catch(e){}
+                            try { localStorage.setItem(`userData_${userData.id}`, JSON.stringify(userData)); } catch (e) { }
                         }
                     })
                     .catch(() => { /* silent – no network = keep cached */ })
@@ -4449,7 +4653,7 @@ async function smartSync(force = false) {
         }
     }
 
-    return Promise.allSettled(adminSyncPromises).catch(() => {});
+    return Promise.allSettled(adminSyncPromises).catch(() => { });
 }
 
 // Start auto-syncer (every 5 seconds – balanced for real-time feel without hammering server)
@@ -4514,7 +4718,7 @@ function syncAdminData() {
                 localStorage.setItem('adminCosts', JSON.stringify(data.costs));
                 // Update global config if needed
                 window.ADMIN_CONFIG = data.costs;
-                
+
                 const c = data.costs || {};
                 const getCurrencyLabel = (val) => {
                     if (val === 'Gems' || val === 'gem') return 'Gems';
@@ -4604,7 +4808,7 @@ function renderShopItems() {
     if (grid) {
         shopCardsHtml += adminItems.map(item => {
             const imgHtml = item.imageUrl
-                ? `<img src="${item.imageUrl}" style="width:70px; height:auto; object-fit:contain;" onerror="this.style.display='none'">`
+                ? `<img src="${item.imageUrl}" style="width:100%; height:100%; object-fit:cover;" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-box\\' style=\\'font-size:36px; color:#f59e0b;\\'></i>'">`
                 : `<i class="fas fa-box" style="font-size:36px; color:#f59e0b;"></i>`;
 
             // Fix price display to ensure $ if not present
@@ -4616,7 +4820,7 @@ function renderShopItems() {
             <div onclick="nav('${item.page || 'deposit'}')"
                 style="background:var(--bg-card); border-radius:16px; overflow:hidden; border:1px solid var(--border-color); cursor:pointer; transition:0.2s;"
                 onmousedown="this.style.transform='scale(0.97)'" onmouseup="this.style.transform='scale(1)'">
-                <div style="background:${item.bgColor || '#0d0d0d'}; padding:16px; display:flex; align-items:center; justify-content:center; min-height:80px;">
+                <div style="background:${item.bgColor || '#0d0d0d'}; padding:0; display:flex; align-items:center; justify-content:center; height:120px; overflow:hidden;">
                     ${imgHtml}
                 </div>
                 <div style="padding:10px;">
@@ -4740,10 +4944,18 @@ function renderCards() {
 
     // Render admin cards
     if (adminCards.length > 0) {
-        html += adminCards.map(c => `
-        <div class="service-card" style="margin-bottom:12px; cursor:default; padding:16px;">
-            <div class="sc-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706); width:50px; height:50px; border-radius:16px; flex-shrink:0;">
-                <i class="fas fa-credit-card"></i>
+        html += adminCards.map(c => {
+            let iconHtml = '';
+            if (c.imageUrl) {
+                iconHtml = `<img src="${c.imageUrl}" style="width:100%; height:100%; object-fit:cover;">`;
+            } else {
+                iconHtml = `<i class="fas fa-credit-card" style="font-size:22px; color:#fff;"></i>`;
+            }
+
+            return `
+        <div class="service-card" onclick="openAndBuyCard('${c.id}', 'card', ${c.price}, '${c.name}')" style="margin-bottom:12px; cursor:pointer; padding:16px;">
+            <div class="sc-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706); width:50px; height:50px; border-radius:16px; flex-shrink:0; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                ${iconHtml}
             </div>
             <div class="sc-info" style="flex:1; margin-left:14px;">
                 <h3 style="font-size:15px; font-weight:700; color:var(--text-main); margin:0;">${c.name}</h3>
@@ -4751,12 +4963,13 @@ function renderCards() {
             </div>
             <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
                 <div style="font-weight:900; color:#22c55e; font-size:15px; letter-spacing:0.5px;">${c.price} TC</div>
-                <button onclick="buyAccount('card', ${c.price}, '${c.id}')" 
+                <button onclick="event.stopPropagation(); openAndBuyCard('${c.id}', 'card', ${c.price}, '${c.name}')" 
                     style="padding:6px 16px; border-radius:12px; background:#fbbf24; color:#000; font-weight:800; font-size:11px; border:none; cursor:pointer; box-shadow:0 4px 10px rgba(251,191,36,0.2);">
                     BUY
                 </button>
             </div>
-        </div>`).join('');
+        </div>`;
+        }).join('');
     }
 
     // Render user-submitted cards with custom name and logo
@@ -4871,8 +5084,8 @@ function copyToClipboard(elementId, button) {
     }
 
     // Modern clipboard API with fallback
-    const copyPromise = navigator.clipboard ? 
-        navigator.clipboard.writeText(textToCopy) : 
+    const copyPromise = navigator.clipboard ?
+        navigator.clipboard.writeText(textToCopy) :
         new Promise((resolve, reject) => {
             try {
                 // Fallback for older browsers
@@ -4926,18 +5139,85 @@ window.copyToClipboard = copyToClipboard;
 function showCardDetail(cardData) {
     if (!cardData) return;
 
+    const cardName = cardData.cardName || 'VIRTUAL CARD';
+
+    // Update header title dynamically!
+    PAGE_TITLES['cardDetail'] = cardName.toUpperCase();
+
     // Populate card details
-    document.getElementById('cardDetailLabel').textContent = cardData.cardName || 'VIRTUAL CARD';
+    document.getElementById('cardDetailLabel').textContent = cardName;
     document.getElementById('cardDetailHolder').textContent = cardData.holderName || 'CARD HOLDER';
+    const fullNameElem = document.getElementById('cardDetailFullName');
+    if (fullNameElem) fullNameElem.textContent = cardData.holderName || 'CARD HOLDER';
+
+    const vpnElem = document.getElementById('cardDetailVPN');
+    if (vpnElem) vpnElem.textContent = cardData.vpn || 'N/A';
     document.getElementById('cardDetailNumber').textContent = cardData.number || '**** **** **** ****';
     document.getElementById('cardDetailExpiry').textContent = `${cardData.month || 'MM'}/${cardData.year || 'YYYY'}`;
     document.getElementById('cardDetailCVV').textContent = cardData.cvv || '***';
     document.getElementById('cardDetailCountry').textContent = cardData.country || 'N/A';
 
+    // Populate additional address fields
+    const cityElem = document.getElementById('cardDetailCity');
+    if (cityElem) cityElem.textContent = cardData.city || 'Dhaka';
+    const stateElem = document.getElementById('cardDetailState');
+    if (stateElem) stateElem.textContent = cardData.state || 'Dhaka';
+    const addressElem = document.getElementById('cardDetailAddress');
+    if (addressElem) addressElem.textContent = cardData.address || 'Gulshan Avenue';
+    const postalElem = document.getElementById('cardDetailPostal');
+    if (postalElem) postalElem.textContent = cardData.postal || '1212';
+
+    // Update Card Label
+    const cardLabel = document.getElementById('cardDetailLabel');
+    if (cardLabel) cardLabel.textContent = cardName.toUpperCase();
+
+    // Update Generator Box
+    const genTitle = document.getElementById('generatorTitle');
+    const genPrice = document.getElementById('generatorPrice');
+    if (genTitle) genTitle.textContent = cardName;
+    if (genPrice) genPrice.textContent = (cardData.price !== undefined) ? `${cardData.price} TOKENS` : '50 TOKENS';
+
+    // Reset view for step-by-step flow
+    const securedArea = document.getElementById('securedArea');
+    const genBtn = document.getElementById('generatorBtn');
+
+    if (securedArea) securedArea.style.display = 'none';
+    if (genBtn) {
+        genBtn.innerHTML = 'GENERATE NOW <i class="fas fa-bolt"></i>';
+        genBtn.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+    }
+
     // Navigate to card detail page
     nav('cardDetail');
 }
 window.showCardDetail = showCardDetail;
+
+function generateCardNow(prefix = '') {
+    const btnId = prefix ? prefix + 'GeneratorBtn' : 'generatorBtn';
+    const areaId = prefix ? prefix + 'SecuredArea' : 'securedArea';
+
+    const genBtn = document.getElementById(btnId);
+    const securedArea = document.getElementById(areaId);
+
+    if (!genBtn || !securedArea) return;
+
+    if (genBtn.innerHTML.includes('GENERATE NOW')) {
+        if (window.currentServiceId && window.currentServicePrice) {
+            buyServiceAccount(window.currentServiceId, window.currentServicePrice);
+        } else {
+            window.showToast('No service selected');
+        }
+    } else {
+        // Generate Again!
+        if (window.currentServiceId && window.currentServicePrice) {
+            window.showToast('Requesting new credentials...');
+            buyServiceAccount(window.currentServiceId, window.currentServicePrice);
+        } else {
+            window.showToast('No service selected');
+        }
+    }
+}
+window.generateCardNow = generateCardNow;
 
 function renderVPN() {
     const container = document.getElementById('vpnList');
@@ -5051,15 +5331,60 @@ function buyPremiumAccount(accountId, type, price) {
                 // Special handling for VCC cards
                 if (type === 'card' || (res.account && res.account.type === 'card')) {
                     const card = res.account;
-                    showCardDetail({
-                        cardName: card.name || 'VIRTUAL CARD',
-                        holderName: 'CARD HOLDER',
-                        number: card.email || card.number || '**** **** **** ****',
-                        cvv: card.password || card.cvv || '***',
-                        expiry: card.instructions || (card.month ? `${card.month}/${card.year}` : 'MM/YYYY'),
-                        country: card.country || 'Global'
-                    });
-                    window.showToast('✅ Card purchased! Details shown below.');
+
+                    const isChatGPT = accountId && accountId.toLowerCase().includes('chatgpt');
+                    const isGemini = accountId && accountId.toLowerCase().includes('gemini');
+
+                    if (isChatGPT) {
+                        // Fill ChatGPT page
+                        if (document.getElementById('chatgptCardHolder')) document.getElementById('chatgptCardHolder').textContent = 'CARD HOLDER';
+                        if (document.getElementById('chatgptCardNumber')) document.getElementById('chatgptCardNumber').textContent = card.email || card.number || '**** **** **** ****';
+                        if (document.getElementById('chatgptCardExpiry')) document.getElementById('chatgptCardExpiry').textContent = card.instructions || (card.month ? `${card.month}/${card.year}` : 'MM/YYYY');
+                        if (document.getElementById('chatgptCardCVV')) document.getElementById('chatgptCardCVV').textContent = card.password || card.cvv || '***';
+                        if (document.getElementById('chatgptCardCountry')) document.getElementById('chatgptCardCountry').textContent = card.country || 'Global';
+
+                        // Reset view for step-by-step flow
+                        const chatgptSecuredArea = document.getElementById('chatgptSecuredArea');
+                        const chatgptGenBtn = document.getElementById('chatgptGeneratorBtn');
+                        if (chatgptSecuredArea) chatgptSecuredArea.style.display = 'none';
+                        if (chatgptGenBtn) {
+                            chatgptGenBtn.innerHTML = 'GENERATE NOW <i class="fas fa-bolt"></i>';
+                            chatgptGenBtn.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+                        }
+
+                        nav('chatgpt');
+                        window.showToast('✅ ChatGPT Card purchased! Details shown below.');
+                    } else if (isGemini) {
+                        // Fill Gemini page
+                        if (document.getElementById('geminiCardHolder')) document.getElementById('geminiCardHolder').textContent = 'CARD HOLDER';
+                        if (document.getElementById('geminiCardNumber')) document.getElementById('geminiCardNumber').textContent = card.email || card.number || '**** **** **** ****';
+                        if (document.getElementById('geminiCardExpiry')) document.getElementById('geminiCardExpiry').textContent = card.instructions || (card.month ? `${card.month}/${card.year}` : 'MM/YYYY');
+                        if (document.getElementById('geminiCardCVV')) document.getElementById('geminiCardCVV').textContent = card.password || card.cvv || '***';
+                        if (document.getElementById('geminiCardCountry')) document.getElementById('geminiCardCountry').textContent = card.country || 'Global';
+
+                        // Reset view for step-by-step flow
+                        const geminiSecuredArea = document.getElementById('geminiSecuredArea');
+                        const geminiGenBtn = document.getElementById('geminiGeneratorBtn');
+                        if (geminiSecuredArea) geminiSecuredArea.style.display = 'none';
+                        if (geminiGenBtn) {
+                            geminiGenBtn.innerHTML = 'GENERATE NOW <i class="fas fa-bolt"></i>';
+                            geminiGenBtn.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+                        }
+
+                        nav('gemini');
+                        window.showToast('✅ Gemini Card purchased! Details shown below.');
+                    } else {
+                        // Fallback to generic card detail
+                        showCardDetail({
+                            cardName: card.name || 'VIRTUAL CARD',
+                            holderName: 'CARD HOLDER',
+                            number: card.email || card.number || '**** **** **** ****',
+                            cvv: card.password || card.cvv || '***',
+                            expiry: card.instructions || (card.month ? `${card.month}/${card.year}` : 'MM/YYYY'),
+                            country: card.country || 'Global'
+                        });
+                        window.showToast('✅ Card purchased! Details shown below.');
+                    }
                 } else {
                     // Show regular account details
                     window.showToast(`✅ Account purchased!\n\nEmail: ${res.account.email}\nPassword: ${res.account.password}${res.account.instructions ? '\nNotes: ' + res.account.instructions : ''}\n\nPlease save these details!`);
@@ -5073,6 +5398,195 @@ function buyPremiumAccount(accountId, type, price) {
         })
         .catch(() => window.showToast('Network error'));
 }
+
+// OPEN AND BUY CARD (Opens page immediately)
+function buyServiceAccount(serviceId, price) {
+    if (!userData || !userData.id) {
+        window.showToast('Please login first.');
+        return;
+    }
+
+    const userTokens = userData.tokens || 0;
+    if (userTokens < price) {
+        nav('earn');
+        return;
+    }
+
+    fetch('/api/accounts/buy-category', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: userData.id, category: serviceId, price: price })
+    })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                userData.tokens = data.newBalance;
+                renderBalances();
+                window.showToast('✅ Service purchased successfully!');
+
+                const isChatGPT = serviceId.toLowerCase().includes('chatgpt');
+                const isGemini = serviceId.toLowerCase().includes('gemini');
+
+                const card = data.account;
+
+                if (isChatGPT) {
+                    if (document.getElementById('chatgptCardNumber')) document.getElementById('chatgptCardNumber').textContent = card.email || '**** **** **** ****';
+                    if (document.getElementById('chatgptCardCVV')) document.getElementById('chatgptCardCVV').textContent = card.password || '***';
+                    const chatgptSecuredArea = document.getElementById('chatgptSecuredArea');
+                    if (chatgptSecuredArea) chatgptSecuredArea.style.display = 'block';
+                    const chatgptGenBtn = document.getElementById('chatgptGeneratorBtn');
+                    if (chatgptGenBtn) {
+                        chatgptGenBtn.innerHTML = 'GENERATE AGAIN <i class="fas fa-sync-alt"></i>';
+                        chatgptGenBtn.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+                    }
+                } else if (isGemini) {
+                    if (document.getElementById('geminiCardNumber')) document.getElementById('geminiCardNumber').textContent = card.email || '**** **** **** ****';
+                    if (document.getElementById('geminiCardCVV')) document.getElementById('geminiCardCVV').textContent = card.password || '***';
+                    const geminiSecuredArea = document.getElementById('geminiSecuredArea');
+                    if (geminiSecuredArea) geminiSecuredArea.style.display = 'block';
+                    const geminiGenBtn = document.getElementById('geminiGeneratorBtn');
+                    if (geminiGenBtn) {
+                        geminiGenBtn.innerHTML = 'GENERATE AGAIN <i class="fas fa-sync-alt"></i>';
+                        geminiGenBtn.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+                    }
+                } else {
+                    let cardNumber = card.email || '**** **** **** ****';
+                    let cardMonth = 'MM';
+                    let cardYear = 'YYYY';
+                    let cardCvv = card.password || '***';
+
+                    if (card.email && card.email.includes('|')) {
+                        const parts = card.email.split('|');
+                        if (parts.length >= 4) {
+                            cardNumber = parts[0];
+                            cardMonth = parts[1];
+                            cardYear = parts[2];
+                            cardCvv = parts[3];
+                        }
+                    } else if (card.email) {
+                        cardNumber = card.email;
+                    }
+
+                    let cardBin = cardNumber.substring(0, 6);
+                    let cardVpn = 'N/A';
+                    let cardType = 'MASTER CARD'; // Default fallback
+
+                    if (card.password && card.password.startsWith('{')) {
+                        try {
+                            const shared = JSON.parse(card.password);
+                            cardVpn = shared.vpn || 'N/A';
+                            cardType = shared.type || 'MASTER CARD';
+                        } catch (e) {
+                            console.error('Error parsing shared info JSON:', e);
+                        }
+                    } else if (card.instructions) {
+                        const vpnMatch = card.instructions.match(/VPN:\s*([^\n]+)/);
+                        if (vpnMatch) cardVpn = vpnMatch[1].trim();
+
+                        const typeMatch = card.instructions.match(/Type:\s*([^\n]+)/);
+                        if (typeMatch) cardType = typeMatch[1].trim();
+                    }
+
+                    showCardDetail({
+                        cardName: serviceId.toUpperCase(),
+                        holderName: ['CALEB OLIVER', 'MAMUN ISLAM'][Math.floor(Math.random() * 2)],
+                        number: cardNumber,
+                        cvv: cardCvv,
+                        month: cardMonth,
+                        year: cardYear,
+                        vpn: cardVpn,
+                        type: cardType,
+                        bin: cardBin,
+                        country: 'Global',
+                        city: 'Dhaka',
+                        state: 'Dhaka',
+                        address: 'Gulshan Avenue',
+                        postal: '1212',
+                        price: price
+                    });
+                    const securedArea = document.getElementById('securedArea');
+                    if (securedArea) securedArea.style.display = 'block';
+                    const genBtn = document.getElementById('generatorBtn');
+                    if (genBtn) {
+                        genBtn.innerHTML = 'GENERATE AGAIN <i class="fas fa-sync-alt"></i>';
+                        genBtn.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+                    }
+                }
+            } else {
+                window.showToast('❌ ' + data.message);
+            }
+        })
+        .catch(() => window.showToast('Network error'));
+}
+window.buyServiceAccount = buyServiceAccount;
+
+function openAndBuyCard(id, type, price, name) {
+    const isChatGPT = id && id.toLowerCase().includes('chatgpt');
+    const isGemini = id && id.toLowerCase().includes('gemini');
+
+    // Store current service info for "Generate Again"
+    window.currentServiceId = id;
+    window.currentServicePrice = price;
+
+    // Update Generator Box immediately based on page type
+    if (isChatGPT) {
+        if (name) PAGE_TITLES['chatgpt'] = name.toUpperCase();
+        const genTitle = document.getElementById('chatgptGeneratorTitle');
+        const genPrice = document.getElementById('chatgptGeneratorPrice');
+        const cardLabel = document.getElementById('chatgptCardLabel');
+        if (genTitle && name) genTitle.textContent = name;
+        if (genPrice) genPrice.textContent = price !== undefined ? `${price} TOKENS` : '50 TOKENS';
+        if (cardLabel && name) cardLabel.textContent = name.toUpperCase();
+
+        // Reset view for step-by-step flow
+        const chatgptSecuredArea = document.getElementById('chatgptSecuredArea');
+        const chatgptGenBtn = document.getElementById('chatgptGeneratorBtn');
+        if (chatgptSecuredArea) chatgptSecuredArea.style.display = 'none';
+        if (chatgptGenBtn) {
+            chatgptGenBtn.innerHTML = 'GENERATE NOW <i class="fas fa-bolt"></i>';
+            chatgptGenBtn.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+        }
+
+        nav('chatgpt');
+    } else if (isGemini) {
+        if (name) PAGE_TITLES['gemini'] = name.toUpperCase();
+        const genTitle = document.getElementById('geminiGeneratorTitle');
+        const genPrice = document.getElementById('geminiGeneratorPrice');
+        if (genTitle && name) genTitle.textContent = name;
+        if (genPrice) genPrice.textContent = price !== undefined ? `${price} TOKENS` : '50 TOKENS';
+
+        // Reset view for step-by-step flow
+        const geminiSecuredArea = document.getElementById('geminiSecuredArea');
+        const geminiGenBtn = document.getElementById('geminiGeneratorBtn');
+        if (geminiSecuredArea) geminiSecuredArea.style.display = 'none';
+        if (geminiGenBtn) {
+            geminiGenBtn.innerHTML = 'GENERATE NOW <i class="fas fa-bolt"></i>';
+            geminiGenBtn.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+        }
+
+        nav('gemini');
+    } else {
+        if (name) PAGE_TITLES['cardDetail'] = name.toUpperCase();
+        const genTitle = document.getElementById('generatorTitle');
+        const genPrice = document.getElementById('generatorPrice');
+        if (genTitle && name) genTitle.textContent = name;
+        if (genPrice) genPrice.textContent = price !== undefined ? `${price} TOKENS` : '50 TOKENS';
+
+        // Reset view for step-by-step flow
+        const securedArea = document.getElementById('securedArea');
+        const genBtn = document.getElementById('generatorBtn');
+        if (securedArea) securedArea.style.display = 'none';
+        if (genBtn) {
+            genBtn.innerHTML = 'GENERATE NOW <i class="fas fa-bolt"></i>';
+            genBtn.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+        }
+
+        nav('cardDetail');
+    }
+
+    // Don't call purchase logic here - wait for user to click "Generate Now"
+}
+window.openAndBuyCard = openAndBuyCard; // Make it global
 
 // ==========================================
 // ACCOUNT STORE CATEGORY DETAIL
@@ -5688,7 +6202,7 @@ function generateVirtualNumber() {
                 const now = Date.now();
 
                 if (data.notifyLimit) {
-                    window.showToast?.('আপনি একসাথে সর্বোচ্চ ৭টি নাম্বার জেনারেট করতে পারবেন। পরবর্তী থেকে নতুন নাম্বার নিলে পুরনো নাম্বার ক্লোজ হয়ে যাবে।');
+                    window.showToast?.('You can generate a maximum of 7 numbers at a time. Taking a new number will close the oldest one.');
                 }
 
                 const newSession = {
@@ -5828,14 +6342,14 @@ function pollForOTP() {
 // Helper: Extract OTP from text
 function extractOtp(text) {
     if (!text) return null;
-    
+
     // 1. Try common labels first
     const patterns = [
         /(?:code|otp|verification|pin|🔑|验证码)[:\s-]*([0-9]{4,8})/i,
         /(?:is|密码为)[:\s-]*([0-9]{4,8})/i,
         /([0-9]{4,8})(?:\s)*(?:is your|is the)/i
     ];
-    
+
     for (const p of patterns) {
         const m = text.match(p);
         if (m && m[1]) return m[1].trim();
@@ -5857,7 +6371,7 @@ function extractOtp(text) {
     // Prefer 6 digits, then 4, then longest
     const sixDigit = filtered.find(m => m.length === 6);
     if (sixDigit) return sixDigit;
-    
+
     const fourDigit = filtered.find(m => m.length === 4);
     if (fourDigit) return fourDigit;
 
@@ -6266,7 +6780,7 @@ async function confirmRenewCustomEmail() {
 
             // Set the new session properly
             const type = currentRenewType === 'premium' ? 'premium' : (currentRenewType === 'hot' ? 'hot' : 'student');
-            
+
             // Update session with new email
             const newEmail = data.email || email; // email from input
             mailSessions[type] = {
@@ -6998,7 +7512,7 @@ async function loadPremiumEmailsFromAdmin() {
                 // Find matching active session block
                 let foundSession = data.activeSessions[internalCheckType] || data.activeSessions['admin_pool_' + internalCheckType];
                 if (!foundSession && internalCheckType === 'gmail') foundSession = data.activeSessions['premium'];
-                
+
                 if (foundSession) {
                     if (!mailSessions) { mailSessions = { temp: null, premium: null }; }
                     mailSessions.premium = {
@@ -7038,7 +7552,7 @@ async function loadPremiumEmailsFromAdmin() {
     if (addrEl) {
         addrEl.innerHTML = '<i class="fas fa-circle-notch fa-spin" style="margin-right:8px;"></i>generating...';
     }
-    
+
     // Prevent overlapping auto-generations
     if (window._isAutoGeneratingPremium) return;
     window._isAutoGeneratingPremium = true;
@@ -7085,12 +7599,12 @@ async function generatePremiumMail(provider) {
                 email: emailStr,
                 type: provider || 'gmail'
             };
-            
+
             // Map the provider to the correct frontend type string usually used in mailSessions
             let sessionType = 'premium';
             if (provider === 'hotmail') sessionType = 'hot';
             if (provider === 'student') sessionType = 'student';
-            
+
             mailSessions[sessionType] = assignedPremiumEmail;
 
             if (addrEl) {
@@ -7195,7 +7709,7 @@ function openPremiumMailDirect() {
 
     // Make sure we select 'gmail' (the default) if no currentPremiumTab is set
     if (!currentPremiumTab) currentPremiumTab = 'gmail';
-    
+
     // We delegate completely to loadPremiumEmailsFromAdmin which will fetch active 
     // sessions from the server, and only generate an email if none is found.
     loadPremiumEmailsFromAdmin();
@@ -7203,7 +7717,7 @@ function openPremiumMailDirect() {
 
 async function autoGeneratePremiumMailWrapper() {
     if (checkZeroBalanceAdTrigger()) return;
-    
+
     // Check if we already have an active session for this specific tab before generating
     if (mailSessions && mailSessions.premium && mailSessions.premium.type === (currentPremiumTab || 'gmail')) {
         return;
@@ -7557,12 +8071,12 @@ function showJoinRequiredModal(missing) {
             </p>
             <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
                 ${items.map(item => {
-                    const isJoined = item.joined;
-                    const style = isJoined ? 
-                        'background: #333; color: #888; text-decoration: line-through; pointer-events: none; opacity: 0.6;' : 
-                        'background: linear-gradient(135deg, #f59e0b, #d97706); color: #000;';
-                    
-                    return `
+        const isJoined = item.joined;
+        const style = isJoined ?
+            'background: #333; color: #888; text-decoration: line-through; pointer-events: none; opacity: 0.6;' :
+            'background: linear-gradient(135deg, #f59e0b, #d97706); color: #000;';
+
+        return `
                         <a href="https://t.me/${item.username.replace('@', '')}" target="_blank" style="
                             ${style}
                             padding: 10px 15px;
@@ -7580,7 +8094,7 @@ function showJoinRequiredModal(missing) {
                             ${isJoined ? '<i class="fas fa-check-circle" style="font-size: 12px; color: #22c55e;"></i>' : '<i class="fas fa-external-link-alt" style="font-size: 12px;"></i>'}
                         </a>
                     `;
-                }).join('')}
+    }).join('')}
             </div>
             <button onclick="verifyJoinsAndProceed()" style="
                 background: linear-gradient(135deg, #22c55e, #16a34a);
@@ -7629,7 +8143,7 @@ async function verifyJoinsAndProceed() {
     } else {
         btn.innerHTML = '<span>✗ Not Joined Yet</span>';
         btn.style.background = '#ef4444';
-        
+
         // Brief delay then update the modal UI to reflect which ones are now joined
         setTimeout(() => {
             showJoinRequiredModal(result);
@@ -7714,6 +8228,9 @@ document.addEventListener('DOMContentLoaded', async function () {
                 console.error('[INIT] Failed to fetch user data:', e);
             }
         }
+
+        // Load payment platforms
+        loadPaymentPlatforms();
 
         // FETCH FEATURE FLAGS & CHECK JOIN REQUIREMENT
         const featuresRes = await fetch('/api/features').catch(() => ({ json: () => ({ success: false }) }));
@@ -7862,12 +8379,12 @@ window.extractOtp = extractOtp;
 // =============================================
 // LIVE PAGES — Routing & Titles
 // =============================================
-PAGE_TITLES['live2fa']        = '2FA LIVE';
-PAGE_TITLES['liveInstagram']  = 'INSTAGRAM LIVE';
-PAGE_TITLES['liveFacebook']   = 'FACEBOOK LIVE';
-PAGE_TITLES['liveTiktok']     = 'TIKTOK LIVE';
-PAGE_TITLES['liveTwitter']    = 'TWITTER LIVE';
-PAGE_TITLES['liveThreads']    = 'THREADS LIVE';
+PAGE_TITLES['live2fa'] = '2FA LIVE';
+PAGE_TITLES['liveInstagram'] = 'INSTAGRAM LIVE';
+PAGE_TITLES['liveFacebook'] = 'FACEBOOK LIVE';
+PAGE_TITLES['liveTiktok'] = 'TIKTOK LIVE';
+PAGE_TITLES['liveTwitter'] = 'TWITTER LIVE';
+PAGE_TITLES['liveThreads'] = 'THREADS LIVE';
 
 // =============================================
 // 2FA TOTP LIVE — START / RESTART Logic
@@ -7881,7 +8398,7 @@ var _twofaInterval = null;
 function generateTOTP(secretBase32) {
     // Base32 decode
     const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-    const base32 = secretBase32.toUpperCase().replace(/\s/g,'').replace(/=/g,'');
+    const base32 = secretBase32.toUpperCase().replace(/\s/g, '').replace(/=/g, '');
     let bits = '';
     for (const c of base32) {
         const idx = alphabet.indexOf(c);
@@ -7903,52 +8420,52 @@ function generateTOTP(secretBase32) {
     return window.crypto.subtle.importKey(
         'raw', new Uint8Array(bytes), { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']
     ).then(key => window.crypto.subtle.sign('HMAC', key, msg))
-     .then(sig => {
-        const h = new Uint8Array(sig);
-        const offset = h[19] & 0xf;
-        const code = (((h[offset] & 0x7f) << 24) |
-                      ((h[offset+1] & 0xff) << 16) |
-                      ((h[offset+2] & 0xff) << 8)  |
-                       (h[offset+3] & 0xff)) % 1000000;
-        return String(code).padStart(6, '0');
-     });
+        .then(sig => {
+            const h = new Uint8Array(sig);
+            const offset = h[19] & 0xf;
+            const code = (((h[offset] & 0x7f) << 24) |
+                ((h[offset + 1] & 0xff) << 16) |
+                ((h[offset + 2] & 0xff) << 8) |
+                (h[offset + 3] & 0xff)) % 1000000;
+            return String(code).padStart(6, '0');
+        });
 }
 
 function start2faLive() {
     const startBtn = document.getElementById('twofa-start-btn');
-    
+
     // Toggle STOP functionality if already running
     if (_twofaInterval) {
         clearInterval(_twofaInterval);
         _twofaInterval = null;
-        
+
         if (startBtn) {
             startBtn.innerHTML = '<i class="fas fa-play"></i> START';
             startBtn.style.background = 'linear-gradient(135deg,#4f46e5,#7c3aed)';
         }
-        
+
         const result = document.getElementById('twofa-result');
-        const timer  = document.getElementById('twofa-timer');
+        const timer = document.getElementById('twofa-timer');
         if (result) result.textContent = '------';
-        if (timer)  timer.textContent  = 'Waiting...';
-        
+        if (timer) timer.textContent = 'Waiting...';
+
         const copyBtn = document.getElementById('twofa-restart-btn');
         if (copyBtn) {
             copyBtn.innerHTML = '<i class="fas fa-paste"></i> PASTE';
             copyBtn.onclick = pasteFromClipboard;
         }
-        
+
         const input = document.getElementById('twofa-input');
         if (input) {
             input.value = '';
             const clearBtn = document.getElementById('twofa-clear-btn');
             if (clearBtn) clearBtn.style.display = 'none';
         }
-        
+
         window.showToast('🛑 2FA service stopped and data cleared.');
         return;
     }
-    
+
     const input = document.getElementById('twofa-input');
     const secret = input ? input.value.trim() : '';
     if (!secret) {
@@ -7969,42 +8486,42 @@ function start2faLive() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: userData.id })
     })
-    .then(r => r.json())
-    .then(data => {
-        if (startBtn) startBtn.disabled = false;
-        
-        if (!data.success) {
-            window.showToast(`❌ ${data.message}`);
-            return;
-        }
+        .then(r => r.json())
+        .then(data => {
+            if (startBtn) startBtn.disabled = false;
 
-        // Success! Tokens deducted. Start service.
-        updateTwoFA(secret);
-        _twofaInterval = setInterval(() => updateTwoFA(secret), 1000);
+            if (!data.success) {
+                window.showToast(`❌ ${data.message}`);
+                return;
+            }
 
-        // Update button states to STOP
-        if (startBtn) {
-            startBtn.innerHTML = '<i class="fas fa-stop"></i> STOP';
-            startBtn.style.background = 'linear-gradient(135deg,#dc2626,#ef4444)'; // Red for Stop
-        }
-        
-        const copyBtn = document.getElementById('twofa-restart-btn');
-        if (copyBtn) {
-            copyBtn.innerHTML = '<i class="fas fa-copy"></i> COPY';
-            copyBtn.onclick = copy2faCode;
-        }
-        
-        window.showToast('🚀 2FA service started.');
-        
-        // Refresh balance and history
-        if (typeof checkUserStatus === 'function') checkUserStatus();
-        if (typeof loadRecentActivity === 'function') loadRecentActivity();
-    })
-    .catch(err => {
-        if (startBtn) startBtn.disabled = false;
-        window.showToast('❌ Failed to start service. Try again.');
-        console.error(err);
-    });
+            // Success! Tokens deducted. Start service.
+            updateTwoFA(secret);
+            _twofaInterval = setInterval(() => updateTwoFA(secret), 1000);
+
+            // Update button states to STOP
+            if (startBtn) {
+                startBtn.innerHTML = '<i class="fas fa-stop"></i> STOP';
+                startBtn.style.background = 'linear-gradient(135deg,#dc2626,#ef4444)'; // Red for Stop
+            }
+
+            const copyBtn = document.getElementById('twofa-restart-btn');
+            if (copyBtn) {
+                copyBtn.innerHTML = '<i class="fas fa-copy"></i> COPY';
+                copyBtn.onclick = copy2faCode;
+            }
+
+            window.showToast('🚀 2FA service started.');
+
+            // Refresh balance and history
+            if (typeof checkUserStatus === 'function') checkUserStatus();
+            if (typeof loadRecentActivity === 'function') loadRecentActivity();
+        })
+        .catch(err => {
+            if (startBtn) startBtn.disabled = false;
+            window.showToast('❌ Failed to start service. Try again.');
+            console.error(err);
+        });
 }
 
 function copy2faCode() {
@@ -8068,12 +8585,12 @@ function updateTwoFA(secret) {
         .catch(() => {
             const result = document.getElementById('twofa-result');
             if (result) result.textContent = 'ERROR';
-            if (timer)  timer.textContent  = 'Invalid secret key';
+            if (timer) timer.textContent = 'Invalid secret key';
         });
 }
 
-window.start2faLive   = start2faLive;
-window.copy2faCode    = copy2faCode;
+window.start2faLive = start2faLive;
+window.copy2faCode = copy2faCode;
 
 
 function copyOtpFromChip(btn, code) {
@@ -8649,20 +9166,13 @@ async function loadMySales() {
                         offerBlock = `
                             <div style="background:rgba(139,92,246,0.1); border:1px solid rgba(139,92,246,0.2); border-radius:12px; padding:12px; margin-top:12px;">
                                 <div style="font-size:12px; color:#c4b5fd; font-weight:700; margin-bottom:8px;">
-                                    Admin offered: <span style="font-size:16px; color:#8b5cf6; font-weight:900;">${item.rewardOffer || 0} ${item.rewardCurrency || 'Tokens'}</span>
-                                </div>
-                                <div style="font-size:11px; color:#a78bfa; margin-bottom:12px;">
-                                    💡 Tip: You will only get paid AFTER your item sells to a buyer
-                                </div>
-                                <div style="display:flex; gap:8px;">
-                                    <button onclick="respondToOffer('${item.id}', 'accept')" style="flex:1; padding:8px; border-radius:10px; border:none; background:#10b981; color:#fff; font-weight:800; cursor:pointer; font-size:12px;">ACCEPT</button>
-                                    <button onclick="respondToOffer('${item.id}', 'reject')" style="flex:1; padding:8px; border-radius:10px; border:none; background:rgba(239,68,68,0.2); color:#ef4444; border:1px solid rgba(239,68,68,0.5); font-weight:800; cursor:pointer; font-size:12px;">REJECT</button>
+                                    Admin Offer: $${item.adminOffer || '0'}
                                 </div>
                             </div>
                         `;
                     }
 
-                    return `
+                    const itemHtml = `
                     <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:18px; padding:18px; border-left:5px solid ${statusColor}; position:relative; overflow:hidden; margin-bottom:12px;">
                         <div style="display:flex; justify-content:space-between; align-items:start;">
                             <div>
@@ -9560,7 +10070,7 @@ async function loadNotifications() {
     try {
         const res = await fetch(`/api/user/notifications?userId=${userData.id}`);
         const data = await res.json();
-        
+
         const list = document.getElementById('notificationsList');
         const empty = document.getElementById('notificationsEmptyState');
         const badge = document.getElementById('notificationBadge');
@@ -9568,7 +10078,7 @@ async function loadNotifications() {
         if (data.success && data.notifications) {
             const notifs = data.notifications;
             const unreadCount = notifs.filter(n => !n.read).length;
-            
+
             if (badge) {
                 if (unreadCount > 0) {
                     badge.style.display = 'flex';
@@ -9590,7 +10100,7 @@ async function loadNotifications() {
                         let color = '#a78bfa';
                         let bg = 'rgba(139, 92, 246, 0.1)';
                         let onClick = `markNotificationRead('${n.id}')`;
-                        
+
                         if (n.type === 'gift') {
                             icon = 'fa-gift';
                             color = '#f59e0b';
@@ -9608,7 +10118,7 @@ async function loadNotifications() {
                             color = '#ec4899';
                             bg = 'rgba(236, 72, 153, 0.1)';
                         }
-                        
+
                         return `
                         <div onclick="${onClick}" style="background: ${isUnread ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.2)'}; border: 1px solid ${isUnread ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)'}; border-radius: 12px; padding: 16px; cursor: pointer; transition: all 0.2s; position: relative;">
                             ${isUnread ? `<div style="position: absolute; top: 12px; right: 12px; width: 8px; height: 8px; background: #ef4444; border-radius: 50%;"></div>` : ''}
@@ -9753,7 +10263,7 @@ async function loadAdminMessages() {
 
 function renderAdminMessages(messages) {
     const list = document.getElementById('adminMessagesList');
-    
+
     // Save current input values to prevent losing them during auto-refresh
     const currentInputs = {};
     if (list) {
@@ -9790,19 +10300,19 @@ function renderAdminMessages(messages) {
             </div>
         `;
     }
-    
+
     // Check if anything actually changed besides inputs
     // Wait, the new HTML includes the saved input values, so it's safe to just assign innerHTML
     // but assignment breaks cursor focus. Let's just avoid re-rendering if no new messages.
     // A simple hack: compare without input values. Or just re-render but focus might be lost. 
     // To preserve focus, don't re-render if the last messages are identical.
-    
+
     // Simple state tracking:
     const newHtmlState = JSON.stringify(messages);
     if (list.dataset.lastState !== newHtmlState) {
         list.innerHTML = html;
         list.dataset.lastState = newHtmlState;
-        
+
         // Restore focus if needed? Actually let's just let it be. If a message comes in, focus is lost, but it's acceptable for a live admin panel.
         // Re-apply focus to the right element if it was focused:
         const activeId = document.activeElement ? document.activeElement.id : null;
@@ -10139,7 +10649,7 @@ window.openApiManagementModal = async function () {
                 // If join check fails, don't hard-block API management UI
             }
         }
-        
+
         console.log('[API_UI] Preparing to show API modal...');
 
         const modal = document.getElementById('apiManagementModal');
@@ -10184,7 +10694,7 @@ window.closeApiManagementModal = function () {
 
 async function loadApiKey() {
     console.log('[API_UI] loadApiKey called. Unified Syncing...');
-    
+
     // Elements for Unified Modal & Page
     const modalLoading = document.getElementById('apiModalLoading');
     const modalBanned = document.getElementById('apiModalBanned');
@@ -10234,7 +10744,7 @@ async function loadApiKey() {
         if (userData) {
             userData.apiKey = data.apiKey || null;
             userData.apiStatus = data.status || 'pending';
-            try { localStorage.setItem(`userData_${userId}`, JSON.stringify(userData)); } catch (e) {}
+            try { localStorage.setItem(`userData_${userId}`, JSON.stringify(userData)); } catch (e) { }
         }
 
         // Show Content
@@ -10305,10 +10815,10 @@ window.generateNewApiKey = async function (btnElement) {
             const data = await res.json();
             if (data.success) {
                 window.showToast('✅ API Key generated successfully!');
-                
+
                 // Update local storage and memory
                 if (userData) userData.apiKey = data.apiKey;
-                try { localStorage.setItem(`userData_${userId}`, JSON.stringify(userData)); } catch (e) {}
+                try { localStorage.setItem(`userData_${userId}`, JSON.stringify(userData)); } catch (e) { }
 
                 // Immediate UI update 
                 const modalDisplay = document.getElementById('modalApiKeyDisplay');

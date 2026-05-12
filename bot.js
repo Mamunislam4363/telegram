@@ -1108,7 +1108,7 @@ bot.on('message', async (msg) => {
 
     // Check for pinned message
     if (msg.pinned_message) {
-        if (settings.deletePinMessages === true) {
+        if (settings.deletePinMessages !== false) { // Default true
             shouldDelete = true;
             deleteReason = 'pin';
         }
@@ -1116,7 +1116,7 @@ bot.on('message', async (msg) => {
 
     // Check for voice chat started
     if (msg.voice_chat_started) {
-        if (settings.deleteVoiceChatStarted === true) {
+        if (settings.deleteVoiceChatStarted !== false) { // Default true
             shouldDelete = true;
             deleteReason = 'voice_chat_started';
         }
@@ -1124,7 +1124,7 @@ bot.on('message', async (msg) => {
 
     // Check for voice chat ended
     if (msg.voice_chat_ended) {
-        if (settings.deleteVoiceChatEnded === true) {
+        if (settings.deleteVoiceChatEnded !== false) { // Default true
             shouldDelete = true;
             deleteReason = 'voice_chat_ended';
         }
@@ -1132,15 +1132,23 @@ bot.on('message', async (msg) => {
 
     // Check for video chat started
     if (msg.video_chat_started) {
-        if (settings.deleteVideoChatStarted === true) {
+        if (settings.deleteVideoChatStarted !== false) { // Default true
             shouldDelete = true;
             deleteReason = 'video_chat_started';
+        }
+        
+        // Auto-join live stream feature (Requested by user)
+        // Note: Standard Bots cannot join voice/video chats or unmute users.
+        // This requires a Userbot (MTProto API).
+        if (settings.autoJoinLiveStream !== false) {
+            console.log(`[LIVE-STREAM] Video chat started in ${chatId}. Bot cannot join directly via Bot API. Requires Userbot.`);
+            // Placeholder for future implementation if a userbot is integrated
         }
     }
 
     // Check for video chat ended
     if (msg.video_chat_ended) {
-        if (settings.deleteVideoChatEnded === true) {
+        if (settings.deleteVideoChatEnded !== false) { // Default true
             shouldDelete = true;
             deleteReason = 'video_chat_ended';
         }
@@ -1148,7 +1156,7 @@ bot.on('message', async (msg) => {
 
     // Check for video chat scheduled
     if (msg.video_chat_scheduled) {
-        if (settings.deleteVideoChatScheduled === true) {
+        if (settings.deleteVideoChatScheduled !== false) { // Default true
             shouldDelete = true;
             deleteReason = 'video_chat_scheduled';
         }
@@ -1156,7 +1164,7 @@ bot.on('message', async (msg) => {
 
     // Check for video chat participants invited
     if (msg.video_chat_participants_invited) {
-        if (settings.deleteVideoChatParticipantsInvited === true) {
+        if (settings.deleteVideoChatParticipantsInvited !== false) { // Default true
             shouldDelete = true;
             deleteReason = 'video_chat_participants_invited';
         }
@@ -1164,7 +1172,7 @@ bot.on('message', async (msg) => {
 
     // Check for proximity alert triggered
     if (msg.proximity_alert_triggered) {
-        if (settings.deleteProximityAlertTriggered === true) {
+        if (settings.deleteProximityAlertTriggered !== false) { // Default true
             shouldDelete = true;
             deleteReason = 'proximity_alert';
         }
@@ -1172,7 +1180,7 @@ bot.on('message', async (msg) => {
 
     // Check for auto delete timer changed
     if (msg.message_auto_delete_timer_changed) {
-        if (settings.deleteAutoDeleteTimerChanged === true) {
+        if (settings.deleteAutoDeleteTimerChanged !== false) { // Default true
             shouldDelete = true;
             deleteReason = 'auto_delete_timer';
         }
@@ -1180,7 +1188,7 @@ bot.on('message', async (msg) => {
 
     // Check for migrate to chat
     if (msg.migrate_to_chat_id) {
-        if (settings.deleteMigrateToChat === true) {
+        if (settings.deleteMigrateToChat !== false) { // Default true
             shouldDelete = true;
             deleteReason = 'migrate';
         }
@@ -1188,7 +1196,7 @@ bot.on('message', async (msg) => {
 
     // Check for migrate from chat
     if (msg.migrate_from_chat_id) {
-        if (settings.deleteMigrateFromChat === true) {
+        if (settings.deleteMigrateFromChat !== false) { // Default true
             shouldDelete = true;
             deleteReason = 'migrate';
         }
@@ -1196,7 +1204,7 @@ bot.on('message', async (msg) => {
 
     // Check for channel chat created
     if (msg.channel_chat_created) {
-        if (settings.deleteChannelChatCreated === true) {
+        if (settings.deleteChannelChatCreated !== false) { // Default true
             shouldDelete = true;
             deleteReason = 'channel_created';
         }
@@ -1204,7 +1212,7 @@ bot.on('message', async (msg) => {
 
     // Check for supergroup chat created
     if (msg.supergroup_chat_created) {
-        if (settings.deleteSupergroupChatCreated === true) {
+        if (settings.deleteSupergroupChatCreated !== false) { // Default true
             shouldDelete = true;
             deleteReason = 'supergroup_created';
         }
@@ -1212,7 +1220,7 @@ bot.on('message', async (msg) => {
 
     // Check for delete chat photo
     if (msg.delete_chat_photo) {
-        if (settings.deleteDeleteGroupPhoto === true) {
+        if (settings.deleteDeleteGroupPhoto !== false) { // Default true
             shouldDelete = true;
             deleteReason = 'photo_deleted';
         }
@@ -1220,7 +1228,7 @@ bot.on('message', async (msg) => {
 
     // Check for group photo changed
     if (msg.new_chat_photo && msg.new_chat_photo.length > 0) {
-        if (settings.deleteGroupPhotoChanged === true) {
+        if (settings.deleteGroupPhotoChanged !== false) { // Default true
             shouldDelete = true;
             deleteReason = 'photo_changed';
         }
@@ -1228,7 +1236,7 @@ bot.on('message', async (msg) => {
 
     // Check for group title changed
     if (msg.new_chat_title) {
-        if (settings.deleteTitleChanged === true) {
+        if (settings.deleteTitleChanged !== false) { // Default true
             shouldDelete = true;
             deleteReason = 'title_changed';
         }
@@ -1237,42 +1245,42 @@ bot.on('message', async (msg) => {
     // Check for group description changed (handled in new_chat_description or edited message)
     // Check for forum topic related messages
     if (msg.forum_topic_created) {
-        if (settings.deleteForumTopicCreated === true) {
+        if (settings.deleteForumTopicCreated !== false) { // Default true
             shouldDelete = true;
             deleteReason = 'forum_topic_created';
         }
     }
 
     if (msg.forum_topic_edited) {
-        if (settings.deleteForumTopicEdited === true) {
+        if (settings.deleteForumTopicEdited !== false) { // Default true
             shouldDelete = true;
             deleteReason = 'forum_topic_edited';
         }
     }
 
     if (msg.forum_topic_closed) {
-        if (settings.deleteForumTopicClosed === true) {
+        if (settings.deleteForumTopicClosed !== false) { // Default true
             shouldDelete = true;
             deleteReason = 'forum_topic_closed';
         }
     }
 
     if (msg.forum_topic_reopened) {
-        if (settings.deleteForumTopicReopened === true) {
+        if (settings.deleteForumTopicReopened !== false) { // Default true
             shouldDelete = true;
             deleteReason = 'forum_topic_reopened';
         }
     }
 
     if (msg.general_forum_topic_hidden) {
-        if (settings.deleteGeneralForumTopicHidden === true) {
+        if (settings.deleteGeneralForumTopicHidden !== false) { // Default true
             shouldDelete = true;
             deleteReason = 'forum_topic_hidden';
         }
     }
 
     if (msg.general_forum_topic_unhidden) {
-        if (settings.deleteGeneralForumTopicUnhidden === true) {
+        if (settings.deleteGeneralForumTopicUnhidden !== false) { // Default true
             shouldDelete = true;
             deleteReason = 'forum_topic_unhidden';
         }
@@ -1280,21 +1288,21 @@ bot.on('message', async (msg) => {
 
     // Check for giveaway messages
     if (msg.giveaway_created) {
-        if (settings.deleteGiveawayCreated === true) {
+        if (settings.deleteGiveawayCreated !== false) { // Default true
             shouldDelete = true;
             deleteReason = 'giveaway_created';
         }
     }
 
     if (msg.giveaway_winners) {
-        if (settings.deleteGiveawayWinners === true) {
+        if (settings.deleteGiveawayWinners !== false) { // Default true
             shouldDelete = true;
             deleteReason = 'giveaway_winners';
         }
     }
 
     if (msg.giveaway_completed) {
-        if (settings.deleteGiveawayCompleted === true) {
+        if (settings.deleteGiveawayCompleted !== false) { // Default true
             shouldDelete = true;
             deleteReason = 'giveaway_completed';
         }
@@ -1302,7 +1310,7 @@ bot.on('message', async (msg) => {
 
     // Check for boost added
     if (msg.boost_added) {
-        if (settings.deleteBoostAdded === true) {
+        if (settings.deleteBoostAdded !== false) { // Default true
             shouldDelete = true;
             deleteReason = 'boost_added';
         }
@@ -1310,7 +1318,7 @@ bot.on('message', async (msg) => {
 
     // Check for chat background set
     if (msg.chat_background_set) {
-        if (settings.deleteChatBackgroundSet === true) {
+        if (settings.deleteChatBackgroundSet !== false) { // Default true
             shouldDelete = true;
             deleteReason = 'background_set';
         }

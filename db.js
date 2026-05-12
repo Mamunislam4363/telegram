@@ -443,7 +443,7 @@ class Database {
         if (remoteData) {
             // Remote exists -> Use it (Primary)
             this.data = { ...defaultData, ...remoteData, settings: { ...defaultData.settings, ...(remoteData.settings || {}) } };
-            
+
             // Merge logic: If localData has users that are more complete than remote, use them
             if (localData && localData.users) {
                 let mergedCount = 0;
@@ -451,7 +451,7 @@ class Database {
                 Object.keys(localData.users).forEach(uid => {
                     const localUser = localData.users[uid];
                     const remoteUser = (this.data.users && this.data.users[uid]) || null;
-                    
+
                     if (remoteUser) {
                         // 1. CRITICAL: If local user has apiKey but remote doesn't (Sync lag)
                         if (localUser.apiKey && !remoteUser.apiKey) {
@@ -459,7 +459,7 @@ class Database {
                             this.data.users[uid].apiStatus = localUser.apiStatus || remoteUser.apiStatus;
                             keyRestoredCount++;
                             mergedCount++;
-                        } 
+                        }
                         // 2. If local has more recent tokens/history
                         else {
                             const localHistory = (localUser.history || []).length;
@@ -638,7 +638,7 @@ class Database {
 
     getUser(userId) {
         if (!userId) return null;
-        
+
         // Handle common non-numeric strings silently
         const stringId = String(userId).trim();
         if (stringId === 'gifts' || stringId === 'undefined' || stringId === 'null') {
@@ -1306,6 +1306,11 @@ class Database {
         if (this.data.services && this.data.services[id]) delete this.data.services[id];
         if (this.data.shopItems && this.data.shopItems[id]) delete this.data.shopItems[id];
         if (this.data.serviceItems && this.data.serviceItems[id]) delete this.data.serviceItems[id];
+        if (this.data.serviceIcons && this.data.serviceIcons[id]) delete this.data.serviceIcons[id];
+        if (this.data.serviceDescriptions && this.data.serviceDescriptions[id]) delete this.data.serviceDescriptions[id];
+        if (this.data.premiumAccounts) {
+            this.data.premiumAccounts = this.data.premiumAccounts.filter(a => a.type !== id);
+        }
         if (this.data.settings && this.data.settings.costs && this.data.settings.costs[id]) {
             delete this.data.settings.costs[id];
         }

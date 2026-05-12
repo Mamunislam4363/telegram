@@ -79,7 +79,7 @@
                     ready: function () { console.log('[TG Mock] WebApp.ready()'); },
                     expand: function () { },
                     close: function () { },
-                    isVersionAtLeast: function(v) { return true; },
+                    isVersionAtLeast: function (v) { return true; },
                     showAlert: function (msg, cb) { console.warn('[TG Mock] showAlert:', msg); if (cb) cb(); },
                     showConfirm: function (msg, cb) { if (cb) cb(true); },
                     showPopup: function (params, cb) { if (cb) cb('ok'); },
@@ -130,6 +130,44 @@
         select option {
             background-color: #1a100a !important;
             color: #ffffff !important;
+        }
+
+        /* Copy Button Styles */
+        .copy-box {
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .copy-btn {
+            width: 36px;
+            height: 36px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s, background 0.2s;
+            margin-left: 10px;
+            flex-shrink: 0;
+            font-size: 14px;
+        }
+
+        .copy-box:hover .copy-btn {
+            opacity: 1;
+        }
+
+        .copy-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .copy-btn.copied i {
+            color: #22c55e !important;
         }
 
         /* Ensure placeholders are visible */
@@ -1634,7 +1672,9 @@
                     <!-- Notification Icon -->
                     <div class="cb-icon" onclick="nav('notifications')" style="cursor:pointer; position:relative;">
                         <i class="fas fa-bell"></i>
-                        <div id="notificationBadge" style="display:none; position:absolute; top:-2px; right:-2px; background:#ef4444; color:#fff; border-radius:50%; width:14px; height:14px; font-size:9px; align-items:center; justify-content:center; font-weight:bold;">0</div>
+                        <div id="notificationBadge"
+                            style="display:none; position:absolute; top:-2px; right:-2px; background:#ef4444; color:#fff; border-radius:50%; width:14px; height:14px; font-size:9px; align-items:center; justify-content:center; font-weight:bold;">
+                            0</div>
                     </div>
                 </div>
             </div>
@@ -1647,7 +1687,8 @@
             <!-- NOTIFICATIONS PAGE -->
             <div id="notificationsPage" class="page">
                 <div class="section-title">NOTIFICATIONS</div>
-                <div id="notificationsList" style="padding: 0 16px; display:flex; flex-direction:column; gap:12px; margin-bottom: 20px;"></div>
+                <div id="notificationsList"
+                    style="padding: 0 16px; display:flex; flex-direction:column; gap:12px; margin-bottom: 20px;"></div>
                 <div class="empty-state" id="notificationsEmptyState">
                     <div class="empty-icon"><i class="fas fa-bell-slash"></i></div>
                     <p>No notifications yet</p>
@@ -1980,9 +2021,15 @@
                 <!-- ===================== LIVE SECTION ===================== -->
                 <div style="padding: 0 16px; margin-top: 8px; margin-bottom: 4px;">
                     <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
-                        <div style="width:8px; height:8px; background:#22c55e; border-radius:50%; animation: livePulse 1.2s ease-in-out infinite;"></div>
-                        <div style="font-size:13px; font-weight:900; color:#22c55e; letter-spacing:2px; text-transform:uppercase;">LIVE</div>
-                        <div style="flex:1; height:1px; background: linear-gradient(90deg, rgba(34,197,94,0.4), transparent);"></div>
+                        <div
+                            style="width:8px; height:8px; background:#22c55e; border-radius:50%; animation: livePulse 1.2s ease-in-out infinite;">
+                        </div>
+                        <div
+                            style="font-size:13px; font-weight:900; color:#22c55e; letter-spacing:2px; text-transform:uppercase;">
+                            LIVE</div>
+                        <div
+                            style="flex:1; height:1px; background: linear-gradient(90deg, rgba(34,197,94,0.4), transparent);">
+                        </div>
                     </div>
 
                     <!-- Live Row 1: 2FA, Instagram, Facebook -->
@@ -1991,43 +2038,67 @@
                         <!-- 2FA Card -->
                         <div id="liveCard2fa" onclick="nav('live2fa')"
                             style="background:var(--bg-card); border:1px solid rgba(99,102,241,0.35); border-radius:18px; padding:14px 8px 12px; display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; position:relative; overflow:hidden; transition:transform 0.15s;"
-                            onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'">
-                            <div style="position:absolute; top:7px; right:8px; display:flex; align-items:center; gap:3px;">
-                                <div style="width:6px; height:6px; background:#22c55e; border-radius:50%; animation:livePulse 1.2s infinite;"></div>
-                                <span style="font-size:8px; font-weight:800; color:#22c55e; letter-spacing:1px;">LIVE</span>
+                            onmousedown="this.style.transform='scale(0.95)'"
+                            onmouseup="this.style.transform='scale(1)'">
+                            <div
+                                style="position:absolute; top:7px; right:8px; display:flex; align-items:center; gap:3px;">
+                                <div
+                                    style="width:6px; height:6px; background:#22c55e; border-radius:50%; animation:livePulse 1.2s infinite;">
+                                </div>
+                                <span
+                                    style="font-size:8px; font-weight:800; color:#22c55e; letter-spacing:1px;">LIVE</span>
                             </div>
-                            <div style="width:46px; height:46px; background:linear-gradient(135deg,#4f46e5,#7c3aed); border-radius:14px; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px rgba(79,70,229,0.4);">
+                            <div
+                                style="width:46px; height:46px; background:linear-gradient(135deg,#4f46e5,#7c3aed); border-radius:14px; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px rgba(79,70,229,0.4);">
                                 <i class="fas fa-shield-alt" style="font-size:20px; color:#fff;"></i>
                             </div>
-                            <div style="font-size:10px; font-weight:800; color:var(--text-main); text-align:center; line-height:1.2; text-transform:uppercase;">2FA</div>
+                            <div
+                                style="font-size:10px; font-weight:800; color:var(--text-main); text-align:center; line-height:1.2; text-transform:uppercase;">
+                                2FA</div>
                         </div>
 
                         <!-- Instagram Card -->
                         <div id="liveCardInsta" onclick="nav('liveInstagram')"
                             style="background:var(--bg-card); border:1px solid rgba(236,72,153,0.35); border-radius:18px; padding:14px 8px 12px; display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; position:relative; overflow:hidden; transition:transform 0.15s;"
-                            onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'">
-                            <div style="position:absolute; top:7px; right:8px; display:flex; align-items:center; gap:3px;">
-                                <div style="width:6px; height:6px; background:#22c55e; border-radius:50%; animation:livePulse 1.2s infinite;"></div>
-                                <span style="font-size:8px; font-weight:800; color:#22c55e; letter-spacing:1px;">LIVE</span>
+                            onmousedown="this.style.transform='scale(0.95)'"
+                            onmouseup="this.style.transform='scale(1)'">
+                            <div
+                                style="position:absolute; top:7px; right:8px; display:flex; align-items:center; gap:3px;">
+                                <div
+                                    style="width:6px; height:6px; background:#22c55e; border-radius:50%; animation:livePulse 1.2s infinite;">
+                                </div>
+                                <span
+                                    style="font-size:8px; font-weight:800; color:#22c55e; letter-spacing:1px;">LIVE</span>
                             </div>
-                            <div style="width:46px; height:46px; background:linear-gradient(135deg,#f97316,#ec4899,#8b5cf6); border-radius:14px; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px rgba(236,72,153,0.4);">
+                            <div
+                                style="width:46px; height:46px; background:linear-gradient(135deg,#f97316,#ec4899,#8b5cf6); border-radius:14px; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px rgba(236,72,153,0.4);">
                                 <i class="fab fa-instagram" style="font-size:22px; color:#fff;"></i>
                             </div>
-                            <div style="font-size:10px; font-weight:800; color:var(--text-main); text-align:center; line-height:1.2; text-transform:uppercase;">Instagram</div>
+                            <div
+                                style="font-size:10px; font-weight:800; color:var(--text-main); text-align:center; line-height:1.2; text-transform:uppercase;">
+                                Instagram</div>
                         </div>
 
                         <!-- Facebook Card -->
                         <div id="liveCardFacebook" onclick="nav('liveFacebook')"
                             style="background:var(--bg-card); border:1px solid rgba(29,78,216,0.35); border-radius:18px; padding:14px 8px 12px; display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; position:relative; overflow:hidden; transition:transform 0.15s;"
-                            onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'">
-                            <div style="position:absolute; top:7px; right:8px; display:flex; align-items:center; gap:3px;">
-                                <div style="width:6px; height:6px; background:#22c55e; border-radius:50%; animation:livePulse 1.2s infinite;"></div>
-                                <span style="font-size:8px; font-weight:800; color:#22c55e; letter-spacing:1px;">LIVE</span>
+                            onmousedown="this.style.transform='scale(0.95)'"
+                            onmouseup="this.style.transform='scale(1)'">
+                            <div
+                                style="position:absolute; top:7px; right:8px; display:flex; align-items:center; gap:3px;">
+                                <div
+                                    style="width:6px; height:6px; background:#22c55e; border-radius:50%; animation:livePulse 1.2s infinite;">
+                                </div>
+                                <span
+                                    style="font-size:8px; font-weight:800; color:#22c55e; letter-spacing:1px;">LIVE</span>
                             </div>
-                            <div style="width:46px; height:46px; background:linear-gradient(135deg,#1d4ed8,#3b82f6); border-radius:14px; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px rgba(29,78,216,0.4);">
+                            <div
+                                style="width:46px; height:46px; background:linear-gradient(135deg,#1d4ed8,#3b82f6); border-radius:14px; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px rgba(29,78,216,0.4);">
                                 <i class="fab fa-facebook-f" style="font-size:22px; color:#fff;"></i>
                             </div>
-                            <div style="font-size:10px; font-weight:800; color:var(--text-main); text-align:center; line-height:1.2; text-transform:uppercase;">Facebook</div>
+                            <div
+                                style="font-size:10px; font-weight:800; color:var(--text-main); text-align:center; line-height:1.2; text-transform:uppercase;">
+                                Facebook</div>
                         </div>
                     </div>
 
@@ -2037,48 +2108,77 @@
                         <!-- TikTok Card — official brand: black bg, cyan+red layered icon -->
                         <div id="liveCardTiktok" onclick="nav('liveTiktok')"
                             style="background:var(--bg-card); border:1px solid rgba(105,201,208,0.3); border-radius:18px; padding:14px 8px 12px; display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; position:relative; overflow:hidden; transition:transform 0.15s;"
-                            onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'">
-                            <div style="position:absolute; top:7px; right:8px; display:flex; align-items:center; gap:3px;">
-                                <div style="width:6px; height:6px; background:#22c55e; border-radius:50%; animation:livePulse 1.2s infinite;"></div>
-                                <span style="font-size:8px; font-weight:800; color:#22c55e; letter-spacing:1px;">LIVE</span>
+                            onmousedown="this.style.transform='scale(0.95)'"
+                            onmouseup="this.style.transform='scale(1)'">
+                            <div
+                                style="position:absolute; top:7px; right:8px; display:flex; align-items:center; gap:3px;">
+                                <div
+                                    style="width:6px; height:6px; background:#22c55e; border-radius:50%; animation:livePulse 1.2s infinite;">
+                                </div>
+                                <span
+                                    style="font-size:8px; font-weight:800; color:#22c55e; letter-spacing:1px;">LIVE</span>
                             </div>
                             <!-- TikTok brand: black circle with musical note, cyan glow -->
-                            <div style="width:46px; height:46px; background:#010101; border-radius:14px; display:flex; align-items:center; justify-content:center; box-shadow:0 0 0 2px #69c9d0, 0 6px 18px rgba(105,201,208,0.35); position:relative; overflow:hidden;">
-                                <i class="fab fa-tiktok" style="font-size:20px; color:#ffffff; position:relative; z-index:1;"></i>
-                                <div style="position:absolute; top:0; left:0; width:100%; height:100%; background:linear-gradient(135deg, rgba(105,201,208,0.15) 0%, transparent 60%);"></div>
+                            <div
+                                style="width:46px; height:46px; background:#010101; border-radius:14px; display:flex; align-items:center; justify-content:center; box-shadow:0 0 0 2px #69c9d0, 0 6px 18px rgba(105,201,208,0.35); position:relative; overflow:hidden;">
+                                <i class="fab fa-tiktok"
+                                    style="font-size:20px; color:#ffffff; position:relative; z-index:1;"></i>
+                                <div
+                                    style="position:absolute; top:0; left:0; width:100%; height:100%; background:linear-gradient(135deg, rgba(105,201,208,0.15) 0%, transparent 60%);">
+                                </div>
                             </div>
-                            <div style="font-size:10px; font-weight:800; color:var(--text-main); text-align:center; line-height:1.2; text-transform:uppercase;">TikTok</div>
+                            <div
+                                style="font-size:10px; font-weight:800; color:var(--text-main); text-align:center; line-height:1.2; text-transform:uppercase;">
+                                TikTok</div>
                         </div>
 
                         <!-- Twitter/X Card -->
                         <div id="liveCardTwitter" onclick="nav('liveTwitter')"
                             style="background:var(--bg-card); border:1px solid rgba(29,155,240,0.3); border-radius:18px; padding:14px 8px 12px; display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; position:relative; overflow:hidden; transition:transform 0.15s;"
-                            onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'">
-                            <div style="position:absolute; top:7px; right:8px; display:flex; align-items:center; gap:3px;">
-                                <div style="width:6px; height:6px; background:#22c55e; border-radius:50%; animation:livePulse 1.2s infinite;"></div>
-                                <span style="font-size:8px; font-weight:800; color:#22c55e; letter-spacing:1px;">LIVE</span>
+                            onmousedown="this.style.transform='scale(0.95)'"
+                            onmouseup="this.style.transform='scale(1)'">
+                            <div
+                                style="position:absolute; top:7px; right:8px; display:flex; align-items:center; gap:3px;">
+                                <div
+                                    style="width:6px; height:6px; background:#22c55e; border-radius:50%; animation:livePulse 1.2s infinite;">
+                                </div>
+                                <span
+                                    style="font-size:8px; font-weight:800; color:#22c55e; letter-spacing:1px;">LIVE</span>
                             </div>
-                            <div style="width:46px; height:46px; background:#000000; border-radius:14px; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px rgba(29,155,240,0.25);">
+                            <div
+                                style="width:46px; height:46px; background:#000000; border-radius:14px; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px rgba(29,155,240,0.25);">
                                 <i class="fab fa-x-twitter" style="font-size:20px; color:#ffffff;"></i>
                             </div>
-                            <div style="font-size:10px; font-weight:800; color:var(--text-main); text-align:center; line-height:1.2; text-transform:uppercase;">Twitter</div>
+                            <div
+                                style="font-size:10px; font-weight:800; color:var(--text-main); text-align:center; line-height:1.2; text-transform:uppercase;">
+                                Twitter</div>
                         </div>
 
                         <!-- Threads Card — official brand: black circle with @ symbol -->
                         <div id="liveCardThreads" onclick="nav('liveThreads')"
                             style="background:var(--bg-card); border:1px solid rgba(100,100,100,0.3); border-radius:18px; padding:14px 8px 12px; display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; position:relative; overflow:hidden; transition:transform 0.15s;"
-                            onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'">
-                            <div style="position:absolute; top:7px; right:8px; display:flex; align-items:center; gap:3px;">
-                                <div style="width:6px; height:6px; background:#22c55e; border-radius:50%; animation:livePulse 1.2s infinite;"></div>
-                                <span style="font-size:8px; font-weight:800; color:#22c55e; letter-spacing:1px;">LIVE</span>
+                            onmousedown="this.style.transform='scale(0.95)'"
+                            onmouseup="this.style.transform='scale(1)'">
+                            <div
+                                style="position:absolute; top:7px; right:8px; display:flex; align-items:center; gap:3px;">
+                                <div
+                                    style="width:6px; height:6px; background:#22c55e; border-radius:50%; animation:livePulse 1.2s infinite;">
+                                </div>
+                                <span
+                                    style="font-size:8px; font-weight:800; color:#22c55e; letter-spacing:1px;">LIVE</span>
                             </div>
                             <!-- Threads brand: pure black with white @ icon -->
-                            <div style="width:46px; height:46px; background:#101010; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px rgba(0,0,0,0.5), 0 0 0 1.5px rgba(255,255,255,0.1);">
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.472 12.01v-.01c.028-3.579.879-6.43 2.525-8.482C5.845 1.205 8.6.024 12.18 0h.014c2.746.02 5.043.725 6.826 2.098 1.677 1.29 2.858 3.13 3.513 5.466l-2.423.868c-.974-3.503-3.241-5.298-7.032-5.331-2.951.02-5.152.969-6.542 2.822-1.298 1.73-1.97 4.296-1.997 7.628.027 3.326.7 5.888 1.997 7.618 1.39 1.853 3.591 2.802 6.542 2.822 2.67-.017 4.527-.716 5.518-2.077.668-.916 1.056-2.25 1.131-3.977H12.18v-2.426h9.315c.083 1.088.109 2.102-.037 3.023-.33 2.109-1.225 3.79-2.663 5.001C17.176 23.316 14.899 24 12.186 24z"/>
+                            <div
+                                style="width:46px; height:46px; background:#101010; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px rgba(0,0,0,0.5), 0 0 0 1.5px rgba(255,255,255,0.1);">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="white"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path
+                                        d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.472 12.01v-.01c.028-3.579.879-6.43 2.525-8.482C5.845 1.205 8.6.024 12.18 0h.014c2.746.02 5.043.725 6.826 2.098 1.677 1.29 2.858 3.13 3.513 5.466l-2.423.868c-.974-3.503-3.241-5.298-7.032-5.331-2.951.02-5.152.969-6.542 2.822-1.298 1.73-1.97 4.296-1.997 7.628.027 3.326.7 5.888 1.997 7.618 1.39 1.853 3.591 2.802 6.542 2.822 2.67-.017 4.527-.716 5.518-2.077.668-.916 1.056-2.25 1.131-3.977H12.18v-2.426h9.315c.083 1.088.109 2.102-.037 3.023-.33 2.109-1.225 3.79-2.663 5.001C17.176 23.316 14.899 24 12.186 24z" />
                                 </svg>
                             </div>
-                            <div style="font-size:10px; font-weight:800; color:var(--text-main); text-align:center; line-height:1.2; text-transform:uppercase;">Threads</div>
+                            <div
+                                style="font-size:10px; font-weight:800; color:var(--text-main); text-align:center; line-height:1.2; text-transform:uppercase;">
+                                Threads</div>
                         </div>
                     </div>
                 </div>
@@ -2118,61 +2218,86 @@
             <div id="live2faPage" class="page">
                 <div class="content-body" style="padding:20px; padding-bottom:120px;">
                     <!-- Balance Display -->
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:14px 18px;">
+                    <div
+                        style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:14px 18px;">
                         <div style="display:flex; align-items:center; gap:10px;">
-                            <div style="width:38px; height:38px; background:rgba(147,51,234,0.15); border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                            <div
+                                style="width:38px; height:38px; background:rgba(147,51,234,0.15); border-radius:10px; display:flex; align-items:center; justify-content:center;">
                                 <i class="fas fa-coins" style="color:#9333ea; font-size:16px;"></i>
                             </div>
                             <div>
-                                <div style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase;">Your Balance</div>
-                                <div id="live2faBalanceDisplay" style="font-size:16px; font-weight:800; color:var(--text-main);">0 TC</div>
+                                <div
+                                    style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase;">
+                                    Your Balance</div>
+                                <div id="live2faBalanceDisplay"
+                                    style="font-size:16px; font-weight:800; color:var(--text-main);">0 TC</div>
                             </div>
                         </div>
-                        <div id="cost-live2fa" style="font-size:11px; color:#9333ea; font-weight:700; background:rgba(147,51,234,0.1); padding:5px 12px; border-radius:20px; border:1px solid rgba(147,51,234,0.3);">
+                        <div id="cost-live2fa"
+                            style="font-size:11px; color:#9333ea; font-weight:700; background:rgba(147,51,234,0.1); padding:5px 12px; border-radius:20px; border:1px solid rgba(147,51,234,0.3);">
                             10 TC / Request
                         </div>
                     </div>
 
                     <!-- Header Card -->
-                    <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed); border-radius:22px; padding:22px; margin-bottom:20px; position:relative; overflow:hidden; box-shadow:0 10px 30px rgba(79,70,229,0.35);">
-                        <div style="position:absolute;top:-20px;right:-20px;width:90px;height:90px;background:rgba(255,255,255,0.08);border-radius:50%;"></div>
+                    <div
+                        style="background:linear-gradient(135deg,#4f46e5,#7c3aed); border-radius:22px; padding:22px; margin-bottom:20px; position:relative; overflow:hidden; box-shadow:0 10px 30px rgba(79,70,229,0.35);">
+                        <div
+                            style="position:absolute;top:-20px;right:-20px;width:90px;height:90px;background:rgba(255,255,255,0.08);border-radius:50%;">
+                        </div>
                         <div style="display:flex;align-items:center;gap:14px;position:relative;z-index:1;">
-                            <div style="width:52px;height:52px;background:rgba(255,255,255,0.15);border-radius:16px;display:flex;align-items:center;justify-content:center;">
+                            <div
+                                style="width:52px;height:52px;background:rgba(255,255,255,0.15);border-radius:16px;display:flex;align-items:center;justify-content:center;">
                                 <i class="fas fa-shield-alt" style="font-size:24px;color:#fff;"></i>
                             </div>
                             <div>
-                                <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:1px;">Live Service</div>
+                                <div
+                                    style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:1px;">
+                                    Live Service</div>
                                 <div style="font-size:22px;font-weight:900;color:#fff;">2FA Live</div>
                             </div>
-                            <div style="margin-left:auto;display:flex;align-items:center;gap:5px;background:rgba(34,197,94,0.25);padding:5px 10px;border-radius:20px;border:1px solid rgba(34,197,94,0.5);">
-                                <div style="width:12px;height:12px;background:#22c55e;border-radius:50%;animation:livePulse 1.2s infinite;"></div>
-                                <span style="font-size:10px;font-weight:800;color:#22c55e;letter-spacing:1px;">LIVE</span>
+                            <div
+                                style="margin-left:auto;display:flex;align-items:center;gap:5px;background:rgba(34,197,94,0.25);padding:5px 10px;border-radius:20px;border:1px solid rgba(34,197,94,0.5);">
+                                <div
+                                    style="width:12px;height:12px;background:#22c55e;border-radius:50%;animation:livePulse 1.2s infinite;">
+                                </div>
+                                <span
+                                    style="font-size:10px;font-weight:800;color:#22c55e;letter-spacing:1px;">LIVE</span>
                             </div>
                         </div>
                     </div>
 
                     <!-- Input Box -->
-                    <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:18px;padding:18px;margin-bottom:14px;">
-                        <div style="font-size:11px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">
+                    <div
+                        style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:18px;padding:18px;margin-bottom:14px;">
+                        <div
+                            style="font-size:11px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">
                             <i class="fas fa-link" style="margin-right:6px;color:#7c3aed;"></i>Account / Secret Key
                         </div>
                         <div style="position:relative;">
                             <input id="twofa-input" type="text" placeholder="Enter 2FA secret key or account..."
                                 style="width:100%;background:rgba(0,0,0,0.2);border:1px solid rgba(124,58,237,0.3);border-radius:12px;padding:12px 16px;padding-right:40px;color:var(--text-main);font-size:14px;outline:none;box-sizing:border-box;"
                                 oninput="toggleClearBtn(this)">
-                            <i id="twofa-clear-btn" class="fas fa-times-circle" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:#ef4444;font-size:18px;cursor:pointer;display:none;" onclick="clearTwoFAInput()"></i>
+                            <i id="twofa-clear-btn" class="fas fa-times-circle"
+                                style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:#ef4444;font-size:18px;cursor:pointer;display:none;"
+                                onclick="clearTwoFAInput()"></i>
                         </div>
                     </div>
 
                     <!-- Result Box -->
-                    <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:18px;padding:18px;margin-bottom:18px;min-height:80px;">
-                        <div style="font-size:11px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">
+                    <div
+                        style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:18px;padding:18px;margin-bottom:18px;min-height:80px;">
+                        <div
+                            style="font-size:11px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">
                             <i class="fas fa-key" style="margin-right:6px;color:#7c3aed;"></i>Live OTP Code
                         </div>
-                        <div id="twofa-result" onclick="copy2faCode()" style="font-size:34px;font-weight:900;color:#7c3aed;text-align:center;letter-spacing:8px;padding:10px 0;cursor:pointer;">
+                        <div id="twofa-result" onclick="copy2faCode()"
+                            style="font-size:34px;font-weight:900;color:#7c3aed;text-align:center;letter-spacing:8px;padding:10px 0;cursor:pointer;">
                             ------
                         </div>
-                        <div id="twofa-timer" style="text-align:center;font-size:11px;color:var(--text-sub);margin-top:4px;">Waiting...</div>
+                        <div id="twofa-timer"
+                            style="text-align:center;font-size:11px;color:var(--text-sub);margin-top:4px;">Waiting...
+                        </div>
                     </div>
 
                     <!-- START & COPY Buttons -->
@@ -2195,39 +2320,56 @@
             <div id="liveInstagramPage" class="page">
                 <div class="content-body" style="padding:20px;padding-bottom:120px;">
                     <!-- Balance Display -->
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:14px 18px;">
+                    <div
+                        style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:14px 18px;">
                         <div style="display:flex; align-items:center; gap:10px;">
-                            <div style="width:38px; height:38px; background:rgba(147,51,234,0.15); border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                            <div
+                                style="width:38px; height:38px; background:rgba(147,51,234,0.15); border-radius:10px; display:flex; align-items:center; justify-content:center;">
                                 <i class="fas fa-coins" style="color:#9333ea; font-size:16px;"></i>
                             </div>
                             <div>
-                                <div style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase;">Your Balance</div>
-                                <div id="liveInstagramBalanceDisplay" style="font-size:16px; font-weight:800; color:var(--text-main);">0 TC</div>
+                                <div
+                                    style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase;">
+                                    Your Balance</div>
+                                <div id="liveInstagramBalanceDisplay"
+                                    style="font-size:16px; font-weight:800; color:var(--text-main);">0 TC</div>
                             </div>
                         </div>
-                        <div id="cost-liveInstagram" style="font-size:11px; color:#9333ea; font-weight:700; background:rgba(147,51,234,0.1); padding:5px 12px; border-radius:20px; border:1px solid rgba(147,51,234,0.3);">
+                        <div id="cost-liveInstagram"
+                            style="font-size:11px; color:#9333ea; font-weight:700; background:rgba(147,51,234,0.1); padding:5px 12px; border-radius:20px; border:1px solid rgba(147,51,234,0.3);">
                             1 TC / Request
                         </div>
                     </div>
 
-                    <div style="background:linear-gradient(135deg,#f97316,#ec4899,#8b5cf6);border-radius:22px;padding:22px;margin-bottom:20px;box-shadow:0 10px 30px rgba(236,72,153,0.35);">
+                    <div
+                        style="background:linear-gradient(135deg,#f97316,#ec4899,#8b5cf6);border-radius:22px;padding:22px;margin-bottom:20px;box-shadow:0 10px 30px rgba(236,72,153,0.35);">
                         <div style="display:flex;align-items:center;gap:14px;">
-                            <div style="width:52px;height:52px;background:rgba(255,255,255,0.15);border-radius:16px;display:flex;align-items:center;justify-content:center;">
+                            <div
+                                style="width:52px;height:52px;background:rgba(255,255,255,0.15);border-radius:16px;display:flex;align-items:center;justify-content:center;">
                                 <i class="fab fa-instagram" style="font-size:26px;color:#fff;"></i>
                             </div>
                             <div>
-                                <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:1px;">Live Service</div>
+                                <div
+                                    style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:1px;">
+                                    Live Service</div>
                                 <div style="font-size:22px;font-weight:900;color:#fff;">Instagram Live</div>
                             </div>
-                            <div style="margin-left:auto;display:flex;align-items:center;gap:5px;background:rgba(34,197,94,0.25);padding:5px 10px;border-radius:20px;border:1px solid rgba(34,197,94,0.5);">
-                                <div style="width:12px;height:12px;background:#22c55e;border-radius:50%;animation:livePulse 1.2s infinite;"></div>
-                                <span style="font-size:10px;font-weight:800;color:#22c55e;letter-spacing:1px;">LIVE</span>
+                            <div
+                                style="margin-left:auto;display:flex;align-items:center;gap:5px;background:rgba(34,197,94,0.25);padding:5px 10px;border-radius:20px;border:1px solid rgba(34,197,94,0.5);">
+                                <div
+                                    style="width:12px;height:12px;background:#22c55e;border-radius:50%;animation:livePulse 1.2s infinite;">
+                                </div>
+                                <span
+                                    style="font-size:10px;font-weight:800;color:#22c55e;letter-spacing:1px;">LIVE</span>
                             </div>
                         </div>
                     </div>
-                    <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:18px;padding:20px;text-align:center;">
-                        <i class="fab fa-instagram" style="font-size:48px;background:linear-gradient(135deg,#f97316,#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:12px;display:block;"></i>
-                        <div style="font-size:15px;font-weight:700;color:var(--text-main);margin-bottom:6px;">Instagram Live Checker</div>
+                    <div
+                        style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:18px;padding:20px;text-align:center;">
+                        <i class="fab fa-instagram"
+                            style="font-size:48px;background:linear-gradient(135deg,#f97316,#ec4899);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:12px;display:block;"></i>
+                        <div style="font-size:15px;font-weight:700;color:var(--text-main);margin-bottom:6px;">Instagram
+                            Live Checker</div>
                         <div style="font-size:12px;color:var(--text-sub);">Coming soon — live account verification</div>
                     </div>
                 </div>
@@ -2237,39 +2379,56 @@
             <div id="liveFacebookPage" class="page">
                 <div class="content-body" style="padding:20px;padding-bottom:120px;">
                     <!-- Balance Display -->
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:14px 18px;">
+                    <div
+                        style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:14px 18px;">
                         <div style="display:flex; align-items:center; gap:10px;">
-                            <div style="width:38px; height:38px; background:rgba(147,51,234,0.15); border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                            <div
+                                style="width:38px; height:38px; background:rgba(147,51,234,0.15); border-radius:10px; display:flex; align-items:center; justify-content:center;">
                                 <i class="fas fa-coins" style="color:#9333ea; font-size:16px;"></i>
                             </div>
                             <div>
-                                <div style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase;">Your Balance</div>
-                                <div id="liveFacebookBalanceDisplay" style="font-size:16px; font-weight:800; color:var(--text-main);">0 TC</div>
+                                <div
+                                    style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase;">
+                                    Your Balance</div>
+                                <div id="liveFacebookBalanceDisplay"
+                                    style="font-size:16px; font-weight:800; color:var(--text-main);">0 TC</div>
                             </div>
                         </div>
-                        <div id="cost-liveFacebook" style="font-size:11px; color:#9333ea; font-weight:700; background:rgba(147,51,234,0.1); padding:5px 12px; border-radius:20px; border:1px solid rgba(147,51,234,0.3);">
+                        <div id="cost-liveFacebook"
+                            style="font-size:11px; color:#9333ea; font-weight:700; background:rgba(147,51,234,0.1); padding:5px 12px; border-radius:20px; border:1px solid rgba(147,51,234,0.3);">
                             1 TC / Request
                         </div>
                     </div>
 
-                    <div style="background:linear-gradient(135deg,#1d4ed8,#3b82f6);border-radius:22px;padding:22px;margin-bottom:20px;box-shadow:0 10px 30px rgba(29,78,216,0.35);">
+                    <div
+                        style="background:linear-gradient(135deg,#1d4ed8,#3b82f6);border-radius:22px;padding:22px;margin-bottom:20px;box-shadow:0 10px 30px rgba(29,78,216,0.35);">
                         <div style="display:flex;align-items:center;gap:14px;">
-                            <div style="width:52px;height:52px;background:rgba(255,255,255,0.15);border-radius:16px;display:flex;align-items:center;justify-content:center;">
+                            <div
+                                style="width:52px;height:52px;background:rgba(255,255,255,0.15);border-radius:16px;display:flex;align-items:center;justify-content:center;">
                                 <i class="fab fa-facebook-f" style="font-size:26px;color:#fff;"></i>
                             </div>
                             <div>
-                                <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:1px;">Live Service</div>
+                                <div
+                                    style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:1px;">
+                                    Live Service</div>
                                 <div style="font-size:22px;font-weight:900;color:#fff;">Facebook Live</div>
                             </div>
-                            <div style="margin-left:auto;display:flex;align-items:center;gap:5px;background:rgba(34,197,94,0.25);padding:5px 10px;border-radius:20px;border:1px solid rgba(34,197,94,0.5);">
-                                <div style="width:12px;height:12px;background:#22c55e;border-radius:50%;animation:livePulse 1.2s infinite;"></div>
-                                <span style="font-size:10px;font-weight:800;color:#22c55e;letter-spacing:1px;">LIVE</span>
+                            <div
+                                style="margin-left:auto;display:flex;align-items:center;gap:5px;background:rgba(34,197,94,0.25);padding:5px 10px;border-radius:20px;border:1px solid rgba(34,197,94,0.5);">
+                                <div
+                                    style="width:12px;height:12px;background:#22c55e;border-radius:50%;animation:livePulse 1.2s infinite;">
+                                </div>
+                                <span
+                                    style="font-size:10px;font-weight:800;color:#22c55e;letter-spacing:1px;">LIVE</span>
                             </div>
                         </div>
                     </div>
-                    <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:18px;padding:20px;text-align:center;">
-                        <i class="fab fa-facebook-f" style="font-size:48px;color:#3b82f6;margin-bottom:12px;display:block;"></i>
-                        <div style="font-size:15px;font-weight:700;color:var(--text-main);margin-bottom:6px;">Facebook Live Checker</div>
+                    <div
+                        style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:18px;padding:20px;text-align:center;">
+                        <i class="fab fa-facebook-f"
+                            style="font-size:48px;color:#3b82f6;margin-bottom:12px;display:block;"></i>
+                        <div style="font-size:15px;font-weight:700;color:var(--text-main);margin-bottom:6px;">Facebook
+                            Live Checker</div>
                         <div style="font-size:12px;color:var(--text-sub);">Coming soon — live account verification</div>
                     </div>
                 </div>
@@ -2279,39 +2438,56 @@
             <div id="liveTiktokPage" class="page">
                 <div class="content-body" style="padding:20px;padding-bottom:120px;">
                     <!-- Balance Display -->
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:14px 18px;">
+                    <div
+                        style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:14px 18px;">
                         <div style="display:flex; align-items:center; gap:10px;">
-                            <div style="width:38px; height:38px; background:rgba(147,51,234,0.15); border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                            <div
+                                style="width:38px; height:38px; background:rgba(147,51,234,0.15); border-radius:10px; display:flex; align-items:center; justify-content:center;">
                                 <i class="fas fa-coins" style="color:#9333ea; font-size:16px;"></i>
                             </div>
                             <div>
-                                <div style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase;">Your Balance</div>
-                                <div id="liveTiktokBalanceDisplay" style="font-size:16px; font-weight:800; color:var(--text-main);">0 TC</div>
+                                <div
+                                    style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase;">
+                                    Your Balance</div>
+                                <div id="liveTiktokBalanceDisplay"
+                                    style="font-size:16px; font-weight:800; color:var(--text-main);">0 TC</div>
                             </div>
                         </div>
-                        <div id="cost-liveTiktok" style="font-size:11px; color:#9333ea; font-weight:700; background:rgba(147,51,234,0.1); padding:5px 12px; border-radius:20px; border:1px solid rgba(147,51,234,0.3);">
+                        <div id="cost-liveTiktok"
+                            style="font-size:11px; color:#9333ea; font-weight:700; background:rgba(147,51,234,0.1); padding:5px 12px; border-radius:20px; border:1px solid rgba(147,51,234,0.3);">
                             1 TC / Request
                         </div>
                     </div>
 
-                    <div style="background:linear-gradient(135deg,#010101,#69c9d0);border-radius:22px;padding:22px;margin-bottom:20px;box-shadow:0 10px 30px rgba(105,201,208,0.25);">
+                    <div
+                        style="background:linear-gradient(135deg,#010101,#69c9d0);border-radius:22px;padding:22px;margin-bottom:20px;box-shadow:0 10px 30px rgba(105,201,208,0.25);">
                         <div style="display:flex;align-items:center;gap:14px;">
-                            <div style="width:52px;height:52px;background:rgba(255,255,255,0.15);border-radius:16px;display:flex;align-items:center;justify-content:center;">
+                            <div
+                                style="width:52px;height:52px;background:rgba(255,255,255,0.15);border-radius:16px;display:flex;align-items:center;justify-content:center;">
                                 <i class="fab fa-tiktok" style="font-size:24px;color:#fff;"></i>
                             </div>
                             <div>
-                                <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:1px;">Live Service</div>
+                                <div
+                                    style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:1px;">
+                                    Live Service</div>
                                 <div style="font-size:22px;font-weight:900;color:#fff;">TikTok Live</div>
                             </div>
-                            <div style="margin-left:auto;display:flex;align-items:center;gap:5px;background:rgba(34,197,94,0.25);padding:5px 10px;border-radius:20px;border:1px solid rgba(34,197,94,0.5);">
-                                <div style="width:12px;height:12px;background:#22c55e;border-radius:50%;animation:livePulse 1.2s infinite;"></div>
-                                <span style="font-size:10px;font-weight:800;color:#22c55e;letter-spacing:1px;">LIVE</span>
+                            <div
+                                style="margin-left:auto;display:flex;align-items:center;gap:5px;background:rgba(34,197,94,0.25);padding:5px 10px;border-radius:20px;border:1px solid rgba(34,197,94,0.5);">
+                                <div
+                                    style="width:12px;height:12px;background:#22c55e;border-radius:50%;animation:livePulse 1.2s infinite;">
+                                </div>
+                                <span
+                                    style="font-size:10px;font-weight:800;color:#22c55e;letter-spacing:1px;">LIVE</span>
                             </div>
                         </div>
                     </div>
-                    <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:18px;padding:20px;text-align:center;">
-                        <i class="fab fa-tiktok" style="font-size:48px;color:#69c9d0;margin-bottom:12px;display:block;"></i>
-                        <div style="font-size:15px;font-weight:700;color:var(--text-main);margin-bottom:6px;">TikTok Live Checker</div>
+                    <div
+                        style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:18px;padding:20px;text-align:center;">
+                        <i class="fab fa-tiktok"
+                            style="font-size:48px;color:#69c9d0;margin-bottom:12px;display:block;"></i>
+                        <div style="font-size:15px;font-weight:700;color:var(--text-main);margin-bottom:6px;">TikTok
+                            Live Checker</div>
                         <div style="font-size:12px;color:var(--text-sub);">Coming soon — live account verification</div>
                     </div>
                 </div>
@@ -2321,39 +2497,56 @@
             <div id="liveTwitterPage" class="page">
                 <div class="content-body" style="padding:20px;padding-bottom:120px;">
                     <!-- Balance Display -->
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:14px 18px;">
+                    <div
+                        style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:14px 18px;">
                         <div style="display:flex; align-items:center; gap:10px;">
-                            <div style="width:38px; height:38px; background:rgba(147,51,234,0.15); border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                            <div
+                                style="width:38px; height:38px; background:rgba(147,51,234,0.15); border-radius:10px; display:flex; align-items:center; justify-content:center;">
                                 <i class="fas fa-coins" style="color:#9333ea; font-size:16px;"></i>
                             </div>
                             <div>
-                                <div style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase;">Your Balance</div>
-                                <div id="liveTwitterBalanceDisplay" style="font-size:16px; font-weight:800; color:var(--text-main);">0 TC</div>
+                                <div
+                                    style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase;">
+                                    Your Balance</div>
+                                <div id="liveTwitterBalanceDisplay"
+                                    style="font-size:16px; font-weight:800; color:var(--text-main);">0 TC</div>
                             </div>
                         </div>
-                        <div id="cost-liveTwitter" style="font-size:11px; color:#9333ea; font-weight:700; background:rgba(147,51,234,0.1); padding:5px 12px; border-radius:20px; border:1px solid rgba(147,51,234,0.3);">
+                        <div id="cost-liveTwitter"
+                            style="font-size:11px; color:#9333ea; font-weight:700; background:rgba(147,51,234,0.1); padding:5px 12px; border-radius:20px; border:1px solid rgba(147,51,234,0.3);">
                             1 TC / Request
                         </div>
                     </div>
 
-                    <div style="background:linear-gradient(135deg,#000000,#1d9bf0);border-radius:22px;padding:22px;margin-bottom:20px;box-shadow:0 10px 30px rgba(29,155,240,0.25);">
+                    <div
+                        style="background:linear-gradient(135deg,#000000,#1d9bf0);border-radius:22px;padding:22px;margin-bottom:20px;box-shadow:0 10px 30px rgba(29,155,240,0.25);">
                         <div style="display:flex;align-items:center;gap:14px;">
-                            <div style="width:52px;height:52px;background:rgba(255,255,255,0.15);border-radius:16px;display:flex;align-items:center;justify-content:center;">
+                            <div
+                                style="width:52px;height:52px;background:rgba(255,255,255,0.15);border-radius:16px;display:flex;align-items:center;justify-content:center;">
                                 <i class="fab fa-x-twitter" style="font-size:24px;color:#fff;"></i>
                             </div>
                             <div>
-                                <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:1px;">Live Service</div>
+                                <div
+                                    style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:1px;">
+                                    Live Service</div>
                                 <div style="font-size:22px;font-weight:900;color:#fff;">Twitter Live</div>
                             </div>
-                            <div style="margin-left:auto;display:flex;align-items:center;gap:5px;background:rgba(34,197,94,0.25);padding:5px 10px;border-radius:20px;border:1px solid rgba(34,197,94,0.5);">
-                                <div style="width:12px;height:12px;background:#22c55e;border-radius:50%;animation:livePulse 1.2s infinite;"></div>
-                                <span style="font-size:10px;font-weight:800;color:#22c55e;letter-spacing:1px;">LIVE</span>
+                            <div
+                                style="margin-left:auto;display:flex;align-items:center;gap:5px;background:rgba(34,197,94,0.25);padding:5px 10px;border-radius:20px;border:1px solid rgba(34,197,94,0.5);">
+                                <div
+                                    style="width:12px;height:12px;background:#22c55e;border-radius:50%;animation:livePulse 1.2s infinite;">
+                                </div>
+                                <span
+                                    style="font-size:10px;font-weight:800;color:#22c55e;letter-spacing:1px;">LIVE</span>
                             </div>
                         </div>
                     </div>
-                    <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:18px;padding:20px;text-align:center;">
-                        <i class="fab fa-x-twitter" style="font-size:48px;color:#1d9bf0;margin-bottom:12px;display:block;"></i>
-                        <div style="font-size:15px;font-weight:700;color:var(--text-main);margin-bottom:6px;">Twitter / X Live Checker</div>
+                    <div
+                        style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:18px;padding:20px;text-align:center;">
+                        <i class="fab fa-x-twitter"
+                            style="font-size:48px;color:#1d9bf0;margin-bottom:12px;display:block;"></i>
+                        <div style="font-size:15px;font-weight:700;color:var(--text-main);margin-bottom:6px;">Twitter /
+                            X Live Checker</div>
                         <div style="font-size:12px;color:var(--text-sub);">Coming soon — live account verification</div>
                     </div>
                 </div>
@@ -2363,39 +2556,56 @@
             <div id="liveThreadsPage" class="page">
                 <div class="content-body" style="padding:20px;padding-bottom:120px;">
                     <!-- Balance Display -->
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:14px 18px;">
+                    <div
+                        style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:14px 18px;">
                         <div style="display:flex; align-items:center; gap:10px;">
-                            <div style="width:38px; height:38px; background:rgba(147,51,234,0.15); border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                            <div
+                                style="width:38px; height:38px; background:rgba(147,51,234,0.15); border-radius:10px; display:flex; align-items:center; justify-content:center;">
                                 <i class="fas fa-coins" style="color:#9333ea; font-size:16px;"></i>
                             </div>
                             <div>
-                                <div style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase;">Your Balance</div>
-                                <div id="liveThreadsBalanceDisplay" style="font-size:16px; font-weight:800; color:var(--text-main);">0 TC</div>
+                                <div
+                                    style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase;">
+                                    Your Balance</div>
+                                <div id="liveThreadsBalanceDisplay"
+                                    style="font-size:16px; font-weight:800; color:var(--text-main);">0 TC</div>
                             </div>
                         </div>
-                        <div id="cost-liveThreads" style="font-size:11px; color:#9333ea; font-weight:700; background:rgba(147,51,234,0.1); padding:5px 12px; border-radius:20px; border:1px solid rgba(147,51,234,0.3);">
+                        <div id="cost-liveThreads"
+                            style="font-size:11px; color:#9333ea; font-weight:700; background:rgba(147,51,234,0.1); padding:5px 12px; border-radius:20px; border:1px solid rgba(147,51,234,0.3);">
                             1 TC / Request
                         </div>
                     </div>
 
-                    <div style="background:linear-gradient(135deg,#1a1a1a,#444444);border-radius:22px;padding:22px;margin-bottom:20px;box-shadow:0 10px 30px rgba(0,0,0,0.4);">
+                    <div
+                        style="background:linear-gradient(135deg,#1a1a1a,#444444);border-radius:22px;padding:22px;margin-bottom:20px;box-shadow:0 10px 30px rgba(0,0,0,0.4);">
                         <div style="display:flex;align-items:center;gap:14px;">
-                            <div style="width:52px;height:52px;background:rgba(255,255,255,0.15);border-radius:16px;display:flex;align-items:center;justify-content:center;">
+                            <div
+                                style="width:52px;height:52px;background:rgba(255,255,255,0.15);border-radius:16px;display:flex;align-items:center;justify-content:center;">
                                 <i class="fab fa-threads" style="font-size:24px;color:#fff;"></i>
                             </div>
                             <div>
-                                <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:1px;">Live Service</div>
+                                <div
+                                    style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:1px;">
+                                    Live Service</div>
                                 <div style="font-size:22px;font-weight:900;color:#fff;">Threads Live</div>
                             </div>
-                            <div style="margin-left:auto;display:flex;align-items:center;gap:5px;background:rgba(34,197,94,0.25);padding:5px 10px;border-radius:20px;border:1px solid rgba(34,197,94,0.5);">
-                                <div style="width:12px;height:12px;background:#22c55e;border-radius:50%;animation:livePulse 1.2s infinite;"></div>
-                                <span style="font-size:10px;font-weight:800;color:#22c55e;letter-spacing:1px;">LIVE</span>
+                            <div
+                                style="margin-left:auto;display:flex;align-items:center;gap:5px;background:rgba(34,197,94,0.25);padding:5px 10px;border-radius:20px;border:1px solid rgba(34,197,94,0.5);">
+                                <div
+                                    style="width:12px;height:12px;background:#22c55e;border-radius:50%;animation:livePulse 1.2s infinite;">
+                                </div>
+                                <span
+                                    style="font-size:10px;font-weight:800;color:#22c55e;letter-spacing:1px;">LIVE</span>
                             </div>
                         </div>
                     </div>
-                    <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:18px;padding:20px;text-align:center;">
-                        <i class="fab fa-threads" style="font-size:48px;color:#aaaaaa;margin-bottom:12px;display:block;"></i>
-                        <div style="font-size:15px;font-weight:700;color:var(--text-main);margin-bottom:6px;">Threads Live Checker</div>
+                    <div
+                        style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:18px;padding:20px;text-align:center;">
+                        <i class="fab fa-threads"
+                            style="font-size:48px;color:#aaaaaa;margin-bottom:12px;display:block;"></i>
+                        <div style="font-size:15px;font-weight:700;color:var(--text-main);margin-bottom:6px;">Threads
+                            Live Checker</div>
                         <div style="font-size:12px;color:var(--text-sub);">Coming soon — live account verification</div>
                     </div>
                 </div>
@@ -3385,11 +3595,15 @@
 
             <!-- TASKS PAGE -->
             <div id="tasksPage" class="page">
-                <div class="center-badge" style="margin-top:20px; display:flex; justify-content:center">
+                <div class="center-badge"
+                    style="margin-top:20px; display:flex; justify-content:center; align-items:center; gap:8px;">
                     <div class="cb-pill"
                         style="border:1px solid #f59e0b; color:#f59e0b; background:rgba(245, 158, 11, 0.1); font-weight:700">
                         <i class="fas fa-check-circle" style="margin-right:6px;"></i> MISSION CENTER
                     </div>
+                    <span id="taskCountBadge"
+                        style="background:rgba(245,158,11,0.2); color:#f59e0b; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:700;">0
+                        tasks</span>
                 </div>
 
                 <h2 style="text-align:center; margin-top:16px; font-size:22px; font-weight:800">Earn Free Tokens</h2>
@@ -3711,38 +3925,135 @@
 
             <!-- GEMINI CARD GENERATOR PAGE -->
             <div id="geminiPage" class="page">
-                <div class="generator-card">
-                    <div class="generator-header">
-                        <div class="generator-info">
-                            <div class="generator-icon">??</div>
-                            <div class="generator-title">
-                                <h2>Gemini</h2>
-                                <div class="generator-status">
-                                    <span class="status-dot"></span>
-                                    Operational
+                <div style="max-width:430px; margin:0 auto; padding:0 16px !important; box-sizing:border-box;">
+                    <!-- Generator Box (Visible by default) -->
+                    <div id="geminiGeneratorBox"
+                        style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:24px; padding:20px; margin-bottom:20px;">
+                        <div
+                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <div
+                                    style="width:48px; height:48px; background:rgba(255,255,255,0.05); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:24px; color:#fff;">
+                                    <i class="fas fa-cubes"></i>
+                                </div>
+                                <div>
+                                    <div id="geminiGeneratorTitle" style="font-size:18px; font-weight:800; color:#fff;">
+                                        Gemini VCC</div>
+                                    <div style="font-size:11px; color:#10b981; font-weight:700;"><i
+                                            class="fas fa-circle" style="font-size:8px; margin-right:4px;"></i>
+                                        OPERATIONAL</div>
+                                </div>
+                            </div>
+                            <div id="geminiGeneratorPrice"
+                                style="font-size:12px; color:#f59e0b; font-weight:800; background:rgba(245,158,11,0.1); padding:4px 10px; border-radius:12px;">
+                                50 TOKENS</div>
+                        </div>
+
+                        <button id="geminiGeneratorBtn" onclick="generateCardNow('gemini')"
+                            style="width:100%; height:52px; background:linear-gradient(135deg, #f59e0b, #d97706); color:#000; font-size:15px; font-weight:900; border-radius:16px; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 8px 16px rgba(245,151,11,0.2);">
+                            GENERATE NOW <i class="fas fa-bolt"></i>
+                        </button>
+                    </div>
+
+                    <!-- Secured Area (Hidden by default) -->
+                    <div id="geminiSecuredArea"
+                        style="display:none; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:20px; padding:16px; margin-top:20px;">
+                        <!-- Secured Credentials Label -->
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px; padding:0 4px;">
+                            <i class="fas fa-shield-alt" style="color:var(--text-sub); font-size:14px;"></i>
+                            <span
+                                style="font-size:11px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:1px;">SECURED
+                                CREDENTIALS</span>
+                        </div>
+
+                        <!-- Card Display -->
+                        <div
+                            style="background:linear-gradient(135deg, #1a1f71 0%, #11144c 100%); border-radius:20px; padding:24px; margin-bottom:24px; position:relative; box-shadow:0 10px 40px rgba(26,31,113,0.3);">
+                            <!-- Card Label -->
+                            <div
+                                style="font-size:11px; font-weight:700; color:rgba(255,255,255,0.7); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">
+                                GEMINI PREMIUM</div>
+
+                            <!-- Cardholder Name with Copy -->
+                            <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+                                <div id="geminiCardHolder"
+                                    style="font-size:22px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:1px; flex:1;">
+                                    CARD HOLDER</div>
+                                <button onclick="copyToClipboard('geminiCardHolder', this)"
+                                    style="width:36px; height:36px; background:rgba(255,255,255,0.1); border:none; border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                                    <i class="fas fa-copy" style="color:#fff; font-size:14px;"></i>
+                                </button>
+                            </div>
+
+                            <!-- Card Number with Copy -->
+                            <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
+                                <div id="geminiCardNumber"
+                                    style="font-size:20px; font-weight:600; color:#fff; letter-spacing:2px; font-family:'Courier New', monospace; flex:1; word-break: break-all;">
+                                    **** **** **** ****</div>
+                                <button onclick="copyToClipboard('geminiCardNumber', this)"
+                                    style="width:36px; height:36px; background:rgba(255,255,255,0.1); border:none; border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                                    <i class="fas fa-copy" style="color:#fff; font-size:14px;"></i>
+                                </button>
+                            </div>
+
+                            <!-- Expiry and CVV Row -->
+                            <div style="display:flex; gap:40px;">
+                                <!-- Expiry -->
+                                <div>
+                                    <div
+                                        style="font-size:9px; font-weight:700; color:rgba(255,255,255,0.7); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">
+                                        EXPIRY</div>
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <div id="geminiCardExpiry" style="font-size:16px; font-weight:600; color:#fff;">
+                                            MM/YYYY</div>
+                                        <button onclick="copyToClipboard('geminiCardExpiry', this)"
+                                            style="width:28px; height:28px; background:rgba(255,255,255,0.1); border:none; border-radius:6px; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                                            <i class="fas fa-copy" style="color:#fff; font-size:11px;"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <!-- CVV -->
+                                <div>
+                                    <div
+                                        style="font-size:9px; font-weight:700; color:rgba(255,255,255,0.7); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">
+                                        CVV</div>
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <div id="geminiCardCVV" style="font-size:16px; font-weight:600; color:#fff;">***
+                                        </div>
+                                        <button onclick="copyToClipboard('geminiCardCVV', this)"
+                                            style="width:28px; height:28px; background:rgba(255,255,255,0.1); border:none; border-radius:6px; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                                            <i class="fas fa-copy" style="color:#fff; font-size:11px;"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="generator-cost">10 Tokens</div>
-                    </div>
-                    <button class="generate-btn" onclick="alert('Generating Card...')">
-                        Generate Now <i class="fas fa-bolt"></i>
-                    </button>
-                </div>
 
-                <div class="recent-activity-header">
-                    <div class="recent-activity-title">
-                        <span class="live-dot"></span>
-                        Recent Activity
-                    </div>
-                    <i class="fas fa-history" style="color:var(--text-sub)"></i>
-                </div>
+                        <!-- Billing Information Label -->
+                        <div
+                            style="font-size:11px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:1px; margin-bottom:16px; padding:0 4px;">
+                            BILLING INFORMATION</div>
 
-                <div class="empty-state">
-                    <div class="empty-icon"><i class="fas fa-clock"></i></div>
-                    <h3>No Recent History</h3>
-                    <p></p>
-                </div>
+                        <!-- Billing Info Boxes -->
+                        <div style="display:flex; flex-direction:column; gap:12px;">
+                            <div
+                                style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:10px 16px;">
+                                <div
+                                    style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">
+                                    COUNTRY</div>
+                                <div class="copy-box">
+                                    <div id="geminiCardCountry" style="font-size:16px; font-weight:600; color:#fff;">
+                                        Global</div>
+                                    <button class="copy-btn" onclick="copyToClipboard('geminiCardCountry', this)">
+                                        <i class="fas fa-copy" style="color:#fff; font-size:11px;"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div> <!-- End of #geminiSecuredArea -->
+                    <div style="height: 60px;"></div> <!-- Spacer for mobile nav -->
+                </div> <!-- End of max-width wrapper -->
             </div>
 
             <!-- CARD DISPLAY PAGE -->
@@ -3916,9 +4227,9 @@
                         SEND PAYMENT TO THE SELECTED METHOD</div>
 
                     <div style="display:flex; gap:10px; margin-bottom:16px;">
-                        <button onclick="selectLocalMethod('bkash')" id="btnBkash"
+                        <button onclick="selectLocalMethod('bkashpersonal')" id="btnBkash"
                             style="flex:1; padding:10px; background:#e1147e; color:#fff; border:none; border-radius:10px; font-weight:700; opacity:1;">bKash</button>
-                        <button onclick="selectLocalMethod('nagad')" id="btnNagad"
+                        <button onclick="selectLocalMethod('nagadpersonal')" id="btnNagad"
                             style="flex:1; padding:10px; background:rgba(255,255,255,0.05); color:#fff; border:1px solid rgba(255,255,255,0.1); border-radius:10px; font-weight:700; opacity:0.6;">Nagad</button>
                     </div>
 
@@ -4619,17 +4930,23 @@
             <div class="content-body" style="padding: 0 16px;">
                 <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:20px;">
                     <!-- Tokens -->
-                    <div style="background:rgba(255,255,255,0.02); padding:10px 6px; border-radius:16px; border:1px solid var(--border-color); text-align:center;">
-                        <div style="font-size:8px; color:var(--text-sub); font-weight:800; margin-bottom:4px;">TOKENS</div>
-                        <div id="tfBalTokens" style="font-size:16px; font-weight:900; color:var(--accent-color);">0</div>
+                    <div
+                        style="background:rgba(255,255,255,0.02); padding:10px 6px; border-radius:16px; border:1px solid var(--border-color); text-align:center;">
+                        <div style="font-size:8px; color:var(--text-sub); font-weight:800; margin-bottom:4px;">TOKENS
+                        </div>
+                        <div id="tfBalTokens" style="font-size:16px; font-weight:900; color:var(--accent-color);">0
+                        </div>
                     </div>
                     <!-- Gems -->
-                    <div style="background:rgba(255,255,255,0.02); padding:10px 6px; border-radius:16px; border:1px solid var(--border-color); text-align:center;">
-                        <div style="font-size:8px; color:var(--text-sub); font-weight:800; margin-bottom:4px;">GEMS</div>
+                    <div
+                        style="background:rgba(255,255,255,0.02); padding:10px 6px; border-radius:16px; border:1px solid var(--border-color); text-align:center;">
+                        <div style="font-size:8px; color:var(--text-sub); font-weight:800; margin-bottom:4px;">GEMS
+                        </div>
                         <div id="tfBalGems" style="font-size:16px; font-weight:900; color:#22d3ee;">0</div>
                     </div>
                     <!-- USD -->
-                    <div style="background:rgba(255,255,255,0.02); padding:10px 6px; border-radius:16px; border:1px solid var(--border-color); text-align:center;">
+                    <div
+                        style="background:rgba(255,255,255,0.02); padding:10px 6px; border-radius:16px; border:1px solid var(--border-color); text-align:center;">
                         <div style="font-size:8px; color:var(--text-sub); font-weight:800; margin-bottom:4px;">USD</div>
                         <div id="tfBalUsd" style="font-size:16px; font-weight:900; color:#10b981;">0.00</div>
                     </div>
@@ -4746,157 +5063,223 @@
 
         <!-- CARD DETAIL PAGE (Shows purchased card credentials) -->
         <div id="cardDetailPage" class="page">
-            <!-- Header -->
-            <div
-                style="background:linear-gradient(135deg,#4a044e,#9333ea); border-radius:24px; padding:16px 20px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between;">
-                <div onclick="goBack()"
-                    style="width:36px; height:36px; background:rgba(255,255,255,0.15); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;">
-                    <i class="fas fa-arrow-left" style="color:#fff; font-size:14px;"></i>
-                </div>
-                <div style="font-size:16px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:1px;">
-                    CARD DETAILS</div>
-                <div onclick="toggleTheme()"
-                    style="width:36px; height:36px; background:rgba(255,255,255,0.15); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;">
-                    <i class="fas fa-sun" style="color:#fbbf24; font-size:16px;"></i>
-                </div>
-            </div>
-
-            <!-- Secured Credentials Label -->
-            <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px; padding:0 4px;">
-                <i class="fas fa-shield-alt" style="color:var(--text-sub); font-size:14px;"></i>
-                <span
-                    style="font-size:11px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:1px;">SECURED
-                    CREDENTIALS</span>
-            </div>
-
-            <!-- Card Display -->
-            <div
-                style="background:linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%); border-radius:20px; padding:24px; margin-bottom:24px; position:relative; box-shadow:0 10px 40px rgba(0,0,0,0.4);">
-                <!-- Card Label -->
-                <div style="font-size:11px; font-weight:700; color:rgba(255,255,255,0.5); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;"
-                    id="cardDetailLabel">GEMINI</div>
-
-                <!-- Cardholder Name with Copy -->
-                <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
-                    <div id="cardDetailHolder"
-                        style="font-size:22px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:1px; flex:1;">
-                        CALEB OLIVER</div>
-                    <button onclick="copyToClipboard('cardDetailHolder', this)"
-                        style="width:36px; height:36px; background:rgba(255,255,255,0.1); border:none; border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.3s;">
-                        <i class="fas fa-copy" style="color:#fbbf24; font-size:14px;"></i>
-                    </button>
-                </div>
-
-                <!-- Card Number with Copy -->
-                <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
-                    <div id="cardDetailNumber"
-                        style="font-size:20px; font-weight:600; color:#fff; letter-spacing:2px; font-family:'Courier New', monospace; flex:1;">
-                        5154 6200 2250 4656</div>
-                    <button onclick="copyToClipboard('cardDetailNumber', this)"
-                        style="width:36px; height:36px; background:rgba(255,255,255,0.1); border:none; border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.3s;">
-                        <i class="fas fa-copy" style="color:#fbbf24; font-size:14px;"></i>
-                    </button>
-                </div>
-
-                <!-- Expiry and CVV Row -->
-                <div style="display:flex; gap:40px;">
-                    <!-- Expiry -->
-                    <div>
-                        <div
-                            style="font-size:9px; font-weight:700; color:rgba(255,255,255,0.5); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">
-                            EXPIRY</div>
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <div id="cardDetailExpiry" style="font-size:16px; font-weight:600; color:#fff;">11/2030
+            <div style="max-width:430px; margin:0 auto; padding:0 16px !important; box-sizing:border-box;">
+                <!-- Generator Box (Visible by default) -->
+                <div id="cardGeneratorBox"
+                    style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:24px; padding:20px; margin-bottom:20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <div
+                                style="width:48px; height:48px; background:rgba(255,255,255,0.05); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:24px; color:#fff;">
+                                <i class="fas fa-cubes"></i>
                             </div>
-                            <button onclick="copyToClipboard('cardDetailExpiry', this)"
-                                style="width:28px; height:28px; background:rgba(255,255,255,0.1); border:none; border-radius:6px; display:flex; align-items:center; justify-content:center; cursor:pointer;">
-                                <i class="fas fa-copy" style="color:#fbbf24; font-size:11px;"></i>
+                            <div>
+                                <div id="generatorTitle" style="font-size:18px; font-weight:800; color:#fff;">VCC Card
+                                </div>
+                                <div style="font-size:11px; color:#10b981; font-weight:700;"><i class="fas fa-circle"
+                                        style="font-size:8px; margin-right:4px;"></i> OPERATIONAL</div>
+                            </div>
+                        </div>
+                        <div id="generatorPrice"
+                            style="font-size:12px; color:#f59e0b; font-weight:800; background:rgba(245,158,11,0.1); padding:4px 10px; border-radius:12px;">
+                            50 TOKENS</div>
+                    </div>
+
+                    <button id="generatorBtn" onclick="generateCardNow()"
+                        style="width:100%; height:52px; background:linear-gradient(135deg, #f59e0b, #d97706); color:#000; font-size:15px; font-weight:900; border-radius:16px; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 8px 16px rgba(245,151,11,0.2);">
+                        GENERATE NOW <i class="fas fa-bolt"></i>
+                    </button>
+                </div>
+
+                <!-- Secured Area (Hidden by default) -->
+                <div id="securedArea"
+                    style="display:none; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:20px; padding:16px; margin-top:20px;">
+                    <!-- Secured Credentials Label -->
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px; padding:0 4px;">
+                        <i class="fas fa-shield-alt" style="color:var(--text-sub); font-size:14px;"></i>
+                        <span
+                            style="font-size:11px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:1px;">SECURED
+                            CREDENTIALS</span>
+                    </div>
+
+                    <!-- Card Display -->
+                    <div
+                        style="background:linear-gradient(135deg, #1a1f71 0%, #11144c 100%); border-radius:20px; padding:24px; margin-bottom:24px; position:relative; box-shadow:0 10px 40px rgba(26,31,113,0.3);">
+                        <!-- Card Label -->
+                        <div style="font-size:11px; font-weight:700; color:rgba(255,255,255,0.5); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;"
+                            id="cardDetailLabel">GEMINI</div>
+
+                        <!-- Cardholder Name with Copy -->
+                        <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+                            <div id="cardDetailHolder"
+                                style="font-size:18px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:1px; flex:1;">
+                                CALEB OLIVER</div>
+                            <button onclick="copyToClipboard('cardDetailHolder', this)"
+                                style="width:36px; height:36px; background:rgba(255,255,255,0.1); border:none; border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.3s;">
+                                <i class="fas fa-copy" style="color:#fbbf24; font-size:14px;"></i>
                             </button>
                         </div>
+
+                        <!-- Card Number with Copy -->
+                        <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
+                            <div id="cardDetailNumber"
+                                style="font-size:16px; font-weight:600; color:#fff; letter-spacing:1px; font-family:'Courier New', monospace; flex:1; word-break: break-all;">
+                                5154 6200 2250 4656</div>
+                            <button onclick="copyToClipboard('cardDetailNumber', this)"
+                                style="width:36px; height:36px; background:rgba(255,255,255,0.1); border:none; border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.3s;">
+                                <i class="fas fa-copy" style="color:#fbbf24; font-size:14px;"></i>
+                            </button>
+                        </div>
+
+                        <!-- Expiry and CVV Row -->
+                        <div style="display:flex; gap:40px;">
+                            <!-- Expiry -->
+                            <div>
+                                <div
+                                    style="font-size:9px; font-weight:700; color:rgba(255,255,255,0.5); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">
+                                    EXPIRY</div>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <div id="cardDetailExpiry" style="font-size:16px; font-weight:600; color:#fff;">
+                                        11/2030
+                                    </div>
+                                    <button onclick="copyToClipboard('cardDetailExpiry', this)"
+                                        style="width:28px; height:28px; background:rgba(255,255,255,0.1); border:none; border-radius:6px; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                                        <i class="fas fa-copy" style="color:#fbbf24; font-size:11px;"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <!-- CVV -->
+                            <div>
+                                <div
+                                    style="font-size:9px; font-weight:700; color:rgba(255,255,255,0.5); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">
+                                    CVV</div>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <div id="cardDetailCVV" style="font-size:16px; font-weight:600; color:#fff;">508
+                                    </div>
+                                    <button onclick="copyToClipboard('cardDetailCVV', this)"
+                                        style="width:28px; height:28px; background:rgba(255,255,255,0.1); border:none; border-radius:6px; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                                        <i class="fas fa-copy" style="color:#fbbf24; font-size:11px;"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <!-- CVV -->
-                    <div>
+
+                    <!-- Billing Information Label -->
+                    <div
+                        style="font-size:11px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:1px; margin-bottom:16px; padding:0 4px;">
+                        BILLING INFORMATION</div>
+
+                    <!-- Billing Info Boxes -->
+                    <div id="cardBillingInfoContainer" style="display:flex; flex-direction:column; gap:12px;">
+                        <!-- VPN -->
                         <div
-                            style="font-size:9px; font-weight:700; color:rgba(255,255,255,0.5); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">
-                            CVV</div>
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <div id="cardDetailCVV" style="font-size:16px; font-weight:600; color:#fff;">508</div>
-                            <button onclick="copyToClipboard('cardDetailCVV', this)"
-                                style="width:28px; height:28px; background:rgba(255,255,255,0.1); border:none; border-radius:6px; display:flex; align-items:center; justify-content:center; cursor:pointer;">
-                                <i class="fas fa-copy" style="color:#fbbf24; font-size:11px;"></i>
-                            </button>
+                            style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:10px 16px;">
+                            <div
+                                style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">
+                                VPN</div>
+                            <div class="copy-box">
+                                <div id="cardDetailVPN" style="font-size:16px; font-weight:600; color:#fff;">N/A</div>
+                                <button class="copy-btn" onclick="copyToClipboard('cardDetailVPN', this)">
+                                    <i class="fas fa-copy" style="color:#fff; font-size:11px;"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Full Name -->
+                        <div
+                            style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:10px 16px;">
+                            <div
+                                style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">
+                                FULL NAME</div>
+                            <div class="copy-box">
+                                <div id="cardDetailFullName" style="font-size:16px; font-weight:600; color:#fff;">Caleb
+                                    Oliver</div>
+                                <button class="copy-btn" onclick="copyToClipboard('cardDetailFullName', this)">
+                                    <i class="fas fa-copy" style="color:#fff; font-size:11px;"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Country -->
+                        <div
+                            style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:10px 16px;">
+                            <div
+                                style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">
+                                COUNTRY</div>
+                            <div class="copy-box">
+                                <div id="cardDetailCountry" style="font-size:16px; font-weight:600; color:#fff;">
+                                    Bangladesh</div>
+                                <button class="copy-btn" onclick="copyToClipboard('cardDetailCountry', this)">
+                                    <i class="fas fa-copy" style="color:#fff; font-size:11px;"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- City -->
+                        <div
+                            style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:10px 16px;">
+                            <div
+                                style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">
+                                CITY</div>
+                            <div class="copy-box">
+                                <div id="cardDetailCity" style="font-size:16px; font-weight:600; color:#fff;">Dhaka
+                                </div>
+                                <button class="copy-btn" onclick="copyToClipboard('cardDetailCity', this)">
+                                    <i class="fas fa-copy" style="color:#fff; font-size:11px;"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- State/Province -->
+                        <div
+                            style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:10px 16px;">
+                            <div
+                                style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">
+                                STATE/PROVINCE</div>
+                            <div class="copy-box">
+                                <div id="cardDetailState" style="font-size:16px; font-weight:600; color:#fff;">Dhaka
+                                </div>
+                                <button class="copy-btn" onclick="copyToClipboard('cardDetailState', this)">
+                                    <i class="fas fa-copy" style="color:#fff; font-size:11px;"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Address -->
+                        <div
+                            style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:10px 16px;">
+                            <div
+                                style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">
+                                ADDRESS</div>
+                            <div class="copy-box">
+                                <div id="cardDetailAddress" style="font-size:16px; font-weight:600; color:#fff;">Gulshan
+                                    Avenue</div>
+                                <button class="copy-btn" onclick="copyToClipboard('cardDetailAddress', this)">
+                                    <i class="fas fa-copy" style="color:#fff; font-size:11px;"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Postal Code -->
+                        <div
+                            style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:10px 16px;">
+                            <div
+                                style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">
+                                POSTAL CODE</div>
+                            <div class="copy-box">
+                                <div id="cardDetailPostal" style="font-size:16px; font-weight:600; color:#fff;">1212
+                                </div>
+                                <button class="copy-btn" onclick="copyToClipboard('cardDetailPostal', this)">
+                                    <i class="fas fa-copy" style="color:#fff; font-size:11px;"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <!-- Billing Information Label -->
-            <div
-                style="font-size:11px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:1px; margin-bottom:16px; padding:0 4px;">
-                BILLING INFORMATION</div>
-
-            <!-- Billing Info Boxes -->
-            <div id="cardBillingInfoContainer" style="display:flex; flex-direction:column; gap:12px;">
-                <!-- Full Name -->
-                <div
-                    style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:16px 20px;">
-                    <div
-                        style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">
-                        FULL NAME</div>
-                    <div id="cardDetailFullName" style="font-size:16px; font-weight:600; color:#fff;">Caleb Oliver</div>
-                </div>
-
-                <!-- Country -->
-                <div
-                    style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:16px 20px;">
-                    <div
-                        style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">
-                        COUNTRY</div>
-                    <div id="cardDetailCountry" style="font-size:16px; font-weight:600; color:#fff;">Bangladesh</div>
-                </div>
-
-                <!-- City -->
-                <div
-                    style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:16px 20px;">
-                    <div
-                        style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">
-                        CITY</div>
-                    <div id="cardDetailCity" style="font-size:16px; font-weight:600; color:#fff;">Dhaka</div>
-                </div>
-
-                <!-- State/Province -->
-                <div
-                    style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:16px 20px;">
-                    <div
-                        style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">
-                        STATE/PROVINCE</div>
-                    <div id="cardDetailState" style="font-size:16px; font-weight:600; color:#fff;">Dhaka</div>
-                </div>
-
-                <!-- Address -->
-                <div
-                    style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:16px 20px;">
-                    <div
-                        style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">
-                        ADDRESS</div>
-                    <div id="cardDetailAddress" style="font-size:16px; font-weight:600; color:#fff;">Gulshan Avenue
-                    </div>
-                </div>
-
-                <!-- Postal Code -->
-                <div
-                    style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:16px 20px;">
-                    <div
-                        style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">
-                        POSTAL CODE</div>
-                    <div id="cardDetailPostal" style="font-size:16px; font-weight:600; color:#fff;">1212</div>
-                </div>
-            </div>
-
-            <button onclick="nav('history')"
-                style="margin-top:24px; width:100%; padding:16px; border-radius:14px; background:var(--accent-color); color:#000; border:none; font-weight:800; font-size:14px; cursor:pointer;">
-                <i class="fas fa-history" style="margin-right:8px;"></i> VIEW PURCHASE HISTORY
-            </button>
+                </div> <!-- End of #securedArea -->
+                <div style="height: 60px;"></div> <!-- Spacer for mobile nav -->
+            </div> <!-- End of max-width wrapper -->
         </div>
 
         <div id="accountDetailPage" class="page">
@@ -4986,7 +5369,133 @@
         </div>
 
         <div id="chatgptPage" class="page">
-            <div class="section-title">CHATGPT DETAILS</div>
+            <div style="max-width:430px; margin:0 auto; padding:0 16px !important; box-sizing:border-box;">
+                <!-- Generator Box (Visible by default) -->
+                <div id="chatgptGeneratorBox"
+                    style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:24px; padding:20px; margin-bottom:20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <div
+                                style="width:48px; height:48px; background:rgba(255,255,255,0.05); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:24px; color:#fff;">
+                                <i class="fas fa-cubes"></i>
+                            </div>
+                            <div>
+                                <div id="chatgptGeneratorTitle" style="font-size:18px; font-weight:800; color:#fff;">
+                                    ChatGPT VCC</div>
+                                <div style="font-size:11px; color:#10b981; font-weight:700;"><i class="fas fa-circle"
+                                        style="font-size:8px; margin-right:4px;"></i> OPERATIONAL</div>
+                            </div>
+                        </div>
+                        <div id="chatgptGeneratorPrice"
+                            style="font-size:12px; color:#f59e0b; font-weight:800; background:rgba(245,158,11,0.1); padding:4px 10px; border-radius:12px;">
+                            50 TOKENS</div>
+                    </div>
+
+                    <button id="chatgptGeneratorBtn" onclick="generateCardNow('chatgpt')"
+                        style="width:100%; height:52px; background:linear-gradient(135deg, #f59e0b, #d97706); color:#000; font-size:15px; font-weight:900; border-radius:16px; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 8px 16px rgba(245,151,11,0.2);">
+                        GENERATE NOW <i class="fas fa-bolt"></i>
+                    </button>
+                </div>
+
+                <!-- Secured Area (Hidden by default) -->
+                <div id="chatgptSecuredArea"
+                    style="display:none; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:20px; padding:16px; margin-top:20px;">
+                    <!-- Secured Credentials Label -->
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px; padding:0 4px;">
+                        <i class="fas fa-shield-alt" style="color:var(--text-sub); font-size:14px;"></i>
+                        <span
+                            style="font-size:11px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:1px;">SECURED
+                            CREDENTIALS</span>
+                    </div>
+
+                    <!-- Card Display -->
+                    <div
+                        style="background:linear-gradient(135deg, #1a1f71 0%, #11144c 100%); border-radius:20px; padding:24px; margin-bottom:24px; position:relative; box-shadow:0 10px 40px rgba(26,31,113,0.3);">
+                        <!-- Card Label -->
+                        <div id="chatgptCardLabel"
+                            style="font-size:11px; font-weight:700; color:rgba(255,255,255,0.7); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">
+                            CHATGPT PREMIUM</div>
+
+                        <!-- Cardholder Name with Copy -->
+                        <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+                            <div id="chatgptCardHolder"
+                                style="font-size:18px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:1px; flex:1;">
+                                CARD HOLDER</div>
+                            <button onclick="copyToClipboard('chatgptCardHolder', this)"
+                                style="width:36px; height:36px; background:rgba(255,255,255,0.1); border:none; border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                                <i class="fas fa-copy" style="color:#fff; font-size:14px;"></i>
+                            </button>
+                        </div>
+
+                        <!-- Card Number with Copy -->
+                        <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
+                            <div id="chatgptCardNumber"
+                                style="font-size:16px; font-weight:600; color:#fff; letter-spacing:1px; font-family:'Courier New', monospace; flex:1; word-break: break-all;">
+                                **** **** **** ****</div>
+                            <button onclick="copyToClipboard('chatgptCardNumber', this)"
+                                style="width:36px; height:36px; background:rgba(255,255,255,0.1); border:none; border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                                <i class="fas fa-copy" style="color:#fff; font-size:14px;"></i>
+                            </button>
+                        </div>
+
+                        <!-- Expiry and CVV Row -->
+                        <div style="display:flex; gap:40px;">
+                            <!-- Expiry -->
+                            <div>
+                                <div
+                                    style="font-size:9px; font-weight:700; color:rgba(255,255,255,0.7); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">
+                                    EXPIRY</div>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <div id="chatgptCardExpiry" style="font-size:16px; font-weight:600; color:#fff;">
+                                        MM/YYYY</div>
+                                    <button onclick="copyToClipboard('chatgptCardExpiry', this)"
+                                        style="width:28px; height:28px; background:rgba(255,255,255,0.1); border:none; border-radius:6px; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                                        <i class="fas fa-copy" style="color:#fff; font-size:11px;"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <!-- CVV -->
+                            <div>
+                                <div
+                                    style="font-size:9px; font-weight:700; color:rgba(255,255,255,0.7); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">
+                                    CVV</div>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <div id="chatgptCardCVV" style="font-size:16px; font-weight:600; color:#fff;">***
+                                    </div>
+                                    <button onclick="copyToClipboard('chatgptCardCVV', this)"
+                                        style="width:28px; height:28px; background:rgba(255,255,255,0.1); border:none; border-radius:6px; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                                        <i class="fas fa-copy" style="color:#fff; font-size:11px;"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Billing Information Label -->
+                    <div
+                        style="font-size:11px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:1px; margin-bottom:16px; padding:0 4px;">
+                        BILLING INFORMATION</div>
+
+                    <!-- Billing Info Boxes -->
+                    <div style="display:flex; flex-direction:column; gap:12px;">
+                        <div
+                            style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:10px 16px;">
+                            <div
+                                style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">
+                                COUNTRY</div>
+                            <div class="copy-box">
+                                <div id="chatgptCardCountry" style="font-size:16px; font-weight:600; color:#fff;">Global
+                                </div>
+                                <button class="copy-btn" onclick="copyToClipboard('chatgptCardCountry', this)">
+                                    <i class="fas fa-copy" style="color:#fff; font-size:11px;"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div> <!-- End of #chatgptSecuredArea -->
+                <div style="height: 60px;"></div> <!-- Spacer for mobile nav -->
+            </div> <!-- End of max-width wrapper -->
         </div>
 
         <!-- SHOP CATEGORIES PAGE (PREMIUM SERVICES) -->

@@ -1,7 +1,7 @@
 {
   "users": {
     "123": {
-      "Gems": 2,
+      "Gems": 8,
       "adminVerified": false,
       "apiKey": "auto_verify_bk6RGdjslD6eimIcZoq5ud1InXWFL3mA",
       "apiKeyCreatedAt": 1778079142405,
@@ -16,9 +16,9 @@
         "virtualnumber",
         "store"
       ],
-      "balance": 15975,
-      "balance_Gems": 1,
-      "balance_tokens": 15975,
+      "balance": 7475,
+      "balance_Gems": 8,
+      "balance_tokens": 7475,
       "blocked": false,
       "cardsPurchased": 0,
       "channelJoined": false,
@@ -31,6 +31,783 @@
       "firstName": "Test",
       "groupJoined": false,
       "history": [
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "adobeexpress",
+          "date": 1778588490896
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "chatgpt",
+          "date": 1778588485308
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "adobeexpress",
+          "date": 1778585725956
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "chatgpt",
+          "date": 1778585712451
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "adobeexpress",
+          "date": 1778581279240
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "adobeexpress",
+          "date": 1778576409308
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "adobeexpress",
+          "date": 1778574743254
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778574735081
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "chatgptplus",
+          "date": 1778573887216
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "chatgptplus",
+          "date": 1778573856131
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "chatgptplus",
+          "date": 1778573852997
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778573820146
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778573051380
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778572951609
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778572919122
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "adobeexpress",
+          "date": 1778572909103
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "adobeexpress",
+          "date": 1778572872235
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778572586262
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778572546535
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778572546367
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778572546135
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778572545887
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778572545399
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778572544285
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778572541291
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778572532860
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "chatgpt",
+          "date": 1778572523147
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "chatgpt",
+          "date": 1778572522961
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "chatgpt",
+          "date": 1778572522763
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "chatgpt",
+          "date": 1778572521966
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "chatgpt",
+          "date": 1778572519405
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778572162192
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778572160084
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "adobeexpress",
+          "date": 1778572152045
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "chatgpt",
+          "date": 1778572148743
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778571661970
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "chatgpt",
+          "date": 1778571649855
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778571616783
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778571407250
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778571406554
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778571397977
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778571397106
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778571396152
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778571395253
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778571394073
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778571393833
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778571393168
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778571391287
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778571390560
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778571390328
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778571390104
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778571389847
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778571389616
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778571389392
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778571389120
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778571388883
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778571388515
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778571387642
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778571368613
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778571360887
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778571358389
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778571328484
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778571315704
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778571149458
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778571130579
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778570968019
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "spotify",
+          "date": 1778570961903
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "spotify",
+          "date": 1778570961720
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "spotify",
+          "date": 1778570960831
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "spotify",
+          "date": 1778570937406
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778570914311
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778570906360
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778570118539
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "chatgpt",
+          "date": 1778569976139
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778569657905
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778569567506
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "adobeexpress",
+          "date": 1778569466605
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "adobeexpress",
+          "date": 1778569429127
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "adobeexpress",
+          "date": 1778569291311
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "chatgpt",
+          "date": 1778568411169
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "chatgpt",
+          "date": 1778567158072
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "adobeexpress",
+          "date": 1778566349688
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "chatgpt",
+          "date": 1778566338628
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "adobeexpress",
+          "date": 1778566335023
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "adobeexpress",
+          "date": 1778566328697
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778566243304
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778566211476
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778566162870
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778565877093
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778565801268
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "spotify",
+          "date": 1778565797593
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "spotify",
+          "date": 1778565282631
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "spotify",
+          "date": 1778565275224
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "spotify",
+          "date": 1778565270418
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "youtube",
+          "date": 1778565214848
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "spotify",
+          "date": 1778565202601
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "spotify",
+          "date": 1778565201906
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778565023343
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778565001224
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "youtube",
+          "date": 1778564918927
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "youtube",
+          "date": 1778564909807
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "youtube",
+          "date": 1778564908941
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "chatgptplus",
+          "date": 1778564902196
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "chatgptplus",
+          "date": 1778564901284
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "chatgptplus",
+          "date": 1778564656151
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "chatgptplus",
+          "date": 1778564655328
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "spotify",
+          "date": 1778564421520
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "chatgptplus",
+          "date": 1778564403447
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "youtube",
+          "date": 1778564375556
+        },
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778564364022
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "chatgptplus",
+          "date": 1778564347806
+        },
         {
           "type": "student_email",
           "amount": -50,
@@ -185,13 +962,13 @@
       "joinedChannel": true,
       "joinedGroup": true,
       "language": "en",
-      "lastActive": 1778522638967,
+      "lastActive": 1778594210094,
       "lastDaily": 1778495256034,
       "lastName": "",
       "referralCode": "ref_95CMCD",
       "referralCount": 0,
       "successfulVerifications": 0,
-      "tokens": 15975,
+      "tokens": 7475,
       "usd": 0,
       "username": "TestUser",
       "verified": false,
@@ -273,7 +1050,588 @@
           "claimed": false,
           "date": 1778518543616
         }
-      ]
+      ],
+      "purchasedAccounts": [
+        {
+          "email": "premium_chatgptplus_1778564347806@email.com",
+          "password": "Pass_1ezypkyk",
+          "category": "chatgptplus",
+          "purchasedAt": 1778564347806
+        },
+        {
+          "email": "premium_ma_1778564364022@email.com",
+          "password": "Pass_d7jpdoiq",
+          "category": "ma",
+          "purchasedAt": 1778564364022
+        },
+        {
+          "email": "premium_youtube_1778564375555@email.com",
+          "password": "Pass_f7aougsd",
+          "category": "youtube",
+          "purchasedAt": 1778564375556
+        },
+        {
+          "email": "premium_chatgptplus_1778564403447@email.com",
+          "password": "Pass_ydmr8ibi",
+          "category": "chatgptplus",
+          "purchasedAt": 1778564403447
+        },
+        {
+          "email": "premium_spotify_1778564421520@email.com",
+          "password": "Pass_npilnbmw",
+          "category": "spotify",
+          "purchasedAt": 1778564421520
+        },
+        {
+          "email": "premium_chatgptplus_1778564655316@email.com",
+          "password": "Pass_cw3gdyt7",
+          "category": "chatgptplus",
+          "purchasedAt": 1778564655328
+        },
+        {
+          "email": "premium_chatgptplus_1778564656151@email.com",
+          "password": "Pass_opyaxwws",
+          "category": "chatgptplus",
+          "purchasedAt": 1778564656151
+        },
+        {
+          "email": "premium_chatgptplus_1778564901255@email.com",
+          "password": "Pass_z73xkwi2",
+          "category": "chatgptplus",
+          "purchasedAt": 1778564901284
+        },
+        {
+          "email": "premium_chatgptplus_1778564902196@email.com",
+          "password": "Pass_1b7yhvyv",
+          "category": "chatgptplus",
+          "purchasedAt": 1778564902196
+        },
+        {
+          "email": "premium_youtube_1778564908941@email.com",
+          "password": "Pass_uppzp43n",
+          "category": "youtube",
+          "purchasedAt": 1778564908941
+        },
+        {
+          "email": "premium_youtube_1778564909807@email.com",
+          "password": "Pass_8dgefene",
+          "category": "youtube",
+          "purchasedAt": 1778564909807
+        },
+        {
+          "email": "premium_youtube_1778564918927@email.com",
+          "password": "Pass_ie51596w",
+          "category": "youtube",
+          "purchasedAt": 1778564918927
+        },
+        {
+          "email": "premium_ma_1778565001224@email.com",
+          "password": "Pass_bgf98dy7",
+          "category": "ma",
+          "purchasedAt": 1778565001224
+        },
+        {
+          "email": "premium_ma_1778565023343@email.com",
+          "password": "Pass_p5q2ecmp",
+          "category": "ma",
+          "purchasedAt": 1778565023343
+        },
+        {
+          "email": "premium_spotify_1778565201906@email.com",
+          "password": "Pass_jpnptd51",
+          "category": "spotify",
+          "purchasedAt": 1778565201906
+        },
+        {
+          "email": "premium_spotify_1778565202600@email.com",
+          "password": "Pass_agnt9n6t",
+          "category": "spotify",
+          "purchasedAt": 1778565202601
+        },
+        {
+          "email": "premium_youtube_1778565214848@email.com",
+          "password": "Pass_0l8f6uhp",
+          "category": "youtube",
+          "purchasedAt": 1778565214848
+        },
+        {
+          "email": "premium_spotify_1778565270418@email.com",
+          "password": "Pass_1o6s17ab",
+          "category": "spotify",
+          "purchasedAt": 1778565270418
+        },
+        {
+          "email": "premium_spotify_1778565275224@email.com",
+          "password": "Pass_ci4kty29",
+          "category": "spotify",
+          "purchasedAt": 1778565275224
+        },
+        {
+          "email": "premium_spotify_1778565282631@email.com",
+          "password": "Pass_r7o0x71v",
+          "category": "spotify",
+          "purchasedAt": 1778565282631
+        },
+        {
+          "email": "premium_spotify_1778565797572@email.com",
+          "password": "Pass_4lkz6k2d",
+          "category": "spotify",
+          "purchasedAt": 1778565797593
+        },
+        {
+          "email": "premium_ma_1778565801268@email.com",
+          "password": "Pass_znpmuzkk",
+          "category": "ma",
+          "purchasedAt": 1778565801268
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778565877093,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778566162870,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778566211476,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778566243304,
+          "instructions": ""
+        },
+        {
+          "category": "adobeexpress",
+          "purchasedAt": 1778566328697,
+          "instructions": ""
+        },
+        {
+          "category": "adobeexpress",
+          "purchasedAt": 1778566335023,
+          "instructions": ""
+        },
+        {
+          "category": "chatgpt",
+          "purchasedAt": 1778566338628,
+          "instructions": ""
+        },
+        {
+          "category": "adobeexpress",
+          "purchasedAt": 1778566349688,
+          "instructions": ""
+        },
+        {
+          "category": "chatgpt",
+          "purchasedAt": 1778567158072,
+          "instructions": ""
+        },
+        {
+          "category": "chatgpt",
+          "purchasedAt": 1778568411169,
+          "instructions": ""
+        },
+        {
+          "category": "adobeexpress",
+          "purchasedAt": 1778569291311,
+          "instructions": ""
+        },
+        {
+          "category": "adobeexpress",
+          "purchasedAt": 1778569429127,
+          "instructions": ""
+        },
+        {
+          "category": "adobeexpress",
+          "purchasedAt": 1778569466605,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778569567506,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778569657905,
+          "instructions": ""
+        },
+        {
+          "category": "chatgpt",
+          "purchasedAt": 1778569976139,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778570118539,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778570906359,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778570914311,
+          "instructions": ""
+        },
+        {
+          "category": "spotify",
+          "purchasedAt": 1778570937406,
+          "instructions": ""
+        },
+        {
+          "category": "spotify",
+          "purchasedAt": 1778570960831,
+          "instructions": ""
+        },
+        {
+          "category": "spotify",
+          "purchasedAt": 1778570961720,
+          "instructions": ""
+        },
+        {
+          "category": "spotify",
+          "purchasedAt": 1778570961903,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778570968019,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778571130579,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778571149458,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778571315703,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778571328484,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778571358389,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778571360887,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778571368613,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778571387642,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778571388515,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778571388883,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778571389120,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778571389392,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778571389616,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778571389847,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778571390104,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778571390328,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778571390560,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778571391287,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778571393168,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778571393833,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778571394073,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778571395253,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778571396152,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778571397106,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778571397977,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778571406554,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778571407250,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778571616783,
+          "instructions": ""
+        },
+        {
+          "category": "chatgpt",
+          "purchasedAt": 1778571649855,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778571661970,
+          "instructions": ""
+        },
+        {
+          "category": "chatgpt",
+          "purchasedAt": 1778572148743,
+          "instructions": ""
+        },
+        {
+          "category": "adobeexpress",
+          "purchasedAt": 1778572152045,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778572160084,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778572162192,
+          "instructions": ""
+        },
+        {
+          "category": "chatgpt",
+          "purchasedAt": 1778572519405,
+          "instructions": ""
+        },
+        {
+          "category": "chatgpt",
+          "purchasedAt": 1778572521966,
+          "instructions": ""
+        },
+        {
+          "category": "chatgpt",
+          "purchasedAt": 1778572522763,
+          "instructions": ""
+        },
+        {
+          "category": "chatgpt",
+          "purchasedAt": 1778572522961,
+          "instructions": ""
+        },
+        {
+          "category": "chatgpt",
+          "purchasedAt": 1778572523147,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778572532860,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778572541291,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778572544285,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778572545399,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778572545887,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778572546135,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778572546367,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778572546535,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778572586262,
+          "instructions": ""
+        },
+        {
+          "category": "adobeexpress",
+          "purchasedAt": 1778572872235,
+          "instructions": ""
+        },
+        {
+          "category": "adobeexpress",
+          "purchasedAt": 1778572909103,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778572919122,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778572951609,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778573051379,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778573820146,
+          "instructions": ""
+        },
+        {
+          "category": "chatgptplus",
+          "purchasedAt": 1778573852997,
+          "instructions": ""
+        },
+        {
+          "category": "chatgptplus",
+          "purchasedAt": 1778573856131,
+          "instructions": ""
+        },
+        {
+          "category": "chatgptplus",
+          "purchasedAt": 1778573887216,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778574735081,
+          "instructions": ""
+        },
+        {
+          "category": "adobeexpress",
+          "purchasedAt": 1778574743254,
+          "instructions": ""
+        },
+        {
+          "category": "adobeexpress",
+          "purchasedAt": 1778576409308,
+          "instructions": ""
+        },
+        {
+          "category": "adobeexpress",
+          "purchasedAt": 1778581279240,
+          "instructions": ""
+        },
+        {
+          "category": "chatgpt",
+          "purchasedAt": 1778585712451,
+          "instructions": ""
+        },
+        {
+          "category": "adobeexpress",
+          "purchasedAt": 1778585725956,
+          "instructions": ""
+        },
+        {
+          "category": "chatgpt",
+          "purchasedAt": 1778588485308,
+          "instructions": ""
+        },
+        {
+          "category": "adobeexpress",
+          "purchasedAt": 1778588490896,
+          "instructions": ""
+        }
+      ],
+      "flags": {},
+      "role": "off"
     },
     "12345": {
       "adminVerified": false,
@@ -1266,6 +2624,42 @@
           "date": 1778518550304
         }
       ]
+    },
+    "1349934599": {
+      "id": 1349934599,
+      "balance": 100,
+      "balance_tokens": 100,
+      "joinedAt": 1778557547766,
+      "referrer": null,
+      "lastDaily": 0,
+      "tasksDone": [],
+      "referralCount": 0,
+      "referredBy": "7672601379",
+      "username": null,
+      "successfulVerifications": 0,
+      "failedVerifications": 0,
+      "cardsPurchased": 0,
+      "blocked": false,
+      "adminVerified": false,
+      "language": "en",
+      "lastActive": 1778557571333,
+      "dailyStreak": 0,
+      "usd": 0,
+      "apiStatus": "allow",
+      "history": [
+        {
+          "type": "bonus",
+          "amount": 100,
+          "reward": "+100 Tokens",
+          "date": 1778557547766,
+          "detail": "Welcome Bonus"
+        }
+      ],
+      "pendingReferrer": null,
+      "referredByCode": "ref_GWZUP2",
+      "referralVerified": true,
+      "verified": true,
+      "verifiedAt": "2026-05-12T03:46:12.086Z"
     },
     "1364506093": {
       "balance": 0,
@@ -5309,8 +6703,8 @@
     },
     "7672601379": {
       "adminVerified": true,
-      "balance": 100,
-      "balance_tokens": 895,
+      "balance": 945,
+      "balance_tokens": 945,
       "blocked": false,
       "cardsPurchased": 0,
       "channelJoined": false,
@@ -5318,7 +6712,25 @@
       "failedVerifications": 0,
       "firstName": "Riad Al Mamun",
       "groupJoined": false,
-      "history": [],
+      "history": [
+        {
+          "type": "referral_bonus",
+          "amount": 50,
+          "currency": "tokens",
+          "date": 1778557573253,
+          "details": "Referred and verified user #1349934599",
+          "reward": "+50 TC",
+          "status": "Verified",
+          "userId": 1349934599
+        },
+        {
+          "type": "bonus",
+          "amount": 100,
+          "reward": "+100 Tokens",
+          "date": 1778557548273,
+          "detail": "Welcome Bonus"
+        }
+      ],
       "id": 7672601379,
       "joinedAt": 1770785907160,
       "joinedChannel": false,
@@ -5332,13 +6744,13 @@
         "Mamun50"
       ],
       "referralCode": "ref_GWZUP2",
-      "referralCount": 2,
+      "referralCount": 3,
       "referredBy": "7672601379p",
       "successfulVerifications": 0,
       "tasksDone": [
         "channel"
       ],
-      "tokens": 895,
+      "tokens": 945,
       "username": "RiadAlMamun_Supporter",
       "verified": true,
       "vpnsPurchased": 1,
@@ -5425,6 +6837,15 @@
           "amount": 10,
           "claimed": false,
           "date": 1778518579039
+        }
+      ],
+      "referredUsers": [
+        {
+          "userId": "1349934599",
+          "date": 1778557548273,
+          "rewarded": true,
+          "status": "Verified",
+          "verifiedDate": 1778557573253
         }
       ]
     },
@@ -6434,7 +7855,7 @@
       "id": 8125978050,
       "joinedAt": 1770642654179,
       "language": "en",
-      "lastActive": 1777778189230,
+      "lastActive": 1778590068470,
       "lastDaily": 1770796487608,
       "referralCount": 0,
       "successfulVerifications": 0,
@@ -6498,7 +7919,18 @@
           "claimed": false,
           "date": 1778518585733
         }
-      ]
+      ],
+      "history": [
+        {
+          "type": "bonus",
+          "amount": 100,
+          "reward": "+100 Tokens",
+          "date": 1778590068472,
+          "detail": "Welcome Bonus"
+        }
+      ],
+      "verified": true,
+      "verifiedAt": "2026-05-12T12:47:49.497Z"
     },
     "8128770916": {
       "balance": 50,
@@ -8407,7 +9839,7 @@
       "blocked": false,
       "adminVerified": false,
       "language": "en",
-      "lastActive": 1778519594962,
+      "lastActive": 1778557729590,
       "dailyStreak": 0,
       "usd": 0,
       "apiStatus": "allow",
@@ -8439,15 +9871,55 @@
           "read": false
         }
       ]
+    },
+    "8714852546": {
+      "id": 8714852546,
+      "balance": 105,
+      "balance_tokens": 105,
+      "joinedAt": 1778557760990,
+      "referrer": null,
+      "lastDaily": 0,
+      "tasksDone": [],
+      "referralCount": 0,
+      "referredBy": null,
+      "username": null,
+      "successfulVerifications": 0,
+      "failedVerifications": 0,
+      "cardsPurchased": 0,
+      "blocked": false,
+      "adminVerified": false,
+      "language": "en",
+      "lastActive": 1778557765293,
+      "dailyStreak": 0,
+      "usd": 0,
+      "apiStatus": "allow",
+      "history": [
+        {
+          "type": "chat_reward",
+          "amount": 5,
+          "currency": "tokens",
+          "date": 1778557760990,
+          "detail": "Message reward"
+        },
+        {
+          "type": "bonus",
+          "amount": 100,
+          "reward": "+100 Tokens",
+          "date": 1778557760990,
+          "detail": "Welcome Bonus"
+        }
+      ],
+      "tokens": 105,
+      "pendingReferrer": "ref_NBEAEX"
     }
   },
   "groups": {
     "-1002516230551": {
-      "addedAt": 1771418121015,
       "id": -1002516230551,
-      "lastActive": 1777777348822,
       "title": "Autos Verify",
-      "type": "supergroup"
+      "type": "supergroup",
+      "addedAt": 1771418121015,
+      "lastActive": 1778557569254
     },
     "-1002502678666": {
       "addedAt": 1771418121015,
@@ -8476,7 +9948,6 @@
       "USA": 15
     },
     "costs": {
-      "gemini": 50,
       "gpt": 50,
       "military": 50,
       "spotify": 50,
@@ -8555,1263 +10026,46 @@
     }
   },
   "cards": {
-    "adobeexpress": [
+    "adobeexpress": [],
+    "chatgpt": [],
+    "ma": [
       {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "191",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/28",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804047676|05|2028|191",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804047676",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "621",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/28",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804099180|05|2028|621",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804099180",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "711",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/28",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804074670|05|2028|711",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804074670",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "260",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/28",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804003661|05|2028|260",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804003661",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "331",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/28",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804099958|05|2028|331",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804099958",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "694",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/28",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804094876|05|2028|694",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804094876",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "272",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/28",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804036612|05|2028|272",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804036612",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "558",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/28",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804088514|05|2028|558",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804088514",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "624",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/28",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804076667|05|2028|624",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804076667",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "581",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/28",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804045407|05|2028|581",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804045407",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "745",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/28",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804081576|05|2028|745",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804081576",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "774",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/28",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804026092|05|2028|774",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804026092",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "233",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/28",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804052031|05|2028|233",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804052031",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "240",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/28",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804094611|05|2028|240",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804094611",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "391",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/28",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804094520|05|2028|391",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804094520",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "567",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/28",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804011581|05|2028|567",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804011581",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "965",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/28",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804044806|05|2028|965",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804044806",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "493",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/28",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804006334|05|2028|493",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804006334",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "944",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/28",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804079083|05|2028|944",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804079083",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "281",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/30",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804075578|05|2030|281",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804075578",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "726",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/30",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804077319|05|2030|726",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804077319",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "460",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/30",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804084273|05|2030|460",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804084273",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "932",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/30",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804096087|05|2030|932",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804096087",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "534",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/30",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804011862|05|2030|534",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804011862",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "684",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/30",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804056487|05|2030|684",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804056487",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "870",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/30",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804041539|05|2030|870",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804041539",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "666",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/30",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804007332|05|2030|666",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804007332",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "747",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/30",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804040168|05|2030|747",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804040168",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "219",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/30",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804077632|05|2030|219",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804077632",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "819",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/30",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804016481|05|2030|819",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804016481",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "411",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/30",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804042834|05|2030|411",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804042834",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "701",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/30",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804092748|05|2030|701",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804092748",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "858",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/30",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804068094|05|2030|858",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804068094",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "123",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/30",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804027512|05|2030|123",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804027512",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "651",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/30",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804060281|05|2030|651",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804060281",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "315",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/30",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804039806|05|2030|315",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804039806",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "918",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/30",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804080636|05|2030|918",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804080636",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "489",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/30",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804038675|05|2030|489",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804038675",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "519",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/30",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804038899|05|2030|519",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804038899",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "237",
-        "district": "Westminster (Soho area)",
-        "expiry": "06/30",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804089751|06|2030|237",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804089751",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "765",
-        "district": "Westminster (Soho area)",
-        "expiry": "06/30",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804050720|06|2030|765",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804050720",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "327",
-        "district": "Westminster (Soho area)",
-        "expiry": "06/30",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804081642|06|2030|327",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804081642",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "482",
-        "district": "Westminster (Soho area)",
-        "expiry": "06/30",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804090411|06|2030|482",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804090411",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "842",
-        "district": "Westminster (Soho area)",
-        "expiry": "06/30",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804056990|06|2030|842",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804056990",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "920",
-        "district": "Westminster (Soho area)",
-        "expiry": "06/30",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804017307|06|2030|920",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804017307",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "753",
-        "district": "Westminster (Soho area)",
-        "expiry": "06/30",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804032926|06|2030|753",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804032926",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "796",
-        "district": "Westminster (Soho area)",
-        "expiry": "06/30",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804051660|06|2030|796",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804051660",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "710",
-        "district": "Westminster (Soho area)",
-        "expiry": "06/30",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804009601|06|2030|710",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804009601",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "418",
-        "district": "Westminster (Soho area)",
-        "expiry": "06/30",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804004776|06|2030|418",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804004776",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "827",
-        "district": "Westminster (Soho area)",
-        "expiry": "06/30",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804045779|06|2030|827",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804045779",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "136",
-        "district": "Westminster (Soho area)",
-        "expiry": "06/30",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804031563|06|2030|136",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804031563",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "addedAt": 1777839217872,
-        "info": " Bangladesh",
-        "key": "VPN"
-      },
-      {
-        "addedAt": 1777839217879,
-        "info": " Kazakhstan",
-        "key": "Country"
-      },
-      {
-        "addedAt": 1777839217884,
-        "info": " MASTER CARD",
-        "key": "Type"
-      },
-      {
-        "addedAt": 1777839217889,
-        "info": " Caleb Oliver",
-        "key": "Name"
-      },
-      {
-        "addedAt": 1777839217899,
-        "info": " Almaty",
-        "key": "State"
-      },
-      {
-        "addedAt": 1777839217903,
-        "info": " Semipalatinsk",
-        "key": "City"
-      },
-      {
-        "addedAt": 1777839217908,
-        "info": " Almaty",
-        "key": "District"
-      },
-      {
-        "addedAt": 1777839217914,
-        "info": " Semipalatinsk",
-        "key": "Address 1"
-      },
-      {
-        "addedAt": 1777839217918,
-        "info": " 020101",
-        "key": "Postal Code"
-      },
-      {
-        "addedAt": 1777839217922,
+        "key": "5154622323140685|01|2029|359",
         "info": "",
-        "key": "5154622143944209|01|2029|865"
-      },
-      {
-        "addedAt": 1777839217926,
-        "info": "",
-        "key": "5154624427120035|01|2029|600"
-      },
-      {
-        "addedAt": 1777839217929,
-        "info": "",
-        "key": "5154621025494655|01|2029|604"
-      },
-      {
-        "addedAt": 1777839217931,
-        "info": "",
-        "key": "5154629071871072|01|2029|235"
-      },
-      {
-        "addedAt": 1777839217936,
-        "info": "",
-        "key": "5154629893961341|01|2029|533"
-      },
-      {
-        "addedAt": 1777839217938,
-        "info": "",
-        "key": "5154627046338219|01|2029|729"
-      },
-      {
-        "addedAt": 1777839217943,
-        "info": "",
-        "key": "5154624380007088|01|2029|566"
-      },
-      {
-        "addedAt": 1777839217947,
-        "info": "",
-        "key": "5154624318733029|01|2029|760"
-      },
-      {
-        "addedAt": 1777839217950,
-        "info": "",
-        "key": "5154622349842900|01|2029|818"
-      },
-      {
-        "addedAt": 1777839217953,
-        "info": "",
-        "key": "5154628326091627|01|2029|174"
-      },
-      {
-        "addedAt": 1777839217957,
-        "info": "",
-        "key": "5154624543705545|01|2029|805"
-      },
-      {
-        "addedAt": 1777839217961,
-        "info": "",
-        "key": "5154627453353412|01|2029|206"
-      },
-      {
-        "addedAt": 1777839217965,
-        "info": "",
-        "key": "5154628411848956|01|2029|263"
-      },
-      {
-        "addedAt": 1777839217998,
-        "info": "",
-        "key": "5154621090034105|01|2029|245"
-      },
-      {
-        "addedAt": 1777839218004,
-        "info": "",
-        "key": "5154627470354195|01|2029|635"
-      },
-      {
-        "addedAt": 1777839218010,
-        "info": "",
-        "key": "5154620536238874|01|2029|637"
-      },
-      {
-        "addedAt": 1777839218019,
-        "info": "",
-        "key": "5154620768777656|01|2029|367"
-      },
-      {
-        "addedAt": 1777839218024,
-        "info": "",
-        "key": "5154620186346472|01|2029|622"
-      },
-      {
-        "addedAt": 1777839218027,
-        "info": "",
-        "key": "5154624602546558|01|2029|582"
-      },
-      {
-        "addedAt": 1777839218030,
-        "info": "",
-        "key": "5154623896824952|01|2029|994"
-      },
-      {
-        "addedAt": 1777839218031,
-        "info": "",
-        "key": "5154625606332085|01|2029|744"
-      },
-      {
-        "addedAt": 1777839218034,
-        "info": "",
-        "key": "5154621876197092|01|2029|884"
-      },
-      {
-        "addedAt": 1777839218037,
-        "info": "",
-        "key": "5154627556523465|01|2029|338"
-      },
-      {
-        "addedAt": 1777839218038,
-        "info": "",
-        "key": "5154626978610520|01|2029|144"
-      },
-      {
-        "addedAt": 1777839218040,
-        "info": "",
-        "key": "5154620053770457|01|2029|483"
-      },
-      {
-        "addedAt": 1777839218043,
-        "info": "",
-        "key": "5154621796162705|01|2029|388"
-      },
-      {
-        "addedAt": 1777839218045,
-        "info": "",
-        "key": "5154625358644604|01|2029|906"
-      },
-      {
-        "addedAt": 1777839218047,
-        "info": "",
-        "key": "5154626992265335|01|2029|317"
-      },
-      {
-        "addedAt": 1777839218049,
-        "info": "",
-        "key": "5154620526922297|01|2029|969"
-      },
-      {
-        "addedAt": 1777839218052,
-        "info": "",
-        "key": "5154620238924342|01|2029|543"
-      },
-      {
-        "addedAt": 1777839218054,
-        "info": "",
-        "key": "5154620355433028|01|2029|481"
-      },
-      {
-        "addedAt": 1777839218057,
-        "info": "",
-        "key": "5154625482472997|01|2029|942"
-      },
-      {
-        "addedAt": 1777839218060,
-        "info": "",
-        "key": "5154622323140685|01|2029|359"
+        "addedAt": 1778571351154
       }
     ],
-    "chatgpt": [
-      {
-        "addedAt": 1777839233166,
-        "info": " Bangladesh",
-        "key": "VPN"
-      },
-      {
-        "addedAt": 1777839233171,
-        "info": " Kazakhstan",
-        "key": "Country"
-      },
-      {
-        "addedAt": 1777839233175,
-        "info": " MASTER CARD",
-        "key": "Type"
-      },
-      {
-        "addedAt": 1777839233179,
-        "info": " Caleb Oliver",
-        "key": "Name"
-      },
-      {
-        "addedAt": 1777839233182,
-        "info": " Almaty",
-        "key": "State"
-      },
-      {
-        "addedAt": 1777839233186,
-        "info": " Semipalatinsk",
-        "key": "City"
-      },
-      {
-        "addedAt": 1777839233193,
-        "info": " Almaty",
-        "key": "District"
-      },
-      {
-        "addedAt": 1777839233198,
-        "info": " Semipalatinsk",
-        "key": "Address 1"
-      },
-      {
-        "addedAt": 1777839233201,
-        "info": " 020101",
-        "key": "Postal Code"
-      },
-      {
-        "addedAt": 1777839233207,
-        "info": "",
-        "key": "5154622143944209|01|2029|865"
-      },
-      {
-        "addedAt": 1777839233212,
-        "info": "",
-        "key": "5154624427120035|01|2029|600"
-      },
-      {
-        "addedAt": 1777839233217,
-        "info": "",
-        "key": "5154621025494655|01|2029|604"
-      },
-      {
-        "addedAt": 1777839233222,
-        "info": "",
-        "key": "5154629071871072|01|2029|235"
-      },
-      {
-        "addedAt": 1777839233229,
-        "info": "",
-        "key": "5154629893961341|01|2029|533"
-      },
-      {
-        "addedAt": 1777839233232,
-        "info": "",
-        "key": "5154627046338219|01|2029|729"
-      },
-      {
-        "addedAt": 1777839233240,
-        "info": "",
-        "key": "5154624380007088|01|2029|566"
-      },
-      {
-        "addedAt": 1777839233244,
-        "info": "",
-        "key": "5154624318733029|01|2029|760"
-      },
-      {
-        "addedAt": 1777839233248,
-        "info": "",
-        "key": "5154622349842900|01|2029|818"
-      },
-      {
-        "addedAt": 1777839233253,
-        "info": "",
-        "key": "5154628326091627|01|2029|174"
-      },
-      {
-        "addedAt": 1777839233259,
-        "info": "",
-        "key": "5154624543705545|01|2029|805"
-      },
-      {
-        "addedAt": 1777839233279,
-        "info": "",
-        "key": "5154627453353412|01|2029|206"
-      },
-      {
-        "addedAt": 1777839233310,
-        "info": "",
-        "key": "5154628411848956|01|2029|263"
-      },
-      {
-        "addedAt": 1777839233315,
-        "info": "",
-        "key": "5154621090034105|01|2029|245"
-      },
-      {
-        "addedAt": 1777839233321,
-        "info": "",
-        "key": "5154627470354195|01|2029|635"
-      },
-      {
-        "addedAt": 1777839233328,
-        "info": "",
-        "key": "5154620536238874|01|2029|637"
-      },
-      {
-        "addedAt": 1777839233334,
-        "info": "",
-        "key": "5154620768777656|01|2029|367"
-      },
-      {
-        "addedAt": 1777839233338,
-        "info": "",
-        "key": "5154620186346472|01|2029|622"
-      },
-      {
-        "addedAt": 1777839233345,
-        "info": "",
-        "key": "5154624602546558|01|2029|582"
-      },
-      {
-        "addedAt": 1777839233350,
-        "info": "",
-        "key": "5154623896824952|01|2029|994"
-      },
-      {
-        "addedAt": 1777839233356,
-        "info": "",
-        "key": "5154625606332085|01|2029|744"
-      },
-      {
-        "addedAt": 1777839233361,
-        "info": "",
-        "key": "5154621876197092|01|2029|884"
-      },
-      {
-        "addedAt": 1777839233365,
-        "info": "",
-        "key": "5154627556523465|01|2029|338"
-      },
-      {
-        "addedAt": 1777839233367,
-        "info": "",
-        "key": "5154626978610520|01|2029|144"
-      },
-      {
-        "addedAt": 1777839233370,
-        "info": "",
-        "key": "5154620053770457|01|2029|483"
-      },
-      {
-        "addedAt": 1777839233373,
-        "info": "",
-        "key": "5154621796162705|01|2029|388"
-      },
-      {
-        "addedAt": 1777839233376,
-        "info": "",
-        "key": "5154625358644604|01|2029|906"
-      },
-      {
-        "addedAt": 1777839233379,
-        "info": "",
-        "key": "5154626992265335|01|2029|317"
-      },
-      {
-        "addedAt": 1777839233382,
-        "info": "",
-        "key": "5154620526922297|01|2029|969"
-      },
-      {
-        "addedAt": 1777839233384,
-        "info": "",
-        "key": "5154620238924342|01|2029|543"
-      },
-      {
-        "addedAt": 1777839233389,
-        "info": "",
-        "key": "5154620355433028|01|2029|481"
-      },
-      {
-        "addedAt": 1777839233391,
-        "info": "",
-        "key": "5154625482472997|01|2029|942"
-      },
-      {
-        "addedAt": 1777839233394,
-        "info": "",
-        "key": "5154622323140685|01|2029|359"
-      }
-    ]
+    "spotify": [],
+    "chatgptplus": []
   },
   "cardPrices": {
-    "adobeexpress": 180,
-    "chatgpt": 200,
+    "adobeexpress": 0,
+    "chatgpt": 0,
     "chatgptplus": 50,
-    "gemini": 50,
     "spotify": 50,
     "youtube": 50
   },
   "serviceNames": {
     "adobeexpress": "Adobeexpress",
-    "chatgpt": "Chatgpt"
+    "chatgpt": "Chatgpt",
+    "ma": "Ma",
+    "spotify": "Spotify",
+    "chatgptplus": "Chatgptplus"
   },
   "scheduledBroadcasts": [],
   "tickets": [],
   "payments": [],
   "transactions": [
+    {
+      "id": "mp239ait5ul16cmm2o",
+      "user_id": "7672601379",
+      "type": "referral",
+      "amount": 50,
+      "currency": "TC",
+      "title": "Referral bonus from verified user #1349934599",
+      "icon": "user-check",
+      "timestamp": 1778557573253
+    },
     {
       "amount": 50,
       "currency": "TC",
@@ -9842,12 +10096,13 @@
     "protonvpn": []
   },
   "vpnPrices": {
-    "adobeexpress": 180,
+    "adobeexpress": 0,
     "cyberghost": 70,
     "expressvpn": 120,
     "nordvpn": 100,
     "protonvpn": 90,
-    "surfshark": 80
+    "surfshark": 80,
+    "chatgpt": 0
   },
   "vpnServiceNames": {
     "cyberghost": "👻 CyberGhost",
@@ -10434,14 +10689,6 @@
       "price": 120,
       "type": "account"
     },
-    "gemini": {
-      "categoryId": "virtual-cards",
-      "color": "from-purple-500 to-pink-600",
-      "icon": "fa-brain",
-      "name": "Gemini",
-      "price": 150,
-      "type": "apikey"
-    },
     "nordvpn": {
       "categoryId": "vpn",
       "color": "from-blue-600 to-blue-800",
@@ -10488,9 +10735,9 @@
       "enabled": true,
       "intervalHours": 6,
       "keep": 30,
-      "lastBackupAt": 1778059002506,
-      "lastBackupFile": "auto_backup_1778059002506.json",
-      "nextBackupAt": 1778555760000
+      "lastBackupAt": 1778555793027,
+      "lastBackupFile": "auto_backup_1778555793027.json",
+      "nextBackupAt": 1778642160000
     },
     "gems": {
       "currentPrice": 1,
@@ -10590,13 +10837,23 @@
     "verification": false
   },
   "numberServices": {},
-  "services": {},
+  "services": {
+    "ma": {
+      "id": "ma",
+      "name": "MT Mamun Islam",
+      "desc": "1yer",
+      "icon": "fa-cube",
+      "color": "from-blue-500 to-purple-600",
+      "section": "virtual-cards",
+      "cost": 100
+    }
+  },
   "shopItems": {
     "gemini 1 day": {
       "id": "gemini 1 day",
       "name": "gemini 1 day",
       "price": 1,
-      "imageUrl": "/uploads/media_1778496405422_534.jpg",
+      "imageUrl": "/uploads/media_1778553616856_697.jpg",
       "bgColor": "#0d0d0d",
       "btnColor": "#f59e0b",
       "page": "deposit"
@@ -10695,26 +10952,46 @@
       "email": "boyearn705@gmail.com",
       "name": "Binance Pay",
       "qr": "https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=39996280",
-      "status": "active"
+      "status": "active",
+      "type": "crypto"
     },
     "bitget": {
       "details": "39996280",
       "email": "",
       "name": "Bitget",
       "qr": "https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=39996280",
-      "status": "active"
+      "status": "active",
+      "type": "crypto"
     },
     "gateio": {
       "details": "39996280",
       "email": "",
       "name": "Gate.io",
       "qr": "https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=39996280",
-      "status": "active"
+      "status": "active",
+      "type": "crypto"
     },
     "web3": {
       "details": "",
       "email": "",
       "name": "Web3 (USDT)",
+      "qr": "",
+      "status": "active",
+      "type": "crypto"
+    },
+    "platform_1778589848304": {
+      "name": " BKASH",
+      "type": "local",
+      "details": "01307016827",
+      "email": "",
+      "qr": "",
+      "status": "active"
+    },
+    "platform_1778591991763": {
+      "name": " NAGAD",
+      "type": "local",
+      "details": "01307016827",
+      "email": "",
       "qr": "",
       "status": "active"
     }
@@ -10741,14 +11018,7 @@
       "publisherId": ""
     }
   },
-  "emailPoolHistory": [
-    {
-      "email": "Mamunislam4.36.38.9.2@gmail.com",
-      "type": "gmail",
-      "assignedTo": "123",
-      "assignedAt": "2026-05-11T12:44:44.582Z"
-    }
-  ],
+  "emailPoolHistory": [],
   "groupWarnings": {
     "-1002516230551_7672601379": 1
   },
@@ -10846,7 +11116,8 @@
     }
   },
   "serviceDescriptions": {
-    "adobeexpress": "No description"
+    "adobeexpress": "No description",
+    "chatgpt": "No description"
   },
   "virtualNumberSettings": {
     "Facebook": {
@@ -10888,9 +11159,16 @@
     "WhatsApp": 0,
     "instagram": 3,
     "other": 2,
-    "telegram": 30,
+    "telegram": 31,
     "tiktok": 7,
     "twitter": 5,
     "whatsapp": 3
+  },
+  "serviceIcons": {
+    "adobeexpress": "/uploads/media_1778566858416_622.jpg",
+    "chatgpt": "/uploads/media_1778568518705_761.jpg"
+  },
+  "serviceSections": {
+    "ma": "virtual-cards"
   }
 }

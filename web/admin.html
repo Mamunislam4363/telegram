@@ -257,8 +257,13 @@
         }
     </style>
     <style>
-        .page { display: none; }
-        .page.active { display: block; }
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
     </style>
 </head>
 
@@ -336,7 +341,8 @@
                 </div>
                 <div class="nav-item" onclick="nav('numbers')"><i class="fas fa-phone-alt w-5"></i> Virtual Numbers
                 </div>
-                <div class="nav-item" onclick="nav('emailpool')"><i class="fas fa-envelope-open-text w-5 text-orange-400"></i> Email Pool
+                <div class="nav-item" onclick="nav('emailpool')"><i
+                        class="fas fa-envelope-open-text w-5 text-orange-400"></i> Email Pool
                 </div>
                 <div class="nav-item" onclick="nav('services')"><i class="fas fa-concierge-bell w-5"></i> Services
                 </div>
@@ -418,8 +424,10 @@
 
                 <div class="glass-card rounded-2xl p-6">
                     <div class="flex items-center justify-between mb-6">
-                        <h3 class="font-bold flex items-center gap-2"><i class="fas fa-key text-purple-400"></i> API KEY HOLDERS</h3>
-                        <button onclick="loadApiStats()" class="p-2 rounded-lg bg-white/5 hover:bg-white/10"><i class="fas fa-sync-alt"></i></button>
+                        <h3 class="font-bold flex items-center gap-2"><i class="fas fa-key text-purple-400"></i> API KEY
+                            HOLDERS</h3>
+                        <button onclick="loadApiStats()" class="p-2 rounded-lg bg-white/5 hover:bg-white/10"><i
+                                class="fas fa-sync-alt"></i></button>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full">
@@ -1058,14 +1066,16 @@
                         <div class="text-sm font-bold mt-1">Send Message</div>
                     </div>
                 </div>
-                
+
                 <!-- Usage Monitoring Row -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <!-- Mail Usage Monitoring -->
-                    <div class="glass-card p-6 rounded-2xl cursor-pointer hover:bg-white/5 transition-all border border-red-500/20" onclick="nav('emailpool')">
+                    <div class="glass-card p-6 rounded-2xl cursor-pointer hover:bg-white/5 transition-all border border-red-500/20"
+                        onclick="nav('emailpool')">
                         <div class="flex items-center justify-between mb-4">
                             <div class="flex items-center gap-3">
-                                <div class="w-12 h-12 rounded-2xl bg-red-500/20 flex items-center justify-center border border-red-500/20">
+                                <div
+                                    class="w-12 h-12 rounded-2xl bg-red-500/20 flex items-center justify-center border border-red-500/20">
                                     <i class="fas fa-envelope-open-text text-red-400 text-xl"></i>
                                 </div>
                                 <div>
@@ -1076,19 +1086,23 @@
                             <div class="text-3xl font-bold text-red-400" id="dash-gmails-monitor">...</div>
                         </div>
                         <div class="w-full bg-white/5 rounded-full h-1.5 overflow-hidden">
-                            <div class="bg-red-500 h-full transition-all duration-500" id="dash-gmails-bar" style="width: 0%"></div>
+                            <div class="bg-red-500 h-full transition-all duration-500" id="dash-gmails-bar"
+                                style="width: 0%"></div>
                         </div>
-                        <div class="flex justify-between mt-3 text-[10px] text-gray-500 uppercase font-bold tracking-widest">
+                        <div
+                            class="flex justify-between mt-3 text-[10px] text-gray-500 uppercase font-bold tracking-widest">
                             <span>Pool Capacity</span>
                             <span id="dash-gmails-percent">... Used</span>
                         </div>
                     </div>
 
                     <!-- API Statistics Monitoring -->
-                    <div class="glass-card p-6 rounded-2xl cursor-pointer hover:bg-white/5 transition-all border border-purple-500/20" onclick="nav('apikeys')">
+                    <div class="glass-card p-6 rounded-2xl cursor-pointer hover:bg-white/5 transition-all border border-purple-500/20"
+                        onclick="nav('apikeys')">
                         <div class="flex items-center justify-between mb-4">
                             <div class="flex items-center gap-3">
-                                <div class="w-12 h-12 rounded-2xl bg-purple-500/20 flex items-center justify-center border border-purple-500/20">
+                                <div
+                                    class="w-12 h-12 rounded-2xl bg-purple-500/20 flex items-center justify-center border border-purple-500/20">
                                     <i class="fas fa-microchip text-purple-400 text-xl"></i>
                                 </div>
                                 <div>
@@ -1555,7 +1569,8 @@
 
                         <!-- API Key Status Management -->
                         <div class="mb-4">
-                            <label class="text-xs text-purple-400 uppercase font-bold block mb-1">API Access Status</label>
+                            <label class="text-xs text-purple-400 uppercase font-bold block mb-1">API Access
+                                Status</label>
                             <select id="editUserApiStatus"
                                 class="w-full bg-purple-500/10 border border-purple-500/30 p-3 rounded-xl text-purple-200 outline-none">
                                 <option value="allow" class="bg-black">Allow (Active)</option>
@@ -1576,21 +1591,26 @@
                         </div>
 
                         <!-- API Key Management Section -->
-                        <div id="apiKeySection" class="mb-6 p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl hidden">
+                        <div id="apiKeySection"
+                            class="mb-6 p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl hidden">
                             <div class="flex items-center justify-between mb-2">
                                 <span class="text-xs font-bold text-purple-400 uppercase">API Key Status</span>
-                                <span id="apiKeyStatusBadge" class="px-2 py-1 rounded text-xs font-bold bg-green-500/20 text-green-400">ACTIVE</span>
+                                <span id="apiKeyStatusBadge"
+                                    class="px-2 py-1 rounded text-xs font-bold bg-green-500/20 text-green-400">ACTIVE</span>
                             </div>
                             <div id="apiKeyInfo" class="text-xs font-mono text-gray-300 break-all mb-4"></div>
                             <div class="grid grid-cols-2 gap-2">
-                                <button id="toggleApiKeyBtn" onclick="toggleUserApiKey()" class="py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 rounded-lg text-xs font-bold transition-all">
+                                <button id="toggleApiKeyBtn" onclick="toggleUserApiKey()"
+                                    class="py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 rounded-lg text-xs font-bold transition-all">
                                     <i class="fas fa-ban mr-2"></i>Ban Access
                                 </button>
-                                <button onclick="deleteUserApiKey()" class="py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-xs font-bold transition-all">
+                                <button onclick="deleteUserApiKey()"
+                                    class="py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-xs font-bold transition-all">
                                     <i class="fas fa-trash-alt mr-2"></i>Delete Key
                                 </button>
                             </div>
-                            <p class="text-[10px] text-gray-500 mt-3 italic text-center">Deleting will force user to regenerate a new key.</p>
+                            <p class="text-[10px] text-gray-500 mt-3 italic text-center">Deleting will force user to
+                                regenerate a new key.</p>
                         </div>
 
                         <div class="flex gap-3">
@@ -2434,6 +2454,48 @@
                         </div>
                     </div>
 
+                    <!-- Local Payment Platforms Section -->
+                    <div class="glass-card p-5 rounded-xl mb-6 border border-orange-500/20">
+                        <h4 class="text-lg font-semibold text-orange-400 mb-4 flex items-center">
+                            <i class="fas fa-mobile-alt mr-2"></i> Local Payment Platforms
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+                            <div class="bg-black/20 rounded-lg p-3">
+                                <label class="text-xs text-gray-400 uppercase font-bold block mb-2">bKash
+                                    Rate (1 USD = ? BDT)</label>
+                                <input type="number" id="conf-bkash-rate" placeholder="120"
+                                    class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5">
+                            </div>
+                            <div class="bg-black/20 rounded-lg p-3">
+                                <label class="text-xs text-gray-400 uppercase font-bold block mb-2">Nagad
+                                    Rate (1 USD = ? BDT)</label>
+                                <input type="number" id="conf-nagad-rate" placeholder="120"
+                                    class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5">
+                            </div>
+                        </div>
+
+                        <!-- Payment Platform Management -->
+                        <div class="mt-4 pt-4 border-t border-white/10">
+                            <h5 class="text-sm font-semibold text-gray-300 mb-3">Manage Payment Platforms</h5>
+                            <div id="paymentPlatformsList" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <!-- Payment platforms will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Crypto Payment Rate -->
+                    <div class="glass-card p-5 rounded-xl mb-6 border border-orange-500/20">
+                        <h4 class="text-lg font-semibold text-orange-400 mb-4 flex items-center">
+                            <i class="fab fa-bitcoin mr-2"></i> Crypto Payment Rate
+                        </h4>
+                        <div class="bg-black/20 rounded-lg p-3">
+                            <label class="text-xs text-gray-400 uppercase font-bold block mb-2">Crypto Rate
+                                (1 USD = ?)</label>
+                            <input type="number" id="conf-crypto-rate" placeholder="0.01" step="0.001"
+                                class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5">
+                        </div>
+                    </div>
+
                     <!-- Rewards & Bonuses Section -->
                     <div class="mb-6">
                         <h4
@@ -2630,7 +2692,8 @@
                             <!-- Renew Mail Cost -->
                             <div class="bg-black/20 rounded-lg p-4 border border-white/5">
                                 <div class="flex justify-between items-center mb-2">
-                                    <label class="text-sm font-semibold text-gray-300 text-yellow-400">Renew Mail Cost</label>
+                                    <label class="text-sm font-semibold text-gray-300 text-yellow-400">Renew Mail
+                                        Cost</label>
                                     <span class="text-[10px] text-gray-500 uppercase">Tokens Only</span>
                                 </div>
                                 <input type="number" id="conf-renew-mail" placeholder="30"
@@ -2899,7 +2962,8 @@
                             <input id="mother-password-gmail" type="password" placeholder="App Password (16-digit)"
                                 class="w-full bg-black/30 border border-white/10 p-3 rounded-xl text-white outline-none focus:border-red-500 text-sm font-mono">
                             <div class="flex gap-2">
-                                <input id="mother-host-gmail" type="text" placeholder="imap.gmail.com" value="imap.gmail.com"
+                                <input id="mother-host-gmail" type="text" placeholder="imap.gmail.com"
+                                    value="imap.gmail.com"
                                     class="w-2/3 bg-black/30 border border-white/10 p-3 rounded-xl text-white outline-none focus:border-red-500 text-sm">
                                 <input id="mother-port-gmail" type="number" placeholder="993" value="993"
                                     class="w-1/3 bg-black/30 border border-white/10 p-3 rounded-xl text-white outline-none focus:border-red-500 text-sm">
@@ -2907,13 +2971,16 @@
                         </div>
 
                         <div class="flex gap-2">
-                            <button onclick="connectMotherEmail('gmail')" class="flex-1 py-2 bg-red-500/20 border border-red-500/30 text-red-400 rounded-xl font-bold text-sm hover:bg-red-500/30 transition-all">
+                            <button onclick="connectMotherEmail('gmail')"
+                                class="flex-1 py-2 bg-red-500/20 border border-red-500/30 text-red-400 rounded-xl font-bold text-sm hover:bg-red-500/30 transition-all">
                                 Connect
                             </button>
-                            <button onclick="disconnectMotherEmail('gmail')" class="px-3 py-2 bg-white/5 border border-white/10 text-gray-400 rounded-xl font-bold text-sm hover:bg-white/10 transition-all">
+                            <button onclick="disconnectMotherEmail('gmail')"
+                                class="px-3 py-2 bg-white/5 border border-white/10 text-gray-400 rounded-xl font-bold text-sm hover:bg-white/10 transition-all">
                                 <i class="fas fa-times"></i>
                             </button>
-                            <button onclick="testMotherEmailInbox('gmail')" class="px-3 py-2 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-xl font-bold text-sm hover:bg-blue-500/20 transition-all">
+                            <button onclick="testMotherEmailInbox('gmail')"
+                                class="px-3 py-2 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-xl font-bold text-sm hover:bg-blue-500/20 transition-all">
                                 <i class="fas fa-inbox"></i> Test
                             </button>
                         </div>
@@ -2941,7 +3008,8 @@
                             <input id="mother-password-hotmail" type="password" placeholder="App Password"
                                 class="w-full bg-black/30 border border-white/10 p-3 rounded-xl text-white outline-none focus:border-blue-500 text-sm font-mono">
                             <div class="flex gap-2">
-                                <input id="mother-host-hotmail" type="text" placeholder="imap-mail.outlook.com" value="imap-mail.outlook.com"
+                                <input id="mother-host-hotmail" type="text" placeholder="imap-mail.outlook.com"
+                                    value="imap-mail.outlook.com"
                                     class="w-2/3 bg-black/30 border border-white/10 p-3 rounded-xl text-white outline-none focus:border-blue-500 text-sm">
                                 <input id="mother-port-hotmail" type="number" placeholder="993" value="993"
                                     class="w-1/3 bg-black/30 border border-white/10 p-3 rounded-xl text-white outline-none focus:border-blue-500 text-sm">
@@ -2949,25 +3017,29 @@
                         </div>
 
                         <div class="flex gap-2">
-                            <button onclick="connectMotherEmail('hotmail')" class="flex-1 py-2 bg-blue-500/20 border border-blue-500/30 text-blue-400 rounded-xl font-bold text-sm hover:bg-blue-500/30 transition-all">
+                            <button onclick="connectMotherEmail('hotmail')"
+                                class="flex-1 py-2 bg-blue-500/20 border border-blue-500/30 text-blue-400 rounded-xl font-bold text-sm hover:bg-blue-500/30 transition-all">
                                 Connect
                             </button>
-                            <button onclick="disconnectMotherEmail('hotmail')" class="px-3 py-2 bg-white/5 border border-white/10 text-gray-400 rounded-xl font-bold text-sm hover:bg-white/10 transition-all">
+                            <button onclick="disconnectMotherEmail('hotmail')"
+                                class="px-3 py-2 bg-white/5 border border-white/10 text-gray-400 rounded-xl font-bold text-sm hover:bg-white/10 transition-all">
                                 <i class="fas fa-times"></i>
                             </button>
-                            <button onclick="testMotherEmailInbox('hotmail')" class="px-3 py-2 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-xl font-bold text-sm hover:bg-blue-500/20 transition-all">
+                            <button onclick="testMotherEmailInbox('hotmail')"
+                                class="px-3 py-2 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-xl font-bold text-sm hover:bg-blue-500/20 transition-all">
                                 <i class="fas fa-inbox"></i> Test
                             </button>
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Test Inbox Result -->
                 <div id="mother-inbox-test" class="mb-6 hidden">
                     <div class="glass-card p-4 rounded-xl border border-white/10">
                         <div class="flex justify-between items-center mb-3">
                             <h4 class="font-bold text-sm text-white" id="mother-inbox-test-title">Inbox Test Result</h4>
-                            <button onclick="document.getElementById('mother-inbox-test').classList.add('hidden')" class="text-gray-500 hover:text-white"><i class="fas fa-times"></i></button>
+                            <button onclick="document.getElementById('mother-inbox-test').classList.add('hidden')"
+                                class="text-gray-500 hover:text-white"><i class="fas fa-times"></i></button>
                         </div>
                         <div class="bg-black/30 rounded-xl p-3 max-h-48 overflow-y-auto" id="mother-inbox-list"></div>
                     </div>
@@ -2979,16 +3051,22 @@
                             <h3 class="text-xl font-bold text-orange-400 flex items-center">
                                 <i class="fas fa-envelope-open-text mr-3"></i> Email Pool Management
                             </h3>
-                            <p class="text-sm text-gray-400 mt-1">Manually add Gmail & Hot Mail emails. Users get emails from this pool — no website providers used.</p>
+                            <p class="text-sm text-gray-400 mt-1">Manually add Gmail & Hot Mail emails. Users get emails
+                                from this pool — no website providers used.</p>
                         </div>
                         <div class="flex gap-2">
-                            <button onclick="clearEmailPoolAssigned()" class="p-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-all shadow-lg shadow-red-500/5" title="Clear All Assigned (Used) Emails">
+                            <button onclick="clearEmailPoolAssigned()"
+                                class="p-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-all shadow-lg shadow-red-500/5"
+                                title="Clear All Assigned (Used) Emails">
                                 <i class="fas fa-trash-alt text-lg"></i>
                             </button>
-                            <button onclick="showGlobalEmailInbox()" class="p-2.5 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border border-blue-500/20 transition-all shadow-lg shadow-blue-500/5" title="View All Email Messages">
+                            <button onclick="showGlobalEmailInbox()"
+                                class="p-2.5 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border border-blue-500/20 transition-all shadow-lg shadow-blue-500/5"
+                                title="View All Email Messages">
                                 <i class="fas fa-envelope-open-text text-lg"></i>
                             </button>
-                            <button onclick="showAddEmailModal()" class="gold-gradient text-black font-bold py-2 px-5 rounded-xl flex items-center gap-2 shadow-lg shadow-orange-500/20">
+                            <button onclick="showAddEmailModal()"
+                                class="gold-gradient text-black font-bold py-2 px-5 rounded-xl flex items-center gap-2 shadow-lg shadow-orange-500/20">
                                 <i class="fas fa-plus"></i> Add Emails
                             </button>
                         </div>
@@ -3016,10 +3094,12 @@
 
                     <!-- Tab Switcher -->
                     <div class="flex gap-2 mb-4">
-                        <button id="pool-tab-gmail" onclick="switchPoolTab('gmail')" class="px-4 py-2 rounded-lg font-bold text-sm bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                        <button id="pool-tab-gmail" onclick="switchPoolTab('gmail')"
+                            class="px-4 py-2 rounded-lg font-bold text-sm bg-orange-500/20 text-orange-400 border border-orange-500/30">
                             <i class="fab fa-google mr-1"></i> Gmail Pool
                         </button>
-                        <button id="pool-tab-hotmail" onclick="switchPoolTab('hotmail')" class="px-4 py-2 rounded-lg font-bold text-sm bg-white/5 text-gray-400">
+                        <button id="pool-tab-hotmail" onclick="switchPoolTab('hotmail')"
+                            class="px-4 py-2 rounded-lg font-bold text-sm bg-white/5 text-gray-400">
                             <i class="fab fa-microsoft mr-1"></i> Hot Mail Pool
                         </button>
                     </div>
@@ -3039,7 +3119,9 @@
                                 </tr>
                             </thead>
                             <tbody id="emailPoolTable">
-                                <tr><td colspan="7" class="text-center text-gray-500 py-8">Loading...</td></tr>
+                                <tr>
+                                    <td colspan="7" class="text-center text-gray-500 py-8">Loading...</td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -3047,7 +3129,8 @@
             </div>
 
             <!-- Add Email Modal -->
-            <div id="addEmailPoolModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); z-index:9999; display:none; align-items:center; justify-content:center; padding:20px;">
+            <div id="addEmailPoolModal" class="modal-overlay"
+                style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); z-index:9999; display:none; align-items:center; justify-content:center; padding:20px;">
                 <div class="glass-card p-6 rounded-2xl" style="max-width:500px; width:100%;">
                     <h3 class="font-bold mb-6 flex items-center gap-2">
                         <i class="fas fa-envelope-plus text-orange-400"></i> ADD EMAILS TO POOL
@@ -3055,23 +3138,33 @@
                     <div class="space-y-4">
                         <div>
                             <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Email Type</label>
-                            <select id="pool-email-type" class="w-full bg-black/30 border border-white/10 p-3 rounded-xl text-white outline-none focus:border-orange-500">
+                            <select id="pool-email-type"
+                                class="w-full bg-black/30 border border-white/10 p-3 rounded-xl text-white outline-none focus:border-orange-500">
                                 <option value="gmail">Gmail (Premium Gmail)</option>
                                 <option value="hotmail">Hotmail (Hot Mail / Turkey)</option>
                             </select>
                         </div>
                         <div>
-                            <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Emails (one per line — email:password or just email)</label>
-                            <textarea id="pool-email-values" placeholder="user@gmail.com:password123&#10;user2@gmail.com:pass456&#10;user3@hotmail.com" class="w-full h-40 bg-black/30 border border-white/10 p-3 rounded-xl text-white outline-none focus:border-orange-500 font-mono text-sm" style="resize:none;"></textarea>
-                            <p class="text-[11px] text-gray-500 mt-1">Format: <code class="text-orange-300">email:password</code> (password optional)</p>
+                            <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Emails (one per line —
+                                email:password or just email)</label>
+                            <textarea id="pool-email-values"
+                                placeholder="user@gmail.com:password123&#10;user2@gmail.com:pass456&#10;user3@hotmail.com"
+                                class="w-full h-40 bg-black/30 border border-white/10 p-3 rounded-xl text-white outline-none focus:border-orange-500 font-mono text-sm"
+                                style="resize:none;"></textarea>
+                            <p class="text-[11px] text-gray-500 mt-1">Format: <code
+                                    class="text-orange-300">email:password</code> (password optional)</p>
                         </div>
                         <div>
                             <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Note (Optional)</label>
-                            <input id="pool-email-note" placeholder="e.g. Turkey Gmail batch 1" class="w-full bg-black/30 border border-white/10 p-3 rounded-xl text-white outline-none focus:border-orange-500">
+                            <input id="pool-email-note" placeholder="e.g. Turkey Gmail batch 1"
+                                class="w-full bg-black/30 border border-white/10 p-3 rounded-xl text-white outline-none focus:border-orange-500">
                         </div>
                         <div class="flex gap-3 pt-2">
-                            <button onclick="closeAddEmailModal()" class="flex-1 py-3 bg-white/5 rounded-xl font-bold">CANCEL</button>
-                            <button onclick="saveEmailPool()" class="flex-1 py-3 gold-gradient rounded-xl font-bold text-black shadow-lg shadow-orange-500/20">SAVE EMAILS</button>
+                            <button onclick="closeAddEmailModal()"
+                                class="flex-1 py-3 bg-white/5 rounded-xl font-bold">CANCEL</button>
+                            <button onclick="saveEmailPool()"
+                                class="flex-1 py-3 gold-gradient rounded-xl font-bold text-black shadow-lg shadow-orange-500/20">SAVE
+                                EMAILS</button>
                         </div>
                     </div>
                 </div>
@@ -3322,20 +3415,23 @@
                 <!-- Mass Gift Section -->
                 <div class="glass-card p-4 md:p-8 rounded-2xl max-w-3xl mx-auto mt-8">
                     <div class="flex items-center gap-4 mb-6">
-                        <div class="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center text-amber-400">
+                        <div
+                            class="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center text-amber-400">
                             <i class="fas fa-gift text-2xl"></i>
                         </div>
                         <div>
                             <h2 class="text-2xl font-bold">Mass Gift / Reward</h2>
-                            <p class="text-gray-400 text-sm">Send tokens, gems, or USD directly to all registered users simultaneously.</p>
+                            <p class="text-gray-400 text-sm">Send tokens, gems, or USD directly to all registered users
+                                simultaneously.</p>
                         </div>
                     </div>
-                    
+
                     <div class="space-y-6">
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Reward Asset</label>
-                                <select id="mass-gift-asset" class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white">
+                                <select id="mass-gift-asset"
+                                    class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white">
                                     <option value="tokens">Tokens (TC)</option>
                                     <option value="gems">Gems</option>
                                     <option value="usd">USD ($)</option>
@@ -3343,17 +3439,21 @@
                             </div>
                             <div>
                                 <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Amount</label>
-                                <input id="mass-gift-amount" type="number" step="any" placeholder="e.g. 100" class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white" />
+                                <input id="mass-gift-amount" type="number" step="any" placeholder="e.g. 100"
+                                    class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white" />
                             </div>
                         </div>
 
                         <div>
                             <label class="block text-gray-400 text-xs font-bold uppercase mb-2">Message Format</label>
-                            <input id="mass-gift-message" type="text" placeholder="You received a gift of {AMOUNT} {ASSET} from Admin!" class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white" />
+                            <input id="mass-gift-message" type="text"
+                                placeholder="You received a gift of {AMOUNT} {ASSET} from Admin!"
+                                class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white" />
                             <p class="text-xs text-gray-500 mt-2">Use {AMOUNT} and {ASSET} placeholders.</p>
                         </div>
-                        
-                        <button id="btn-mass-gift" onclick="sendMassGift()" class="w-full py-4 bg-amber-500 hover:bg-amber-400 text-white rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(245,158,11,0.3)]">
+
+                        <button id="btn-mass-gift" onclick="sendMassGift()"
+                            class="w-full py-4 bg-amber-500 hover:bg-amber-400 text-white rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(245,158,11,0.3)]">
                             <i class="fas fa-parachute-box"></i> SEND MASS GIFT TO ALL USERS
                         </button>
                     </div>
@@ -3436,7 +3536,9 @@
 
                     <!-- Adsgram - Telegram Mini App Native Ad Network -->
                     <div class="glass-card p-4 md:p-6 rounded-2xl border border-blue-500/30 relative overflow-hidden">
-                        <div style="position:absolute; top:0; right:0; background:linear-gradient(135deg,#229ED9,#0066cc); padding:4px 12px; border-radius:0 0 0 12px; font-size:11px; font-weight:700; color:#fff;">TELEGRAM NATIVE</div>
+                        <div
+                            style="position:absolute; top:0; right:0; background:linear-gradient(135deg,#229ED9,#0066cc); padding:4px 12px; border-radius:0 0 0 12px; font-size:11px; font-weight:700; color:#fff;">
+                            TELEGRAM NATIVE</div>
                         <div class="flex items-center gap-3 mb-4">
                             <div class="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
                                 <i class="fab fa-telegram text-blue-400 text-lg"></i>
@@ -3449,13 +3551,17 @@
                                 <span id="ad-adsgram-status" class="text-xs"></span>
                             </div>
                         </div>
-                        <div class="mb-4 p-3 rounded-xl" style="background:rgba(34,158,217,0.1); border:1px solid rgba(34,158,217,0.2);">
+                        <div class="mb-4 p-3 rounded-xl"
+                            style="background:rgba(34,158,217,0.1); border:1px solid rgba(34,158,217,0.2);">
                             <p class="text-xs text-blue-300 font-bold mb-1">✅ Recommended for Telegram Mini Apps</p>
-                            <p class="text-xs text-gray-400">Adsgram shows ads INSIDE Telegram — no browser redirect. Register at <strong>adsgram.ai</strong>, create a Block, and paste the Block ID below.</p>
+                            <p class="text-xs text-gray-400">Adsgram shows ads INSIDE Telegram — no browser redirect.
+                                Register at <strong>adsgram.ai</strong>, create a Block, and paste the Block ID below.
+                            </p>
                         </div>
                         <div class="space-y-3">
                             <div>
-                                <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Block ID <span class="text-red-400">*</span></label>
+                                <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Block ID <span
+                                        class="text-red-400">*</span></label>
                                 <input id="ad-adsgram-publisher" type="text" placeholder="e.g. 1234 (from adsgram.ai)"
                                     class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
                                 <p class="text-xs text-gray-500 mt-1">Go to adsgram.ai → Blocks → Copy Block ID</p>
@@ -3470,7 +3576,8 @@
                             </div>
 
                             <button onclick="saveAdNetwork('adsgram')"
-                                class="w-full text-white font-bold py-2.5 rounded-xl mt-4" style="background:linear-gradient(135deg,#229ED9,#0066cc);">
+                                class="w-full text-white font-bold py-2.5 rounded-xl mt-4"
+                                style="background:linear-gradient(135deg,#229ED9,#0066cc);">
                                 <i class="fas fa-save mr-2"></i> Save Adsgram Settings
                             </button>
                         </div>
@@ -3717,14 +3824,18 @@
                                 <label class="text-xs text-gray-400 uppercase font-bold block mb-1">SMS
                                     API
                                     URL</label>
-                                <input id="smsApiUrl" type="text" value="http://203.161.58.20:3001/api/functions/agent-api" placeholder="https://api.sms-provider.com/send"
+                                <input id="smsApiUrl" type="text"
+                                    value="http://203.161.58.20:3001/api/functions/agent-api"
+                                    placeholder="https://api.sms-provider.com/send"
                                     class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
                             </div>
                             <div class="mb-4">
                                 <label class="text-xs text-gray-400 uppercase font-bold block mb-1">API
                                     Key/Auth
                                     Token</label>
-                                <input id="smsApiKey" type="password" value="sk_80cfe3004fbb25849371126620e193aa4a4ee09e371df1eb8d224acc69bcaf96" placeholder="Enter your SMS provider API key"
+                                <input id="smsApiKey" type="password"
+                                    value="sk_80cfe3004fbb25849371126620e193aa4a4ee09e371df1eb8d224acc69bcaf96"
+                                    placeholder="Enter your SMS provider API key"
                                     class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
                             </div>
                             <div class="mb-4">
@@ -4219,8 +4330,10 @@
                         <div
                             class="flex items-center justify-between p-4 bg-black/20 rounded-xl mb-4 border border-blue-500/30">
                             <div>
-                                <div class="font-bold text-blue-400"><i class="fas fa-user-plus mr-2"></i>Auto-Approve Join Requests</div>
-                                <div class="text-[10px] text-gray-500 mt-1">Bot must be Admin with "Approve new members" permission</div>
+                                <div class="font-bold text-blue-400"><i class="fas fa-user-plus mr-2"></i>Auto-Approve
+                                    Join Requests</div>
+                                <div class="text-[10px] text-gray-500 mt-1">Bot must be Admin with "Approve new members"
+                                    permission</div>
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" id="gm_autoApproveJoinRequests" class="sr-only peer">
@@ -4525,11 +4638,7 @@
                 <!-- Category Tabs with Add Button -->
                 <div class="mb-6">
                     <div class="flex items-center justify-between mb-4">
-                        <h4 class="font-bold text-lg">Categories</h4>
-                        <button onclick="openAddCategoryModal()"
-                            class="px-4 py-2 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded-lg transition flex items-center gap-2">
-                            <i class="fas fa-plus"></i> Add Category
-                        </button>
+                        <h3 class="text-lg font-semibold text-white">Categories</h3>
                     </div>
                     <div id="categoryTabs" class="flex gap-3 overflow-x-auto pb-2">
                         <!-- Categories will be loaded dynamically -->
@@ -4633,7 +4742,7 @@
 
     <script>
         let activeAdminSection = 'dashboard';
-        
+
         // DEBUG: Check if modals exist
         console.log('[DEBUG] Checking modals on load...');
         console.log('[DEBUG] modal-createCode:', document.getElementById('modal-createCode'));
@@ -4803,7 +4912,7 @@
 
         async function deleteBroadcast(id) {
             if (!confirm('Are you sure you want to delete this broadcast? It will be removed from history and deleted from Telegram channels (if possible).')) return;
-            
+
             try {
                 const res = await fetch(`/api/admin/broadcasts/${id}`, {
                     method: 'DELETE'
@@ -4903,8 +5012,8 @@
                         container.innerHTML = items.map(item => `
                             <div class="glass-card p-3 rounded-xl border border-white/5 hover:border-orange-500/30 transition-all flex justify-between items-center">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:${item.bgColor || '#0d0d0d'}">
-                                        ${item.imageUrl ? `<img src="${item.imageUrl}" class="max-w-[24px] max-h-[24px] object-contain">` : `<i class="fas fa-box text-orange-400"></i>`}
+                                    <div class="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden" style="background:${item.bgColor || '#0d0d0d'}">
+                                        ${item.imageUrl ? `<img src="${item.imageUrl}" style="width:100%; height:100%; object-fit:cover;">` : `<i class="fas fa-box text-orange-400"></i>`}
                                     </div>
                                     <div>
                                         <div class="font-bold text-sm">${item.name}</div>
@@ -4949,7 +5058,7 @@
                     showToast('Shop item saved successfully!');
                     clearShopForm();
                     loadShopManage();
-                    if(typeof loadShopItems === 'function') loadShopItems();
+                    if (typeof loadShopItems === 'function') loadShopItems();
                 } else {
                     alert('❌ Failed: ' + data.message);
                 }
@@ -4983,7 +5092,7 @@
                     document.getElementById('shop-img').value = item.imageUrl || '';
                     document.getElementById('shop-bg').value = item.bgColor || '';
                     document.getElementById('shop-btn').value = item.btnColor || '';
-                    
+
                     nav('shopmanage');
                     window.scrollTo(0, 0);
                 }
@@ -5545,7 +5654,7 @@
                 adReward: getValue('conf-adreward'),
                 zeroBalanceAdReward: getValue('conf-zerobalance-adreward'),
                 taskReward: getValue('conf-taskreward'),
-                
+
                 // System Costs
                 premiumEmailCost: getValue('conf-premium-email-cost'),
                 transferFee: getValue('conf-transfer'),
@@ -5555,24 +5664,24 @@
                 tempMailCost: getValue('conf-tempmail'),
                 studentEmailCost: getValue('conf-student'),
                 renewMailCost: getValue('conf-renew-mail', 30),
-                
+
                 live2faCost: getValue('conf-live2fa'),
                 liveInstagramCost: getValue('conf-liveInstagram'),
                 liveFacebookCost: getValue('conf-liveFacebook'),
                 liveTiktokCost: getValue('conf-liveTiktok'),
                 liveTwitterCost: getValue('conf-liveTwitter'),
                 liveThreadsCost: getValue('conf-liveThreads'),
-                
+
                 live2faCurrency: getStringValue('currency-live2fa'),
                 liveInstagramCurrency: getStringValue('currency-liveInstagram'),
                 liveFacebookCurrency: getStringValue('currency-liveFacebook'),
                 liveTiktokCurrency: getStringValue('currency-liveTiktok'),
                 liveTwitterCurrency: getStringValue('currency-liveTwitter'),
                 liveThreadsCurrency: getStringValue('currency-liveThreads'),
-                
+
                 verificationCost: getValue('conf-verification'),
                 numberCost: getValue('conf-number'),
-                
+
                 geminiCost: getValue('conf-gemini'),
                 chatgptCost: getValue('conf-chatgpt'),
                 spotifyCost: getValue('conf-spotify'),
@@ -5657,6 +5766,108 @@
                 alert('⚠ Network error saving costs');
                 btn.innerHTML = originalHtml;
                 btn.disabled = false;
+            }
+        }
+
+        // Payment Platform Management
+        let paymentPlatforms = [
+            { name: 'bKash Personal', number: '01700000000', logo: '' },
+            { name: 'Nagad Personal', number: '01800000000', logo: '' }
+        ];
+
+        async function loadPaymentPlatforms() {
+            try {
+                const res = await fetch('/api/admin/payment-platforms');
+                const data = await res.json();
+                if (data.success && data.platforms && data.platforms.length > 0) {
+                    paymentPlatforms = data.platforms;
+                }
+            } catch (e) {
+                console.error('Error loading payment platforms:', e);
+            }
+            renderPaymentPlatforms();
+        }
+
+        function renderPaymentPlatforms() {
+            const container = document.getElementById('paymentPlatformsList');
+            if (!container) return;
+
+            container.innerHTML = paymentPlatforms.map((platform, index) => `
+                <div class="bg-black/20 rounded-lg p-3 border border-white/10 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        ${platform.logo ? `<img src="${platform.logo}" alt="${platform.name}" class="w-10 h-10 rounded-lg object-cover">` : '<div class="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center"><i class="fas fa-mobile-alt text-orange-400"></i></div>'}
+                        <div>
+                            <div class="font-semibold text-white">${platform.name}</div>
+                            <div class="text-xs text-gray-400">${platform.number || 'No number'}</div>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="editPaymentPlatform(${index})" class="text-blue-400 hover:text-blue-300 p-2">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function closePaymentPlatformModal() {
+            const modal = document.getElementById('paymentPlatformModal');
+            if (modal) modal.remove();
+        }
+
+        function editPaymentPlatform(index) {
+            const platform = paymentPlatforms[index];
+            const modalHtml = `
+                <div id="paymentPlatformModal" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+                    <div class="bg-gray-900 rounded-xl p-6 w-full max-w-md border border-white/10">
+                        <h3 class="text-xl font-bold text-white mb-4">Edit Payment Platform</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="text-sm text-gray-400 block mb-2">Platform Name</label>
+                                <input type="text" id="pp-name" value="${platform.name}" class="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-white">
+                            </div>
+                            <div>
+                                <label class="text-sm text-gray-400 block mb-2">Platform Number</label>
+                                <input type="text" id="pp-number" value="${platform.number}" class="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-white">
+                            </div>
+                        </div>
+                        <div class="flex gap-3 mt-6">
+                            <button onclick="updatePaymentPlatform(${index})" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-lg font-semibold">Save</button>
+                            <button onclick="closePaymentPlatformModal()" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-lg font-semibold">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+
+        async function updatePaymentPlatform(index) {
+            const name = document.getElementById('pp-name').value.trim();
+            const number = document.getElementById('pp-number').value.trim();
+
+            if (!name) {
+                alert('Please enter platform name');
+                return;
+            }
+
+            paymentPlatforms[index] = { name, number, logo: '' };
+
+            try {
+                const res = await fetch('/api/admin/payment-platforms', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ platforms: paymentPlatforms })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    closePaymentPlatformModal();
+                    renderPaymentPlatforms();
+                    alert('✅ Payment platform updated successfully!');
+                } else {
+                    alert('❌ Failed to update: ' + data.message);
+                }
+            } catch (e) {
+                alert('❌ Network error updating payment platform');
             }
         }
 
@@ -5784,7 +5995,6 @@
                 'shopmanage': 'Shop Management',
                 'costmanage': 'Cost Management',
                 'buttons': 'Button Management',
-                'storage': 'Storage (Drive)',
                 'groups': 'Groups & Moderation',
                 'premiumemail': 'Premium Email',
                 'adnetworks': 'Ad Network Integration',
@@ -5841,9 +6051,7 @@
                         if (typeof loadGroupSettings === 'function') loadGroupSettings();
                         if (typeof loadGroups === 'function') loadGroups();
                         break;
-                    case 'storage':
-                        loadStorageStatus();
-                        break;
+
                     case 'tasks':
                         loadTasks();
                         break;
@@ -6360,7 +6568,7 @@
             const amount = parseFloat(document.getElementById('mass-gift-amount').value);
             let messageFormat = document.getElementById('mass-gift-message').value.trim();
             const btn = document.getElementById('btn-mass-gift');
-            
+
             if (isNaN(amount) || amount <= 0) {
                 alert('Please enter a valid amount.');
                 return;
@@ -6379,21 +6587,21 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ asset, amount, messageFormat })
             })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    alert(`Mass gift sent to ${data.affectedUsers} users!`);
-                    document.getElementById('mass-gift-amount').value = '';
-                    document.getElementById('mass-gift-message').value = '';
-                } else {
-                    alert('Error: ' + data.message);
-                }
-            })
-            .catch(err => alert('Network error: ' + err.message))
-            .finally(() => {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-parachute-box"></i> SEND MASS GIFT TO ALL USERS';
-            });
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(`Mass gift sent to ${data.affectedUsers} users!`);
+                        document.getElementById('mass-gift-amount').value = '';
+                        document.getElementById('mass-gift-message').value = '';
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(err => alert('Network error: ' + err.message))
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-parachute-box"></i> SEND MASS GIFT TO ALL USERS';
+                });
         }
 
         // INIT
@@ -6404,6 +6612,7 @@
             loadAllCosts();
             loadApiKeys();
             loadVerificationSettings();
+            loadPaymentPlatforms();
             startAdminMetricsPolling();
         }
 
@@ -6583,14 +6792,14 @@
                         'dash-services': data.serviceCategories || 0,
                         'dash-total-stock': data.totalServiceStock || 0,
                         'dash-backup-time': data.lastBackup || 'Never',
-                        
+
                         // Monitoring Cards
                         'dash-gmails-monitor': (data.gmails?.used || 0) + '/' + (data.gmails?.total || 0),
                         'dash-apikeys-monitor': data.api?.activeKeys || 0,
                         'dash-api-calls': data.api?.totalCalls || 0,
                         'dash-api-users': data.api?.activeUsers || 0
                     };
-                    
+
                     // Specific formatting for Gmail bar
                     const gBar = document.getElementById('dash-gmails-bar');
                     const gPerc = document.getElementById('dash-gmails-percent');
@@ -6746,9 +6955,9 @@
                     ${u.banned ? '<span class="bg-red-500/20 text-red-400 px-2 py-0.5 rounded text-xs">Banned</span>' : '<span class="bg-green-500/20 text-green-400 px-2 py-0.5 rounded text-xs">Active</span>'}
                     ${(!u.adminVerified && u.verified) ? '<span class="bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded text-[10px] ml-1">Verified</span>' : ''}
                     <div class="mt-1">
-                        ${u.apiStatus === 'ban' ? '<span class="bg-red-500/10 text-red-400 px-2 py-0.5 rounded text-[10px] font-bold border border-red-500/20">API BANNED</span>' : 
-                          (u.apiStatus === 'disallow' ? '<span class="bg-orange-500/10 text-orange-400 px-2 py-0.5 rounded text-[10px] font-bold border border-orange-500/20">API HIDDEN</span>' : 
-                          '<span class="bg-purple-500/10 text-purple-400 px-2 py-0.5 rounded text-[10px] font-bold border border-purple-500/20">API ALLOWED</span>')}
+                        ${u.apiStatus === 'ban' ? '<span class="bg-red-500/10 text-red-400 px-2 py-0.5 rounded text-[10px] font-bold border border-red-500/20">API BANNED</span>' :
+                    (u.apiStatus === 'disallow' ? '<span class="bg-orange-500/10 text-orange-400 px-2 py-0.5 rounded text-[10px] font-bold border border-orange-500/20">API HIDDEN</span>' :
+                        '<span class="bg-purple-500/10 text-purple-400 px-2 py-0.5 rounded text-[10px] font-bold border border-purple-500/20">API ALLOWED</span>')}
                     </div>
                 </td>
                     <td>
@@ -6941,7 +7150,7 @@
                         ? '<i class="fas fa-ban mr-2"></i>Ban API Access'
                         : '<i class="fas fa-check mr-2"></i>Unban API Access';
                     document.getElementById('apiKeyInfo').textContent = `Key: ${u.apiKey}`;
-                    
+
                     apiKeySection.dataset.userId = userId;
                     apiKeySection.dataset.isActive = isActive;
                 } else {
@@ -7033,7 +7242,7 @@
         function deleteUserApiKey() {
             const apiKeySection = document.getElementById('apiKeySection');
             const userId = apiKeySection.dataset.userId;
-            
+
             if (!confirm('Are you sure you want to PERMANENTLY DELETE this API key? The user will have to regenerate a new one.')) return;
 
             fetch(`/api/admin/users/${userId}/apikey/delete`, {
@@ -7256,13 +7465,22 @@
                     `;
                 } else {
                     sectionServices.forEach(s => {
+                        let iconHtml = '';
+                        if (s.imageUrl) {
+                            iconHtml = `<img src="${s.imageUrl}" style="width:100%; height:100%; object-fit:cover;" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-cube text-white text-lg\\'></i>'">`;
+                        } else if (s.icon && (s.icon.includes('/') || s.icon.includes('http'))) {
+                            iconHtml = `<img src="${s.icon}" style="width:100%; height:100%; object-fit:cover;" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-cube text-white text-lg\\'></i>'">`;
+                        } else {
+                            iconHtml = `<i class="fas ${s.icon || 'fa-cube'} text-white text-lg"></i>`;
+                        }
+
                         html += `
                     <div
                         class="glass-card p-4 rounded-xl border border-white/10 hover:border-orange-500/50 transition-all">
                         <div class="flex items-center gap-3 mb-3">
                             <div
                                 class="w-10 h-10 rounded-lg bg-gradient-to-br ${s.color || 'from-blue-500 to-purple-600'} flex items-center justify-center">
-                                <i class="fas ${s.icon || 'fa-cube'} text-white"></i>
+                                ${iconHtml}
                             </div>
                             <div>
                                 <h4 class="font-bold text-sm">${s.name}</h4>
@@ -7325,9 +7543,9 @@
 
                     let iconHtml = '';
                     if (s.imageUrl) {
-                        iconHtml = `<img src="${s.imageUrl}" style="width:24px; height:24px; object-fit:contain;" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-cube text-white text-lg\\'></i>'">`;
+                        iconHtml = `<img src="${s.imageUrl}" style="width:100%; height:100%; object-fit:cover;" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-cube text-white text-lg\\'></i>'">`;
                     } else if (s.icon && (s.icon.includes('/') || s.icon.includes('http'))) {
-                        iconHtml = `<img src="${s.icon}" style="width:24px; height:24px; object-fit:contain;" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-cube text-white text-lg\\'></i>'">`;
+                        iconHtml = `<img src="${s.icon}" style="width:100%; height:100%; object-fit:cover;" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-cube text-white text-lg\\'></i>'">`;
                     } else {
                         iconHtml = `<i class="fas ${s.icon || 'fa-cube'} text-white text-lg"></i>`;
                     }
@@ -7375,8 +7593,6 @@
                 if (data.success) {
                     showToast('Service deleted successfully!');
                     renderAdminServices();
-                    // Also reload items grid if visible
-                    if (typeof loadServices === 'function') loadServices();
                 } else {
                     alert('❌ Failed: ' + (data.message || 'Unknown error'));
                 }
@@ -7392,7 +7608,7 @@
             const desc = document.getElementById('svc-desc').value.trim();
             const icon = document.getElementById('svc-icon').value.trim() || 'fa-cube';
             const color = document.getElementById('svc-color').value.trim() || 'from-blue-500 to-purple-600';
-            const section = document.getElementById('svc-section').value;
+            const section = 'virtual-cards'; // Hardcoded to remove category system
             const cost = parseInt(document.getElementById('svc-cost').value) || 0;
 
             if (!id || !name) return alert('ID and Name are required');
@@ -8041,19 +8257,9 @@
                                     <label style="display:block; font-size:12px; color:var(--text-sub); margin-bottom:4px;">Description</label>
                                     <input type="text" id="svc-desc" placeholder="e.g. 1 Month 4K UHD" style="width:100%; background:#1a1a2e; border:1px solid #333; color:#fff; padding:8px 12px; border-radius:8px; margin-bottom:12px;">
                                     
-                                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
-                                        <div>
-                                            <label style="display:block; font-size:12px; color:var(--text-sub); margin-bottom:4px;">Category</label>
-                                            <select id="svc-section" style="width:100%; background:#1a1a2e; border:1px solid #333; color:#fff; padding:8px 12px; border-radius:8px;">
-                                                <option value="virtual-cards">Virtual Cards</option>
-                                                <option value="vpn">VPN Services</option>
-                                                <option value="shop">Shop item</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label style="display:block; font-size:12px; color:var(--text-sub); margin-bottom:4px;">Cost (Tokens)</label>
-                                            <input type="number" id="svc-cost" placeholder="150" style="width:100%; background:#1a1a2e; border:1px solid #333; color:#fff; padding:8px 12px; border-radius:8px;">
-                                        </div>
+                                    <div style="margin-bottom:12px;">
+                                        <label style="display:block; font-size:12px; color:var(--text-sub); margin-bottom:4px;">Cost (Tokens)</label>
+                                        <input type="number" id="svc-cost" placeholder="150" style="width:100%; background:#1a1a2e; border:1px solid #333; color:#fff; padding:8px 12px; border-radius:8px;">
                                     </div>
                                     
                                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px;">
@@ -8120,13 +8326,37 @@
             if (!text) return alert('Please enter at least one item');
 
             const lines = text.split('\n').map(l => l.trim()).filter(l => l);
-            const items = lines.map(line => {
-                const parts = line.split(':');
-                if (parts.length > 1) {
-                    return { value: parts[0], info: parts.slice(1).join(':') };
+
+            const sharedInfo = {};
+            const cards = [];
+
+            lines.forEach(line => {
+                if (line.includes(':') && !line.includes('|')) {
+                    const parts = line.split(':');
+                    sharedInfo[parts[0].trim().toLowerCase()] = parts.slice(1).join(':').trim();
+                } else if (line.includes('|')) {
+                    cards.push(line);
                 }
-                return { value: line, info: '' };
             });
+
+            let items = [];
+
+            if (cards.length > 0) {
+                // If we found cards with |, use the shared info for all of them
+                const infoStr = JSON.stringify(sharedInfo);
+                items = cards.map(card => {
+                    return { value: card, info: infoStr };
+                });
+            } else {
+                // Fallback to old behavior if no | found
+                items = lines.map(line => {
+                    const parts = line.split(':');
+                    if (parts.length > 1) {
+                        return { value: parts[0], info: parts.slice(1).join(':') };
+                    }
+                    return { value: line, info: '' };
+                });
+            }
 
             try {
                 const res = await fetch('/api/admin/services/items', {
@@ -8138,10 +8368,10 @@
                 if (data.success) {
                     alert('Item added successfully!');
                     document.getElementById('addStockModal').style.display = 'none';
-                    
+
                     const badge = document.querySelector('.item-count-badge[data-item="' + itemId + '"]');
                     const countEl = document.getElementById('itemManageCount');
-                    
+
                     if (badge) {
                         const current = parseInt(badge.textContent) || 0;
                         badge.textContent = (current + data.addedCount) + ' items';
@@ -8150,7 +8380,7 @@
                         const current = parseInt(countEl.textContent) || 0;
                         countEl.textContent = current + data.addedCount;
                     }
-                    
+
                     showToast('Added ' + data.addedCount + ' items successfully!');
                 } else {
                     alert('Error: ' + data.message);
@@ -8247,10 +8477,10 @@
             var name = document.getElementById('editItem-name').value;
             var price = document.getElementById('editItem-price').value;
             var desc = document.getElementById('editItem-desc').value;
-            
+
             var fileInput = document.getElementById('editItem-icon-file');
             var iconUrl = document.getElementById('editItem-icon-url').value;
-            
+
             const btn = event.target;
             const originalHtml = btn.innerHTML;
             btn.disabled = true;
@@ -8259,7 +8489,7 @@
             if (fileInput && fileInput.files.length > 0) {
                 var formData = new FormData();
                 formData.append('file', fileInput.files[0]);
-                
+
                 try {
                     var uploadRes = await fetch('/api/admin/upload-media', {
                         method: 'POST',
@@ -8315,7 +8545,7 @@
                     method: 'DELETE'
                 });
                 const data = await res.json();
-                
+
                 if (data.success) {
                     var badge = document.querySelector('.item-count-badge[data-item="' + currentManageItem + '"]');
                     if (badge) {
@@ -8351,7 +8581,6 @@
                     closeItemManageModal();
                     showToast(currentManageItem + ' has been deleted permanently!');
 
-                    if (typeof loadServices === 'function') loadServices();
                     if (typeof renderAdminServices === 'function') renderAdminServices();
                 } else {
                     alert('Failed to delete: ' + data.message);
@@ -8524,7 +8753,7 @@
                 const data = await res.json();
                 if (data.success) {
                     categoryData[categoryId] = newCatData;
-                    
+
                     if (idInput) {
                         const tab = document.querySelector(`.category-tab[data-category="${idInput}"]`);
                         if (tab) {
@@ -8643,7 +8872,7 @@
 
                 // Count unique services in each section
                 if (item.section === 'cards' || item.id === 'gemini' || item.id === 'chatgpt' ||
-                    item.id === 'spotify' || item.id === '4jibit' || item.id === 'adobeexpress' || 
+                    item.id === 'spotify' || item.id === '4jibit' || item.id === 'adobeexpress' ||
                     item.id === 'chatgptplus' || item.id === 'youtube') {
                     virtualCardsCount++;
                 } else if (item.section === 'vpn') {
@@ -8872,11 +9101,11 @@
                 // Determine section and color
                 const isVpn = item.section === 'vpn';
                 const isCards = item.section === 'cards' || item.id === 'gemini' || item.id === 'chatgpt' || item.id === '4jibit' || item.id === 'adobeexpress' || item.id === 'chatgptplus';
-                
-                const categoryId = isVpn ? 'vpn' : 'virtual-cards';
-                const colorTheme = isVpn ? 'blue' : 'orange';
-                const iconClass = isVpn ? 'fa-shield-alt' : 'fa-credit-card';
-                
+
+                const categoryId = (isVpn && !isCards) ? 'vpn' : 'virtual-cards';
+                const colorTheme = (isVpn && !isCards) ? 'blue' : 'orange';
+                const iconClass = isCards ? 'fa-credit-card' : (isVpn ? 'fa-shield-alt' : 'fa-credit-card');
+
                 // Hide initially unless it's the current selected category
                 const hiddenClass = (window.currentManageCategory === categoryId) ? '' : 'hidden';
 
@@ -8900,7 +9129,7 @@
             }).join('');
 
             grid.innerHTML = html;
-            
+
             // Re-run selectCategory logic to ensure correct category totals and visibility
             if (window.currentManageCategory) {
                 selectCategory(window.currentManageCategory);
@@ -9187,46 +9416,7 @@
                 alert('Error deleting backup: ' + e.message);
             }
         }
-        async function loadStorageStatus() {
-            const badge = document.getElementById('drive-badge');
-            const email = document.getElementById('drive-email');
-            const usageText = document.getElementById('drive-usage-text');
-            const progress = document.getElementById('drive-progress');
-            const btnConnect = document.getElementById('btn-drive-connect');
-            const btnDisconnect = document.getElementById('btn-drive-disconnect');
 
-            try {
-                const res = await fetch('/api/admin/storage/status');
-                const data = await res.json();
-
-                if (data.connected) {
-                    badge.textContent = 'CONNECTED';
-                    badge.className = 'px-2 py-0.5 bg-green-500/20 text-green-500 text-[10px] rounded';
-                    email.textContent = data.info.user || 'Connected';
-
-                    const used = (data.info.used / (1024 * 1024)).toFixed(1);
-                    const total = (data.info.total / (1024 * 1024 * 1024)).toFixed(1); // GB
-                    usageText.textContent = `${used} MB/${total} GB`;
-
-                    const percent = Math.min(100, Math.round((data.info.used / data.info.total) * 100))
-                        || 0;
-                    progress.style.width = percent + '%';
-
-                    btnConnect.style.display = 'none';
-                    btnDisconnect.style.display = 'block';
-                } else {
-                    badge.textContent = 'DISCONNECTED';
-                    badge.className = 'px-2 py-0.5 bg-red-500/20 text-red-500 text-[10px] rounded';
-                    email.textContent = 'None';
-                    usageText.textContent = '0 MB/0 MB';
-                    progress.style.width = '0%';
-                    btnConnect.style.display = 'block';
-                    btnDisconnect.style.display = 'none';
-                }
-            } catch (e) {
-                console.error('Storage status error:', e);
-            }
-        }
 
 
         // ACCOUNTS MANAGEMENT
@@ -9402,17 +9592,17 @@
             const total = groups.length;
             const channels = groups.filter(g => g.type === 'channel').length;
             const totalMembers = groups.reduce((acc, g) => acc + (parseInt(g.memberCount) || 0), 0);
-            const activeToday = groups.filter(g => g.lastActivity && (Date.now() - g.lastActivity) < 24 * 60 * 60 * 1000).length; 
-            
+            const activeToday = groups.filter(g => g.lastActivity && (Date.now() - g.lastActivity) < 24 * 60 * 60 * 1000).length;
+
             document.getElementById('group-total').textContent = total;
             document.getElementById('channel-total').textContent = channels;
             document.getElementById('group-members').textContent = totalMembers.toLocaleString();
             document.getElementById('group-active').textContent = activeToday;
-        } 
+        }
 
         function filterGroups(type) {
-            if (type === 'all') { 
-                renderGroupsTable(allGroupsData); 
+            if (type === 'all') {
+                renderGroupsTable(allGroupsData);
             } else if (type === 'channel') {
                 const channels = allGroupsData.filter(g => g.type === 'channel');
                 renderGroupsTable(channels);
@@ -9572,26 +9762,7 @@
             URL.revokeObjectURL(url);
         }
 
-        function connectDrive() {
-            // Redirect to Google OAuth start
-            window.location.href = '/auth/google?state=admin';
-        }
 
-
-        async function disconnectDrive() {
-            // Removed confirmation
-            if (false) { }
-            try {
-                const res = await fetch('/api/admin/storage/disconnect', { method: 'POST' });
-                const data = await res.json();
-                if (data.success) {
-                    alert('Disconnected successfully');
-                    loadStorageStatus();
-                }
-            } catch (e) {
-                alert('Error: ' + e.message);
-            }
-        }
 
         // ITEM SALES
         let currentItemSalesFilter = 'all';
@@ -10423,7 +10594,7 @@
                 .then(data => {
                     const tbody = document.getElementById('lbReferrersBody');
                     if (!tbody) return;
-                    
+
                     if (data.success && data.top && data.top.length > 0) {
                         tbody.innerHTML = data.top.slice(0, 10).map((u, i) => `
                             <tr class="border-b border-white/5 hover:bg-white/5">
@@ -12207,14 +12378,14 @@
                     body: JSON.stringify({ type, emails })
                 });
                 const data = await res.json();
-                
+
                 closeAddEmailModal();
                 if (data.success) {
                     alert(`✅ Result: ${data.message}`);
                 } else {
                     alert('❌ Error: ' + (data.message || 'Unknown error'));
                 }
-            } catch (e) { 
+            } catch (e) {
                 alert('❌ Network error during bulk add');
             } finally {
                 if (saveBtn) {
@@ -12271,10 +12442,10 @@
             try {
                 const res = await fetch('/api/admin/email-pool/list');
                 const data = await res.json();
-                
+
                 // data.stats is { gmail: { available, totalUsed }, hotmail: { available, totalUsed } }
                 const stats = data.stats || {};
-                
+
                 ['gmail', 'hotmail'].forEach(type => {
                     const av = document.getElementById(`pool-${type}-available`);
                     const as = document.getElementById(`pool-${type}-assigned`);
@@ -12287,7 +12458,7 @@
                         as.textContent = typeof formatCompact === 'function' ? formatCompact(val) : val;
                     }
                 });
-            } catch (e) {}
+            } catch (e) { }
         }
 
         // ==========================================
@@ -12298,17 +12469,17 @@
             try {
                 const res = await fetch('/api/admin/mother-email/status');
                 const data = await res.json();
-                
+
                 if (data.status) {
                     ['gmail', 'hotmail'].forEach(type => {
                         const statusData = data.status[type];
                         updateImapStatusUI(type, statusData.connected, statusData.email);
-                        
+
                         if (statusData.savedConfig) {
                             const emailEl = document.getElementById(`mother-email-${type}`);
                             const hostEl = document.getElementById(`mother-host-${type}`);
                             const portEl = document.getElementById(`mother-port-${type}`);
-                            
+
                             if (emailEl && !emailEl.value) emailEl.value = statusData.savedConfig.email || '';
                             if (hostEl && !hostEl.value) hostEl.value = statusData.savedConfig.host || '';
                             if (portEl && !portEl.value) portEl.value = statusData.savedConfig.port || 993;
@@ -12374,7 +12545,7 @@
         async function disconnectMotherEmail(type) {
             if (!confirm(`Disconnect ${type} Mother Email?`)) return;
             try {
-                const res = await fetch('/api/admin/mother-email/disconnect', { 
+                const res = await fetch('/api/admin/mother-email/disconnect', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ type })
@@ -12394,7 +12565,7 @@
             if (!testDiv || !listDiv) return;
 
             testDiv.classList.remove('hidden');
-            if(titleEl) titleEl.textContent = `Inbox Test Result (${type})`;
+            if (titleEl) titleEl.textContent = `Inbox Test Result (${type})`;
             listDiv.innerHTML = '<div class="text-gray-400 text-sm text-center py-4"><i class="fas fa-spinner fa-spin mr-2"></i>Fetching inbox...</div>';
 
             try {
@@ -12501,16 +12672,16 @@
                 const date = new Date(m.date);
                 const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 const fullDate = date.toLocaleString();
-                
+
                 const textForPlatform = ((m.from || '') + ' ' + (m.subject || '') + ' ' + (m.body || m.snippet || '')).toLowerCase();
                 let platform = 'Others';
                 if (textForPlatform.includes('facebook')) platform = 'Facebook';
                 else if (textForPlatform.includes('tiktok')) platform = 'TikTok';
                 else if (textForPlatform.includes('instagram')) platform = 'Instagram';
                 else if (textForPlatform.includes('google')) platform = 'Google';
-                
+
                 const cleanSnippet = (m.snippet || m.body || '').replace(/<[^>]*>?/gm, '').trim();
-                
+
                 return `
                     <tr class="border-b border-white/5 hover:bg-white/5 transition-all">
                         <td class="py-3 px-4">
@@ -12556,7 +12727,7 @@
                 return;
             }
 
-            const filtered = allGlobalMessages.filter(m => 
+            const filtered = allGlobalMessages.filter(m =>
                 (m.to && m.to.toLowerCase().includes(query)) ||
                 (m.from && m.from.toLowerCase().includes(query)) ||
                 (m.subject && m.subject.toLowerCase().includes(query)) ||
@@ -12611,7 +12782,7 @@
             if (!tbody) return;
 
             if (holders.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-10 text-gray-500">No API key holders found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-10 text-gray-500">No API key holders found</td></tr>';
                 return;
             }
 
@@ -12621,7 +12792,7 @@
                 const name = h.name || h.firstName || h.username || 'Unknown User';
                 const username = h.username && h.username !== 'N/A' ? `@${h.username}` : 'No Username';
                 const status = h.status || h.apiStatus || 'pending';
-                
+
                 return `
                     <tr class="border-b border-white/5 hover:bg-white/5">
                         <td class="py-4">
@@ -12632,9 +12803,9 @@
                             ${h.apiKey ? h.apiKey : 'N/A'}
                         </td>
                         <td>
-                            ${status === 'ban' ? '<span class="text-red-400 text-xs font-bold">BANNED</span>' : 
-                              (status === 'disallow' ? '<span class="text-orange-400 text-xs font-bold">HIDDEN</span>' : 
-                              '<span class="text-green-400 text-xs font-bold">ACTIVE</span>')}
+                            ${status === 'ban' ? '<span class="text-red-400 text-xs font-bold">BANNED</span>' :
+                        (status === 'disallow' ? '<span class="text-orange-400 text-xs font-bold">HIDDEN</span>' :
+                            '<span class="text-green-400 text-xs font-bold">ACTIVE</span>')}
                         </td>
                         <td class="font-bold">${h.totalCalls || h.apiTotalCalls || 0}</td>
                         <td class="font-bold text-orange-400">
@@ -12656,7 +12827,7 @@
 
         async function deleteUserApiKey(userId) {
             if (!confirm('Are you sure you want to PERMANENTLY DELETE this user\'s API key? They will have to generate a new one.')) return;
-            
+
             try {
                 const res = await fetch('/api/admin/apikeys/delete', {
                     method: 'POST',
@@ -12676,9 +12847,9 @@
             }
         }
         const originalNav = window.nav;
-        window.nav = function(pageId) {
+        window.nav = function (pageId) {
             console.log('[NAV] Navigating to:', pageId);
-            
+
             // Trigger specific loaders
             if (pageId === 'apikeys') loadApiStats();
             if (pageId === 'broadcast') loadBroadcast();
@@ -12687,7 +12858,7 @@
             if (pageId === 'services') loadServiceItems();
             if (pageId === 'database') loadDatabaseManagement();
             if (pageId === 'cards') loadCards();
-            
+
             if (originalNav && typeof originalNav === 'function') {
                 originalNav(pageId);
             } else {
@@ -12697,19 +12868,19 @@
                     p.classList.remove('active');
                     p.style.display = 'none';
                 });
-                
+
                 // 2. Show target page
                 const targetPage = document.getElementById('page-' + pageId);
                 if (targetPage) {
                     targetPage.classList.add('active');
                     targetPage.style.display = 'block';
                 }
-                
+
                 // 3. Update Sidebar Active State
                 document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
                 const activeNav = document.querySelector(`.nav-item[onclick*="nav('${pageId}')"]`);
                 if (activeNav) activeNav.classList.add('active');
-                
+
                 // 4. Update Header Title
                 const headerTitle = document.getElementById('dashboard-title');
                 if (headerTitle && PAGE_TITLES[pageId]) {
@@ -12738,12 +12909,16 @@
     </script>
 
     <!-- Global Email Inbox Modal -->
-    <div id="globalEmailInboxModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center; padding:20px; backdrop-filter: blur(5px);">
-        <div class="glass-card rounded-2xl w-full max-w-5xl flex flex-col max-h-[90vh] overflow-hidden border border-white/10 shadow-2xl">
+    <div id="globalEmailInboxModal" class="modal-overlay"
+        style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center; padding:20px; backdrop-filter: blur(5px);">
+        <div
+            class="glass-card rounded-2xl w-full max-w-5xl flex flex-col max-h-[90vh] overflow-hidden border border-white/10 shadow-2xl">
             <!-- Header -->
-            <div class="p-6 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-blue-500/10 to-purple-500/10">
+            <div
+                class="p-6 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-blue-500/10 to-purple-500/10">
                 <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-2xl bg-blue-500/20 flex items-center justify-center border border-blue-500/20">
+                    <div
+                        class="w-12 h-12 rounded-2xl bg-blue-500/20 flex items-center justify-center border border-blue-500/20">
                         <i class="fas fa-inbox text-blue-400 text-xl"></i>
                     </div>
                     <div>
@@ -12754,14 +12929,17 @@
                 <div class="flex items-center gap-3">
                     <div class="relative">
                         <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
-                        <input id="globalEmailSearch" type="text" placeholder="Search email, code or content..." 
+                        <input id="globalEmailSearch" type="text" placeholder="Search email, code or content..."
                             oninput="filterGlobalEmails()"
                             class="bg-black/40 border border-white/10 rounded-xl pl-9 pr-4 py-2 text-sm w-64 focus:border-blue-500 outline-none transition-all">
                     </div>
-                    <button onclick="loadGlobalEmailMessages()" class="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 transition-all" title="Refresh">
+                    <button onclick="loadGlobalEmailMessages()"
+                        class="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 transition-all"
+                        title="Refresh">
                         <i class="fas fa-sync-alt"></i>
                     </button>
-                    <button onclick="closeGlobalEmailInbox()" class="w-10 h-10 rounded-xl bg-white/5 hover:bg-red-500/20 hover:text-red-400 flex items-center justify-center transition-all">
+                    <button onclick="closeGlobalEmailInbox()"
+                        class="w-10 h-10 rounded-xl bg-white/5 hover:bg-red-500/20 hover:text-red-400 flex items-center justify-center transition-all">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -12771,7 +12949,8 @@
             <div class="flex-1 overflow-y-auto p-0 bg-black/20">
                 <table class="w-full text-left border-collapse">
                     <thead class="sticky top-0 bg-gray-900/95 backdrop-blur-md z-10">
-                        <tr class="text-gray-500 text-[10px] uppercase tracking-wider font-bold border-b border-white/5">
+                        <tr
+                            class="text-gray-500 text-[10px] uppercase tracking-wider font-bold border-b border-white/5">
                             <th class="py-4 px-4 w-1/4">Account & Sender</th>
                             <th class="py-4 px-4 w-20">Code</th>
                             <th class="py-4 px-4 w-24">Received</th>
@@ -12793,7 +12972,8 @@
                     </div>
                     <span>Data fetched from Gmail & Hotmail Mother Emails</span>
                 </div>
-                <button onclick="closeGlobalEmailInbox()" class="px-6 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-sm font-bold text-gray-300 transition-all">
+                <button onclick="closeGlobalEmailInbox()"
+                    class="px-6 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-sm font-bold text-gray-300 transition-all">
                     Close Inbox
                 </button>
             </div>
