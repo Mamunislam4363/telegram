@@ -4177,13 +4177,14 @@
                             Deposits</span>
                     </div>
 
-                    <div
-                        style="text-align:center; padding:40px 20px; background:rgba(255,255,255,0.03); border-radius:20px; border:1px solid rgba(255,255,255,0.1);">
-                        <div style="font-size:40px; color:#666; margin-bottom:12px;">
-                            <i class="fas fa-hourglass-half"></i>
+                    <div id="userRecentDeposits" style="display:flex; flex-direction:column; gap:12px;">
+                        <div
+                            style="text-align:center; padding:40px 20px; background:rgba(255,255,255,0.03); border-radius:20px; border:1px solid rgba(255,255,255,0.1);">
+                            <div style="font-size:40px; color:#666; margin-bottom:12px;">
+                                <i class="fas fa-hourglass-half"></i>
+                            </div>
+                            <div style="font-size:16px; color:#666; font-weight:600;">No deposits yet</div>
                         </div>
-                        <div style="font-size:16px; color:#666; font-weight:600;">No deposits
-                            yet</div>
                     </div>
                 </div>
 
@@ -4198,8 +4199,11 @@
                         <span style="font-size:15px; font-weight:800; color:#fff;">How it
                             works:</span>
                     </div>
-                    <div style="font-size:13px; color:#888; padding-left:38px;">
-                        1. Select cryptocurrency
+                    <div style="font-size:13px; color:#888; padding-left:38px; line-height: 1.6;">
+                        1. Select Cryptocurrency / Local Payment<br>
+                        2. Send exact amount to provided details<br>
+                        3. Submit Transaction ID & Screenshot proof<br>
+                        4. Balance will be added after admin verification
                     </div>
                 </div>
             </div>
@@ -5059,7 +5063,7 @@
                         <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
                             <div id="cardDetailHolder"
                                 style="font-size:18px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:1px; flex:1;">
-                                CALEB OLIVER</div>
+                                CARD HOLDER</div>
                             <button onclick="copyToClipboard('cardDetailHolder', this)"
                                 style="width:36px; height:36px; background:rgba(255,255,255,0.1); border:none; border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.3s;">
                                 <i class="fas fa-copy" style="color:#fbbf24; font-size:14px;"></i>
@@ -7791,7 +7795,7 @@
                         <label
                             style="display:block; font-size:11px; color:var(--text-sub,#888); margin-bottom:8px; text-transform:uppercase; font-weight:600;">Enter
                             Amount (BDT)</label>
-                        <input type="number" id="paymentAmount" placeholder="Enter amount..." style="
+                        <input type="number" id="paymentAmount" oninput="updateConvertedUsd()" placeholder="Enter amount..." style="
                             width:100%;
                             padding:14px 16px;
                             border-radius:12px;
@@ -7801,6 +7805,9 @@
                             font-size:16px;
                             outline:none;
                         ">
+                        <div id="usdPreview" style="margin-top: 8px; font-size: 12px; color: #10b981; font-weight: 700; display: none;">
+                            <i class="fas fa-exchange-alt mr-1"></i> You will receive: <span id="convertedAmount">$0.00</span>
+                        </div>
                     </div>
                     <!-- Transaction ID Input -->
                     <div style="margin-bottom:16px;">
@@ -7918,6 +7925,22 @@
             window.copyPaymentNumber = copyPaymentNumber;
             window.handleScreenshotUpload = handleScreenshotUpload;
             window.submitPayment = submitPayment;
+            window.updateConvertedUsd = updateConvertedUsd;
+
+            function updateConvertedUsd() {
+                const amount = document.getElementById('paymentAmount').value;
+                const preview = document.getElementById('usdPreview');
+                const converted = document.getElementById('convertedAmount');
+                const rate = window.bdtRate || 125;
+                
+                if (amount && amount > 0) {
+                    const usd = (amount / rate).toFixed(2);
+                    converted.textContent = '$' + usd;
+                    preview.style.display = 'block';
+                } else {
+                    preview.style.display = 'none';
+                }
+            }
 
             let currentLocalMethod = null;
 
@@ -8167,12 +8190,91 @@
                 }
             }
 
-            // Polling for new messages when on messages page
+            // User Deposits Tracking
+            async function loadUserRecentDeposits() {
+                const container = document.getElementById('userRecentDeposits');
+                if (!container || !window.userData?.id) return;
+
+                try {
+                    const res = await fetch(`/api/user/deposits/${window.userData.id}`);
+                    const data = await res.json();
+                    if (data.success && data.deposits) {
+                        renderUserDeposits(data.deposits);
+                    }
+                } catch (e) { console.error('Error loading deposits', e); }
+            }
+
+            function renderUserDeposits(deposits) {
+                const container = document.getElementById('userRecentDeposits');
+                if (!container) return;
+
+                if (!deposits || deposits.length === 0) {
+                    container.innerHTML = `
+                        <div style="text-align:center; padding:40px 20px; background:rgba(255,255,255,0.03); border-radius:20px; border:1px solid rgba(255,255,255,0.1);">
+                            <div style="font-size:40px; color:#666; margin-bottom:12px;"><i class="fas fa-hourglass-half"></i></div>
+                            <div style="font-size:16px; color:#666; font-weight:600;">No deposits yet</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = deposits.slice(0, 5).map(d => {
+                    const status = (d.status || 'Submitted').toLowerCase();
+                    let color = '#fbbf24'; // pending yellow
+                    let icon = 'fa-clock';
+                    let statusText = 'Pending';
+
+                    if (status === 'approved') { color = '#22c55e'; icon = 'fa-check-circle'; statusText = 'Approved'; }
+                    if (status === 'rejected') { color = '#ef4444'; icon = 'fa-times-circle'; statusText = 'Rejected'; }
+
+                    const methodId = d.method || 'Unknown';
+                    let methodName = methodId.charAt(0).toUpperCase() + methodId.slice(1);
+                    
+                    // Try to get method name from cryptoConfig if available
+                    if (window.cryptoMethods && window.cryptoMethods[methodId]) {
+                        methodName = window.cryptoMethods[methodId].name || methodName;
+                    } else if (methodId === 'bkash') methodName = 'bKash';
+                    else if (methodId === 'nagad') methodName = 'Nagad';
+
+                    const usdAmount = d.usdAmount || (d.amount / (window.bdtRate || 125)).toFixed(2);
+
+                    return `
+                        <div style="background:rgba(255,255,255,0.04); border-radius:16px; padding:16px; border:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center;">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <div style="width:40px; height:40px; border-radius:12px; background:${color}15; color:${color}; display:flex; align-items:center; justify-content:center; font-size:18px;">
+                                    <i class="fas ${icon}"></i>
+                                </div>
+                                <div>
+                                    <div style="font-size:14px; font-weight:800; color:#fff;">${methodName} - ${d.amount} BDT</div>
+                                    <div style="font-size:11px; color:#22c55e; font-weight:600; margin-top:2px;">≈ $${usdAmount} USD</div>
+                                    <div style="font-size:10px; color:var(--text-sub); margin-top:4px;">${new Date(d.date).toLocaleDateString()} • ${d.txnId}</div>
+                                </div>
+                            </div>
+                            <div style="text-align:right;">
+                                <div style="font-size:11px; font-weight:800; color:${color}; text-transform:uppercase;">${statusText}</div>
+                                ${d.adminNote ? `<div style="font-size:9px; color:#ef4444; margin-top:2px;">${d.adminNote}</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // Polling for new messages and deposits
             setInterval(() => {
                 if (currentPage === 'messages' || currentPage === 'support') {
                     loadUserMessages();
                 }
+                if (currentPage === 'deposit') {
+                    loadUserRecentDeposits();
+                }
             }, 5000);
+
+            // Nav Hook
+            const _oldNav = window.nav;
+            window.nav = function (targetId) {
+                if (typeof _oldNav === 'function') _oldNav(targetId);
+                if (targetId === 'deposit') loadUserRecentDeposits();
+            }
 
         </script>
 

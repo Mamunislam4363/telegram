@@ -1260,54 +1260,48 @@ class Database {
     }
 
     getServices() {
-        const fromPrices = Object.keys(this.data.cardPrices || {});
-        const fromStock = Object.keys(this.data.cards || {});
-        const fromNames = Object.keys(this.data.serviceNames || {});
-
-        // Merge all known service IDs
-        const allIds = [...new Set([...fromPrices, ...fromStock, ...fromNames])];
-
-        // Filter out empty or invalid IDs just in case
-        const validIds = allIds.filter(id => id && typeof id === 'string' && id.length > 0);
-
-        return validIds.map(sid => {
-            const stock = (this.data.cards && this.data.cards[sid]) ? this.data.cards[sid].length : 0;
-            const price = (this.data.cardPrices && this.data.cardPrices[sid]) ? this.data.cardPrices[sid] : 100;
-            const name = (this.data.serviceNames && this.data.serviceNames[sid]) ? this.data.serviceNames[sid] : sid.toUpperCase();
-
-            return { id: sid, name: name, price: price, stock: stock };
+        const services = this.data.services || {};
+        return Object.values(services).map(s => {
+            const cardStock = (this.data.cards && this.data.cards[s.id]) ? this.data.cards[s.id].length : 0;
+            const vpnStock = (this.data.vpnAccounts && this.data.vpnAccounts[s.id]) ? this.data.vpnAccounts[s.id].length : 0;
+            return {
+                ...s,
+                stock: cardStock || vpnStock || s.stock || 0
+            };
         });
     }
 
     // Service Management
 
 
-    createService(id, name, price, section = 'all') {
+    createService(id, name, price, section = 'virtual-cards', desc = '', imageUrl = '', color = '') {
+        if (!this.data.services) this.data.services = {};
+        this.data.services[id] = {
+            id,
+            name,
+            price: parseInt(price),
+            section: section || 'virtual-cards',
+            desc: desc || this.data.serviceDescriptions?.[id] || '',
+            imageUrl: imageUrl || this.data.serviceIcons?.[id] || '',
+            color: color || ''
+        };
+        
+        // Ensure support for legacy objects if still needed
         if (!this.data.cards) this.data.cards = {};
-        if (!this.data.serviceNames) this.data.serviceNames = {};
-        if (!this.data.cardPrices) this.data.cardPrices = {};
-        if (!this.data.serviceSections) this.data.serviceSections = {};
-
         if (!this.data.cards[id]) this.data.cards[id] = [];
-        this.data.serviceNames[id] = name;
-        this.data.cardPrices[id] = parseInt(price);
-        this.data.serviceSections[id] = section;
+        
         this.save();
     }
 
     deleteService(id) {
-        if (this.data.cards && this.data.cards[id]) delete this.data.cards[id];
-        if (this.data.serviceNames && this.data.serviceNames[id]) delete this.data.serviceNames[id];
-        if (this.data.cardPrices && this.data.cardPrices[id]) delete this.data.cardPrices[id];
-        if (this.data.serviceSections && this.data.serviceSections[id]) delete this.data.serviceSections[id];
-        if (this.data.vpnPrices && this.data.vpnPrices[id]) delete this.data.vpnPrices[id];
-        if (this.data.vpnAccounts && this.data.vpnAccounts[id]) delete this.data.vpnAccounts[id];
-        if (this.data.vpnServiceNames && this.data.vpnServiceNames[id]) delete this.data.vpnServiceNames[id];
-        if (this.data.services && this.data.services[id]) delete this.data.services[id];
-        if (this.data.shopItems && this.data.shopItems[id]) delete this.data.shopItems[id];
-        if (this.data.serviceItems && this.data.serviceItems[id]) delete this.data.serviceItems[id];
-        if (this.data.serviceIcons && this.data.serviceIcons[id]) delete this.data.serviceIcons[id];
-        if (this.data.serviceDescriptions && this.data.serviceDescriptions[id]) delete this.data.serviceDescriptions[id];
+        const objects = [
+            'services', 'cards', 'serviceNames', 'cardPrices', 'serviceSections',
+            'vpnPrices', 'vpnAccounts', 'vpnServiceNames', 'shopItems',
+            'serviceItems', 'serviceIcons', 'serviceDescriptions', 'shopStock'
+        ];
+        objects.forEach(obj => {
+            if (this.data[obj] && this.data[obj][id]) delete this.data[obj][id];
+        });
         if (this.data.premiumAccounts) {
             this.data.premiumAccounts = this.data.premiumAccounts.filter(a => a.type !== id);
         }
@@ -2265,23 +2259,7 @@ class Database {
 
     // Get all VPN Services (Returns array like getServices())
     getVPNServices() {
-        const fromPrices = Object.keys(this.data.vpnPrices || {});
-        const fromStock = Object.keys(this.data.vpnAccounts || {});
-        const fromNames = Object.keys(this.data.vpnServiceNames || {});
-
-        // Merge all known service IDs
-        const allIds = [...new Set([...fromPrices, ...fromStock, ...fromNames])];
-
-        // Filter out empty or invalid IDs
-        const validIds = allIds.filter(id => id && typeof id === 'string' && id.length > 0);
-
-        return validIds.map(sid => {
-            const stock = (this.data.vpnAccounts && this.data.vpnAccounts[sid]) ? this.data.vpnAccounts[sid].length : 0;
-            const price = (this.data.vpnPrices && this.data.vpnPrices[sid]) ? this.data.vpnPrices[sid] : 100;
-            const name = (this.data.vpnServiceNames && this.data.vpnServiceNames[sid]) ? this.data.vpnServiceNames[sid] : sid.toUpperCase();
-
-            return { id: sid, name: name, price: price, stock: stock };
-        });
+        return this.getServices().filter(s => s.section === 'vpn');
     }
 
     // Create VPN Service

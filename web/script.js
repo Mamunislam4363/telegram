@@ -3686,6 +3686,7 @@ async function registerAndFetchUser() {
             userData.verified = data.verified || false;
             userData.adminVerified = data.adminVerified || false;
             userData.apiStatus = data.apiStatus || 'allow';
+            userData.purchasedAccounts = data.purchasedAccounts || [];
 
             // SOFT API KEY SYNC: Trust the server if it explicitly sends a key, 
             // but NEVER wipe a local key if the server just says null (could be sync lag).
@@ -3722,6 +3723,7 @@ async function registerAndFetchUser() {
             userData.photo_url = _tgUser.photo_url || data.photo_url || '';
             userData.banned = data.banned || false;
             userStatus = data.banned ? 'banned' : 'active';
+            window.bdtRate = data.bdtRate || 125;
 
             // Mark completed tasks locally
             if (userData.completedTasks.length > 0) {
@@ -3777,6 +3779,7 @@ function loadRecentActivity() {
         .then(data => {
             if (data.success && data.history) {
                 userData.history = data.history; // Store globally
+                userData.purchasedAccounts = data.purchasedAccounts || [];
                 renderRecentActivity(data.history.slice(0, 3)); // Show last 3 activities on home
 
                 // If we currently are on history page, render full list too
@@ -3893,12 +3896,13 @@ function renderFullHistory() {
 
         const displayValue = (reward || ((item.amount !== undefined && item.amount !== null) ? ((isNeg ? '-' : (isPos ? '+' : '')) + formatCompact(Math.abs(amt)) + ' ' + (item.asset || item.currency || 'TC').toUpperCase()) : ''));
 
+        const isAccountPurchase = itemType === 'account_purchase';
         const isShopPurchase = itemType === 'shop_item_purchase';
         if (isShopPurchase && item.itemName) config.name = item.itemName;
 
         return `
         <div class="activity-card" 
-            ${isShopPurchase ? `onclick='showPurchaseSuccessModal(${JSON.stringify(item).replace(/'/g, "&apos;")})' style="cursor:pointer; margin-bottom:12px;"` : 'style="margin-bottom:12px;"'}>
+            ${isShopPurchase ? `onclick='showPurchaseSuccessModal(${JSON.stringify(item).replace(/'/g, "&apos;")})' style="cursor:pointer; margin-bottom:12px;"` : (isAccountPurchase ? `onclick='showAccountPurchaseDetails(${JSON.stringify(item).replace(/'/g, "&apos;")})' style="cursor:pointer; margin-bottom:12px;"` : 'style="margin-bottom:12px;"')}>
             <div class="activity-left">
                 <div class="activity-icon" style="width:40px; height:40px; background:rgba(255,255,255,0.05); color:${config.color}; display:flex; align-items:center; justify-content:center; border-radius:50%;">
                     ${imageUrl ? `<img src="${imageUrl}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">` : `<i class="${config.icon}" style="font-size:18px;"></i>`}
@@ -4089,12 +4093,13 @@ function renderRecentActivity(history) {
             rewardDisplay = (isPos ? '+' : (isNeg ? '-' : '')) + formatCompact(Math.abs(amt)) + ' ' + String(asset).toUpperCase();
         }
 
+        const isAccountPurchase = itemType === 'account_purchase';
         const isShopPurchase = itemType === 'shop_item_purchase';
         if (isShopPurchase && item.itemName) config.name = item.itemName;
 
         return `
         <div class="activity-card" 
-            ${isShopPurchase ? `onclick='showPurchaseSuccessModal(${JSON.stringify(item).replace(/'/g, "&apos;")})' style="cursor:pointer;"` : ''}>
+            ${isShopPurchase ? `onclick='showPurchaseSuccessModal(${JSON.stringify(item).replace(/'/g, "&apos;")})' style="cursor:pointer;"` : (isAccountPurchase ? `onclick='showAccountPurchaseDetails(${JSON.stringify(item).replace(/'/g, "&apos;")})' style="cursor:pointer;"` : '')}>
             <div class="activity-left">
                 <div class="activity-icon" style="width:40px; height:40px; background:rgba(255,255,255,0.05); color:${config.color}; display:flex; align-items:center; justify-content:center; border-radius:50%;">
                     ${imageUrl ? `<img src="${imageUrl}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">` : `<i class="${config.icon}" style="font-size:18px;"></i>`}
@@ -5144,15 +5149,28 @@ function showCardDetail(cardData) {
     document.getElementById('cardDetailCVV').textContent = cardData.cvv || '***';
     document.getElementById('cardDetailCountry').textContent = cardData.country || 'N/A';
 
-    // Populate additional address fields
+    // Populate additional address fields from cardBillingAddress if it exists
+    let city = cardData.city || 'N/A';
+    let state = cardData.state || 'N/A';
+    let address = cardData.address || 'N/A';
+    let postal = cardData.postal || 'N/A';
+
+    if (cardData.cardBillingAddress) {
+        const billing = typeof cardData.cardBillingAddress === 'string' ? { address: cardData.cardBillingAddress } : cardData.cardBillingAddress;
+        city = billing.City || billing.city || city;
+        state = billing.State || billing.state || state;
+        address = billing.Address || billing.address || billing.Address1 || billing.address1 || address;
+        postal = billing.PostalCode || billing.postalCode || billing.postal || postal;
+    }
+
     const cityElem = document.getElementById('cardDetailCity');
-    if (cityElem) cityElem.textContent = cardData.city || 'Dhaka';
+    if (cityElem) cityElem.textContent = city;
     const stateElem = document.getElementById('cardDetailState');
-    if (stateElem) stateElem.textContent = cardData.state || 'Dhaka';
+    if (stateElem) stateElem.textContent = state;
     const addressElem = document.getElementById('cardDetailAddress');
-    if (addressElem) addressElem.textContent = cardData.address || 'Gulshan Avenue';
+    if (addressElem) addressElem.textContent = address;
     const postalElem = document.getElementById('cardDetailPostal');
-    if (postalElem) postalElem.textContent = cardData.postal || '1212';
+    if (postalElem) postalElem.textContent = postal;
 
     // Update Card Label
     const cardLabel = document.getElementById('cardDetailLabel');
@@ -5492,27 +5510,55 @@ function confirmPurchase(serviceId, price) {
 
                     let cardBin = cardNumber.substring(0, 6);
                     let cardVpn = 'N/A';
-                    let cardType = 'MASTER CARD'; // Default fallback
+                    let cardType = 'MASTER CARD';
+                    let holderName = ['CALEB OLIVER', 'MAMUN ISLAM'][Math.floor(Math.random() * 2)]; // Fallback
+                    let billingCountry = 'Global';
+                    let billingCity = 'Dhaka';
+                    let billingState = 'Dhaka';
+                    let billingAddress = 'Gulshan Avenue';
+                    let billingPostal = '1212';
 
-                    if (card.password && card.password.startsWith('{')) {
+                    if (card.password) {
                         try {
-                            const shared = JSON.parse(card.password);
-                            cardVpn = shared.vpn || 'N/A';
-                            cardType = shared.type || 'MASTER CARD';
+                            const shared = typeof card.password === 'string' ? JSON.parse(card.password) : card.password;
+                            // Handle case-insensitive keys
+                            const getVal = (keys) => {
+                                for (const k of keys) {
+                                    if (shared[k] !== undefined) return shared[k];
+                                    const lowerK = k.toLowerCase();
+                                    if (shared[lowerK] !== undefined) return shared[lowerK];
+                                    const titleK = k.charAt(0).toUpperCase() + k.slice(1).toLowerCase();
+                                    if (shared[titleK] !== undefined) return shared[titleK];
+                                    // Try common variations like "Address 1"
+                                    if (k === 'address' && shared['Address 1'] !== undefined) return shared['Address 1'];
+                                    if (k === 'postal' && shared['Postal Code'] !== undefined) return shared['Postal Code'];
+                                }
+                                return null;
+                            };
+
+                            cardVpn = getVal(['vpn', 'VPN']) || 'N/A';
+                            cardType = getVal(['type', 'Type']) || 'MASTER CARD';
+                            const name = getVal(['name', 'Name']);
+                            if (name) holderName = name.toUpperCase();
+                            
+                            billingCountry = getVal(['country', 'Country']) || billingCountry;
+                            billingCity = getVal(['city', 'City']) || billingCity;
+                            billingState = getVal(['state', 'State']) || billingState;
+                            billingAddress = getVal(['address', 'Address', 'address 1', 'Address 1']) || billingAddress;
+                            billingPostal = getVal(['postal', 'Postal', 'postal code', 'Postal Code']) || billingPostal;
                         } catch (e) {
-                            console.error('Error parsing shared info JSON:', e);
+                            console.error('Error parsing card info:', e);
                         }
                     } else if (card.instructions) {
                         const vpnMatch = card.instructions.match(/VPN:\s*([^\n]+)/);
                         if (vpnMatch) cardVpn = vpnMatch[1].trim();
-
                         const typeMatch = card.instructions.match(/Type:\s*([^\n]+)/);
                         if (typeMatch) cardType = typeMatch[1].trim();
                     }
 
                     showCardDetail({
                         cardName: serviceId.toUpperCase(),
-                        holderName: ['CALEB OLIVER', 'MAMUN ISLAM'][Math.floor(Math.random() * 2)],
+                        holderName: holderName,
                         number: cardNumber,
                         cvv: cardCvv,
                         month: cardMonth,
@@ -5520,11 +5566,11 @@ function confirmPurchase(serviceId, price) {
                         vpn: cardVpn,
                         type: cardType,
                         bin: cardBin,
-                        country: 'Global',
-                        city: 'Dhaka',
-                        state: 'Dhaka',
-                        address: 'Gulshan Avenue',
-                        postal: '1212',
+                        country: billingCountry,
+                        city: billingCity,
+                        state: billingState,
+                        address: billingAddress,
+                        postal: billingPostal,
                         price: price
                     });
                     const securedArea = document.getElementById('securedArea');
@@ -5542,6 +5588,112 @@ function confirmPurchase(serviceId, price) {
         .catch(() => window.showToast('Network error'));
 }
 window.buyServiceAccount = buyServiceAccount;
+
+function showAccountPurchaseDetails(item) {
+    if (!userData.purchasedAccounts || userData.purchasedAccounts.length === 0) {
+        window.showToast('Syncing account details...');
+        loadRecentActivity();
+        return;
+    }
+    
+    // Find matching account by category and date
+    // Sort by date proximity to handle slight deviations
+    const sorted = [...userData.purchasedAccounts].sort((a, b) => 
+        Math.abs(a.purchasedAt - item.date) - Math.abs(b.purchasedAt - item.date)
+    );
+    
+    const card = sorted.find(acc => acc.category === item.category);
+    
+    if (card && Math.abs(card.purchasedAt - item.date) < 60000) { // 1 minute window
+        // Prepare cardData for showCardDetail
+        let cardNumber = card.email || '**** **** **** ****';
+        let cardMonth = 'MM';
+        let cardYear = 'YYYY';
+        let cardCvv = card.password || '***';
+
+        if (card.email && card.email.includes('|')) {
+            const parts = card.email.split('|');
+            if (parts.length >= 4) {
+                cardNumber = parts[0];
+                cardMonth = parts[1];
+                cardYear = parts[2];
+                cardCvv = parts[3];
+            }
+        }
+        
+        let cardBin = cardNumber.substring(0, 6);
+        let cardVpn = 'N/A';
+        let cardType = 'MASTER CARD';
+        let holderName = 'USER';
+        let billingCountry = 'Global';
+        let billingCity = 'Dhaka';
+        let billingState = 'Dhaka';
+        let billingAddress = 'Gulshan Avenue';
+        let billingPostal = '1212';
+
+        if (card.password) {
+            try {
+                const shared = typeof card.password === 'string' ? JSON.parse(card.password) : card.password;
+                const getVal = (keys) => {
+                    for (const k of keys) {
+                        if (shared[k] !== undefined) return shared[k];
+                        const lowerK = k.toLowerCase();
+                        if (shared[lowerK] !== undefined) return shared[lowerK];
+                        const titleK = k.charAt(0).toUpperCase() + k.slice(1).toLowerCase();
+                        if (shared[titleK] !== undefined) return shared[titleK];
+                        if (k === 'address' && shared['Address 1'] !== undefined) return shared['Address 1'];
+                        if (k === 'postal' && shared['Postal Code'] !== undefined) return shared['Postal Code'];
+                    }
+                    return null;
+                };
+
+                cardVpn = getVal(['vpn', 'VPN']) || 'N/A';
+                cardType = getVal(['type', 'Type']) || 'MASTER CARD';
+                const name = getVal(['name', 'Name']);
+                if (name) holderName = name.toUpperCase();
+                
+                billingCountry = getVal(['country', 'Country']) || billingCountry;
+                billingCity = getVal(['city', 'City']) || billingCity;
+                billingState = getVal(['state', 'State']) || billingState;
+                billingAddress = getVal(['address', 'Address', 'address 1', 'Address 1']) || billingAddress;
+                billingPostal = getVal(['postal', 'Postal', 'postal code', 'Postal Code']) || billingPostal;
+            } catch (e) {
+                console.error('Error parsing card info:', e);
+            }
+        }
+
+        showCardDetail({
+            cardName: item.category.toUpperCase(),
+            holderName: holderName,
+            number: cardNumber,
+            cvv: cardCvv,
+            month: cardMonth,
+            year: cardYear,
+            vpn: cardVpn,
+            type: cardType,
+            bin: cardBin,
+            country: billingCountry,
+            city: billingCity,
+            state: billingState,
+            address: billingAddress,
+            postal: billingPostal,
+            price: item.amount
+        });
+        nav('cardDetail');
+        
+        const securedArea = document.getElementById('securedArea');
+        if (securedArea) securedArea.style.display = 'block';
+        const genBtn = document.getElementById('generatorBtn');
+        if (genBtn) {
+            genBtn.innerHTML = 'GENERATE AGAIN <i class="fas fa-sync-alt"></i>';
+            genBtn.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+        }
+    } else {
+        window.showToast('Account details not found locally. Syncing...');
+        loadRecentActivity(); 
+    }
+}
+window.showAccountPurchaseDetails = showAccountPurchaseDetails;
 
 function buyAdminShopItem(shopId, name, price) {
     if (!userData || !userData.id) {

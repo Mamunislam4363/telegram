@@ -1136,7 +1136,8 @@ app.get('/api/user/sync/:userId', async (req, res) => {
         apiKey: user.apiKey || '',
         completedTasks: user.completedTasks || [],
         lastClaim: user.lastDaily || 0,
-        dailyStreak: user.dailyStreak || 0
+        dailyStreak: user.dailyStreak || 0,
+        bdtRate: parseFloat(db.data.adminSettings?.bdtUsdRate || 125)
     });
 });
 
@@ -1274,7 +1275,9 @@ app.post('/api/register', async (req, res) => {
         apiStatus: user.apiStatus || 'allow',
         apiKey: user.apiKey || null,
         banned: user.banned || user.blocked || false,
-        webMessages: webMessages
+        webMessages: webMessages,
+        bdtRate: parseFloat(db.data.adminSettings?.bdtUsdRate || 125),
+        purchasedAccounts: user.purchasedAccounts || []
     });
 });
 
@@ -1378,7 +1381,11 @@ app.get('/api/history/:userId', async (req, res) => {
     }
 
     const history = user.history || [];
-    res.json({ success: true, history: history });
+    res.json({ 
+        success: true, 
+        history: history,
+        purchasedAccounts: user.purchasedAccounts || []
+    });
 });
 
 // API: Generate Quiz with AI
@@ -1764,9 +1771,10 @@ app.post('/api/accounts/buy-category', async (req, res) => {
     db.setTokenBalance(user, userTokens - priceInt);
 
     // Prepare response data
+    // Handle both email/password (legacy/VPN) and key/info (Cards) formats
     const accountData = {
-        email: account.email,
-        password: account.password,
+        email: account.key || account.email || '',
+        password: account.info || account.password || '',
         category: category,
         purchasedAt: Date.now(),
         instructions: account.instructions || ''
@@ -3199,6 +3207,446 @@ app.get('/api/mother-email/inbox', async (req, res) => {
 })();
 
 // ==========================================
+// GROUP MODERATION & AI SYSTEM
+// ==========================================
+
+// API: Get Group Moderation Settings
+app.get('/api/admin/group-moderation', (req, res) => {
+    try {
+        if (!db.data.adminSettings) db.data.adminSettings = {};
+        if (!db.data.adminSettings.groupModeration) {
+            db.data.adminSettings.groupModeration = {
+                enabled: false,
+                autoDetailsEnabled: false,
+                aiAccessUrl: '',
+                aiApiKey: '',
+                respondToVotesOnly: true,
+                restrictedKeywords: ['crypto', 'scam', 'hack', 'illegal'],
+                allowedCommands: ['vote', '/vote', '!vote']
+            };
+            db.save();
+        }
+        res.json({ success: true, settings: db.data.adminSettings.groupModeration });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// API: Update Group Moderation Settings
+app.post('/api/admin/group-moderation', (req, res) => {
+    try {
+        if (!db.data.adminSettings) db.data.adminSettings = {};
+        const { enabled, autoDetailsEnabled, aiAccessUrl, aiApiKey, respondToVotesOnly } = req.body;
+        
+        const moderation = db.data.adminSettings.groupModeration || {};
+        if (enabled !== undefined) moderation.enabled = enabled;
+        if (autoDetailsEnabled !== undefined) moderation.autoDetailsEnabled = autoDetailsEnabled;
+        if (aiAccessUrl !== undefined) moderation.aiAccessUrl = aiAccessUrl;
+        if (aiApiKey !== undefined) moderation.aiApiKey = aiApiKey;
+        if (respondToVotesOnly !== undefined) moderation.respondToVotesOnly = respondToVotesOnly;
+        
+        db.data.adminSettings.groupModeration = moderation;
+        db.save();
+        
+        res.json({ success: true, message: 'Group moderation settings updated', settings: moderation });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// ==========================================
+// CURRENCY & DEPOSIT MANAGEMENT
+// ==========================================
+
+// API: Get Currency Settings (BDT to USD conversion)
+app.get('/api/admin/currency', (req, res) => {
+    try {
+        if (!db.data.adminSettings) db.data.adminSettings = {};
+        if (!db.data.adminSettings.currency) {
+            db.data.adminSettings.currency = {
+                bdtToUsdRate: 126,
+                lastUpdated: Date.now()
+            };
+            db.save();
+        }
+        res.json({ success: true, currency: db.data.adminSettings.currency });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// API: Update Currency Rate
+app.post('/api/admin/currency/rate', (req, res) => {
+    try {
+        const { rate } = req.body;
+        if (!rate || isNaN(rate) || rate <= 0) {
+            return res.json({ success: false, message: 'Invalid rate provided' });
+        }
+        
+        if (!db.data.adminSettings) db.data.adminSettings = {};
+        if (!db.data.adminSettings.currency) db.data.adminSettings.currency = {};
+        
+        db.data.adminSettings.currency.bdtToUsdRate = parseFloat(rate);
+        db.data.adminSettings.currency.lastUpdated = Date.now();
+        db.save();
+        
+        res.json({ success: true, message: 'Currency rate updated', rate: parseFloat(rate) });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// API: Get Deposit History with USD Conversion
+app.get('/api/user/:userId/deposit-history', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const user = await db.getUser(userId);
+        if (!user) return res.json({ success: false, message: 'User not found' });
+        
+        const rate = db.data.adminSettings?.currency?.bdtToUsdRate || 126;
+        const history = user.depositHistory || [];
+        
+        const convertedHistory = history.map(deposit => ({
+            id: deposit.id || `dep_${Date.now()}`,
+            amount: deposit.amount,
+            amountUsd: (deposit.amount / rate).toFixed(2),
+            method: deposit.method,
+            status: deposit.status || 'pending',
+            date: deposit.date,
+            proof: deposit.proof,
+            approvedBy: deposit.approvedBy,
+            approvedAt: deposit.approvedAt
+        }));
+        
+        res.json({ success: true, history: convertedHistory, exchangeRate: rate });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// API: Add Deposit (Payment Proof Submission)
+app.post('/api/user/:userId/deposit', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { amount, method, proof } = req.body;
+        
+        if (!userId || !amount || !method) {
+            return res.json({ success: false, message: 'Missing required fields' });
+        }
+        
+        const user = await db.getUser(userId);
+        if (!user) return res.json({ success: false, message: 'User not found' });
+        
+        if (!user.depositHistory) user.depositHistory = [];
+        
+        const rate = db.data.adminSettings?.currency?.bdtToUsdRate || 126;
+        const depositId = `dep_${Math.random().toString(36).substr(2, 9)}`;
+        
+        user.depositHistory.push({
+            id: depositId,
+            amount: parseInt(amount),
+            amountUsd: (parseInt(amount) / rate).toFixed(2),
+            method: method,
+            status: 'pending',
+            date: Date.now(),
+            proof: proof || null,
+            approvedBy: null,
+            approvedAt: null
+        });
+        
+        await db.updateUser(user);
+        
+        res.json({
+            success: true,
+            message: 'Deposit submitted successfully. Status: Pending Admin Approval',
+            depositId: depositId,
+            amountUsd: (parseInt(amount) / rate).toFixed(2),
+            status: 'pending'
+        });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// API: Admin - Approve/Reject Deposit
+app.post('/api/admin/deposit/approve', async (req, res) => {
+    try {
+        const { userId, depositId, approved } = req.body;
+        
+        if (!userId || !depositId) {
+            return res.json({ success: false, message: 'Missing userId or depositId' });
+        }
+        
+        const user = await db.getUser(userId);
+        if (!user) return res.json({ success: false, message: 'User not found' });
+        
+        const deposit = user.depositHistory?.find(d => d.id === depositId);
+        if (!deposit) return res.json({ success: false, message: 'Deposit not found' });
+        
+        if (approved) {
+            deposit.status = 'approved';
+            deposit.approvedAt = Date.now();
+            deposit.approvedBy = req.body.adminId || 'admin';
+            
+            // Add USD to user balance
+            user.usd = (user.usd || 0) + parseFloat(deposit.amountUsd);
+            
+            if (!user.history) user.history = [];
+            user.history.unshift({
+                type: 'deposit_approved',
+                amount: deposit.amount,
+                amountUsd: deposit.amountUsd,
+                currency: 'usd',
+                date: Date.now(),
+                detail: `Deposit approved: ${deposit.amount} BDT = $${deposit.amountUsd}`
+            });
+        } else {
+            deposit.status = 'rejected';
+            deposit.approvedAt = Date.now();
+            deposit.approvedBy = req.body.adminId || 'admin';
+        }
+        
+        await db.updateUser(user);
+        
+        res.json({
+            success: true,
+            message: `Deposit ${approved ? 'approved' : 'rejected'}`,
+            newBalance: user.usd || 0
+        });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// ==========================================
+// API COST TRACKING & DISPLAY
+// ==========================================
+
+// API: Get API Usage Costs (Track actual spending)
+app.get('/api/user/:userId/api-costs', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const user = await db.getUser(userId);
+        if (!user) return res.json({ success: false, message: 'User not found' });
+        
+        const apiHistory = user.apiUsageHistory || [];
+        const totalCost = apiHistory.reduce((sum, entry) => sum + (entry.cost || 0), 0);
+        
+        res.json({
+            success: true,
+            totalCost: totalCost,
+            totalCalls: user.apiTotalCalls || 0,
+            history: apiHistory.slice(0, 100),
+            creditSpent: totalCost,
+            creditAvailable: db.getTokenBalance(user) || 0
+        });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// ==========================================
+// NOTIFICATION SYSTEM FIXES
+// ==========================================
+
+// API: Send Notification (Messages/Gifts)
+app.post('/api/notification/send', async (req, res) => {
+    try {
+        const { userId, type, title, message, data } = req.body;
+        
+        if (!userId || !type) {
+            return res.json({ success: false, message: 'Missing userId or type' });
+        }
+        
+        const user = await db.getUser(userId);
+        if (!user) return res.json({ success: false, message: 'User not found' });
+        
+        if (!user.notifications) user.notifications = [];
+        
+        const notification = {
+            id: `notif_${Math.random().toString(36).substr(2, 9)}`,
+            type: type, // 'message', 'gift', 'alert', etc
+            title: title || 'Notification',
+            message: message,
+            read: false,
+            date: Date.now(),
+            data: data || {}
+        };
+        
+        user.notifications.unshift(notification);
+        
+        // Keep only last 100 notifications
+        if (user.notifications.length > 100) {
+            user.notifications = user.notifications.slice(0, 100);
+        }
+        
+        await db.updateUser(user);
+        
+        // Send Telegram notification if bot is available
+        if (bot && user.id) {
+            try {
+                const msgText = `📬 ${title || type.toUpperCase()}\n\n${message}`;
+                await bot.sendMessage(user.id, msgText);
+            } catch (e) {
+                console.error(`[NOTIFICATION] Failed to send Telegram message to ${userId}:`, e.message);
+            }
+        }
+        
+        res.json({ success: true, notification });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// API: Get Notifications
+app.get('/api/user/:userId/notifications', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const user = await db.getUser(userId);
+        if (!user) return res.json({ success: false, message: 'User not found' });
+        
+        const notifications = user.notifications || [];
+        
+        res.json({
+            success: true,
+            notifications: notifications,
+            unreadCount: notifications.filter(n => !n.read).length
+        });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// API: Mark Notification as Read
+app.post('/api/user/:userId/notification/read', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { notificationId } = req.body;
+        
+        const user = await db.getUser(userId);
+        if (!user) return res.json({ success: false, message: 'User not found' });
+        
+       const notification = user.notifications?.find(n => n.id === notificationId);
+        if (!notification) return res.json({ success: false, message: 'Notification not found' });
+        
+        notification.read = true;
+        await db.updateUser(user);
+        
+        res.json({ success: true, message: 'Notification marked as read' });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// ==========================================
+// DYNAMIC SERVICE CONFIGURATION
+// ==========================================
+
+// API: Get Service Configuration (Standard vs Custom)
+app.get('/api/admin/services-config', (req, res) => {
+    try {
+        if (!db.data.adminSettings) db.data.adminSettings = {};
+        if (!db.data.adminSettings.servicesConfig) {
+            db.data.adminSettings.servicesConfig = {
+                configType: 'standard', // 'standard' or 'custom'
+                standardApiKey: '',
+                customServices: []
+            };
+            db.save();
+        }
+        res.json({ success: true, config: db.data.adminSettings.servicesConfig });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// API: Update Service Configuration
+app.post('/api/admin/services-config', (req, res) => {
+    try {
+        const { configType, standardApiKey, customServices } = req.body;
+        
+        if (!db.data.adminSettings) db.data.adminSettings = {};
+        
+        const config = db.data.adminSettings.servicesConfig || {};
+        
+        if (configType) config.configType = configType;
+        if (standardApiKey !== undefined) config.standardApiKey = standardApiKey;
+        if (Array.isArray(customServices)) config.customServices = customServices;
+        
+        db.data.adminSettings.servicesConfig = config;
+        db.save();
+        
+        res.json({ success: true, message: 'Service configuration updated', config });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// API: Add Custom Service
+app.post('/api/admin/services-config/add-service', (req, res) => {
+    try {
+        const { name, apiKey, apiUrl, status } = req.body;
+        
+        if (!name || !apiKey || !apiUrl) {
+            return res.json({ success: false, message: 'Missing required fields' });
+        }
+        
+        if (!db.data.adminSettings) db.data.adminSettings = {};
+        if (!db.data.adminSettings.servicesConfig) {
+            db.data.adminSettings.servicesConfig = { configType: 'custom', customServices: [] };
+        }
+        
+        const service = {
+            id: `service_${Math.random().toString(36).substr(2, 9)}`,
+            name: name,
+            apiKey: apiKey,
+            apiUrl: apiUrl,
+            status: status || 'active',
+            addedAt: Date.now()
+        };
+        
+        if (!db.data.adminSettings.servicesConfig.customServices) {
+            db.data.adminSettings.servicesConfig.customServices = [];
+        }
+        
+        db.data.adminSettings.servicesConfig.customServices.push(service);
+        db.data.adminSettings.servicesConfig.configType = 'custom';
+        db.save();
+        
+        res.json({ success: true, message: 'Custom service added', service });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// API: Remove Custom Service
+app.delete('/api/admin/services-config/service/:serviceId', (req, res) => {
+    try {
+        const { serviceId } = req.params;
+        
+        if (!db.data.adminSettings?.servicesConfig?.customServices) {
+            return res.json({ success: false, message: 'No custom services configured' });
+        }
+        
+        const index = db.data.adminSettings.servicesConfig.customServices.findIndex(s => s.id === serviceId);
+        if (index === -1) {
+            return res.json({ success: false, message: 'Service not found' });
+        }
+        
+        const removed = db.data.adminSettings.servicesConfig.customServices.splice(index, 1);
+        db.save();
+        
+        res.json({ success: true, message: 'Service removed', removed: removed[0] });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// ==========================================
+// SERVER INITIALIZATION & EXPORT
+// ==========================================
+
+// ==========================================
 // ADMIN EMAIL POOL MANAGEMENT
 // ==========================================
 
@@ -4481,6 +4929,13 @@ app.post('/api/deposit/submit', (req, res) => {
     res.json({ success: true, message: 'Deposit submitted successfully! Admin will review it.' });
 });
 
+// API: User - Get Their Own Deposits (Pending & History)
+app.get('/api/user/deposits/:userId', (req, res) => {
+    const { userId } = req.params;
+    const deposits = (db.data.pendingDeposits || []).filter(d => d.userId === userId.toString());
+    res.json({ success: true, deposits });
+});
+
 // API: Deposit - Get Config (QR/Addresses)
 app.get('/api/deposit/config', (req, res) => {
     res.json({ success: true, cryptoMethods: db.data.cryptoMethods || {} });
@@ -4528,13 +4983,23 @@ app.post('/api/admin/deposits/action', (req, res) => {
         }
 
         // Credit user with USD balance
-        user.usd = parseFloat(((user.usd || 0) + deposit.amount).toFixed(3));
+        let creditAmount = deposit.amount;
+
+        // Check if it's a local payment (BDT) and convert to USD
+        const isLocal = db.data.cryptoMethods && db.data.cryptoMethods[deposit.method] && db.data.cryptoMethods[deposit.method].isLocal;
+        if (isLocal) {
+            const bdtRate = parseFloat(db.data.adminSettings?.bdtUsdRate || 125);
+            creditAmount = deposit.amount / bdtRate;
+            console.log(`[DEPOSIT] Converting ${deposit.amount} BDT to ${creditAmount.toFixed(3)} USD (Rate: ${bdtRate})`);
+        }
+
+        user.usd = parseFloat(((user.usd || 0) + creditAmount).toFixed(3));
 
         // Add to history
         if (!user.history) user.history = [];
         user.history.unshift({
             type: 'deposit',
-            amount: deposit.amount,
+            amount: creditAmount,
             currency: 'usd',
             method: deposit.method,
             txnId: deposit.txnId,
@@ -7444,179 +7909,50 @@ app.delete('/api/admin/ads/:network', (req, res) => {
 
 // API: Admin - Services (UNIFIED FOR COST MANAGEMENT)
 app.get('/api/admin/services', (req, res) => {
-    const services = db.data.services || {};
-    const toDelete = [];
-    const normalizedNames = new Set();
-
-    // Find duplicates and demo data
-    Object.keys(services).forEach(id => {
-        const s = services[id];
-        const nameLower = s.name ? s.name.toLowerCase() : id.toLowerCase();
-
-        // Criteria 1: Zero price (likely demo)
-        // Criteria 2: Specific junk names
-        // Criteria 3: Duplicate names (case insensitive)
-        if (s.price === 0 || nameLower === 'mamun islam' || id.toLowerCase().includes('demo')) {
-            toDelete.push(id);
-        } else if (normalizedNames.has(nameLower)) {
-            toDelete.push(id); // Duplicate!
-        } else {
-            normalizedNames.add(nameLower);
-        }
-    });
-
-    // Delete them
-    toDelete.forEach(id => {
-        db.deleteService(id);
-    });
-
-    // Also check legacy items in cardPrices
-    if (db.data.cardPrices) {
-        Object.keys(db.data.cardPrices).forEach(id => {
-            if (id.toLowerCase().includes('demo') || id.toLowerCase() === 'mamun islam') {
-                delete db.data.cardPrices[id];
-            }
+    try {
+        const services = db.getServices();
+        res.json({
+            success: true,
+            services: services
         });
+    } catch (err) {
+        console.error('Admin services API error:', err);
+        res.status(500).json({ success: false, message: 'Failed to load services' });
     }
-
-    // Update VPN sections for known VPNs
-    Object.keys(services).forEach(id => {
-        if (id.toLowerCase().includes('vpn') || ['cyberghost', 'nordvpn', 'expressvpn', 'surfshark', 'protonvpn'].includes(id.toLowerCase())) {
-            db.updateServiceSection(id, 'vpn');
-        }
-    });
-
-    db.save();
-
-    // Proceed with loaded services after cleanup
-    const updatedServices = db.data.services || {};
-    const shopItems = db.data.shopItems || {};
-
-    // Convert services to array
-    const servicesList = Object.values(updatedServices).map(s => {
-        const cardStock = db.data.cards?.[s.id]?.length || 0;
-        const vpnStock = db.data.vpnAccounts?.[s.id]?.length || 0;
-        return {
-            ...s,
-            section: db.getServiceSection(s.id),
-            imageUrl: db.data.serviceIcons?.[s.id] || s.imageUrl || '',
-            stock: cardStock || vpnStock || 0
-        };
-    });
-
-    // Convert shopItems to array (if they haven't been merged into services yet)
-    const shopItemsList = Object.values(shopItems).map(i => {
-        const cardStock = db.data.cards?.[i.id]?.length || 0;
-        const vpnStock = db.data.vpnAccounts?.[i.id]?.length || 0;
-        return {
-            id: i.id,
-            name: i.name,
-            price: i.price || 0,
-            section: i.section || 'shop',
-            imageUrl: db.data.serviceIcons?.[i.id] || i.imageUrl || '',
-            stock: cardStock || vpnStock || 0
-        };
-    });
-
-    // Add legacy items if they are missing
-    const legacyItems = [];
-    if (db.data.cardPrices) {
-        Object.entries(db.data.cardPrices).forEach(([id, price]) => {
-            if (!services[id] && !shopItems[id]) {
-                legacyItems.push({
-                    id,
-                    name: db.data.serviceNames?.[id] || id.toUpperCase(),
-                    price,
-                    section: 'cards',
-                    imageUrl: db.data.serviceIcons?.[id] || '',
-                    stock: db.data.cards?.[id]?.length || 0
-                });
-            }
-        });
-    }
-    if (db.data.vpnPrices) {
-        Object.entries(db.data.vpnPrices).forEach(([id, price]) => {
-            if (!services[id] && !shopItems[id]) {
-                legacyItems.push({
-                    id,
-                    name: db.data.vpnServiceNames?.[id] || id.toUpperCase(),
-                    price,
-                    section: 'vpn',
-                    stock: db.data.vpnAccounts?.[id]?.length || 0
-                });
-            }
-        });
-    }
-
-    // Add items from settings.costs (gemini, gpt, etc.)
-    const settingCosts = [];
-    if (db.data.settings && db.data.settings.costs) {
-        Object.entries(db.data.settings.costs).forEach(([id, price]) => {
-            settingCosts.push({
-                id,
-                name: id.charAt(0).toUpperCase() + id.slice(1) + " (Bot Access)",
-                price,
-                section: 'settings',
-                stock: 0 // Settings costs usually don't have stock
-            });
-        });
-    }
-
-    res.json({
-        success: true,
-        services: [...servicesList, ...shopItemsList, ...legacyItems]
-    });
 });
 
 // Public API: Get Services (for user panel) - Filters out 0 stock items
 app.get('/api/public/services', (req, res) => {
-    // Get service items with stock
-    const serviceItems = db.data.serviceItems || {};
-    const availableItems = Object.entries(serviceItems)
-        .filter(([id, item]) => (item.stock || 0) > 0) // Only items with stock > 0
-        .map(([id, item]) => ({
-            id,
-            ...item,
-            section: item.categoryId,
-            imageUrl: db.data.serviceIcons?.[id] || item.imageUrl || ''
-        }));
+    try {
+        // Get all services using unified method
+        const services = db.getServices();
+        
+        // Filter out items with 0 stock for public view
+        const availableServices = services.filter(s => s.stock > 0 || s.stock === undefined);
 
-    // Also get legacy services (if still using old system)
-    const services = db.data.services || {};
-    const servicesWithSections = Object.values(services)
-        .map(s => {
-            const cardStock = db.data.cards?.[s.id]?.length || 0;
-            const vpnStock = db.data.vpnAccounts?.[s.id]?.length || 0;
-            const realStock = cardStock || vpnStock || s.stock || 0;
-            return {
-                ...s,
-                section: db.getServiceSection(s.id),
-                imageUrl: db.data.serviceIcons?.[s.id] || s.imageUrl || '',
-                stock: realStock
-            };
-        })
-        .filter(s => s.stock > 0 || s.stock === undefined);
-
-    // Combine both systems
-    res.json({
-        success: true,
-        services: [...availableItems, ...servicesWithSections],
-        categories: db.getServiceCategories()
-    });
+        res.json({
+            success: true,
+            services: availableServices,
+            categories: db.getServiceCategories()
+        });
+    } catch (err) {
+        console.error('Public services API error:', err);
+        res.status(500).json({ success: false, message: 'Failed to load services' });
+    }
 });
 
 app.post('/api/admin/services', (req, res) => {
-    const item = req.body;
-    db.data.services = db.data.services || {};
-    db.data.services[item.id] = item;
-
-    // Save section assignment
-    if (item.section) {
-        db.updateServiceSection(item.id, item.section);
+    const { id, name, price, cost, section, desc, icon, imageUrl, color } = req.body;
+    if (!id || !name) {
+        return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
+    
+    // cost can be passed as 'cost' or 'price'
+    const finalPrice = price || cost || 0;
+    const finalIcon = imageUrl || icon || '';
 
-    db.save();
-    res.json({ success: true });
+    db.createService(id, name, finalPrice, section, desc, finalIcon, color);
+    res.json({ success: true, message: 'Service created/updated successfully' });
 });
 
 app.post('/api/admin/cleanup-services', (req, res) => {
@@ -9165,7 +9501,11 @@ app.post('/api/user/item-sales/buy', async (req, res) => {
             twoFA: sale.twoFA,
             cardNumber: sale.cardNumber,
             cardExpiry: sale.cardExpiry,
-            cardCVV: sale.cardCVV
+            cardCVV: sale.cardCVV,
+            cardHolder: sale.cardHolder,
+            cardCountry: sale.cardCountry,
+            cardBillingAddress: sale.cardBillingAddress,
+            vpnName: sale.vpnName
         },
         boughtAt: Date.now()
     });
@@ -9181,7 +9521,11 @@ app.post('/api/user/item-sales/buy', async (req, res) => {
             twoFA: sale.twoFA,
             cardNumber: sale.cardNumber,
             cardExpiry: sale.cardExpiry,
-            cardCVV: sale.cardCVV
+            cardCVV: sale.cardCVV,
+            cardHolder: sale.cardHolder,
+            cardCountry: sale.cardCountry,
+            cardBillingAddress: sale.cardBillingAddress,
+            vpnName: sale.vpnName
         }
     });
 });

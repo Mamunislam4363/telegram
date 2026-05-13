@@ -16,9 +16,9 @@
         "virtualnumber",
         "store"
       ],
-      "balance": 7475,
+      "balance": 7075,
       "balance_Gems": 8,
-      "balance_tokens": 7475,
+      "balance_tokens": 7075,
       "blocked": false,
       "cardsPurchased": 0,
       "channelJoined": false,
@@ -31,6 +31,71 @@
       "firstName": "Test",
       "groupJoined": false,
       "history": [
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "adobeexpress",
+          "date": 1778704000332
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "adobeexpress",
+          "date": 1778701170065
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "adobeexpress",
+          "date": 1778699919609
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "adobeexpress",
+          "date": 1778699903086
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "adobeexpress",
+          "date": 1778699173367
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "adobeexpress",
+          "date": 1778697710731
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "adobeexpress",
+          "date": 1778697358751
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "adobeexpress",
+          "date": 1778696557312
+        },
+        {
+          "type": "deposit",
+          "amount": 1204,
+          "currency": "usd",
+          "method": "platform_1778589848304",
+          "txnId": "vbgfvc",
+          "date": 1778686265735,
+          "status": "completed"
+        },
         {
           "id": "ORD-XYFBZ6SZ1",
           "type": "shop_item_purchase",
@@ -985,14 +1050,14 @@
       "joinedChannel": true,
       "joinedGroup": true,
       "language": "en",
-      "lastActive": 1778651432168,
+      "lastActive": 1778703918787,
       "lastDaily": 1778495256034,
       "lastName": "",
       "referralCode": "ref_95CMCD",
       "referralCount": 0,
       "successfulVerifications": 0,
-      "tokens": 7475,
-      "usd": 3,
+      "tokens": 7075,
+      "usd": 1207,
       "username": "TestUser",
       "verified": false,
       "supportLoan": 0,
@@ -1671,6 +1736,33 @@
         {
           "category": "adobeexpress",
           "purchasedAt": 1778588490896,
+          "instructions": ""
+        },
+        {
+          "category": "adobeexpress",
+          "purchasedAt": 1778696557312,
+          "instructions": ""
+        },
+        {
+          "category": "adobeexpress",
+          "purchasedAt": 1778697358751,
+          "instructions": ""
+        },
+        {
+          "category": "adobeexpress",
+          "purchasedAt": 1778697710731,
+          "instructions": ""
+        },
+        {
+          "category": "adobeexpress",
+          "purchasedAt": 1778699173367,
+          "instructions": ""
+        },
+        {
+          "email": "5154622143944209|01|2029|865",
+          "password": "{\"vpn\":\"Bangladesh\",\"country\":\"Kazakhstan\",\"type\":\"MASTER CARD\",\"name\":\"Caleb Oliver, Mamun, islam\",\"state\":\"Almaty\",\"city\":\"Semipalatinsk\",\"district\":\"Almaty\",\"address 1\":\"Semipalatinsk\",\"postal code\":\"020101\",\"mamun\":\"islam\"}",
+          "category": "adobeexpress",
+          "purchasedAt": 1778704000332,
           "instructions": ""
         }
       ],
@@ -10862,6 +10954,40 @@
           "read": false
         }
       ]
+    },
+    "5707415566": {
+      "id": 5707415566,
+      "balance": 100,
+      "balance_tokens": 100,
+      "joinedAt": 1778695711366,
+      "referrer": null,
+      "lastDaily": 0,
+      "tasksDone": [],
+      "referralCount": 0,
+      "referredBy": null,
+      "username": null,
+      "successfulVerifications": 0,
+      "failedVerifications": 0,
+      "cardsPurchased": 0,
+      "blocked": false,
+      "adminVerified": false,
+      "language": "en",
+      "lastActive": 1778696169843,
+      "dailyStreak": 0,
+      "usd": 0,
+      "apiStatus": "allow",
+      "history": [
+        {
+          "type": "bonus",
+          "amount": 100,
+          "reward": "+100 Tokens",
+          "date": 1778695711366,
+          "detail": "Welcome Bonus"
+        }
+      ],
+      "pendingReferrer": null,
+      "verified": true,
+      "verifiedAt": "2026-05-13T18:16:10.306Z"
     }
   },
   "groups": {
@@ -10870,7 +10996,7 @@
       "title": "Autos Verify",
       "type": "supergroup",
       "addedAt": 1771418121015,
-      "lastActive": 1778557569254
+      "lastActive": 1778695087800
     },
     "-1002502678666": {
       "addedAt": 1771418121015,
@@ -10979,15 +11105,10 @@
   "cards": {
     "adobeexpress": [],
     "chatgpt": [],
-    "ma": [
-      {
-        "key": "5154622323140685|01|2029|359",
-        "info": "",
-        "addedAt": 1778571351154
-      }
-    ],
+    "ma": [],
     "spotify": [],
-    "chatgptplus": []
+    "chatgptplus": [],
+    "gemini 1 day": []
   },
   "cardPrices": {
     "adobeexpress": 0,
@@ -11001,7 +11122,8 @@
     "chatgpt": "Chatgpt",
     "ma": "Ma",
     "spotify": "Spotify",
-    "chatgptplus": "Chatgptplus"
+    "chatgptplus": "Chatgptplus",
+    "gemini 1 day": "Gemini 1 day"
   },
   "scheduledBroadcasts": [],
   "tickets": [],
@@ -11671,6 +11793,14 @@
       "name": "Surfshark",
       "price": 80,
       "type": "account"
+    },
+    "adobeexpress": {
+      "categoryId": "virtual-cards",
+      "color": "from-purple-500 to-pink-600",
+      "icon": "fa-paint-brush",
+      "name": "Adobe Express",
+      "price": 150,
+      "type": "account"
     }
   },
   "adminSettings": {
@@ -11705,12 +11835,26 @@
     "groupManagement": {
       "autoDeleteSystemMessages": true,
       "deleteGroupPhotoChanged": false,
-      "deleteJoinMessages": true,
-      "deleteLeaveMessages": true,
+      "deleteJoinMessages": false,
+      "deleteLeaveMessages": false,
       "deletePinMessages": false,
       "deleteTitleChanged": false,
       "welcomeMessage": true,
-      "welcomeMessageText": "👋 Welcome {name} to {title}!"
+      "welcomeMessageText": "👋 Welcome {name} to {title}!",
+      "deleteVideoChatStarted": false,
+      "deleteVideoChatEnded": false,
+      "deleteUserLinks": false,
+      "deleteMentionsHashtags": false,
+      "deleteDmSolicitations": false,
+      "enableWarningSystem": false,
+      "warningMessage": "",
+      "enableBanCommand": false,
+      "banCommand": "",
+      "autoApproveJoinRequests": false,
+      "aiPlatform": "gemini",
+      "enableAiModeration": false,
+      "enableAiResponse": false,
+      "aiPrompt": ""
     },
     "motherEmailConfigs": {
       "gmail": {
@@ -11789,14 +11933,96 @@
   },
   "numberServices": {},
   "services": {
-    "ma": {
-      "id": "ma",
-      "name": "MT Mamun Islam",
-      "desc": "1yer",
-      "icon": "fa-cube",
-      "color": "from-blue-500 to-purple-600",
+    "adobeexpress": {
+      "id": "adobeexpress",
+      "name": "Adobeexpress",
+      "price": 50,
       "section": "virtual-cards",
-      "cost": 100
+      "stock": 31
+    },
+    "chatgpt": {
+      "id": "chatgpt",
+      "name": "Chatgpt",
+      "price": 50,
+      "section": "virtual-cards",
+      "stock": 0
+    },
+    "chatgptplus": {
+      "id": "chatgptplus",
+      "name": "Chatgptplus",
+      "price": 50,
+      "section": "virtual-cards",
+      "stock": 0
+    },
+    "spotify": {
+      "id": "spotify",
+      "name": "Spotify",
+      "price": 50,
+      "section": "virtual-cards",
+      "stock": 0
+    },
+    "youtube": {
+      "id": "youtube",
+      "name": "YOUTUBE",
+      "price": 50,
+      "section": "virtual-cards",
+      "stock": 0
+    },
+    "adobeexpress_vpn": {
+      "id": "adobeexpress_vpn",
+      "name": "ADOBEEXPRESS",
+      "price": 50,
+      "section": "vpn",
+      "stock": 0
+    },
+    "cyberghost": {
+      "id": "cyberghost",
+      "name": "👻 CyberGhost",
+      "price": 70,
+      "section": "vpn",
+      "stock": 0
+    },
+    "expressvpn": {
+      "id": "expressvpn",
+      "name": "⚡ ExpressVPN",
+      "price": 120,
+      "section": "vpn",
+      "stock": 0
+    },
+    "nordvpn": {
+      "id": "nordvpn",
+      "name": "🛡️ NordVPN",
+      "price": 100,
+      "section": "vpn",
+      "stock": 0
+    },
+    "protonvpn": {
+      "id": "protonvpn",
+      "name": "🔒 ProtonVPN",
+      "price": 90,
+      "section": "vpn",
+      "stock": 0
+    },
+    "surfshark": {
+      "id": "surfshark",
+      "name": "🦈 Surfshark",
+      "price": 80,
+      "section": "vpn",
+      "stock": 0
+    },
+    "chatgpt_vpn": {
+      "id": "chatgpt_vpn",
+      "name": "CHATGPT",
+      "price": 50,
+      "section": "vpn",
+      "stock": 0
+    },
+    "gemini 1 day": {
+      "id": "gemini 1 day",
+      "name": "gemini 1 day",
+      "price": 1,
+      "section": "virtual-cards",
+      "stock": 33
     }
   },
   "shopItems": {
@@ -11896,7 +12122,38 @@
   },
   "providers": {},
   "broadcasts": [],
-  "pendingDeposits": [],
+  "pendingDeposits": [
+    {
+      "id": "dep_1778686254172txnye",
+      "userId": "123",
+      "method": "platform_1778589848304",
+      "amount": 1204,
+      "txnId": "vbgfvc",
+      "screenshot": null,
+      "date": 1778686254172,
+      "status": "Approved"
+    },
+    {
+      "id": "dep_1778684624691o6ool",
+      "userId": "123",
+      "method": "platform_1778589848304",
+      "amount": 1000,
+      "txnId": "bnvjhvhjv",
+      "screenshot": null,
+      "date": 1778684624691,
+      "status": "Submitted"
+    },
+    {
+      "id": "dep_1778658901165dgulq",
+      "userId": "123",
+      "method": "platform_1778589848304",
+      "amount": 1000,
+      "txnId": "hjghf",
+      "screenshot": null,
+      "date": 1778658901166,
+      "status": "Submitted"
+    }
+  ],
   "cryptoMethods": {
     "binance": {
       "details": "39996280",

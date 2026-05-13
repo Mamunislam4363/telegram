@@ -395,7 +395,10 @@ const userState = {};
 
 // Helper: Check authorization
 function isAdmin(userId) {
-    return String(userId) === String(config.ADMIN_ID) || config.ALLOWED_USER_IDS.includes(String(userId));
+    if (!userId) return false;
+    const adminId = String(config.ADMIN_ID || '');
+    const allowedIds = config.ALLOWED_USER_IDS || [];
+    return String(userId) === adminId || allowedIds.includes(String(userId));
 }
 
 // Helper: Generate user authentication token for web panel

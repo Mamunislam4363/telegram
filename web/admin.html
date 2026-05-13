@@ -53,6 +53,19 @@
             /* Prevent overflow */
         }
 
+        /* Remove input number spinners */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+        appearance: none;
+            margin: 0;
+        }
+
+        input[type=number] {
+            -moz-appearance: textfield;
+            appearance: textfield;
+        }
+
         .table-responsive-wrapper {
             width: 100%;
             overflow-x: auto;
@@ -305,7 +318,7 @@
     <div id="app-container" class="flex h-screen">
 
         <!-- SIDEBAR -->
-        <aside class="w-72 glass-card border-y-0 border-l-0 flex flex-col p-6 bg-[#0f172a]/90" style="z-index: 9999;">
+        <aside class="w-72 flex-shrink-0 glass-card border-y-0 border-l-0 flex flex-col p-6 bg-[#0f172a]/95" style="z-index: 9999;">
             <div class="flex items-center gap-3 mb-10 px-2">
                 <div class="w-10 h-10 gold-gradient rounded-lg flex items-center justify-center"><i
                         class="fas fa-robot text-white"></i></div>
@@ -327,7 +340,6 @@
                 <div class="nav-item" onclick="nav('providers')"><i class="fas fa-server w-5"></i> Providers</div>
                 <div class="nav-item" onclick="nav('groups')"><i class="fas fa-users-cog w-5"></i> Group Management
                 </div>
-                <div class="nav-item" onclick="nav('ai-assistant')"><i class="fas fa-robot w-5 text-purple-400"></i> AI Assistant</div>
                 <div class="nav-item" onclick="nav('settings')" id="settings-menu"><i class="fas fa-cog w-5"></i>
                     Settings</div>
                 <div class="nav-item pl-8 text-sm" onclick="nav('costmanage')" id="cost-manage-submenu">
@@ -363,7 +375,7 @@
         <div id="sidebarOverlay" class="sidebar-overlay" onclick="closeMobileMenu()"></div>
 
         <!-- MAIN CONTENT -->
-        <main class="flex-1 p-4 md:p-8 overflow-y-auto overflow-x-hidden relative max-w-full w-full">
+        <main class="flex-1 p-4 md:p-8 overflow-y-auto overflow-x-hidden relative">
             <header class="flex justify-between items-center mb-8">
                 <div class="flex items-center gap-4">
                     <!-- Mobile Hamburger Menu Button -->
@@ -2579,61 +2591,21 @@
                         </div>
                     </div>
 
-                    <!-- Local Payment Platforms Section -->
-                    <div class="glass-card p-5 rounded-xl mb-6 border border-orange-500/20">
-                        <h4 class="text-lg font-semibold text-orange-400 mb-4 flex items-center">
-                            <i class="fas fa-mobile-alt mr-2"></i> Local Payment Platforms
+                    <!-- Exchange Rate (BDT to USD) Section -->
+                    <div class="glass-card p-5 rounded-xl mb-6 border border-green-500/20">
+                        <h4 class="text-lg font-semibold text-green-400 mb-4 flex items-center">
+                            <i class="fas fa-exchange-alt mr-2"></i> Exchange Rate (BDT → USD)
                         </h4>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <!-- bKash Section -->
-                            <div class="bg-black/20 rounded-lg p-4">
-                                <label class="text-xs text-gray-400 uppercase font-bold block mb-3">bKash</label>
-                                <div class="space-y-3">
-                                    <div>
-                                        <label class="text-xs text-gray-500 font-semibold block mb-1">Name</label>
-                                        <input type="text" id="conf-bkash-name" placeholder="bKash Personal"
-                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 text-white">
-                                    </div>
-                                    <div>
-                                        <label class="text-xs text-gray-500 font-semibold block mb-1">Number</label>
-                                        <input type="text" id="conf-bkash-number" placeholder="01700000000"
-                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 text-white">
-                                    </div>
-                                    <div>
-                                        <label class="text-xs text-gray-500 font-semibold block mb-1">Type</label>
-                                        <select id="conf-bkash-type"
-                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 text-white">
-                                            <option value="Personal">Personal</option>
-                                            <option value="Student">Student</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- Nagad Section -->
-                            <div class="bg-black/20 rounded-lg p-4">
-                                <label class="text-xs text-gray-400 uppercase font-bold block mb-3">Nagad</label>
-                                <div class="space-y-3">
-                                    <div>
-                                        <label class="text-xs text-gray-500 font-semibold block mb-1">Name</label>
-                                        <input type="text" id="conf-nagad-name" placeholder="Nagad Personal"
-                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 text-white">
-                                    </div>
-                                    <div>
-                                        <label class="text-xs text-gray-500 font-semibold block mb-1">Number</label>
-                                        <input type="text" id="conf-nagad-number" placeholder="01800000000"
-                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 text-white">
-                                    </div>
-                                    <div>
-                                        <label class="text-xs text-gray-500 font-semibold block mb-1">Type</label>
-                                        <select id="conf-nagad-type"
-                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 text-white">
-                                            <option value="Personal">Personal</option>
-                                            <option value="Student">Student</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="bg-black/20 rounded-lg p-4 flex items-center gap-3">
+                            <span class="text-gray-300 font-semibold">1 USD =</span>
+                            <input type="number" id="conf-bdt-usd-rate" placeholder="125" min="1" step="0.01"
+                                class="w-24 bg-black/40 border border-white/10 focus:border-green-500 rounded-lg p-2.5 text-white font-bold text-lg">
+                            <span class="text-gray-300 font-semibold">BDT</span>
+                            <button onclick="saveBDTExchangeRate()" class="ml-auto px-4 py-2 bg-green-500/20 border border-green-500/50 hover:bg-green-500/30 rounded-lg text-green-400 font-bold transition-all">
+                                <i class="fas fa-save mr-2"></i>Save Rate
+                            </button>
                         </div>
+                        <p class="text-xs text-gray-400 mt-3">All deposit calculations will use this rate for BDT to USD conversion.</p>
                     </div>
 
                     <!-- Crypto Payment Rate -->
@@ -3435,10 +3407,7 @@
 
             <div id="page-serverlogs" class="page">
                 <div class="flex justify-between items-center mb-6">
-                    <div>
-                        <h2 class="text-2xl font-bold text-white">Server Problems & Logs</h2>
-                        <p class="text-slate-400">Track and manage server issues in real-time</p>
-                    </div>
+
                     <div class="flex gap-3">
                         <button onclick="fetchServerLogs()"
                             class="p-2 px-4 glass-card rounded-lg hover:bg-white/10 transition-all flex items-center gap-2 text-white">
@@ -4459,101 +4428,104 @@
                     </div>
                 </div>
                 <div id="groupManagementStatus" class="text-xs text-gray-400 mt-3"></div>
+
+                <!-- Group Management Stats - Filling the empty space -->
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+                    <div class="glass-card p-4 rounded-2xl border border-blue-500/10">
+                        <div class="text-[10px] text-gray-500 uppercase font-bold mb-1">Total Groups</div>
+                        <div class="text-2xl font-black text-white" id="gm-stat-total-groups">0</div>
+                    </div>
+                    <div class="glass-card p-4 rounded-2xl border border-purple-500/10">
+                        <div class="text-[10px] text-gray-500 uppercase font-bold mb-1">Total Channels</div>
+                        <div class="text-2xl font-black text-white" id="gm-stat-total-channels">0</div>
+                    </div>
+                    <div class="glass-card p-4 rounded-2xl border border-green-500/10">
+                        <div class="text-[10px] text-gray-500 uppercase font-bold mb-1">Auto-Mod Active</div>
+                        <div class="text-2xl font-black text-green-400" id="gm-stat-active-mod">0</div>
+                    </div>
+                    <div class="glass-card p-4 rounded-2xl border border-orange-500/10">
+                        <div class="text-[10px] text-gray-500 uppercase font-bold mb-1">Welcome Enabled</div>
+                        <div class="text-2xl font-black text-orange-400" id="gm-stat-welcome-on">0</div>
+                    </div>
+                    <div class="glass-card p-4 rounded-2xl border border-red-500/10">
+                        <div class="text-[10px] text-gray-500 uppercase font-bold mb-1">System Alerts</div>
+                        <div class="text-2xl font-black text-red-400" id="gm-stat-alerts">0</div>
+                    </div>
+                </div>
+
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <!-- Main Toggle -->
-                    <div class="glass-card p-4 md:p-6 rounded-2xl">
-                        <h4 class="font-bold mb-4 flex items-center gap-2">
-                            <i class="fas fa-power-off text-blue-400"></i> Main Control
-                        </h4>
-                        <div class="flex items-center justify-between p-4 bg-black/20 rounded-xl mb-4">
-                            <div>
-                                <div class="font-bold">Auto-Delete System Messages</div>
-                                <div class="text-xs text-gray-400">Master switch for all auto-delete
-                                    features</div>
-                            </div>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" id="gm_autoDeleteSystemMessages" class="sr-only peer" checked>
-                                <div
-                                    class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500">
+                    <!-- Left Column -->
+                    <div class="space-y-6">
+                        <!-- Main Toggle -->
+                        <div class="glass-card p-4 md:p-6 rounded-2xl">
+                            <h4 class="font-bold mb-4 flex items-center gap-2">
+                                <i class="fas fa-power-off text-blue-400"></i> Main Control
+                            </h4>
+                            <div class="flex items-center justify-between p-4 bg-black/20 rounded-xl mb-4">
+                                <div>
+                                    <div class="font-bold">Auto-Delete System Messages</div>
+                                    <div class="text-xs text-gray-400">Master switch for all auto-delete features</div>
                                 </div>
-                            </label>
-                        </div>
-
-                        <!-- Auto-Approve Join Request Toggle -->
-                        <div
-                            class="flex items-center justify-between p-4 bg-black/20 rounded-xl mb-4 border border-blue-500/30">
-                            <div>
-                                <div class="font-bold text-blue-400"><i class="fas fa-user-plus mr-2"></i>Auto-Approve
-                                    Join Requests</div>
-                                <div class="text-[10px] text-gray-500 mt-1">Bot must be Admin with "Approve new members"
-                                    permission</div>
-                            </div>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" id="gm_autoApproveJoinRequests" class="sr-only peer">
-                                <div
-                                    class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500">
-                                </div>
-                            </label>
-                        </div>
-
-                        <!-- Welcome Message Toggle -->
-                        <div
-                            class="flex items-center justify-between p-4 bg-black/20 rounded-xl mb-4 border border-green-500/30">
-                            <div>
-                                <div class="font-bold text-green-400"><i class="fas fa-hand-wave mr-2"></i>Welcome
-                                    Message</div>
-                                <div class="text-xs text-gray-400">Send welcome message to new users when
-                                    they join
-                                </div>
-                            </div>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" id="gm_welcomeMessage" class="sr-only peer">
-                                <div
-                                    class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500">
-                                </div>
-                            </label>
-                        </div>
-
-                        <!-- Welcome Message Text Input -->
-                        <div class="mb-4">
-                            <label class="text-xs text-gray-400 uppercase font-bold block mb-2">Welcome
-                                Message
-                                Text</label>
-                            <textarea id="gm_welcomeMessageText" rows="3"
-                                placeholder="Welcome {username}! 🎉 We're glad to have you here..."
-                                class="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white text-sm focus:border-green-500 focus:outline-none resize-none"></textarea>
-                            <div class="text-xs text-gray-500 mt-1">Use {username} to mention the new user
-                            </div>
-                        </div>
-
-                        <!-- Title/Photo/Pin Changes -->
-                        <div class="space-y-3 mb-4">
-                            <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
-                                <div class="text-sm">Delete Title Changes</div>
                                 <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="gm_deleteTitleChanged" class="sr-only peer">
-                                    <div
-                                        class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-yellow-500">
-                                    </div>
+                                    <input type="checkbox" id="gm_autoDeleteSystemMessages" class="sr-only peer" checked>
+                                    <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
                                 </label>
                             </div>
-                            <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
-                                <div class="text-sm">Delete Photo Changes</div>
+
+                            <!-- Auto-Approve Join Request Toggle -->
+                            <div class="flex items-center justify-between p-4 bg-black/20 rounded-xl mb-4 border border-blue-500/30">
+                                <div>
+                                    <div class="font-bold text-blue-400"><i class="fas fa-user-plus mr-2"></i>Auto-Approve Join Requests</div>
+                                    <div class="text-[10px] text-gray-500 mt-1">Bot must be Admin with "Approve new members" permission</div>
+                                </div>
                                 <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="gm_deleteGroupPhotoChanged" class="sr-only peer">
-                                    <div
-                                        class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-yellow-500">
-                                    </div>
+                                    <input type="checkbox" id="gm_autoApproveJoinRequests" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
                                 </label>
                             </div>
-                            <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
-                                <div class="text-sm">Delete Pin Messages</div>
+
+                            <!-- Welcome Message Toggle -->
+                            <div class="flex items-center justify-between p-4 bg-black/20 rounded-xl mb-4 border border-green-500/30">
+                                <div>
+                                    <div class="font-bold text-green-400"><i class="fas fa-hand-wave mr-2"></i>Welcome Message</div>
+                                    <div class="text-xs text-gray-400">Send welcome message to new users when they join</div>
+                                </div>
                                 <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="gm_deletePinMessages" class="sr-only peer">
-                                    <div
-                                        class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-yellow-500">
-                                    </div>
+                                    <input type="checkbox" id="gm_welcomeMessage" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
                                 </label>
+                            </div>
+
+                            <!-- Welcome Message Text Input -->
+                            <div class="mb-4">
+                                <label class="text-xs text-gray-400 uppercase font-bold block mb-2">Welcome Message Text</label>
+                                <textarea id="gm_welcomeMessageText" rows="3" placeholder="Welcome {username}! 🎉 We're glad to have you here..." class="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white text-sm focus:border-green-500 focus:outline-none resize-none"></textarea>
+                                <div class="text-xs text-gray-500 mt-1">Use {username} to mention the new user</div>
+                            </div>
+
+                            <!-- Title/Photo/Pin Changes -->
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                                    <div class="text-sm">Delete Title Changes</div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="gm_deleteTitleChanged" class="sr-only peer">
+                                        <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-yellow-500"></div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                                    <div class="text-sm">Delete Photo Changes</div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="gm_deleteGroupPhotoChanged" class="sr-only peer">
+                                        <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-yellow-500"></div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                                    <div class="text-sm">Delete Pin Messages</div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="gm_deletePinMessages" class="sr-only peer">
+                                        <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-yellow-500"></div>
+                                    </label>
+                                </div>
                             </div>
                         </div>
 
@@ -4567,19 +4539,63 @@
                                     <div class="text-sm">Delete Video Chat Started</div>
                                     <label class="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" id="gm_deleteVideoChatStarted" class="sr-only peer">
-                                        <div
-                                            class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500">
-                                        </div>
+                                        <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
                                     </label>
                                 </div>
                                 <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
                                     <div class="text-sm">Delete Video Chat Ended</div>
                                     <label class="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" id="gm_deleteVideoChatEnded" class="sr-only peer">
-                                        <div
-                                            class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500">
-                                        </div>
+                                        <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
                                     </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column -->
+                    <div class="space-y-6">
+                        <!-- AI GROUP ASSISTANT -->
+                        <div class="glass-card p-4 md:p-6 rounded-2xl">
+                            <h4 class="font-bold mb-4 flex items-center gap-2">
+                                <i class="fas fa-robot text-purple-400"></i> AI Group Assistant
+                            </h4>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="text-[10px] text-gray-500 uppercase font-bold block mb-1">AI PLATFORM</label>
+                                    <select id="gm_aiPlatform" class="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-purple-500 focus:outline-none">
+                                        <option value="gemini">Google Gemini (Recommended)</option>
+                                        <option value="chatgpt">OpenAI ChatGPT</option>
+                                        <option value="claude">Anthropic Claude</option>
+                                        <option value="deepseek">DeepSeek AI</option>
+                                    </select>
+                                </div>
+
+                                <div class="flex items-center justify-between p-3 bg-black/20 rounded-xl border border-purple-500/20">
+                                    <div>
+                                        <div class="text-sm font-bold text-purple-400">Auto-Moderation</div>
+                                        <div class="text-[10px] text-gray-500">AI will monitor and delete harmful messages</div>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="gm_enableAiModeration" class="sr-only peer">
+                                        <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
+                                    </label>
+                                </div>
+
+                                <div class="flex items-center justify-between p-3 bg-black/20 rounded-xl">
+                                    <div>
+                                        <div class="text-sm">AI Response</div>
+                                        <div class="text-[10px] text-gray-500">Assistant will reply to user queries</div>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="gm_enableAiResponse" class="sr-only peer">
+                                        <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
+                                    </label>
+                                </div>
+
+                                <div>
+                                    <label class="text-[10px] text-gray-500 uppercase font-bold block mb-1">AI SYSTEM PROMPT</label>
+                                    <textarea id="gm_aiPrompt" rows="3" placeholder="You are a helpful and strict group moderator..." class="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white text-sm focus:border-purple-500 focus:outline-none resize-none"></textarea>
                                 </div>
                             </div>
                         </div>
@@ -4594,27 +4610,21 @@
                                     <div class="text-sm">Delete User Links</div>
                                     <label class="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" id="gm_deleteUserLinks" class="sr-only peer">
-                                        <div
-                                            class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-500">
-                                        </div>
+                                        <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-500"></div>
                                     </label>
                                 </div>
                                 <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
                                     <div class="text-sm">Delete Mentions/Hashtags</div>
                                     <label class="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" id="gm_deleteMentionsHashtags" class="sr-only peer">
-                                        <div
-                                            class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-500">
-                                        </div>
+                                        <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-500"></div>
                                     </label>
                                 </div>
                                 <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
                                     <div class="text-sm">Delete DM Solicitations</div>
                                     <label class="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" id="gm_deleteDmSolicitations" class="sr-only peer">
-                                        <div
-                                            class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-500">
-                                        </div>
+                                        <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-500"></div>
                                     </label>
                                 </div>
                             </div>
@@ -4625,14 +4635,10 @@
                                     <div class="text-sm font-bold text-yellow-400">Warning System</div>
                                     <label class="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" id="gm_enableWarningSystem" class="sr-only peer">
-                                        <div
-                                            class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-yellow-500">
-                                        </div>
+                                        <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-yellow-500"></div>
                                     </label>
                                 </div>
-                                <textarea id="gm_warningMessage" rows="2"
-                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white text-sm"
-                                    placeholder="Warning message..."></textarea>
+                                <textarea id="gm_warningMessage" rows="2" class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white text-sm" placeholder="Warning message..."></textarea>
                             </div>
 
                             <!-- Ban Command -->
@@ -4641,33 +4647,28 @@
                                     <div class="text-sm font-bold text-red-400">Ban Command</div>
                                     <label class="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" id="gm_enableBanCommand" class="sr-only peer">
-                                        <div
-                                            class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-500">
-                                        </div>
+                                        <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-500"></div>
                                     </label>
                                 </div>
-                                <input id="gm_banCommand" type="text" placeholder="ban"
-                                    class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white text-sm">
-                            </div>
-                        </div>
-
-                        <!-- Info Box -->
-                        <div class="glass-card p-4 md:p-6 rounded-2xl lg:col-span-2">
-                            <div class="flex items-start gap-3">
-                                <i class="fas fa-info-circle text-blue-400 text-xl mt-0.5"></i>
-                                <div>
-                                    <h4 class="font-bold mb-2">How It Works</h4>
-                                    <p class="text-sm text-gray-400">The bot will automatically delete
-                                        selected system
-                                        messages in groups where it has <b>Delete Messages</b> admin
-                                        permission.</p>
-                                </div>
+                                <input id="gm_banCommand" type="text" placeholder="ban" class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white text-sm">
                             </div>
                         </div>
                     </div>
 
+                    <!-- Info Box -->
+                    <div class="glass-card p-4 md:p-6 rounded-2xl lg:col-span-2">
+                        <div class="flex items-start gap-3">
+                            <i class="fas fa-info-circle text-blue-400 text-xl mt-0.5"></i>
+                            <div>
+                                <h4 class="font-bold mb-2">How It Works</h4>
+                                <p class="text-sm text-gray-400">The bot will automatically delete selected system messages in groups where it has <b>Delete Messages</b> admin permission.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                     <!-- Groups Table -->
-                    <div class="glass-card p-4 md:p-6 rounded-2xl mt-6">
+                    <div class="glass-card p-4 md:p-6 rounded-2xl mt-6 lg:col-span-2">
                         <div class="flex items-center justify-between mb-4">
                             <h4 class="font-bold flex items-center gap-2">
                                 <i class="fas fa-list text-blue-400"></i> Active Groups & Channels
@@ -4700,174 +4701,6 @@
             </div>
 
             <!-- AI GROUP ASSISTANT PAGE -->
-            <div id="page-ai-assistant" class="page">
-                <div class="glass-card p-4 md:p-6 rounded-2xl mb-6">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <h3 class="font-bold text-lg flex items-center gap-2">
-                                <i class="fas fa-robot text-purple-400"></i> AI Group & Channel Assistant
-                            </h3>
-                            <p class="text-sm text-gray-400 mt-1">Automatically manages your groups and channels with AI intelligence</p>
-                        </div>
-                        <button onclick="saveAiAssistantSettings()" class="gold-gradient px-4 py-2 rounded-xl font-bold text-sm">
-                            <i class="fas fa-save mr-1"></i> Save
-                        </button>
-                    </div>
-                </div>
-                <div id="aiAssistantStatus" class="text-xs text-gray-400 mb-3"></div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-                    <!-- Enable AI Assistant -->
-                    <div class="glass-card p-4 md:p-6 rounded-2xl">
-                        <h4 class="font-bold mb-4 flex items-center gap-2">
-                            <i class="fas fa-power-off text-purple-400"></i> AI Assistant Control
-                        </h4>
-                        <div class="flex items-center justify-between p-4 bg-purple-500/10 border border-purple-500/30 rounded-xl mb-4">
-                            <div>
-                                <div class="font-bold text-purple-400">Enable AI Assistant</div>
-                                <div class="text-xs text-gray-400 mt-1">Master switch for all AI features</div>
-                            </div>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" id="ai_enabled" class="sr-only peer" checked>
-                                <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
-                            </label>
-                        </div>
-
-                        <!-- Auto-delete system messages -->
-                        <h5 class="text-xs font-bold text-gray-400 uppercase mb-3">Auto-Delete System Messages</h5>
-                        <div class="space-y-2 mb-4">
-                            <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
-                                <div class="text-sm">🤝 Join Messages</div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="ai_deleteJoin" class="sr-only peer" checked>
-                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
-                                </label>
-                            </div>
-                            <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
-                                <div class="text-sm">👋 Leave Messages</div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="ai_deleteLeave" class="sr-only peer" checked>
-                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
-                                </label>
-                            </div>
-                            <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
-                                <div class="text-sm">✅ Member Approved Messages</div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="ai_deleteApproved" class="sr-only peer" checked>
-                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
-                                </label>
-                            </div>
-                            <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
-                                <div class="text-sm">📺 Live Stream Start/End</div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="ai_deleteLive" class="sr-only peer" checked>
-                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
-                                </label>
-                            </div>
-                            <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
-                                <div class="text-sm">👤 User Added Notifications</div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="ai_deleteAdded" class="sr-only peer" checked>
-                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
-                                </label>
-                            </div>
-                            <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
-                                <div class="text-sm">📌 Pin Messages</div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="ai_deletePins" class="sr-only peer" checked>
-                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
-                                </label>
-                            </div>
-                            <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
-                                <div class="text-sm">🏷️ Title/Photo Changes</div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="ai_deleteTitlePhoto" class="sr-only peer">
-                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Select Service / Supporter IDs -->
-                    <div class="glass-card p-4 md:p-6 rounded-2xl">
-                        <h4 class="font-bold mb-4 flex items-center gap-2">
-                            <i class="fas fa-headset text-blue-400"></i> Select Service (Supporter IDs)
-                        </h4>
-                        <p class="text-xs text-gray-500 mb-3">Add Telegram user IDs of supporters/admins who can manage the group via the bot</p>
-
-                        <div id="supporterIdsList" class="space-y-2 mb-4 max-h-48 overflow-y-auto"></div>
-
-                        <div class="flex gap-2 mb-4">
-                            <input type="text" id="newSupporterId" class="flex-1 bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white" placeholder="Enter Telegram User ID (e.g. 123456789)">
-                            <button onclick="addSupporterId()" class="bg-blue-500/20 text-blue-400 border border-blue-500/30 px-4 py-2 rounded-lg text-sm hover:bg-blue-500/30 transition-all">
-                                <i class="fas fa-plus"></i> Add
-                            </button>
-                        </div>
-
-                        <div class="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
-                            <div class="text-xs text-blue-400 font-bold mb-1"><i class="fas fa-info-circle mr-1"></i> Supporter Permissions</div>
-                            <div class="text-xs text-gray-400">Supporters can: ban/unban users, delete messages, approve join requests, and reply to user queries via bot commands.</div>
-                        </div>
-
-                        <!-- AI Smart Replies -->
-                        <div class="mt-4 pt-4 border-t border-white/10">
-                            <div class="flex items-center justify-between mb-3">
-                                <div>
-                                    <div class="text-sm font-bold text-green-400"><i class="fas fa-brain mr-1"></i> AI Smart Replies</div>
-                                    <div class="text-xs text-gray-500 mt-0.5">Auto-reply to common questions using AI</div>
-                                </div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="ai_smartReply" class="sr-only peer">
-                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
-                                </label>
-                            </div>
-                            <div class="flex items-center justify-between mb-3">
-                                <div>
-                                    <div class="text-sm font-bold text-yellow-400"><i class="fas fa-gavel mr-1"></i> Auto-Ban Spammers</div>
-                                    <div class="text-xs text-gray-500 mt-0.5">Automatically ban users who repeatedly violate rules</div>
-                                </div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="ai_autoBan" class="sr-only peer">
-                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-yellow-500"></div>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Channel Management -->
-                    <div class="glass-card p-4 md:p-6 rounded-2xl lg:col-span-2">
-                        <h4 class="font-bold mb-4 flex items-center gap-2">
-                            <i class="fas fa-broadcast-tower text-orange-400"></i> Channel Management
-                        </h4>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
-                                <div class="text-sm">Auto-Forward Posts to Group</div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="ai_forwardChannel" class="sr-only peer">
-                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500"></div>
-                                </label>
-                            </div>
-                            <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
-                                <div class="text-sm">Delete Non-Admin Messages in Channel</div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="ai_channelNonAdmin" class="sr-only peer" checked>
-                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500"></div>
-                                </label>
-                            </div>
-                            <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
-                                <div class="text-sm">Auto-Pin Important Announcements</div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="ai_autoPin" class="sr-only peer">
-                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500"></div>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-
             <div id="page-removebg" class="page">
                 <div class="glass-card p-4 md:p-6 rounded-2xl mb-6">
                     <div class="flex items-center justify-between">
@@ -4956,6 +4789,18 @@
 
             <!-- SERVICES MANAGEMENT PAGE -->
             <div id="page-services" class="page">
+                <div class="space-y-6">
+                    <!-- Page Header -->
+                <div class="mb-6 flex justify-between items-center">
+                    <div>
+                        <h3 class="text-xl font-bold">Services & Inventory</h3>
+                        <p class="text-sm text-gray-400">Manage your product catalog</p>
+                    </div>
+                    <button onclick="loadServiceItems()" class="px-4 py-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-all">
+                        <i class="fas fa-sync-alt mr-2"></i>Refresh Data
+                    </button>
+                </div>
+
                 <!-- Category Tabs with Add Button -->
                 <div class="mb-6">
                     <div class="flex items-center justify-between mb-4">
@@ -5035,6 +4880,7 @@
                     </div>
                 </div>
             </div>
+        </div>
 
             <!-- Create Code Modal -->
             <div id="modal-createCode" class="modal-overlay">
@@ -5158,7 +5004,6 @@
             'adnetworks': 'Ad Networks',
             'providers': 'Providers',
             'groups': 'Group Management',
-            'ai-assistant': 'AI Group Assistant',
             'settings': 'Settings',
             'costmanage': 'Cost Management',
             'tasks': 'Tasks',
@@ -6437,7 +6282,6 @@
                 'deposits': 'Deposit Management',
                 'numbers': 'Virtual Numbers',
                 'support': 'Support & Chat',
-                'history': 'Global History',
                 'serverlogs': 'Server Problems & Logs'
             };
 
@@ -6485,10 +6329,6 @@
                         if (typeof loadGroupSettings === 'function') loadGroupSettings();
                         if (typeof loadGroups === 'function') loadGroups();
                         break;
-                    case 'ai-assistant':
-                        loadAiAssistantSettings();
-                        break;
-
                     case 'tasks':
                         loadTasks();
                         break;
@@ -6590,48 +6430,63 @@
 
             const pBody = document.querySelector('#pendingDepositsTable tbody');
             if (pending.length === 0) {
-                pBody.innerHTML = '<tr><td colspan="5" class="text-center text-gray-500 py-8">No pending requests</td></tr>';
+                pBody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-500 py-8">No pending requests</td></tr>';
             } else {
-                pBody.innerHTML = pending.map(d => `
-            <tr>
-                <td class="font-mono text-xs">${d.userId}</td>
-                <td class="text-orange-400 font-bold uppercase text-xs">${d.method}</td>
-                <td class="font-bold">$${d.amount}</td>
-                <td class="text-xs text-gray-400 font-mono">${d.txnId}</td>
-                <td>
-                    ${d.screenshot ? `
-                    <a href="${d.screenshot}" target="_blank" class="text-blue-400 hover:text-blue-300 text-xs">
-                        <i class="fas fa-image"></i> View
-                    </a>
-                    ` : '<span class="text-gray-600 text-[10px]">None</span>'}
-                </td>
-                <td class="space-x-2">
-                    <button onclick="actionDeposit('${d.id}', 'approve')" class="text-green-500 hover:text-green-400"><i
-                            class="fas fa-check"></i></button>
-                    <button onclick="actionDeposit('${d.id}', 'reject')" class="text-red-500 hover:text-red-400"><i
-                            class="fas fa-times"></i></button>
-                </td>
-            </tr>
-            `).join('');
+                pBody.innerHTML = pending.map(d => {
+                    const method = cryptoMethods[d.method] || { name: d.method, isLocal: false };
+                    const displayAmount = method.isLocal ? `${d.amount} BDT` : `$${d.amount} USD`;
+                    const usdCredit = method.isLocal ? (d.amount / (adminSettings.bdtUsdRate || 125)).toFixed(2) : d.amount;
+
+                    return `
+                    <tr>
+                        <td class="font-mono text-xs">${d.userId}</td>
+                        <td class="text-orange-400 font-bold uppercase text-[10px]">
+                            ${method.name}
+                        </td>
+                        <td>
+                            <div class="font-bold text-sm">${displayAmount}</div>
+                            <div class="text-[10px] text-green-500">Credit: $${usdCredit}</div>
+                        </td>
+                        <td class="text-[10px] text-gray-400 font-mono">${d.txnId}</td>
+                        <td>
+                            ${d.screenshot ? `
+                            <a href="${d.screenshot}" target="_blank" class="text-blue-400 hover:text-blue-300 text-xs">
+                                <i class="fas fa-image"></i> View
+                            </a>
+                            ` : '<span class="text-gray-600 text-[10px]">None</span>'}
+                        </td>
+                        <td class="space-x-2">
+                            <button onclick="actionDeposit('${d.id}', 'approve')" class="text-green-500 hover:text-green-400"><i
+                                    class="fas fa-check"></i></button>
+                            <button onclick="actionDeposit('${d.id}', 'reject')" class="text-red-500 hover:text-red-400"><i
+                                    class="fas fa-times"></i></button>
+                        </td>
+                    </tr>
+                    `;
+                }).join('');
             }
 
             const hBody = document.querySelector('#depositHistoryTable tbody');
-            hBody.innerHTML = history.map(d => `
-            <tr class="opacity-70">
-                <td class="text-xs">${d.userId}</td>
-                <td class="text-xs uppercase">${d.method}</td>
-                <td class="font-bold text-xs">$${d.amount}</td>
-                <td class="text-xs font-mono">${d.txnId}</td>
-                <td>
-                    ${d.screenshot ? `<a href="${d.screenshot}" target="_blank" class="text-blue-400"><i
-                            class="fas fa-image"></i></a>` : '-'}
-                </td>
-                <td><span
-                        class="px-2 py-0.5 rounded text-[10px] ${d.status === 'approved' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">${d.status.toUpperCase()}</span>
-                </td>
-                <td class="text-[10px] text-gray-500">${new Date(d.date).toLocaleString()}</td>
-            </tr>
-            `).join('');
+            hBody.innerHTML = history.map(d => {
+                const method = cryptoMethods[d.method] || { name: d.method, isLocal: false };
+                const displayAmount = method.isLocal ? `${d.amount} BDT` : `$${d.amount} USD`;
+                return `
+                <tr class="opacity-70">
+                    <td class="text-xs">${d.userId}</td>
+                    <td class="text-[10px] uppercase">${method.name}</td>
+                    <td class="font-bold text-xs">${displayAmount}</td>
+                    <td class="text-[10px] font-mono">${d.txnId}</td>
+                    <td>
+                        ${d.screenshot ? `<a href="${d.screenshot}" target="_blank" class="text-blue-400"><i
+                                class="fas fa-image"></i></a>` : '-'}
+                    </td>
+                    <td><span
+                            class="px-2 py-0.5 rounded text-[10px] ${d.status === 'approved' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">${d.status.toUpperCase()}</span>
+                    </td>
+                    <td class="text-[10px] text-gray-500">${new Date(d.date).toLocaleString()}</td>
+                </tr>
+                `;
+            }).join('');
         }
 
         async function actionDeposit(depositId, action) {
@@ -6759,19 +6614,28 @@
                     <div>
                         <label class="text-[10px] text-gray-500 block mb-1">STATUS</label>
                         <select onchange="updateLocalM('${id}', 'status', this.value)"
-                            class="w-full bg-black/30 border border-white/5 rounded px-2 py-1 text-xs">
+                            class="w-full bg-black/30 border border-white/5 rounded px-2 py-1 text-xs mb-2">
                             <option value="active" ${m.status === 'active' ? 'selected' : ''}>
                                 Active</option>
                             <option value="disabled" ${m.status !== 'active' ? 'selected' : ''}>
                                 Disabled</option>
                         </select>
+                        <label class="flex items-center gap-2 cursor-pointer mt-1">
+                            <input type="checkbox" ${m.isLocal ? 'checked' : ''} 
+                                onchange="updateLocalM('${id}', 'isLocal', this.checked)"
+                                class="rounded border-white/10 bg-black/20 text-orange-500">
+                            <span class="text-[10px] text-gray-400">Local Payment (BDT)</span>
+                        </label>
                     </div>
                 </div>
             </div>
             `).join('');
         }
 
-        function updateLocalM(id, field, val) { cryptoMethods[id][field] = val; }
+        function updateLocalM(id, field, val) { 
+            if (!cryptoMethods[id]) cryptoMethods[id] = {};
+            cryptoMethods[id][field] = val; 
+        }
 
         async function saveCryptoConfig() {
             try {
@@ -8018,6 +7882,10 @@
                 } else {
                     selectCategory('virtual-cards');
                 }
+            }).catch(err => {
+                console.error('[Services] Fetch error:', err);
+                const container = document.getElementById('serviceItemsGrid');
+                if (container) container.innerHTML = '<div class="col-span-full py-8 text-center text-red-500">Error loading services. Check console.</div>';
             });
         }
 
@@ -8044,7 +7912,7 @@
             const desc = document.getElementById('svc-desc').value.trim();
             const icon = document.getElementById('svc-icon').value.trim() || 'fa-cube';
             const color = document.getElementById('svc-color').value.trim() || 'from-blue-500 to-purple-600';
-            const section = 'virtual-cards'; // Hardcoded to remove category system
+            const section = window.currentManageCategory || 'virtual-cards';
             const cost = parseInt(document.getElementById('svc-cost').value) || 0;
 
             if (!id || !name) return alert('ID and Name are required');
@@ -8056,7 +7924,8 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(service)
             }).then(() => {
-                closeModal();
+                const modal = document.getElementById('modal-addServiceItem');
+                if (modal) modal.style.display = 'none';
                 renderAdminServices();
             });
         }
@@ -8558,7 +8427,7 @@
         let currentServiceCategory = null;
         let serviceInputMethod = 'single';
         let currentManageItem = null;
-        let currentManageCategory = null;
+        let currentManageCategory = 'virtual-cards';
 
         // Category data
         const categoryData = {
@@ -8578,7 +8447,9 @@
 
         // Select category and show its items
         function selectCategory(categoryId) {
+            if (!categoryId) return;
             window.currentManageCategory = categoryId;
+            
             // Update tab styles
             document.querySelectorAll('.category-tab').forEach(tab => {
                 if (tab.dataset.category === categoryId) {
@@ -8593,12 +8464,16 @@
             // Update category info
             const cat = categoryData[categoryId];
             if (cat) {
-                document.getElementById('selectedCategoryName').textContent = cat.name;
-                document.getElementById('selectedCategoryDesc').textContent = cat.desc;
-                document.getElementById('selectedCategoryIcon').innerHTML = `<i
-                class="fas ${cat.icon} text-${cat.color}-400 text-xl"></i>`;
-                document.getElementById('selectedCategoryIcon').className = `w-12 h-12 rounded-xl
-            bg-${cat.color}-500/20 flex items-center justify-center`;
+                const nameEl = document.getElementById('selectedCategoryName');
+                const descEl = document.getElementById('selectedCategoryDesc');
+                const iconEl = document.getElementById('selectedCategoryIcon');
+                
+                if (nameEl) nameEl.textContent = cat.name;
+                if (descEl) descEl.textContent = cat.desc;
+                if (iconEl) {
+                    iconEl.innerHTML = `<i class="fas ${cat.icon} text-${cat.color}-400 text-xl"></i>`;
+                    iconEl.className = `w-12 h-12 rounded-xl bg-${cat.color}-500/20 flex items-center justify-center`;
+                }
             }
 
             // Show/hide items based on category
@@ -8610,10 +8485,23 @@
                 }
             });
 
-            // Update category total (Count of boxes)
+            // Update category total (Sum of all stock)
             const visibleItems = document.querySelectorAll(`.service-item-box[data-category="${categoryId}"]:not(.hidden)`);
-            const label = (categoryId === 'virtual-cards' || categoryId === 'cards') ? 'Cards' : 'Services';
-            document.getElementById('categoryTotalStock').textContent = visibleItems.length + ' ' + label;
+            let totalStock = 0;
+            visibleItems.forEach(box => {
+                const badge = box.querySelector('.item-count-badge');
+                if (badge) {
+                    const text = badge.textContent.split(' ')[0]; // Extract number
+                    const count = parseInt(text.replace(/,/g, '')) || 0;
+                    totalStock += count;
+                }
+            });
+
+            const catTotal = document.getElementById('categoryTotalStock');
+            if (catTotal) {
+                const label = (categoryId === 'virtual-cards' || categoryId === 'cards') ? 'Cards' : 'Services';
+                catTotal.textContent = totalStock + ' ' + label;
+            }
         }
 
         // Open item management modal
@@ -9282,6 +9170,9 @@
 
         // Load service items on page init
         async function loadServiceItems() {
+            const grid = document.getElementById('serviceItemsGrid');
+            if (grid) grid.innerHTML = '<div class="col-span-full py-12 text-center"><i class="fas fa-spinner fa-spin text-3xl text-orange-500 mb-3"></i><p class="text-gray-500">Loading inventory...</p></div>';
+
             try {
                 const res = await fetch('/api/admin/services');
                 const data = await res.json();
@@ -9290,9 +9181,12 @@
                     renderServiceItemsGrid(data.services);
                     updateServiceStockDisplay(data.services);
                     renderServiceItemsTable(data.services);
+                } else {
+                    if (grid) grid.innerHTML = '<div class="col-span-full py-12 text-center text-gray-500">Failed to load services. Please try again.</div>';
                 }
             } catch (e) {
                 console.error('Error loading service items:', e);
+                if (grid) grid.innerHTML = '<div class="col-span-full py-12 text-center text-red-500">Connection error. Check console.</div>';
             }
         }
 
@@ -9306,12 +9200,12 @@
                 const count = item.stock || 0;
                 stockMap[item.id] = count;
 
-                // Count unique services in each section
-                if (item.section === 'cards' || item.id === 'gemini' || item.id === 'chatgpt' ||
-                    item.id === 'spotify' || item.id === '4jibit' || item.id === 'adobeexpress' ||
-                    item.id === 'chatgptplus' || item.id === 'youtube') {
+                // Detect section correctly
+                const section = item.section || (item.id === 'gemini' || item.id === 'chatgpt' || item.id === 'spotify' || item.id === 'adobeexpress' || item.id === 'youtube' ? 'virtual-cards' : 'vpn');
+                
+                if (section === 'virtual-cards' || section === 'cards') {
                     virtualCardsCount++;
-                } else if (item.section === 'vpn') {
+                } else if (section === 'vpn') {
                     vpnCount++;
                 }
             });
@@ -9326,10 +9220,12 @@
             });
 
             // Update category totals (Show number of Cards/Services)
-            const virtualCardsTotalStock = document.getElementById('virtualCardsTotalStock');
-            const vpnTotalStock = document.getElementById('vpnTotalStock');
-            if (virtualCardsTotalStock) virtualCardsTotalStock.textContent = virtualCardsCount + ' Cards';
-            if (vpnTotalStock) vpnTotalStock.textContent = vpnCount + ' Services';
+            const catTotal = document.getElementById('categoryTotalStock');
+            if (catTotal) {
+                const label = (window.currentManageCategory === 'virtual-cards') ? 'Cards' : 'Services';
+                const count = (window.currentManageCategory === 'virtual-cards') ? virtualCardsCount : vpnCount;
+                catTotal.textContent = count + ' ' + label;
+            }
         }
 
         function openServiceItemModal(itemId, category) {
@@ -9534,15 +9430,18 @@
 
             // Generate HTML for all items
             const html = items.map(item => {
-                // Determine section and color
-                const isVpn = item.section === 'vpn';
-                const isCards = item.section === 'cards' || item.id === 'gemini' || item.id === 'chatgpt' || item.id === '4jibit' || item.id === 'adobeexpress' || item.id === 'chatgptplus';
+                // Determine section and category correctly
+                const section = item.section || (['gemini', 'chatgpt', 'spotify', 'adobeexpress', 'youtube', 'chatgptplus'].includes(item.id) ? 'virtual-cards' : 'vpn');
+                const isVpn = section === 'vpn';
+                const isCards = !isVpn;
 
-                const categoryId = (isVpn && !isCards) ? 'vpn' : 'virtual-cards';
-                const colorTheme = (isVpn && !isCards) ? 'blue' : 'orange';
-                const iconClass = isCards ? 'fa-credit-card' : (isVpn ? 'fa-shield-alt' : 'fa-credit-card');
+                const categoryId = isVpn ? 'vpn' : 'virtual-cards';
+                const colorTheme = isVpn ? 'cyan' : 'orange';
+                const iconClass = isCards ? 'fa-credit-card' : 'fa-shield-alt';
 
-                // Hide initially unless it's the current selected category
+                // Ensure we have a valid current category
+                if (!window.currentManageCategory) window.currentManageCategory = 'virtual-cards';
+                
                 const hiddenClass = (window.currentManageCategory === categoryId) ? '' : 'hidden';
 
                 return `
@@ -10027,13 +9926,24 @@
         function updateGroupStats(groups) {
             const total = groups.length;
             const channels = groups.filter(g => g.type === 'channel').length;
+            const grps = total - channels;
             const totalMembers = groups.reduce((acc, g) => acc + (parseInt(g.memberCount) || 0), 0);
-            const activeToday = groups.filter(g => g.lastActivity && (Date.now() - g.lastActivity) < 24 * 60 * 60 * 1000).length;
-
-            document.getElementById('group-total').textContent = total;
-            document.getElementById('channel-total').textContent = channels;
-            document.getElementById('group-members').textContent = totalMembers.toLocaleString();
-            document.getElementById('group-active').textContent = activeToday;
+            
+            // Update the new 5-card stats row
+            const elTotal = document.getElementById('gm-stat-total-groups');
+            const elChannels = document.getElementById('gm-stat-total-channels');
+            const elActiveMod = document.getElementById('gm-stat-active-mod');
+            const elWelcomeOn = document.getElementById('gm-stat-welcome-on');
+            
+            if (elTotal) elTotal.textContent = grps;
+            if (elChannels) elChannels.textContent = channels;
+            
+            // These would ideally come from settings, but let's count groups with > 0 members for now as 'active'
+            if (elActiveMod) elActiveMod.textContent = groups.filter(g => (parseInt(g.memberCount) || 0) > 0).length;
+            
+            // Check global settings for welcome
+            const welcomeEnabled = document.getElementById('gm_welcomeMessage')?.checked;
+            if (elWelcomeOn) elWelcomeOn.textContent = welcomeEnabled ? 'ACTIVE' : 'OFF';
         }
 
         function filterGroups(type) {
@@ -12054,118 +11964,14 @@
                     document.getElementById('gm_banCommand').value = s.banCommand || 'ban';
                     // Load Auto-Approve Join Request
                     document.getElementById('gm_autoApproveJoinRequests').checked = s.autoApproveJoinRequests === true;
+                    // Load AI Assistant Settings
+                    document.getElementById('gm_aiPlatform').value = s.aiPlatform || 'gemini';
+                    document.getElementById('gm_enableAiModeration').checked = s.enableAiModeration === true;
+                    document.getElementById('gm_enableAiResponse').checked = s.enableAiResponse === true;
+                    document.getElementById('gm_aiPrompt').value = s.aiPrompt || '';
                 }
             } catch (e) {
                 console.error('Error loading group management settings:', e);
-            }
-        }
-
-        // ==================== AI ASSISTANT MANAGEMENT ====================
-        let aiAssistantSupporters = [];
-
-        async function loadAiAssistantSettings() {
-            try {
-                const res = await fetch('/api/admin/ai-assistant');
-                if (res.ok) {
-                    const s = await res.json();
-                    document.getElementById('ai_enabled').checked = s.enabled !== false;
-                    document.getElementById('ai_deleteJoin').checked = s.deleteJoin !== false;
-                    document.getElementById('ai_deleteLeave').checked = s.deleteLeave !== false;
-                    document.getElementById('ai_deleteApproved').checked = s.deleteApproved !== false;
-                    document.getElementById('ai_deleteLive').checked = s.deleteLive !== false;
-                    document.getElementById('ai_deleteAdded').checked = s.deleteAdded !== false;
-                    document.getElementById('ai_deletePins').checked = s.deletePins !== false;
-                    document.getElementById('ai_deleteTitlePhoto').checked = s.deleteTitlePhoto === true;
-                    
-                    aiAssistantSupporters = s.supporterIds || [];
-                    renderSupporterIds();
-                    
-                    document.getElementById('ai_smartReply').checked = s.smartReply === true;
-                    document.getElementById('ai_autoBan').checked = s.autoBan === true;
-                    document.getElementById('ai_forwardChannel').checked = s.forwardChannel === true;
-                    document.getElementById('ai_channelNonAdmin').checked = s.channelNonAdmin !== false;
-                    document.getElementById('ai_autoPin').checked = s.autoPin === true;
-                }
-            } catch (e) {
-                console.error('Error loading AI assistant settings:', e);
-            }
-        }
-
-        function renderSupporterIds() {
-            const list = document.getElementById('supporterIdsList');
-            if (!list) return;
-            
-            if (aiAssistantSupporters.length === 0) {
-                list.innerHTML = '<div class="text-xs text-gray-500 italic p-2 bg-black/20 rounded-lg text-center">No supporters added yet.</div>';
-                return;
-            }
-            
-            list.innerHTML = aiAssistantSupporters.map(id => `
-                <div class="flex items-center justify-between p-2 bg-black/30 border border-white/5 rounded-lg mb-1">
-                    <div class="flex items-center gap-2">
-                        <i class="fas fa-user-shield text-blue-400"></i>
-                        <span class="text-sm font-mono">${id}</span>
-                    </div>
-                    <button onclick="removeSupporterId('${id}')" class="text-red-400 hover:text-red-300">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
-                </div>
-            `).join('');
-        }
-
-        function addSupporterId() {
-            const input = document.getElementById('newSupporterId');
-            const id = input.value.trim();
-            if (!id) return;
-            
-            if (!aiAssistantSupporters.includes(id)) {
-                aiAssistantSupporters.push(id);
-                renderSupporterIds();
-            }
-            input.value = '';
-        }
-
-        function removeSupporterId(id) {
-            aiAssistantSupporters = aiAssistantSupporters.filter(sid => sid !== id);
-            renderSupporterIds();
-        }
-
-        async function saveAiAssistantSettings() {
-            const statusEl = document.getElementById('aiAssistantStatus');
-            if (statusEl) statusEl.textContent = 'Saving...';
-
-            const settings = {
-                enabled: document.getElementById('ai_enabled')?.checked,
-                deleteJoin: document.getElementById('ai_deleteJoin')?.checked,
-                deleteLeave: document.getElementById('ai_deleteLeave')?.checked,
-                deleteApproved: document.getElementById('ai_deleteApproved')?.checked,
-                deleteLive: document.getElementById('ai_deleteLive')?.checked,
-                deleteAdded: document.getElementById('ai_deleteAdded')?.checked,
-                deletePins: document.getElementById('ai_deletePins')?.checked,
-                deleteTitlePhoto: document.getElementById('ai_deleteTitlePhoto')?.checked,
-                supporterIds: aiAssistantSupporters,
-                smartReply: document.getElementById('ai_smartReply')?.checked,
-                autoBan: document.getElementById('ai_autoBan')?.checked,
-                forwardChannel: document.getElementById('ai_forwardChannel')?.checked,
-                channelNonAdmin: document.getElementById('ai_channelNonAdmin')?.checked,
-                autoPin: document.getElementById('ai_autoPin')?.checked
-            };
-
-            try {
-                const res = await fetch('/api/admin/ai-assistant', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(settings)
-                });
-                if (res.ok) {
-                    if (statusEl) statusEl.textContent = 'Settings saved successfully.';
-                    setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 3000);
-                } else {
-                    if (statusEl) statusEl.textContent = 'Failed to save settings.';
-                }
-            } catch (e) {
-                console.error('Error saving AI assistant settings:', e);
-                if (statusEl) statusEl.textContent = 'Error saving settings.';
             }
         }
 
@@ -12191,7 +11997,11 @@
                 warningMessage: document.getElementById('gm_warningMessage')?.value || "",
                 enableBanCommand: document.getElementById('gm_enableBanCommand')?.checked || false,
                 banCommand: document.getElementById('gm_banCommand')?.value || "",
-                autoApproveJoinRequests: document.getElementById('gm_autoApproveJoinRequests')?.checked || false
+                autoApproveJoinRequests: document.getElementById('gm_autoApproveJoinRequests')?.checked || false,
+                aiPlatform: document.getElementById('gm_aiPlatform')?.value || "gemini",
+                enableAiModeration: document.getElementById('gm_enableAiModeration')?.checked || false,
+                enableAiResponse: document.getElementById('gm_enableAiResponse')?.checked || false,
+                aiPrompt: document.getElementById('gm_aiPrompt')?.value || ""
             };
 
             try {
