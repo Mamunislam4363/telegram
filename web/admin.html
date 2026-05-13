@@ -327,6 +327,7 @@
                 <div class="nav-item" onclick="nav('providers')"><i class="fas fa-server w-5"></i> Providers</div>
                 <div class="nav-item" onclick="nav('groups')"><i class="fas fa-users-cog w-5"></i> Group Management
                 </div>
+                <div class="nav-item" onclick="nav('ai-assistant')"><i class="fas fa-robot w-5 text-purple-400"></i> AI Assistant</div>
                 <div class="nav-item" onclick="nav('settings')" id="settings-menu"><i class="fas fa-cog w-5"></i>
                     Settings</div>
                 <div class="nav-item pl-8 text-sm" onclick="nav('costmanage')" id="cost-manage-submenu">
@@ -2071,6 +2072,130 @@
                 </div>
             </div>
 
+            <!-- SHOP EDIT MODAL (3 Tabs) -->
+            <div id="shopEditModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm">
+                <div class="bg-[#111111] border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col m-4">
+                    <!-- Header -->
+                    <div class="p-4 border-b border-white/10 flex justify-between items-center bg-black/40">
+                        <h3 class="font-bold text-lg text-orange-400 flex items-center gap-2">
+                            <i class="fas fa-edit"></i> Edit Shop Item: <span id="shopEditModalTitle" class="text-white"></span>
+                        </h3>
+                        <button onclick="closeShopEditModal()" class="text-gray-400 hover:text-white">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+
+                    <!-- Tabs -->
+                    <div class="flex border-b border-white/10 bg-black/20">
+                        <button onclick="switchShopEditTab('info')" id="tab-btn-shop-info" class="flex-1 py-3 text-sm font-bold border-b-2 border-orange-500 text-orange-400">Information</button>
+                        <button onclick="switchShopEditTab('add')" id="tab-btn-shop-add" class="flex-1 py-3 text-sm font-bold border-b-2 border-transparent text-gray-500 hover:text-gray-300">Add Item/Service</button>
+                        <button onclick="switchShopEditTab('clear')" id="tab-btn-shop-clear" class="flex-1 py-3 text-sm font-bold border-b-2 border-transparent text-gray-500 hover:text-gray-300">Clear Data</button>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="p-6 overflow-y-auto" style="max-height: 60vh;">
+                        <!-- Information Tab -->
+                        <div id="tab-shop-info" class="space-y-4 block">
+                            <input type="hidden" id="modal-shop-id">
+                            <div>
+                                <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Name</label>
+                                <input id="modal-shop-name" class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Price</label>
+                                <input id="modal-shop-price" type="number" step="0.001" class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Item Image URL</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="modal-shop-img" class="flex-1 bg-black/30 border border-white/10 p-3 rounded-lg text-white text-sm">
+                                    <label class="bg-white/10 border border-white/10 rounded-lg px-3 flex items-center justify-center cursor-pointer hover:bg-white/20 transition-all w-12" title="Upload Image">
+                                        <i class="fas fa-upload text-gray-400"></i>
+                                        <input type="file" accept="image/*" class="hidden" onchange="uploadAdminImage(this, 'modal-shop-img')">
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Background Color</label>
+                                    <input id="modal-shop-bg" class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Button Color</label>
+                                    <input id="modal-shop-btn" class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                                </div>
+                            </div>
+                            <button onclick="saveModalShopInfo()" class="w-full gold-gradient py-3 rounded-xl font-bold text-black mt-4">Save Information</button>
+                        </div>
+
+                        <!-- Add Item/Service Tab -->
+                        <div id="tab-shop-add" class="space-y-4 hidden">
+                            <div class="bg-blue-500/10 border border-blue-500/20 p-4 rounded-xl mb-4">
+                                <h4 class="font-bold text-blue-400 mb-2">Item Type</h4>
+                                <div class="flex gap-4">
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" name="shop-item-type" value="account" checked onchange="toggleShopItemType()" class="accent-blue-500">
+                                        <span class="text-sm">Account (Email/Pass)</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" name="shop-item-type" value="key" onchange="toggleShopItemType()" class="accent-blue-500">
+                                        <span class="text-sm">License/Key</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div id="shop-add-account-form" class="space-y-3 block">
+                                <div>
+                                    <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Email</label>
+                                    <input id="shop-add-email" class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white" placeholder="user@example.com">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Password</label>
+                                    <input id="shop-add-password" class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white" placeholder="secret123">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-400 uppercase font-bold block mb-1">2FA Secret (Optional)</label>
+                                    <input id="shop-add-2fa" class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white" placeholder="JBSWY3DPEHPK3PXP">
+                                </div>
+                            </div>
+
+                            <div id="shop-add-key-form" class="space-y-3 hidden">
+                                <div>
+                                    <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Key / Code</label>
+                                    <input id="shop-add-key" class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white" placeholder="XXXX-YYYY-ZZZZ">
+                                </div>
+                            </div>
+
+                            <button onclick="addStockToShopItem()" class="w-full bg-green-500/20 text-green-400 border border-green-500/30 py-3 rounded-xl font-bold hover:bg-green-500/30 transition-all mt-4">
+                                <i class="fas fa-plus mr-2"></i> Add Stock
+                            </button>
+                            
+                            <!-- Stock List -->
+                            <div class="mt-6">
+                                <h4 class="font-bold text-sm mb-3">Current Stock (<span id="modal-shop-stock-count">0</span>)</h4>
+                                <div id="modal-shop-stock-list" class="space-y-2 max-h-40 overflow-y-auto"></div>
+                            </div>
+                        </div>
+
+                        <!-- Clear Data Tab -->
+                        <div id="tab-shop-clear" class="hidden text-center py-8">
+                            <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
+                            <h4 class="font-bold text-xl mb-2">Danger Zone</h4>
+                            <p class="text-sm text-gray-400 mb-6">You can delete all unsold stock or delete the entire shop item completely.</p>
+                            
+                            <div class="space-y-3 max-w-xs mx-auto">
+                                <button onclick="clearShopItemStock()" class="w-full bg-orange-500/20 text-orange-400 border border-orange-500/30 py-3 rounded-xl font-bold hover:bg-orange-500/30 transition-all">
+                                    <i class="fas fa-broom mr-2"></i> Clear Unsold Stock
+                                </button>
+                                <button onclick="deleteShopItemFromModal()" class="w-full bg-red-500/20 text-red-400 border border-red-500/30 py-3 rounded-xl font-bold hover:bg-red-500/30 transition-all">
+                                    <i class="fas fa-trash-alt mr-2"></i> Delete Entire Item
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- SHOP MANAGEMENT -->
             <div id="page-shopmanage" class="page">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -2459,26 +2584,54 @@
                         <h4 class="text-lg font-semibold text-orange-400 mb-4 flex items-center">
                             <i class="fas fa-mobile-alt mr-2"></i> Local Payment Platforms
                         </h4>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
-                            <div class="bg-black/20 rounded-lg p-3">
-                                <label class="text-xs text-gray-400 uppercase font-bold block mb-2">bKash
-                                    Rate (1 USD = ? BDT)</label>
-                                <input type="number" id="conf-bkash-rate" placeholder="120"
-                                    class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- bKash Section -->
+                            <div class="bg-black/20 rounded-lg p-4">
+                                <label class="text-xs text-gray-400 uppercase font-bold block mb-3">bKash</label>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="text-xs text-gray-500 font-semibold block mb-1">Name</label>
+                                        <input type="text" id="conf-bkash-name" placeholder="bKash Personal"
+                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 text-white">
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-500 font-semibold block mb-1">Number</label>
+                                        <input type="text" id="conf-bkash-number" placeholder="01700000000"
+                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 text-white">
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-500 font-semibold block mb-1">Type</label>
+                                        <select id="conf-bkash-type"
+                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 text-white">
+                                            <option value="Personal">Personal</option>
+                                            <option value="Student">Student</option>
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="bg-black/20 rounded-lg p-3">
-                                <label class="text-xs text-gray-400 uppercase font-bold block mb-2">Nagad
-                                    Rate (1 USD = ? BDT)</label>
-                                <input type="number" id="conf-nagad-rate" placeholder="120"
-                                    class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5">
-                            </div>
-                        </div>
-
-                        <!-- Payment Platform Management -->
-                        <div class="mt-4 pt-4 border-t border-white/10">
-                            <h5 class="text-sm font-semibold text-gray-300 mb-3">Manage Payment Platforms</h5>
-                            <div id="paymentPlatformsList" class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <!-- Payment platforms will be loaded here -->
+                            <!-- Nagad Section -->
+                            <div class="bg-black/20 rounded-lg p-4">
+                                <label class="text-xs text-gray-400 uppercase font-bold block mb-3">Nagad</label>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="text-xs text-gray-500 font-semibold block mb-1">Name</label>
+                                        <input type="text" id="conf-nagad-name" placeholder="Nagad Personal"
+                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 text-white">
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-500 font-semibold block mb-1">Number</label>
+                                        <input type="text" id="conf-nagad-number" placeholder="01800000000"
+                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 text-white">
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-500 font-semibold block mb-1">Type</label>
+                                        <select id="conf-nagad-type"
+                                            class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5 text-white">
+                                            <option value="Personal">Personal</option>
+                                            <option value="Student">Student</option>
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -4546,7 +4699,175 @@
                 </div>
             </div>
 
-            <!-- REMOVE.BG API MANAGEMENT PAGE -->
+            <!-- AI GROUP ASSISTANT PAGE -->
+            <div id="page-ai-assistant" class="page">
+                <div class="glass-card p-4 md:p-6 rounded-2xl mb-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="font-bold text-lg flex items-center gap-2">
+                                <i class="fas fa-robot text-purple-400"></i> AI Group & Channel Assistant
+                            </h3>
+                            <p class="text-sm text-gray-400 mt-1">Automatically manages your groups and channels with AI intelligence</p>
+                        </div>
+                        <button onclick="saveAiAssistantSettings()" class="gold-gradient px-4 py-2 rounded-xl font-bold text-sm">
+                            <i class="fas fa-save mr-1"></i> Save
+                        </button>
+                    </div>
+                </div>
+                <div id="aiAssistantStatus" class="text-xs text-gray-400 mb-3"></div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                    <!-- Enable AI Assistant -->
+                    <div class="glass-card p-4 md:p-6 rounded-2xl">
+                        <h4 class="font-bold mb-4 flex items-center gap-2">
+                            <i class="fas fa-power-off text-purple-400"></i> AI Assistant Control
+                        </h4>
+                        <div class="flex items-center justify-between p-4 bg-purple-500/10 border border-purple-500/30 rounded-xl mb-4">
+                            <div>
+                                <div class="font-bold text-purple-400">Enable AI Assistant</div>
+                                <div class="text-xs text-gray-400 mt-1">Master switch for all AI features</div>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="ai_enabled" class="sr-only peer" checked>
+                                <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
+                            </label>
+                        </div>
+
+                        <!-- Auto-delete system messages -->
+                        <h5 class="text-xs font-bold text-gray-400 uppercase mb-3">Auto-Delete System Messages</h5>
+                        <div class="space-y-2 mb-4">
+                            <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                                <div class="text-sm">🤝 Join Messages</div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="ai_deleteJoin" class="sr-only peer" checked>
+                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                                <div class="text-sm">👋 Leave Messages</div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="ai_deleteLeave" class="sr-only peer" checked>
+                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                                <div class="text-sm">✅ Member Approved Messages</div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="ai_deleteApproved" class="sr-only peer" checked>
+                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                                <div class="text-sm">📺 Live Stream Start/End</div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="ai_deleteLive" class="sr-only peer" checked>
+                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                                <div class="text-sm">👤 User Added Notifications</div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="ai_deleteAdded" class="sr-only peer" checked>
+                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                                <div class="text-sm">📌 Pin Messages</div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="ai_deletePins" class="sr-only peer" checked>
+                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                                <div class="text-sm">🏷️ Title/Photo Changes</div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="ai_deleteTitlePhoto" class="sr-only peer">
+                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Select Service / Supporter IDs -->
+                    <div class="glass-card p-4 md:p-6 rounded-2xl">
+                        <h4 class="font-bold mb-4 flex items-center gap-2">
+                            <i class="fas fa-headset text-blue-400"></i> Select Service (Supporter IDs)
+                        </h4>
+                        <p class="text-xs text-gray-500 mb-3">Add Telegram user IDs of supporters/admins who can manage the group via the bot</p>
+
+                        <div id="supporterIdsList" class="space-y-2 mb-4 max-h-48 overflow-y-auto"></div>
+
+                        <div class="flex gap-2 mb-4">
+                            <input type="text" id="newSupporterId" class="flex-1 bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white" placeholder="Enter Telegram User ID (e.g. 123456789)">
+                            <button onclick="addSupporterId()" class="bg-blue-500/20 text-blue-400 border border-blue-500/30 px-4 py-2 rounded-lg text-sm hover:bg-blue-500/30 transition-all">
+                                <i class="fas fa-plus"></i> Add
+                            </button>
+                        </div>
+
+                        <div class="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+                            <div class="text-xs text-blue-400 font-bold mb-1"><i class="fas fa-info-circle mr-1"></i> Supporter Permissions</div>
+                            <div class="text-xs text-gray-400">Supporters can: ban/unban users, delete messages, approve join requests, and reply to user queries via bot commands.</div>
+                        </div>
+
+                        <!-- AI Smart Replies -->
+                        <div class="mt-4 pt-4 border-t border-white/10">
+                            <div class="flex items-center justify-between mb-3">
+                                <div>
+                                    <div class="text-sm font-bold text-green-400"><i class="fas fa-brain mr-1"></i> AI Smart Replies</div>
+                                    <div class="text-xs text-gray-500 mt-0.5">Auto-reply to common questions using AI</div>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="ai_smartReply" class="sr-only peer">
+                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-between mb-3">
+                                <div>
+                                    <div class="text-sm font-bold text-yellow-400"><i class="fas fa-gavel mr-1"></i> Auto-Ban Spammers</div>
+                                    <div class="text-xs text-gray-500 mt-0.5">Automatically ban users who repeatedly violate rules</div>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="ai_autoBan" class="sr-only peer">
+                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-yellow-500"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Channel Management -->
+                    <div class="glass-card p-4 md:p-6 rounded-2xl lg:col-span-2">
+                        <h4 class="font-bold mb-4 flex items-center gap-2">
+                            <i class="fas fa-broadcast-tower text-orange-400"></i> Channel Management
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                                <div class="text-sm">Auto-Forward Posts to Group</div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="ai_forwardChannel" class="sr-only peer">
+                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500"></div>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                                <div class="text-sm">Delete Non-Admin Messages in Channel</div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="ai_channelNonAdmin" class="sr-only peer" checked>
+                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500"></div>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                                <div class="text-sm">Auto-Pin Important Announcements</div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="ai_autoPin" class="sr-only peer">
+                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
             <div id="page-removebg" class="page">
                 <div class="glass-card p-4 md:p-6 rounded-2xl mb-6">
                     <div class="flex items-center justify-between">
@@ -4837,6 +5158,7 @@
             'adnetworks': 'Ad Networks',
             'providers': 'Providers',
             'groups': 'Group Management',
+            'ai-assistant': 'AI Group Assistant',
             'settings': 'Settings',
             'costmanage': 'Cost Management',
             'tasks': 'Tasks',
@@ -5017,7 +5339,7 @@
                                     </div>
                                     <div>
                                         <div class="font-bold text-sm">${item.name}</div>
-                                        <div class="text-xs text-green-400 font-bold">$${parseFloat(item.price || 0).toFixed(3)}</div>
+                                        <div class="text-xs text-green-400 font-bold">$${parseFloat(item.price || 0).toFixed(2)}</div>
                                     </div>
                                 </div>
                                 <div class="flex gap-2">
@@ -5084,20 +5406,215 @@
                 const data = await res.json();
                 const item = (data.shopItems || []).find(i => i.id === id);
                 if (item) {
-                    document.getElementById('shop-edit-id').value = item.id;
-                    document.getElementById('shop-id').value = item.id;
-                    document.getElementById('shop-id').disabled = true; // Prevent changing ID during edit
-                    document.getElementById('shop-name').value = item.name || '';
-                    document.getElementById('shop-price').value = item.price || '';
-                    document.getElementById('shop-img').value = item.imageUrl || '';
-                    document.getElementById('shop-bg').value = item.bgColor || '';
-                    document.getElementById('shop-btn').value = item.btnColor || '';
+                    // Populate modal inputs
+                    document.getElementById('modal-shop-id').value = item.id;
+                    document.getElementById('shopEditModalTitle').textContent = item.name || item.id;
+                    document.getElementById('modal-shop-name').value = item.name || '';
+                    document.getElementById('modal-shop-price').value = item.price || '';
+                    document.getElementById('modal-shop-img').value = item.imageUrl || '';
+                    document.getElementById('modal-shop-bg').value = item.bgColor || '';
+                    document.getElementById('modal-shop-btn').value = item.btnColor || '';
 
-                    nav('shopmanage');
-                    window.scrollTo(0, 0);
+                    // Load stock for this item
+                    await loadShopItemStock(item.id);
+
+                    // Show modal and first tab
+                    document.getElementById('shopEditModal').classList.remove('hidden');
+                    document.getElementById('shopEditModal').classList.add('flex');
+                    switchShopEditTab('info');
                 }
             } catch (e) {
                 alert('❌ Error loading item data');
+            }
+        }
+
+        function closeShopEditModal() {
+            document.getElementById('shopEditModal').classList.add('hidden');
+            document.getElementById('shopEditModal').classList.remove('flex');
+        }
+
+        function switchShopEditTab(tab) {
+            // Hide all tabs
+            document.getElementById('tab-shop-info').classList.add('hidden');
+            document.getElementById('tab-shop-info').classList.remove('block');
+            document.getElementById('tab-shop-add').classList.add('hidden');
+            document.getElementById('tab-shop-add').classList.remove('block');
+            document.getElementById('tab-shop-clear').classList.add('hidden');
+            document.getElementById('tab-shop-clear').classList.remove('block');
+
+            // Reset tab button styles
+            const btns = ['info', 'add', 'clear'];
+            btns.forEach(b => {
+                const el = document.getElementById(`tab-btn-shop-${b}`);
+                el.classList.remove('border-orange-500', 'text-orange-400');
+                el.classList.add('border-transparent', 'text-gray-500');
+            });
+
+            // Show selected tab
+            document.getElementById(`tab-shop-${tab}`).classList.remove('hidden');
+            document.getElementById(`tab-shop-${tab}`).classList.add('block');
+            
+            // Active button style
+            const activeBtn = document.getElementById(`tab-btn-shop-${tab}`);
+            activeBtn.classList.add('border-orange-500', 'text-orange-400');
+            activeBtn.classList.remove('border-transparent', 'text-gray-500');
+        }
+
+        async function saveModalShopInfo() {
+            const id = document.getElementById('modal-shop-id').value;
+            const item = {
+                id: id,
+                name: document.getElementById('modal-shop-name').value,
+                price: document.getElementById('modal-shop-price').value,
+                imageUrl: document.getElementById('modal-shop-img').value,
+                bgColor: document.getElementById('modal-shop-bg').value,
+                btnColor: document.getElementById('modal-shop-btn').value
+            };
+
+            try {
+                const res = await fetch('/api/admin/shop', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(item)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Shop item information saved!');
+                    loadShopManage();
+                    document.getElementById('shopEditModalTitle').textContent = item.name;
+                } else {
+                    alert('❌ Failed: ' + data.message);
+                }
+            } catch (e) {
+                alert('❌ Network error');
+            }
+        }
+
+        function toggleShopItemType() {
+            const isAccount = document.querySelector('input[name="shop-item-type"]:checked').value === 'account';
+            if (isAccount) {
+                document.getElementById('shop-add-account-form').classList.remove('hidden');
+                document.getElementById('shop-add-account-form').classList.add('block');
+                document.getElementById('shop-add-key-form').classList.add('hidden');
+                document.getElementById('shop-add-key-form').classList.remove('block');
+            } else {
+                document.getElementById('shop-add-account-form').classList.add('hidden');
+                document.getElementById('shop-add-account-form').classList.remove('block');
+                document.getElementById('shop-add-key-form').classList.remove('hidden');
+                document.getElementById('shop-add-key-form').classList.add('block');
+            }
+        }
+
+        async function loadShopItemStock(shopId) {
+            try {
+                const res = await fetch(`/api/admin/shop-stock/${shopId}`);
+                if (!res.ok) return;
+                const data = await res.json();
+                const container = document.getElementById('modal-shop-stock-list');
+                const countEl = document.getElementById('modal-shop-stock-count');
+                
+                if (data.success) {
+                    const stock = data.stock || [];
+                    countEl.textContent = stock.length;
+                    
+                    if (stock.length === 0) {
+                        container.innerHTML = '<div class="text-xs text-gray-500 italic p-2 text-center bg-black/20 rounded">No stock available</div>';
+                    } else {
+                        container.innerHTML = stock.map(s => `
+                            <div class="flex items-center justify-between p-2 bg-black/30 border border-white/5 rounded-lg">
+                                <div class="text-xs font-mono text-gray-300 overflow-hidden text-ellipsis whitespace-nowrap pr-2">
+                                    ${s.type === 'key' ? s.key : (s.email || 'Unknown')}
+                                </div>
+                                <button onclick="deleteSingleStock('${shopId}', '${s.id}')" class="text-red-400 hover:text-red-300 flex-shrink-0">
+                                    <i class="fas fa-trash-alt text-sm"></i>
+                                </button>
+                            </div>
+                        `).join('');
+                    }
+                }
+            } catch (e) {
+                console.error('Error loading stock', e);
+            }
+        }
+
+        async function addStockToShopItem() {
+            const shopId = document.getElementById('modal-shop-id').value;
+            const type = document.querySelector('input[name="shop-item-type"]:checked').value;
+            
+            let payload = { shopId, type };
+            if (type === 'account') {
+                payload.email = document.getElementById('shop-add-email').value.trim();
+                payload.password = document.getElementById('shop-add-password').value.trim();
+                payload.twoFactor = document.getElementById('shop-add-2fa').value.trim();
+                
+                if (!payload.email || !payload.password) {
+                    return alert('Email and Password are required for Account type.');
+                }
+            } else {
+                payload.key = document.getElementById('shop-add-key').value.trim();
+                if (!payload.key) {
+                    return alert('Key/Code is required.');
+                }
+            }
+
+            try {
+                const res = await fetch('/api/admin/shop-stock', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Stock added successfully!');
+                    // Clear inputs
+                    document.getElementById('shop-add-email').value = '';
+                    document.getElementById('shop-add-password').value = '';
+                    document.getElementById('shop-add-2fa').value = '';
+                    document.getElementById('shop-add-key').value = '';
+                    // Reload stock
+                    loadShopItemStock(shopId);
+                } else {
+                    alert('❌ Failed: ' + data.message);
+                }
+            } catch (e) {
+                alert('❌ Network error');
+            }
+        }
+
+        async function deleteSingleStock(shopId, stockId) {
+            if (!confirm('Delete this stock item?')) return;
+            try {
+                const res = await fetch(`/api/admin/shop-stock/${shopId}/${stockId}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) {
+                    loadShopItemStock(shopId);
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function clearShopItemStock() {
+            const shopId = document.getElementById('modal-shop-id').value;
+            if (!confirm('Are you sure you want to delete ALL unsold stock for this item?')) return;
+            
+            try {
+                const res = await fetch(`/api/admin/shop-stock/${shopId}/clear`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('All stock cleared.');
+                    loadShopItemStock(shopId);
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function deleteShopItemFromModal() {
+            const shopId = document.getElementById('modal-shop-id').value;
+            if (confirm('Delete the entire shop item completely?')) {
+                closeShopEditModal();
+                await deleteShopItem(shopId);
             }
         }
 
@@ -5159,7 +5676,7 @@
                 const data = await res.json();
                 const container = document.getElementById('shopItemsContainer');
                 if (container && data.success) {
-                    const items = data.items || [];
+                    const items = data.shopItems || [];
                     if (items.length === 0) {
                         container.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fas fa-shopping-bag text-4xl mb-3 opacity-50"></i><p>No shop items yet</p></div>';
                     } else {
@@ -5181,7 +5698,10 @@
                                                 </div>
                                             </div>
                                             <p class="text-sm text-gray-400 mb-2">${item.desc || 'No description'}</p>
-                                            <span class="text-xs px-2 py-1 rounded bg-orange-500/20 text-orange-400">${item.price || 0} TC</span>
+                                            <div class="flex items-center justify-between">
+                                                <span class="text-xs px-2 py-1 rounded bg-green-500/20 text-green-400">$${item.price || 0}</span>
+                                                <span class="text-xs px-2 py-1 rounded bg-orange-500/20 text-orange-400">Stock: ${item.stockCount || 0}</span>
+                                            </div>
                                         </div>
                                     `).join('');
                     }
@@ -5567,10 +6087,20 @@
                     // Credit Exchange Rates
                     if (document.getElementById('conf-crypto-rate'))
                         document.getElementById('conf-crypto-rate').value = c.cryptoRate || 0.01;
-                    if (document.getElementById('conf-bkash-rate'))
-                        document.getElementById('conf-bkash-rate').value = c.bkashRate || 1;
-                    if (document.getElementById('conf-nagad-rate'))
-                        document.getElementById('conf-nagad-rate').value = c.nagadRate || 1;
+
+                    // Local Payment Platforms
+                    if (document.getElementById('conf-bkash-name'))
+                        document.getElementById('conf-bkash-name').value = c.bkashName || 'bKash Personal';
+                    if (document.getElementById('conf-bkash-number'))
+                        document.getElementById('conf-bkash-number').value = c.bkashNumber || '';
+                    if (document.getElementById('conf-bkash-type'))
+                        document.getElementById('conf-bkash-type').value = c.bkashType || 'Personal';
+                    if (document.getElementById('conf-nagad-name'))
+                        document.getElementById('conf-nagad-name').value = c.nagadName || 'Nagad Personal';
+                    if (document.getElementById('conf-nagad-number'))
+                        document.getElementById('conf-nagad-number').value = c.nagadNumber || '';
+                    if (document.getElementById('conf-nagad-type'))
+                        document.getElementById('conf-nagad-type').value = c.nagadType || 'Personal';
                     // Exchange Rates (USD/Tokens/Gems)
                     if (document.getElementById('conf-usd-to-token'))
                         document.getElementById('conf-usd-to-token').value = c.usdToToken || 100;
@@ -5616,7 +6146,7 @@
                     const statUsd = document.getElementById('stat-usd-revenue');
                     if (statRewards) statRewards.textContent = totalRewards + ' TC';
                     if (statCosts) statCosts.textContent = totalCosts + ' TC';
-                    if (statUsd) statUsd.textContent = '$' + usdRevenue.toFixed(3);
+                    if (statUsd) statUsd.textContent = (usdRevenue === 0 ? '0' : '$' + usdRevenue.toFixed(2));
                     // Selling Rewards
                     const sr = data.sellingRewards || {};
                     document.getElementById('reward-gmail').value = sr.gmail || 0;
@@ -5697,8 +6227,14 @@
 
                 // Credit Exchange Rates
                 cryptoRate: getFloatValue('conf-crypto-rate', 0.01),
-                bkashRate: getFloatValue('conf-bkash-rate', 1),
-                nagadRate: getFloatValue('conf-nagad-rate', 1),
+
+                // Local Payment Platforms
+                bkashName: getStringValue('conf-bkash-name') || 'bKash Personal',
+                bkashNumber: getStringValue('conf-bkash-number') || '',
+                bkashType: getStringValue('conf-bkash-type') || 'Personal',
+                nagadName: getStringValue('conf-nagad-name') || 'Nagad Personal',
+                nagadNumber: getStringValue('conf-nagad-number') || '',
+                nagadType: getStringValue('conf-nagad-type') || 'Personal',
 
                 // Exchange Rates (USD/Tokens/Gems)
                 usdToToken: getValue('conf-usd-to-token', 100),
@@ -5766,108 +6302,6 @@
                 alert('⚠ Network error saving costs');
                 btn.innerHTML = originalHtml;
                 btn.disabled = false;
-            }
-        }
-
-        // Payment Platform Management
-        let paymentPlatforms = [
-            { name: 'bKash Personal', number: '01700000000', logo: '' },
-            { name: 'Nagad Personal', number: '01800000000', logo: '' }
-        ];
-
-        async function loadPaymentPlatforms() {
-            try {
-                const res = await fetch('/api/admin/payment-platforms');
-                const data = await res.json();
-                if (data.success && data.platforms && data.platforms.length > 0) {
-                    paymentPlatforms = data.platforms;
-                }
-            } catch (e) {
-                console.error('Error loading payment platforms:', e);
-            }
-            renderPaymentPlatforms();
-        }
-
-        function renderPaymentPlatforms() {
-            const container = document.getElementById('paymentPlatformsList');
-            if (!container) return;
-
-            container.innerHTML = paymentPlatforms.map((platform, index) => `
-                <div class="bg-black/20 rounded-lg p-3 border border-white/10 flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        ${platform.logo ? `<img src="${platform.logo}" alt="${platform.name}" class="w-10 h-10 rounded-lg object-cover">` : '<div class="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center"><i class="fas fa-mobile-alt text-orange-400"></i></div>'}
-                        <div>
-                            <div class="font-semibold text-white">${platform.name}</div>
-                            <div class="text-xs text-gray-400">${platform.number || 'No number'}</div>
-                        </div>
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="editPaymentPlatform(${index})" class="text-blue-400 hover:text-blue-300 p-2">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function closePaymentPlatformModal() {
-            const modal = document.getElementById('paymentPlatformModal');
-            if (modal) modal.remove();
-        }
-
-        function editPaymentPlatform(index) {
-            const platform = paymentPlatforms[index];
-            const modalHtml = `
-                <div id="paymentPlatformModal" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-                    <div class="bg-gray-900 rounded-xl p-6 w-full max-w-md border border-white/10">
-                        <h3 class="text-xl font-bold text-white mb-4">Edit Payment Platform</h3>
-                        <div class="space-y-4">
-                            <div>
-                                <label class="text-sm text-gray-400 block mb-2">Platform Name</label>
-                                <input type="text" id="pp-name" value="${platform.name}" class="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-white">
-                            </div>
-                            <div>
-                                <label class="text-sm text-gray-400 block mb-2">Platform Number</label>
-                                <input type="text" id="pp-number" value="${platform.number}" class="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-white">
-                            </div>
-                        </div>
-                        <div class="flex gap-3 mt-6">
-                            <button onclick="updatePaymentPlatform(${index})" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-lg font-semibold">Save</button>
-                            <button onclick="closePaymentPlatformModal()" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-lg font-semibold">Cancel</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            document.body.insertAdjacentHTML('beforeend', modalHtml);
-        }
-
-        async function updatePaymentPlatform(index) {
-            const name = document.getElementById('pp-name').value.trim();
-            const number = document.getElementById('pp-number').value.trim();
-
-            if (!name) {
-                alert('Please enter platform name');
-                return;
-            }
-
-            paymentPlatforms[index] = { name, number, logo: '' };
-
-            try {
-                const res = await fetch('/api/admin/payment-platforms', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ platforms: paymentPlatforms })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    closePaymentPlatformModal();
-                    renderPaymentPlatforms();
-                    alert('✅ Payment platform updated successfully!');
-                } else {
-                    alert('❌ Failed to update: ' + data.message);
-                }
-            } catch (e) {
-                alert('❌ Network error updating payment platform');
             }
         }
 
@@ -6050,6 +6484,9 @@
                     case 'groups':
                         if (typeof loadGroupSettings === 'function') loadGroupSettings();
                         if (typeof loadGroups === 'function') loadGroups();
+                        break;
+                    case 'ai-assistant':
+                        loadAiAssistantSettings();
                         break;
 
                     case 'tasks':
@@ -6575,7 +7012,7 @@
             }
             if (!messageFormat) {
                 const assetLabel = asset === 'tokens' ? 'TC' : (asset === 'usd' ? '$' : 'Gems');
-                const amtStr = asset === 'usd' ? amount.toFixed(3) : amount;
+                const amtStr = asset === 'usd' ? amount.toFixed(2) : amount;
                 messageFormat = `🎁 You received a gift of ${asset === 'usd' ? '$' : ''}${amtStr} ${assetLabel} from Admin!`;
             }
 
@@ -6612,7 +7049,6 @@
             loadAllCosts();
             loadApiKeys();
             loadVerificationSettings();
-            loadPaymentPlatforms();
             startAdminMetricsPolling();
         }
 
@@ -6912,7 +7348,7 @@
 
         function formatUsdDisplay(usd) {
             const v = Number(usd || 0);
-            return v === 0 ? '$0.000' : ('$' + v.toFixed(3));
+            return v === 0 ? '0' : ('$' + v.toFixed(2));
         }
 
         function loadUsers() {
@@ -11624,6 +12060,115 @@
             }
         }
 
+        // ==================== AI ASSISTANT MANAGEMENT ====================
+        let aiAssistantSupporters = [];
+
+        async function loadAiAssistantSettings() {
+            try {
+                const res = await fetch('/api/admin/ai-assistant');
+                if (res.ok) {
+                    const s = await res.json();
+                    document.getElementById('ai_enabled').checked = s.enabled !== false;
+                    document.getElementById('ai_deleteJoin').checked = s.deleteJoin !== false;
+                    document.getElementById('ai_deleteLeave').checked = s.deleteLeave !== false;
+                    document.getElementById('ai_deleteApproved').checked = s.deleteApproved !== false;
+                    document.getElementById('ai_deleteLive').checked = s.deleteLive !== false;
+                    document.getElementById('ai_deleteAdded').checked = s.deleteAdded !== false;
+                    document.getElementById('ai_deletePins').checked = s.deletePins !== false;
+                    document.getElementById('ai_deleteTitlePhoto').checked = s.deleteTitlePhoto === true;
+                    
+                    aiAssistantSupporters = s.supporterIds || [];
+                    renderSupporterIds();
+                    
+                    document.getElementById('ai_smartReply').checked = s.smartReply === true;
+                    document.getElementById('ai_autoBan').checked = s.autoBan === true;
+                    document.getElementById('ai_forwardChannel').checked = s.forwardChannel === true;
+                    document.getElementById('ai_channelNonAdmin').checked = s.channelNonAdmin !== false;
+                    document.getElementById('ai_autoPin').checked = s.autoPin === true;
+                }
+            } catch (e) {
+                console.error('Error loading AI assistant settings:', e);
+            }
+        }
+
+        function renderSupporterIds() {
+            const list = document.getElementById('supporterIdsList');
+            if (!list) return;
+            
+            if (aiAssistantSupporters.length === 0) {
+                list.innerHTML = '<div class="text-xs text-gray-500 italic p-2 bg-black/20 rounded-lg text-center">No supporters added yet.</div>';
+                return;
+            }
+            
+            list.innerHTML = aiAssistantSupporters.map(id => `
+                <div class="flex items-center justify-between p-2 bg-black/30 border border-white/5 rounded-lg mb-1">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-user-shield text-blue-400"></i>
+                        <span class="text-sm font-mono">${id}</span>
+                    </div>
+                    <button onclick="removeSupporterId('${id}')" class="text-red-400 hover:text-red-300">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function addSupporterId() {
+            const input = document.getElementById('newSupporterId');
+            const id = input.value.trim();
+            if (!id) return;
+            
+            if (!aiAssistantSupporters.includes(id)) {
+                aiAssistantSupporters.push(id);
+                renderSupporterIds();
+            }
+            input.value = '';
+        }
+
+        function removeSupporterId(id) {
+            aiAssistantSupporters = aiAssistantSupporters.filter(sid => sid !== id);
+            renderSupporterIds();
+        }
+
+        async function saveAiAssistantSettings() {
+            const statusEl = document.getElementById('aiAssistantStatus');
+            if (statusEl) statusEl.textContent = 'Saving...';
+
+            const settings = {
+                enabled: document.getElementById('ai_enabled')?.checked,
+                deleteJoin: document.getElementById('ai_deleteJoin')?.checked,
+                deleteLeave: document.getElementById('ai_deleteLeave')?.checked,
+                deleteApproved: document.getElementById('ai_deleteApproved')?.checked,
+                deleteLive: document.getElementById('ai_deleteLive')?.checked,
+                deleteAdded: document.getElementById('ai_deleteAdded')?.checked,
+                deletePins: document.getElementById('ai_deletePins')?.checked,
+                deleteTitlePhoto: document.getElementById('ai_deleteTitlePhoto')?.checked,
+                supporterIds: aiAssistantSupporters,
+                smartReply: document.getElementById('ai_smartReply')?.checked,
+                autoBan: document.getElementById('ai_autoBan')?.checked,
+                forwardChannel: document.getElementById('ai_forwardChannel')?.checked,
+                channelNonAdmin: document.getElementById('ai_channelNonAdmin')?.checked,
+                autoPin: document.getElementById('ai_autoPin')?.checked
+            };
+
+            try {
+                const res = await fetch('/api/admin/ai-assistant', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+                if (res.ok) {
+                    if (statusEl) statusEl.textContent = 'Settings saved successfully.';
+                    setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 3000);
+                } else {
+                    if (statusEl) statusEl.textContent = 'Failed to save settings.';
+                }
+            } catch (e) {
+                console.error('Error saving AI assistant settings:', e);
+                if (statusEl) statusEl.textContent = 'Error saving settings.';
+            }
+        }
+
         async function saveGroupManagementSettings() {
             const statusEl = document.getElementById('groupManagementStatus');
             if (statusEl) statusEl.textContent = 'Saving...';
@@ -11797,10 +12342,13 @@
                 const nameInput = document.getElementById('dp_name_' + key);
                 if (nameInput) {
                     cryptoMethodsCache[key].name = nameInput.value;
-                    cryptoMethodsCache[key].type = document.getElementById('dp_type_' + key).value || 'crypto';
-                    cryptoMethodsCache[key].details = document.getElementById('dp_details_' + key).value;
-                    cryptoMethodsCache[key].email = document.getElementById('dp_email_' + key).value;
-                    cryptoMethodsCache[key].qr = document.getElementById('dp_qr_' + key).value;
+                    cryptoMethodsCache[key].type = document.getElementById('dp_type_' + key)?.value || cryptoMethodsCache[key].type || 'crypto';
+                    cryptoMethodsCache[key].details = document.getElementById('dp_details_' + key)?.value || '';
+                    const emailEl = document.getElementById('dp_email_' + key);
+                    if (emailEl) cryptoMethodsCache[key].email = emailEl.value;
+                    const accountTypeEl = document.getElementById('dp_accountType_' + key);
+                    if (accountTypeEl) cryptoMethodsCache[key].accountType = accountTypeEl.value;
+                    cryptoMethodsCache[key].qr = document.getElementById('dp_qr_' + key)?.value || '';
                     cryptoMethodsCache[key].status = document.getElementById('dp_status_' + key).checked ? 'active' : 'inactive';
                 }
             }
@@ -11824,16 +12372,14 @@
 
                 const element = document.createElement('div');
                 element.className = 'bg-slate-900/50 border border-white/10 rounded-xl p-4 relative';
+                // For local platforms: hide email field, add accountType instead
+                const isLocalPlatform = pType === 'local';
                 element.innerHTML = `
+                                    <input type="hidden" id="dp_type_${key}" value="${pType}">
                                     <div class="flex flex-wrap gap-2 justify-between items-start mb-3">
                                         <div class="font-bold flex flex-wrap items-center gap-2">
-                                            <input type="text" id="dp_name_${key}" class="bg-black/50 border border-white/20 rounded px-2 py-1 text-sm text-white w-48" value="${platform.name || ''}" placeholder="Platform Name (e.g. Binance)">
-                                            
-                                            <select id="dp_type_${key}" class="bg-black/50 border border-white/20 rounded px-2 py-1 text-sm text-white outline-none">
-                                                <option value="crypto" ${pType === 'crypto' ? 'selected' : ''}>Crypto Payment</option>
-                                                <option value="local" ${pType === 'local' ? 'selected' : ''}>Local Payment (bKash/Nagad)</option>
-                                            </select>
-
+                                            <input type="text" id="dp_name_${key}" class="bg-black/50 border border-white/20 rounded px-2 py-1 text-sm text-white w-48" value="${platform.name || ''}" placeholder="${isLocalPlatform ? 'e.g. bKash / Nagad' : 'Platform Name (e.g. Binance)'}">
+                                            ${isLocalPlatform ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400">LOCAL</span>` : `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400">CRYPTO</span>`}
                                             <div class="flex items-center gap-1 ml-2">
                                                 <input type="checkbox" id="dp_status_${key}" ${platform.status === 'active' ? 'checked' : ''} class="w-4 h-4 accent-green-500">
                                                 <label for="dp_status_${key}" class="text-xs text-gray-400">Active</label>
@@ -11846,13 +12392,20 @@
                                     
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                         <div>
-                                            <label class="text-[10px] text-gray-400 uppercase tracking-wider mb-1 block">Details / Address / Number</label>
-                                            <input type="text" id="dp_details_${key}" class="w-full bg-black/50 border border-white/10 rounded px-3 py-2 text-sm text-white" value="${platform.details || ''}" placeholder="e.g. TR7NH...">
+                                            <label class="text-[10px] text-gray-400 uppercase tracking-wider mb-1 block">${isLocalPlatform ? 'Phone Number' : 'Details / Address / Number'}</label>
+                                            <input type="text" id="dp_details_${key}" class="w-full bg-black/50 border border-white/10 rounded px-3 py-2 text-sm text-white" value="${platform.details || ''}" placeholder="${isLocalPlatform ? 'e.g. 01712345678' : 'e.g. TR7NH...'}">
                                         </div>
+                                        ${isLocalPlatform ? `
+                                        <div>
+                                            <label class="text-[10px] text-gray-400 uppercase tracking-wider mb-1 block">Account Type (e.g. Personal / Student)</label>
+                                            <input type="text" id="dp_accountType_${key}" class="w-full bg-black/50 border border-white/10 rounded px-3 py-2 text-sm text-white" value="${platform.accountType || 'Personal'}" placeholder="e.g. Personal">
+                                        </div>
+                                        ` : `
                                         <div>
                                             <label class="text-[10px] text-gray-400 uppercase tracking-wider mb-1 block">Email (Optional)</label>
                                             <input type="text" id="dp_email_${key}" class="w-full bg-black/50 border border-white/10 rounded px-3 py-2 text-sm text-white" value="${platform.email || ''}" placeholder="e.g. email@binance.com">
                                         </div>
+                                        `}
                                         <div class="col-span-full">
                                             <label class="text-[10px] text-gray-400 uppercase tracking-wider mb-1 block">QR Code URL (Optional)</label>
                                             <input type="text" id="dp_qr_${key}" class="w-full bg-black/50 border border-white/10 rounded px-3 py-2 text-sm text-white" value="${platform.qr || ''}" placeholder="https://...">
@@ -11873,22 +12426,26 @@
                 const nameInput = document.getElementById('dp_name_' + key);
                 if (nameInput) {
                     cryptoMethodsCache[key].name = nameInput.value;
-                    cryptoMethodsCache[key].type = document.getElementById('dp_type_' + key).value || 'crypto';
-                    cryptoMethodsCache[key].details = document.getElementById('dp_details_' + key).value;
-                    cryptoMethodsCache[key].email = document.getElementById('dp_email_' + key).value;
-                    cryptoMethodsCache[key].qr = document.getElementById('dp_qr_' + key).value;
+                    cryptoMethodsCache[key].type = document.getElementById('dp_type_' + key)?.value || cryptoMethodsCache[key].type || 'crypto';
+                    cryptoMethodsCache[key].details = document.getElementById('dp_details_' + key)?.value || '';
+                    const emailEl = document.getElementById('dp_email_' + key);
+                    if (emailEl) cryptoMethodsCache[key].email = emailEl.value;
+                    const accountTypeEl = document.getElementById('dp_accountType_' + key);
+                    if (accountTypeEl) cryptoMethodsCache[key].accountType = accountTypeEl.value;
+                    cryptoMethodsCache[key].qr = document.getElementById('dp_qr_' + key)?.value || '';
                     cryptoMethodsCache[key].status = document.getElementById('dp_status_' + key).checked ? 'active' : 'inactive';
                 }
             }
 
             const newKey = 'platform_' + Date.now();
             cryptoMethodsCache[newKey] = {
-                name: "New Platform",
+                name: currentPlatformTab === 'local' ? 'bKash' : 'New Platform',
                 type: currentPlatformTab, // Match currently open tab
-                details: "",
-                email: "",
-                qr: "",
-                status: "active"
+                details: '',
+                email: '',
+                accountType: currentPlatformTab === 'local' ? 'Personal' : '',
+                qr: '',
+                status: 'active'
             };
             renderDepositPlatforms();
         };
@@ -11906,12 +12463,19 @@
                 const nameInput = document.getElementById('dp_name_' + key);
                 if (!nameInput) continue; // safety check
 
+                const typeEl = document.getElementById('dp_type_' + key);
+                const emailEl = document.getElementById('dp_email_' + key);
+                const accountTypeEl = document.getElementById('dp_accountType_' + key);
+                const detailsEl = document.getElementById('dp_details_' + key);
+                const qrEl = document.getElementById('dp_qr_' + key);
+
                 cryptoMethodsCache[key] = {
                     name: nameInput.value,
-                    type: document.getElementById('dp_type_' + key).value || 'crypto',
-                    details: document.getElementById('dp_details_' + key).value,
-                    email: document.getElementById('dp_email_' + key).value,
-                    qr: document.getElementById('dp_qr_' + key).value,
+                    type: typeEl ? typeEl.value : (cryptoMethodsCache[key].type || 'crypto'),
+                    details: detailsEl ? detailsEl.value : (cryptoMethodsCache[key].details || ''),
+                    email: emailEl ? emailEl.value : (cryptoMethodsCache[key].email || ''),
+                    accountType: accountTypeEl ? accountTypeEl.value : (cryptoMethodsCache[key].accountType || ''),
+                    qr: qrEl ? qrEl.value : (cryptoMethodsCache[key].qr || ''),
                     status: document.getElementById('dp_status_' + key).checked ? 'active' : 'inactive'
                 };
             }

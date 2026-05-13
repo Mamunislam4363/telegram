@@ -795,6 +795,26 @@ app.get('/api/admin/config', (req, res) => {
     });
 });
 
+// API: Public Config (includes payment platform details)
+app.get('/api/config', (req, res) => {
+    res.json({
+        success: true,
+        config: {
+            dailyBonus: db.data.settings.dailyBonus,
+            welcomeCredits: db.data.settings.welcomeCredits || db.data.settings.welcomeBonus,
+            maintenance: db.data.meta?.maintenance || false,
+            countryAdRewards: db.data.settings.countryAdRewards || {},
+            // Payment platform details
+            bkashName: db.data.settings.bkashName || 'bKash Personal',
+            bkashNumber: db.data.settings.bkashNumber || '',
+            bkashType: db.data.settings.bkashType || 'Personal',
+            nagadName: db.data.settings.nagadName || 'Nagad Personal',
+            nagadNumber: db.data.settings.nagadNumber || '',
+            nagadType: db.data.settings.nagadType || 'Personal'
+        }
+    });
+});
+
 app.post('/api/admin/toggle-maintenance', (req, res) => {
     const { userId } = req.body;
     if (String(userId) !== String(process.env.ADMIN_ID)) return res.json({ success: false, message: 'Unauthorized' });
@@ -806,12 +826,20 @@ app.post('/api/admin/toggle-maintenance', (req, res) => {
 });
 
 app.post('/api/admin/update-config', (req, res) => {
-    const { userId, dailyBonus, welcomeCredits, countryAdRewards } = req.body;
+    const { userId, dailyBonus, welcomeCredits, countryAdRewards, bkashName, bkashNumber, bkashType, nagadName, nagadNumber, nagadType } = req.body;
     if (String(userId) !== String(process.env.ADMIN_ID)) return res.json({ success: false, message: 'Unauthorized' });
 
     if (dailyBonus !== undefined) db.data.settings.dailyBonus = parseInt(dailyBonus);
     if (welcomeCredits !== undefined) db.data.settings.welcomeCredits = parseInt(welcomeCredits);
     if (countryAdRewards !== undefined) db.data.settings.countryAdRewards = countryAdRewards;
+
+    // Payment platform details
+    if (bkashName !== undefined) db.data.settings.bkashName = bkashName;
+    if (bkashNumber !== undefined) db.data.settings.bkashNumber = bkashNumber;
+    if (bkashType !== undefined) db.data.settings.bkashType = bkashType;
+    if (nagadName !== undefined) db.data.settings.nagadName = nagadName;
+    if (nagadNumber !== undefined) db.data.settings.nagadNumber = nagadNumber;
+    if (nagadType !== undefined) db.data.settings.nagadType = nagadType;
 
     db.save();
     res.json({ success: true });
@@ -1768,6 +1796,67 @@ app.post('/api/accounts/buy-category', async (req, res) => {
             password: accountData.password,
             instructions: accountData.instructions
         }
+    });
+});
+
+// API: Buy Admin Shop Item (USD)
+app.post('/api/accounts/buy-shop-item', async (req, res) => {
+    const { userId, shopId, price } = req.body;
+    if (!userId || !shopId || isNaN(price)) return res.json({ success: false, message: 'Invalid request' });
+
+    const users = typeof getUsersObj === 'function' ? getUsersObj() : (db.data.users || {});
+    const user = users[userId];
+    if (!user) return res.json({ success: false, message: 'User not found' });
+
+    const userUsd = user.usd || 0;
+    if (userUsd < price) return res.json({ success: false, message: 'Insufficient USD balance' });
+
+    // Check stock
+    const stockList = db.data.shopStock?.[shopId] || [];
+    const availableStock = stockList.filter(s => !s.sold);
+    if (availableStock.length === 0) return res.json({ success: false, message: 'Out of stock' });
+
+    // Take one stock item
+    const item = availableStock[0];
+    item.sold = true; // Mark as sold
+    item.soldTo = userId;
+    item.soldAt = Date.now();
+
+    // Deduct USD
+    user.usd -= price;
+
+    const orderId = 'ORD-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+    const shopItem = db.data.shopItems?.[shopId] || { name: 'Shop Item' };
+
+    // Record history
+    if (!user.history) user.history = [];
+    const historyEntry = {
+        id: orderId,
+        type: 'shop_item_purchase',
+        amount: price,
+        currency: 'usd',
+        shopId: shopId,
+        itemName: shopItem.name,
+        date: Date.now(),
+        itemData: {
+            type: item.type,
+            email: item.email,
+            password: item.password,
+            twoFactor: item.twoFactor,
+            key: item.key
+        }
+    };
+    user.history.unshift(historyEntry);
+
+    await db.updateUser(user);
+    db.save(); // Save stock changes
+
+    return res.json({
+        success: true,
+        newBalance: user.usd,
+        orderId: orderId,
+        itemName: shopItem.name,
+        item: historyEntry.itemData
     });
 });
 
@@ -4383,7 +4472,7 @@ app.post('/api/deposit/submit', (req, res) => {
         txnId,
         screenshot: req.body.screenshot || null,
         date: Date.now(),
-        status: 'pending'
+        status: 'Submitted'
     };
 
     db.data.pendingDeposits.unshift(deposit);
@@ -4399,8 +4488,8 @@ app.get('/api/deposit/config', (req, res) => {
 
 // API: Admin - Get All Deposits (Pending & History)
 app.get('/api/admin/deposits', (req, res) => {
-    const pending = (db.data.pendingDeposits || []).filter(d => d.status === 'pending');
-    const history = (db.data.pendingDeposits || []).filter(d => d.status !== 'pending').slice(0, 50);
+    const pending = (db.data.pendingDeposits || []).filter(d => d.status === 'Submitted');
+    const history = (db.data.pendingDeposits || []).filter(d => d.status !== 'Submitted').slice(0, 50);
     res.json({ success: true, pending, history });
 });
 
@@ -4413,7 +4502,7 @@ app.post('/api/admin/deposits/action', (req, res) => {
     if (depositIndex === -1) return res.json({ success: false, message: 'Deposit not found' });
 
     const deposit = deposits[depositIndex];
-    if (deposit.status !== 'pending') return res.json({ success: false, message: 'Deposit already processed' });
+    if (deposit.status !== 'Submitted') return res.json({ success: false, message: 'Deposit already processed' });
 
     if (action === 'approve') {
         const users = getUsersObj();
@@ -4454,9 +4543,9 @@ app.post('/api/admin/deposits/action', (req, res) => {
         });
 
         saveUsersObj(users);
-        deposit.status = 'approved';
+        deposit.status = 'Approved';
     } else {
-        deposit.status = 'rejected';
+        deposit.status = 'Rejected';
         deposit.adminNote = note;
     }
 
@@ -4468,10 +4557,10 @@ app.post('/api/admin/deposits/action', (req, res) => {
 app.post('/api/admin/deposits/delete-all', (req, res) => {
     try {
         if (!db.data.pendingDeposits) db.data.pendingDeposits = [];
-        // Only keep the pending ones
-        db.data.pendingDeposits = db.data.pendingDeposits.filter(d => d.status === 'pending');
+        // Only keep the Submitted ones
+        db.data.pendingDeposits = db.data.pendingDeposits.filter(d => d.status === 'Submitted');
         db.save();
-        res.json({ success: true, message: 'Deposit history cleared (Pending requests preserved)' });
+        res.json({ success: true, message: 'Deposit history cleared (Submitted requests preserved)' });
     } catch (e) {
         res.json({ success: false, message: e.message });
     }
@@ -4489,7 +4578,7 @@ app.post('/api/admin/deposits/auto-approve', (req, res) => {
     let approvedCount = 0;
 
     idsArray.forEach(tid => {
-        const deposit = deposits.find(d => d.txnId === tid && d.status === 'pending');
+        const deposit = deposits.find(d => d.txnId === tid && d.status === 'Submitted');
         if (deposit) {
             const user = users[deposit.userId];
             if (user) {
@@ -4505,7 +4594,7 @@ app.post('/api/admin/deposits/auto-approve', (req, res) => {
                     status: 'completed',
                     autoApproved: true
                 });
-                deposit.status = 'approved';
+                deposit.status = 'Approved';
                 deposit.autoApproved = true;
                 approvedCount++;
             }
@@ -5277,6 +5366,14 @@ app.get('/api/admin/costs', (req, res) => {
             bkashRate: creditRates.bkash || 1,
             nagadRate: creditRates.nagad || 1,
 
+            // Local Payment Platforms
+            bkashName: settings.bkashName || 'bKash Personal',
+            bkashNumber: settings.bkashNumber || '',
+            bkashType: settings.bkashType || 'Personal',
+            nagadName: settings.nagadName || 'Nagad Personal',
+            nagadNumber: settings.nagadNumber || '',
+            nagadType: settings.nagadType || 'Personal',
+
             // Exchange Rates (USD/Tokens/Gems)
             usdToToken: settings.usdToToken || 100,
             gemToToken: settings.gemToToken || 100,
@@ -5379,6 +5476,14 @@ app.post('/api/admin/costs', (req, res) => {
     if (payload.cryptoRate !== undefined) db.data.adminSettings.creditRates.crypto = parseFloat(payload.cryptoRate);
     if (payload.bkashRate !== undefined) db.data.adminSettings.creditRates.bkash = parseFloat(payload.bkashRate);
     if (payload.nagadRate !== undefined) db.data.adminSettings.creditRates.nagad = parseFloat(payload.nagadRate);
+
+    // Local Payment Platforms
+    if (payload.bkashName !== undefined) db.data.settings.bkashName = payload.bkashName;
+    if (payload.bkashNumber !== undefined) db.data.settings.bkashNumber = payload.bkashNumber;
+    if (payload.bkashType !== undefined) db.data.settings.bkashType = payload.bkashType;
+    if (payload.nagadName !== undefined) db.data.settings.nagadName = payload.nagadName;
+    if (payload.nagadNumber !== undefined) db.data.settings.nagadNumber = payload.nagadNumber;
+    if (payload.nagadType !== undefined) db.data.settings.nagadType = payload.nagadType;
 
     // Exchange Rates (USD/Tokens/Gems)
     if (payload.usdToToken !== undefined) db.data.settings.usdToToken = parseInt(payload.usdToToken) || 100;
@@ -6229,6 +6334,22 @@ app.post('/api/admin/group-management', (req, res) => {
 
     db.save();
     res.json({ success: true, settings: gm });
+});
+
+// =============================================
+// AI ASSISTANT API
+// =============================================
+
+app.get('/api/admin/ai-assistant', (req, res) => {
+    const settings = db.data?.adminSettings?.aiAssistant || {};
+    res.json(settings);
+});
+
+app.post('/api/admin/ai-assistant', (req, res) => {
+    if (!db.data.adminSettings) db.data.adminSettings = {};
+    db.data.adminSettings.aiAssistant = req.body;
+    db.save();
+    res.json({ success: true });
 });
 
 // =============================================
@@ -7559,13 +7680,23 @@ app.delete('/api/admin/services/:id', (req, res) => {
 // API: Admin - Shop Items
 app.get('/api/admin/shop', (req, res) => {
     const items = db.data.shopItems || {};
-    res.json({ success: true, shopItems: Object.values(items) });
+    const itemsWithStock = Object.values(items).map(item => {
+        const stock = db.data.shopStock?.[item.id] || [];
+        const available = stock.filter(s => !s.sold).length;
+        return { ...item, stockCount: available };
+    });
+    res.json({ success: true, shopItems: itemsWithStock });
 });
 
 // Public API: Get Shop Items (for user panel)
 app.get('/api/shop', (req, res) => {
     const items = db.data.shopItems || {};
-    res.json({ success: true, shopItems: Object.values(items) });
+    const itemsWithStock = Object.values(items).map(item => {
+        const stock = db.data.shopStock?.[item.id] || [];
+        const available = stock.filter(s => !s.sold).length;
+        return { ...item, stockCount: available };
+    });
+    res.json({ success: true, shopItems: itemsWithStock });
 });
 
 app.post('/api/admin/shop', (req, res) => {
@@ -7580,6 +7711,64 @@ app.delete('/api/admin/shop/:id', (req, res) => {
     const { id } = req.params;
     if (db.data.shopItems && db.data.shopItems[id]) {
         delete db.data.shopItems[id];
+        db.save();
+        res.json({ success: true });
+    } else {
+        res.json({ success: false });
+    }
+});
+
+// =============================================
+// SHOP STOCK API
+// =============================================
+
+app.get('/api/admin/shop-stock/:shopId', (req, res) => {
+    const { shopId } = req.params;
+    const stock = db.data.shopStock?.[shopId] || [];
+    // Return only unsold stock for admin to view
+    const unsold = stock.filter(s => !s.sold);
+    res.json({ success: true, stock: unsold });
+});
+
+app.post('/api/admin/shop-stock', (req, res) => {
+    const { shopId, type, email, password, twoFactor, key } = req.body;
+    if (!shopId) return res.json({ success: false, message: 'Shop ID required' });
+    
+    if (!db.data.shopStock) db.data.shopStock = {};
+    if (!db.data.shopStock[shopId]) db.data.shopStock[shopId] = [];
+
+    const newItem = {
+        id: 'stock_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+        type,
+        email,
+        password,
+        twoFactor,
+        key,
+        sold: false,
+        addedAt: Date.now()
+    };
+
+    db.data.shopStock[shopId].push(newItem);
+    db.save();
+    res.json({ success: true, item: newItem });
+});
+
+app.delete('/api/admin/shop-stock/:shopId/:stockId', (req, res) => {
+    const { shopId, stockId } = req.params;
+    if (db.data.shopStock && db.data.shopStock[shopId]) {
+        db.data.shopStock[shopId] = db.data.shopStock[shopId].filter(s => s.id !== stockId);
+        db.save();
+        res.json({ success: true });
+    } else {
+        res.json({ success: false });
+    }
+});
+
+app.delete('/api/admin/shop-stock/:shopId/clear', (req, res) => {
+    const { shopId } = req.params;
+    if (db.data.shopStock && db.data.shopStock[shopId]) {
+        // Only keep sold stock, delete unsold
+        db.data.shopStock[shopId] = db.data.shopStock[shopId].filter(s => s.sold);
         db.save();
         res.json({ success: true });
     } else {

@@ -1271,7 +1271,7 @@ function calculateExchange(from, to, amount) {
 function formatCurrencyAmount(amount, cur) {
     if (cur === 'usd') {
         const val = Math.round(amount * 100) / 100;
-        return val === 0 ? '$0' : `$${val.toFixed(2)}`;
+        return val === 0 ? '0' : `$${val.toFixed(2)}`;
     }
     if (cur === 'tokens') return `${Math.floor(amount)} TOKENS`;
     if (cur === 'Gems') return `${Math.floor(amount * 10000) / 10000} Gems`;
@@ -1291,7 +1291,7 @@ function updateExchangeBalances() {
     const u = document.getElementById('exBalUsd');
     if (t) t.textContent = formatCompact(userData.tokens || 0);
     if (j) j.textContent = formatCompact(userData.Gems || 0);
-    if (u) u.textContent = (Math.round((userData.usd || 0) * 100) / 100).toFixed(2);
+    if (u) u.textContent = userData.usd === 0 ? '0' : (Math.round((userData.usd || 0) * 100) / 100).toFixed(2);
 }
 
 function updateExchangePreview() {
@@ -1476,25 +1476,42 @@ function renderCryptoMethods() {
             if (lcName.includes('rocket')) { color = '#3b82f6'; shortName = 'Rocket'; }
             if (lcName.includes('upay')) { color = '#a855f7'; shortName = 'Upay'; }
 
+            let iconHtml = `<i class="fas fa-wallet" style="font-size:24px; color:${color};"></i>`;
+            if (meta.logoBase64) {
+                iconHtml = `<img src="${meta.logoBase64}" style="width:100%; height:100%; border-radius:14px; object-fit:cover;">`;
+            } else if (meta.logoUrl) {
+                iconHtml = `<img src="${meta.logoUrl}" style="width:100%; height:100%; border-radius:14px; object-fit:cover;">`;
+            } else if (lcName.includes('bkash')) {
+                iconHtml = `<i class="fas fa-paper-plane" style="font-size:24px; color:${color};"></i>`;
+            } else if (lcName.includes('nagad')) {
+                iconHtml = `<i class="fas fa-fire" style="font-size:24px; color:${color};"></i>`;
+            } else if (lcName.includes('rocket')) {
+                iconHtml = `<i class="fas fa-rocket" style="font-size:24px; color:${color};"></i>`;
+            }
+
             const card = document.createElement('button');
             card.onclick = () => window.showPaymentDetails(id);
             card.style.cssText = `
                 display:flex; flex-direction:column; align-items:center; gap:8px;
                 padding:20px 12px;
-                border-radius:16px;
+                border-radius:20px;
                 border:1.5px solid ${color}4d;
                 cursor:pointer;
-                transition:all 0.22s ease;
-                background:${color}14;
+                transition:all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+                background:rgba(255,255,255,0.02);
                 text-align:center;
                 width:100%;
+                position:relative;
+                overflow:hidden;
             `;
+            card.onmousedown = () => { card.style.transform = 'scale(0.96)'; card.style.background = `${color}22`; };
+            card.onmouseup = () => { card.style.transform = 'scale(1)'; card.style.background = 'rgba(255,255,255,0.02)'; };
             card.innerHTML = `
-                <div style="width:56px; height:56px; border-radius:16px; background:${color}33; display:flex; align-items:center; justify-content:center;">
-                    <span style="color:${color}; font-size:14px; font-weight:800;">${shortName}</span>
+                <div style="width:60px; height:60px; border-radius:18px; background:${color}15; display:flex; align-items:center; justify-content:center; margin-bottom:4px; border: 1px solid ${color}33;">
+                    ${iconHtml}
                 </div>
-                <div style="font-size:13px; font-weight:700; color:var(--text-main,#fff);">${meta.name}</div>
-                <div style="font-size:10px; color:var(--text-sub,#888);">Send Money</div>
+                <div style="font-size:14px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:0.5px;">${meta.name}</div>
+                <div style="font-size:10px; color:${color}; font-weight:700; background:${color}15; padding:2px 8px; border-radius:8px;">SELECT</div>
             `;
             localContainer.appendChild(card);
 
@@ -1611,102 +1628,22 @@ async function submitCryptoDeposit() {
 }
 
 let activeLocalPayMethod = 'bkash';
-let paymentPlatforms = [];
 
-// Load payment platforms from API
-async function loadPaymentPlatforms() {
+// Load config from API
+async function loadConfig() {
     try {
-        const res = await fetch('/api/payment-platforms');
+        const res = await fetch('/api/config');
         const data = await res.json();
-        if (data.success && data.platforms && data.platforms.length > 0) {
-            paymentPlatforms = data.platforms;
+        if (data.success && data.config) {
+            window.appConfig = data.config;
         }
     } catch (e) {
-        console.error('Error loading payment platforms:', e);
-    }
-    renderPaymentPlatforms();
-}
-
-// Render payment platforms in the UI
-function renderPaymentPlatforms() {
-    const container = document.getElementById('localPaymentMethodsGrid');
-    if (!container) return;
-
-    if (paymentPlatforms.length === 0) {
-        container.innerHTML = '<div style="text-align:center; color:var(--text-sub); padding:20px;">No payment methods available</div>';
-        updateLocalPaymentButtons();
-        return;
-    }
-
-    container.innerHTML = paymentPlatforms.map((platform, index) => `
-        <div onclick="selectLocalMethod('${platform.name.toLowerCase().replace(' ', '')}')" class="pm-method-card" data-method="${platform.name.toLowerCase().replace(' ', '')}" style="
-            background:var(--bg-card);
-            border:1px solid var(--border-color);
-            border-radius:16px;
-            padding:16px;
-            cursor:pointer;
-            transition:all 0.3s;
-            ${index === 0 ? 'border-color:#e1147e;' : ''}
-        ">
-            <div style="display:flex; align-items:center; gap:12px;">
-                ${platform.logo ? `<img src="${platform.logo}" alt="${platform.name}" style="width:40px; height:40px; border-radius:10px; object-fit:contain;">` : `<div style="width:40px; height:40px; border-radius:10px; background:linear-gradient(135deg,#e1147e,#f7931e); display:flex; align-items:center; justify-content:center;"><i class="fas fa-mobile-alt" style="color:#fff; font-size:18px;"></i></div>`}
-                <div>
-                    <div style="font-size:14px; font-weight:700; color:var(--text-main);">${platform.name}</div>
-                    <div style="font-size:11px; color:var(--text-sub);">${platform.number || 'Contact for number'}</div>
-                </div>
-            </div>
-        </div>
-    `).join('');
-
-    // Update the hardcoded buttons as well
-    updateLocalPaymentButtons();
-}
-
-function updateLocalPaymentButtons() {
-    const btnBkash = document.getElementById('btnBkash');
-    const btnNagad = document.getElementById('btnNagad');
-
-    if (paymentPlatforms.length >= 2) {
-        const bkashPlatform = paymentPlatforms.find(p => p.name.toLowerCase().includes('bkash'));
-        const nagadPlatform = paymentPlatforms.find(p => p.name.toLowerCase().includes('nagad'));
-
-        if (btnBkash && bkashPlatform) {
-            btnBkash.textContent = bkashPlatform.name;
-        }
-        if (btnNagad && nagadPlatform) {
-            btnNagad.textContent = nagadPlatform.name;
-        }
-    } else {
-        // Reset buttons to default when no platforms
-        if (btnBkash) {
-            btnBkash.textContent = 'bKash';
-            btnBkash.style.background = 'rgba(255,255,255,0.05)';
-            btnBkash.style.opacity = '0.6';
-            btnBkash.style.border = '1px solid rgba(255,255,255,0.1)';
-        }
-        if (btnNagad) {
-            btnNagad.textContent = 'Nagad';
-            btnNagad.style.background = 'rgba(255,255,255,0.05)';
-            btnNagad.style.opacity = '0.6';
-            btnNagad.style.border = '1px solid rgba(255,255,255,0.1)';
-        }
-
-        // Clear payment number display
-        const nameLabel = document.getElementById('localPaymentMethodName');
-        const numberLabel = document.getElementById('localPaymentNumber');
-        if (nameLabel) nameLabel.innerText = 'SELECT PAYMENT METHOD';
-        if (numberLabel) numberLabel.innerText = 'No number available';
+        console.error('Error loading config:', e);
     }
 }
 
 function selectLocalMethod(method) {
-    if (paymentPlatforms.length === 0) {
-        window.showToast('No payment methods available. Please contact admin.');
-        return;
-    }
-
     activeLocalPayMethod = method;
-    const platform = paymentPlatforms.find(p => p.name.toLowerCase().replace(' ', '') === method) || paymentPlatforms[0];
 
     const btnBkash = document.getElementById('btnBkash');
     const btnNagad = document.getElementById('btnNagad');
@@ -1714,18 +1651,41 @@ function selectLocalMethod(method) {
     const numberLabel = document.getElementById('localPaymentNumber');
     const submitBtn = document.getElementById('btnLocalSubmit');
 
-    // Reset all method cards
-    document.querySelectorAll('.pm-method-card').forEach(card => {
-        card.style.borderColor = 'var(--border-color)';
-    });
+    let name = '', number = '', type = '';
 
-    // Highlight selected method card
-    const selectedCard = document.querySelector(`.pm-method-card[data-method="${method}"]`);
-    if (selectedCard) {
-        selectedCard.style.borderColor = '#e1147e';
+    // First: try to get from cryptoConfig (new system from admin panel)
+    if (window.cryptoConfig) {
+        for (const [id, meta] of Object.entries(window.cryptoConfig)) {
+            if (meta.type === 'local' && meta.status === 'active') {
+                const lcName = meta.name.toLowerCase();
+                if (method === 'bkash' && lcName.includes('bkash')) {
+                    number = meta.details || '';
+                    name = meta.name || 'bKash';
+                    type = meta.accountType || 'Personal';
+                } else if (method === 'nagad' && lcName.includes('nagad')) {
+                    number = meta.details || '';
+                    name = meta.name || 'Nagad';
+                    type = meta.accountType || 'Personal';
+                }
+            }
+        }
     }
 
-    if (method.includes('bkash') || (platform && platform.name.toLowerCase().includes('bkash'))) {
+    // Fallback: try appConfig (old system)
+    if (!number) {
+        const config = window.appConfig || {};
+        if (method === 'bkash') {
+            name = name || config.bkashName || 'bKash';
+            number = config.bkashNumber || '';
+            type = type || config.bkashType || 'Personal';
+        } else if (method === 'nagad') {
+            name = name || config.nagadName || 'Nagad';
+            number = config.nagadNumber || '';
+            type = type || config.nagadType || 'Personal';
+        }
+    }
+
+    if (method === 'bkash') {
         if (btnBkash) {
             btnBkash.style.background = '#e1147e';
             btnBkash.style.opacity = '1';
@@ -1736,11 +1696,8 @@ function selectLocalMethod(method) {
             btnNagad.style.opacity = '0.6';
             btnNagad.style.border = '1px solid rgba(255,255,255,0.1)';
         }
-
-        if (nameLabel) nameLabel.innerText = `${platform ? platform.name.toUpperCase() : 'BKASH'} NUMBER`;
-        if (numberLabel) numberLabel.innerText = platform ? platform.number : 'No number available';
         if (submitBtn) submitBtn.style.background = 'linear-gradient(135deg,#e1147e,#f7931e)';
-    } else {
+    } else if (method === 'nagad') {
         if (btnNagad) {
             btnNagad.style.background = '#f7931e';
             btnNagad.style.opacity = '1';
@@ -1751,11 +1708,11 @@ function selectLocalMethod(method) {
             btnBkash.style.opacity = '0.6';
             btnBkash.style.border = '1px solid rgba(255,255,255,0.1)';
         }
-
-        if (nameLabel) nameLabel.innerText = `${platform ? platform.name.toUpperCase() : 'NAGAD'} NUMBER`;
-        if (numberLabel) numberLabel.innerText = platform ? platform.number : 'No number available';
         if (submitBtn) submitBtn.style.background = 'linear-gradient(135deg,#f7931e,#e1147e)';
     }
+
+    if (nameLabel) nameLabel.innerText = `${name.toUpperCase()} NUMBER (${type.toUpperCase()})`;
+    if (numberLabel) numberLabel.innerText = number || 'No number available';
 }
 
 async function submitFaucetDeposit() {
@@ -3849,7 +3806,7 @@ function renderFullHistory() {
     empty.style.display = 'none';
 
     const POS_TYPES = new Set(['transfer_in', 'redeem', 'daily_bonus', 'ad_reward', 'mission_reward', 'quiz_reward', 'bonus', 'deposit', 'gift_claimed', 'gift', 'apikey_generate']);
-    const NEG_TYPES = new Set(['transfer_out', 'account_purchase', 'mail', 'temp_mail', 'temp_email', 'premium_mail', 'premium_email', 'hotmail_email', 'student_email', 'gmail_email', 'mail_renew', 'number', 'exchange_out', 'support_contact', 'live2fa', 'liveinstagram', 'livefacebook', 'livetiktok', 'livetwitter', 'livethreads']);
+    const NEG_TYPES = new Set(['transfer_out', 'account_purchase', 'shop_item_purchase', 'mail', 'temp_mail', 'temp_email', 'premium_mail', 'premium_email', 'hotmail_email', 'student_email', 'gmail_email', 'mail_renew', 'number', 'exchange_out', 'support_contact', 'live2fa', 'liveinstagram', 'livefacebook', 'livetiktok', 'livetwitter', 'livethreads']);
 
     const typeConfig = {
         'apikey_generate': { icon: 'fas fa-key', color: '#9333ea', name: 'API Key Generated' },
@@ -3884,7 +3841,8 @@ function renderFullHistory() {
         'livefacebook': { icon: 'fab fa-facebook-f', color: '#1877f2', name: 'Facebook Live' },
         'livetiktok': { icon: 'fab fa-tiktok', color: '#69c9d0', name: 'TikTok Live' },
         'livetwitter': { icon: 'fab fa-x-twitter', color: '#000000', name: 'Twitter Live' },
-        'livethreads': { icon: 'fab fa-threads', color: '#000000', name: 'Threads Live' }
+        'livethreads': { icon: 'fab fa-threads', color: '#000000', name: 'Threads Live' },
+        'shop_item_purchase': { icon: 'fas fa-shopping-bag', color: '#f59e0b', name: 'Shop Purchase' }
     };
 
     list.innerHTML = userData.history.map(item => {
@@ -3935,15 +3893,22 @@ function renderFullHistory() {
 
         const displayValue = (reward || ((item.amount !== undefined && item.amount !== null) ? ((isNeg ? '-' : (isPos ? '+' : '')) + formatCompact(Math.abs(amt)) + ' ' + (item.asset || item.currency || 'TC').toUpperCase()) : ''));
 
+        const isShopPurchase = itemType === 'shop_item_purchase';
+        if (isShopPurchase && item.itemName) config.name = item.itemName;
+
         return `
-        <div class="activity-card" style="margin-bottom:12px;">
+        <div class="activity-card" 
+            ${isShopPurchase ? `onclick='showPurchaseSuccessModal(${JSON.stringify(item).replace(/'/g, "&apos;")})' style="cursor:pointer; margin-bottom:12px;"` : 'style="margin-bottom:12px;"'}>
             <div class="activity-left">
                 <div class="activity-icon" style="width:40px; height:40px; background:rgba(255,255,255,0.05); color:${config.color}; display:flex; align-items:center; justify-content:center; border-radius:50%;">
                     ${imageUrl ? `<img src="${imageUrl}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">` : `<i class="${config.icon}" style="font-size:18px;"></i>`}
                 </div>
                 <div class="activity-info">
                     <div class="activity-name">${config.name}</div>
-                    <div class="activity-meta">${dateStr} • ${timeStr} ${item.to ? `to User #${item.to}` : (item.from ? `from User #${item.from}` : '')}</div>
+                    <div class="activity-meta">
+                        ${dateStr} • ${timeStr}
+                        ${item.id ? `<span style="color:#f59e0b; font-weight:700; margin-left:4px;">#${item.id}</span>` : ''}
+                    </div>
                     ${detail ? `<div style="font-size:10px; color:rgba(255,255,255,0.5); margin-top:2px;">${detail}</div>` : ''}
                     ${item.type === 'exchange' ? `<div style="font-size:10px; color:rgba(255,255,255,0.5); margin-top:2px;">${item.fromAmount} ${item.from.toUpperCase()} → ${item.toAmount} ${item.to.toUpperCase()}</div>` : ''}
                 </div>
@@ -4053,7 +4018,8 @@ function renderRecentActivity(history) {
         'livefacebook': { icon: 'fab fa-facebook-f', color: '#1877f2', name: 'Facebook Live' },
         'livetiktok': { icon: 'fab fa-tiktok', color: '#69c9d0', name: 'TikTok Live' },
         'livetwitter': { icon: 'fab fa-x-twitter', color: '#000000', name: 'Twitter Live' },
-        'livethreads': { icon: 'fab fa-threads', color: '#000000', name: 'Threads Live' }
+        'livethreads': { icon: 'fab fa-threads', color: '#000000', name: 'Threads Live' },
+        'shop_item_purchase': { icon: 'fas fa-shopping-bag', color: '#f59e0b', name: 'Shop Purchase' }
     };
 
     if (!history || history.length === 0) {
@@ -4105,7 +4071,7 @@ function renderRecentActivity(history) {
         const date = item.date ? new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
         const time = item.date ? new Date(item.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '';
         const POS_TYPES = new Set(['transfer_in', 'redeem', 'daily_bonus', 'ad_reward', 'mission_reward', 'quiz_reward', 'bonus', 'deposit', 'gift_claimed', 'gift', 'apikey_generate']);
-        const NEG_TYPES = new Set(['transfer_out', 'account_purchase', 'mail', 'number', 'support_contact', 'premium_email', 'temp_email', 'hotmail_email', 'student_email', 'gmail_email', 'premium_mail', 'temp_mail', 'mail_renew', 'live2fa', 'liveinstagram', 'livefacebook', 'livetiktok', 'livetwitter', 'livethreads']);
+        const NEG_TYPES = new Set(['transfer_out', 'account_purchase', 'shop_item_purchase', 'mail', 'number', 'support_contact', 'premium_email', 'temp_email', 'hotmail_email', 'student_email', 'gmail_email', 'premium_mail', 'temp_mail', 'mail_renew', 'live2fa', 'liveinstagram', 'livefacebook', 'livetiktok', 'livetwitter', 'livethreads']);
         // Fix: For mail type, if amount is 0 or missing, use mailCost from config
         let rawAmount = item.amount;
         if ((itemType === 'mail' || itemType === 'email' || config.name?.includes('Mail')) && (!rawAmount || rawAmount === 0)) {
@@ -4123,8 +4089,12 @@ function renderRecentActivity(history) {
             rewardDisplay = (isPos ? '+' : (isNeg ? '-' : '')) + formatCompact(Math.abs(amt)) + ' ' + String(asset).toUpperCase();
         }
 
+        const isShopPurchase = itemType === 'shop_item_purchase';
+        if (isShopPurchase && item.itemName) config.name = item.itemName;
+
         return `
-        <div class="activity-card">
+        <div class="activity-card" 
+            ${isShopPurchase ? `onclick='showPurchaseSuccessModal(${JSON.stringify(item).replace(/'/g, "&apos;")})' style="cursor:pointer;"` : ''}>
             <div class="activity-left">
                 <div class="activity-icon" style="width:40px; height:40px; background:rgba(255,255,255,0.05); color:${config.color}; display:flex; align-items:center; justify-content:center; border-radius:50%;">
                     ${imageUrl ? `<img src="${imageUrl}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">` : `<i class="${config.icon}" style="font-size:18px;"></i>`}
@@ -4338,7 +4308,7 @@ function renderBalances() {
         if (usd >= 1000) {
             formattedUsd = '$' + formatCompact(usd);
         } else {
-            formattedUsd = '$' + usd.toFixed(2);
+            formattedUsd = '$' + (usd % 1 === 0 ? usd.toFixed(0) : usd.toFixed(2));
         }
     }
 
@@ -4378,6 +4348,18 @@ function renderBalances() {
     // Virtual Number (TC) - already exists as numBalanceDisplay
     const numBal = document.getElementById('numBalanceDisplay');
     if (numBal) numBal.innerText = formattedTokens + ' TC';
+
+    // 4. Update Announcement Bar if empty
+    const annTrack = document.getElementById('broadcastTrack');
+    if (annTrack && !annTrack.innerHTML.trim()) {
+        const messages = [
+            "Welcome to Auto Verify! ??",
+            "Real-time verification services at your fingertips.",
+            "Check out our new Shop for Premium Accounts! ??",
+            "Refer friends and earn 50 TC bonus! ??"
+        ];
+        annTrack.innerHTML = messages.map(m => `<span class="bcp-item">${m}</span>`).join('');
+    }
 
     // Hotmail (TC)
     const hotMailBal = document.getElementById('hotMailBalanceDisplay');
@@ -4806,32 +4788,37 @@ function renderShopItems() {
 
     // 1. Process Admin Items (Always in main shop)
     if (grid) {
-        shopCardsHtml += adminItems.map(item => {
-            const imgHtml = item.imageUrl
-                ? `<img src="${item.imageUrl}" style="width:100%; height:100%; object-fit:cover;" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-box\\' style=\\'font-size:36px; color:#f59e0b;\\'></i>'">`
-                : `<i class="fas fa-box" style="font-size:36px; color:#f59e0b;"></i>`;
+        shopCardsHtml += adminItems
+            .filter(item => (item.stockCount || 0) > 0) // HIDE OUT OF STOCK ITEMS FROM USERS
+            .map(item => {
+                const imgHtml = item.imageUrl
+                    ? `<img src="${item.imageUrl}" style="width:100%; height:100%; object-fit:cover;" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-box\\' style=\\'font-size:36px; color:#f59e0b;\\'></i>'">`
+                    : `<i class="fas fa-box" style="font-size:36px; color:#f59e0b;"></i>`;
 
-            // Fix price display to ensure $ if not present
-            let priceDisp = item.price || '$0.00';
-            if (typeof priceDisp === 'number') priceDisp = '$' + priceDisp.toFixed(2);
-            else if (!priceDisp.includes('$') && !priceDisp.toLowerCase().includes('tc')) priceDisp = '$' + priceDisp;
+                // Fix price display to ensure $ if not present
+                let priceDisp = item.price || '$0.00';
+                if (typeof priceDisp === 'number') priceDisp = '$' + priceDisp.toFixed(2);
+                else if (!priceDisp.includes('$') && !priceDisp.toLowerCase().includes('tc')) priceDisp = '$' + priceDisp;
 
-            return `
-            <div onclick="nav('${item.page || 'deposit'}')"
-                style="background:var(--bg-card); border-radius:16px; overflow:hidden; border:1px solid var(--border-color); cursor:pointer; transition:0.2s;"
-                onmousedown="this.style.transform='scale(0.97)'" onmouseup="this.style.transform='scale(1)'">
-                <div style="background:${item.bgColor || '#0d0d0d'}; padding:0; display:flex; align-items:center; justify-content:center; height:120px; overflow:hidden;">
-                    ${imgHtml}
-                </div>
-                <div style="padding:10px;">
-                    <div style="font-size:10px; font-weight:700; color:var(--text-main); margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.name}</div>
-                    <div style="font-size:14px; font-weight:800; color:#22c55e; margin-bottom:8px;">${priceDisp}</div>
-                    <div style="background:rgba(245,158,11,0.1); border:1px solid ${item.btnColor || '#f59e0b'}; border-radius:8px; padding:6px; text-align:center; font-size:10px; font-weight:700; color:${item.btnColor || '#f59e0b'}; display:flex; align-items:center; justify-content:center; gap:4px;">
-                        <i class="fas fa-shopping-cart"></i> BUY
+                return `
+                <div onclick="buyAdminShopItem('${item.id}', '${item.name}', ${item.price || 0})"
+                    style="background:var(--bg-card); border-radius:16px; overflow:hidden; border:1px solid var(--border-color); cursor:pointer; transition:0.2s;"
+                    onmousedown="this.style.transform='scale(0.97)'" onmouseup="this.style.transform='scale(1)'">
+                    <div style="background:${item.bgColor || '#0d0d0d'}; padding:0; display:flex; align-items:center; justify-content:center; height:120px; overflow:hidden;">
+                        ${imgHtml}
                     </div>
-                </div>
-            </div>`;
-        }).join('');
+                    <div style="padding:10px;">
+                        <div style="font-size:10px; font-weight:700; color:var(--text-main); margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.name}</div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <div style="font-size:14px; font-weight:800; color:#22c55e;">${priceDisp}</div>
+                            <div style="font-size:10px; color:#888; font-weight:700;">Stock: ${item.stockCount}</div>
+                        </div>
+                        <div style="background:rgba(245,158,11,0.1); border:1px solid ${item.btnColor || '#f59e0b'}; border-radius:8px; padding:6px; text-align:center; font-size:10px; font-weight:700; color:${item.btnColor || '#f59e0b'}; display:flex; align-items:center; justify-content:center; gap:4px;">
+                            <i class="fas fa-shopping-cart"></i> BUY
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
     }
 
     // 2. Process User Items
@@ -5408,9 +5395,45 @@ function buyServiceAccount(serviceId, price) {
 
     const userTokens = userData.tokens || 0;
     if (userTokens < price) {
-        nav('earn');
+        nav('deposit');
         return;
     }
+
+    // Show confirmation popup
+    showPurchaseConfirmation(serviceId, price);
+}
+
+function showPurchaseConfirmation(serviceId, price) {
+    const modalHtml = `
+        <div id="purchaseConfirmationModal" style="position:fixed; inset:0; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:9999;">
+            <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:20px; padding:24px; max-width:320px; width:90%; position:relative;">
+                <button onclick="closePurchaseConfirmation()" style="position:absolute; top:12px; right:12px; background:none; border:none; color:var(--text-sub); font-size:20px; cursor:pointer; padding:8px;">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div style="text-align:center;">
+                    <div style="width:60px; height:60px; background:linear-gradient(135deg,#e1147e,#f7931e); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
+                        <i class="fas fa-shopping-cart" style="color:#fff; font-size:24px;"></i>
+                    </div>
+                    <h3 style="font-size:18px; font-weight:800; color:#fff; margin-bottom:8px;">Confirm Purchase</h3>
+                    <p style="font-size:13px; color:var(--text-sub); margin-bottom:16px;">Do you want to purchase this item for <span style="color:#e1147e; font-weight:700;">${price} tokens</span>?</p>
+                    <div style="display:flex; gap:10px;">
+                        <button onclick="closePurchaseConfirmation()" style="flex:1; padding:12px; background:rgba(255,255,255,0.1); color:#fff; border:none; border-radius:10px; font-weight:700; cursor:pointer;">Cancel</button>
+                        <button onclick="confirmPurchase('${serviceId}', ${price})" style="flex:1; padding:12px; background:linear-gradient(135deg,#e1147e,#f7931e); color:#fff; border:none; border-radius:10px; font-weight:700; cursor:pointer;">Confirm</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+function closePurchaseConfirmation() {
+    const modal = document.getElementById('purchaseConfirmationModal');
+    if (modal) modal.remove();
+}
+
+function confirmPurchase(serviceId, price) {
+    closePurchaseConfirmation();
 
     fetch('/api/accounts/buy-category', {
         method: 'POST',
@@ -5422,7 +5445,7 @@ function buyServiceAccount(serviceId, price) {
             if (data.success) {
                 userData.tokens = data.newBalance;
                 renderBalances();
-                window.showToast('✅ Service purchased successfully!');
+                window.showToast('✅ Payment Successful!');
 
                 const isChatGPT = serviceId.toLowerCase().includes('chatgpt');
                 const isGemini = serviceId.toLowerCase().includes('gemini');
@@ -5519,6 +5542,165 @@ function buyServiceAccount(serviceId, price) {
         .catch(() => window.showToast('Network error'));
 }
 window.buyServiceAccount = buyServiceAccount;
+
+function buyAdminShopItem(shopId, name, price) {
+    if (!userData || !userData.id) {
+        window.showToast('Please login first.');
+        return;
+    }
+
+    const userUsd = userData.usd || 0;
+    if (userUsd < price) {
+        window.showToast(`Insufficient balance. You need $${price} but have $${userUsd.toFixed(2)}.`);
+        nav('deposit');
+        return;
+    }
+
+    // Show confirmation popup for Shop Items (USD)
+    const modalHtml = `
+        <div id="shopPurchaseConfirmationModal" style="position:fixed; inset:0; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:9999;">
+            <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:20px; padding:24px; max-width:320px; width:90%; position:relative;">
+                <button onclick="document.getElementById('shopPurchaseConfirmationModal').remove()" style="position:absolute; top:12px; right:12px; background:none; border:none; color:var(--text-sub); font-size:20px; cursor:pointer; padding:8px;">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div style="text-align:center;">
+                    <div style="width:60px; height:60px; background:linear-gradient(135deg,#e1147e,#f7931e); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
+                        <i class="fas fa-shopping-cart" style="color:#fff; font-size:24px;"></i>
+                    </div>
+                    <h3 style="font-size:18px; font-weight:800; color:#fff; margin-bottom:8px;">Confirm Purchase</h3>
+                    <p style="font-size:13px; color:var(--text-sub); margin-bottom:16px;">Do you want to purchase <b>${name}</b> for <span style="color:#22c55e; font-weight:700;">$${price}</span>?</p>
+                    <div style="display:flex; gap:10px;">
+                        <button onclick="document.getElementById('shopPurchaseConfirmationModal').remove()" style="flex:1; padding:12px; background:rgba(255,255,255,0.1); color:#fff; border:none; border-radius:10px; font-weight:700; cursor:pointer;">Cancel</button>
+                        <button onclick="confirmAdminShopPurchase('${shopId}', ${price})" style="flex:1; padding:12px; background:linear-gradient(135deg,#e1147e,#f7931e); color:#fff; border:none; border-radius:10px; font-weight:700; cursor:pointer;">Confirm</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+window.buyAdminShopItem = buyAdminShopItem;
+
+function confirmAdminShopPurchase(shopId, price) {
+    const modal = document.getElementById('shopPurchaseConfirmationModal');
+    if (modal) modal.remove();
+
+    fetch('/api/accounts/buy-shop-item', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: userData.id, shopId: shopId, price: price })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            userData.usd = data.newBalance;
+            renderBalances();
+            window.showToast('✅ Purchase Successful!');
+            showPurchaseSuccessModal(data);
+            nav('history');
+        } else {
+            window.showToast('❌ ' + (data.message || 'Purchase failed.'));
+        }
+    })
+    .catch(e => {
+        console.error(e);
+        window.showToast('Network error.');
+    });
+}
+window.confirmAdminShopPurchase = confirmAdminShopPurchase;
+
+function showPurchaseSuccessModal(data) {
+    // data can be the response from purchase API or a history entry
+    const orderId = data.orderId || data.id || 'N/A';
+    const itemName = data.itemName || 'Product';
+    const item = data.item || data.itemData || {};
+    
+    let contentHtml = '';
+    if (item.type === 'account' || item.email) {
+        contentHtml = `
+            <div style="margin-top:20px; background:rgba(255,255,255,0.05); border-radius:12px; padding:16px; text-align:left; border:1px solid rgba(255,255,255,0.1);">
+                <div style="margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="flex:1;">
+                        <div style="font-size:10px; color:#888; font-weight:700; text-transform:uppercase; margin-bottom:4px;">Email / Username</div>
+                        <div style="font-size:15px; font-weight:800; color:#fff; word-break:break-all;">${item.email}</div>
+                    </div>
+                    <button onclick="copyToClipboard('${item.email}', 'Email')" style="background:rgba(255,255,255,0.1); border:none; color:#fff; width:32px; height:32px; border-radius:8px; cursor:pointer;"><i class="far fa-copy"></i></button>
+                </div>
+                <div style="margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="flex:1;">
+                        <div style="font-size:10px; color:#888; font-weight:700; text-transform:uppercase; margin-bottom:4px;">Password</div>
+                        <div style="font-size:15px; font-weight:800; color:#fff; word-break:break-all;">${item.password}</div>
+                    </div>
+                    <button onclick="copyToClipboard('${item.password}', 'Password')" style="background:rgba(255,255,255,0.1); border:none; color:#fff; width:32px; height:32px; border-radius:8px; cursor:pointer;"><i class="far fa-copy"></i></button>
+                </div>
+                ${item.twoFactor ? `
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div style="flex:1;">
+                        <div style="font-size:10px; color:#888; font-weight:700; text-transform:uppercase; margin-bottom:4px;">2FA Recovery / Key</div>
+                        <div style="font-size:15px; font-weight:800; color:#3b82f6; word-break:break-all;">${item.twoFactor}</div>
+                    </div>
+                    <button onclick="copyToClipboard('${item.twoFactor}', '2FA Key')" style="background:rgba(59,130,246,0.1); border:none; color:#3b82f6; width:32px; height:32px; border-radius:8px; cursor:pointer;"><i class="far fa-copy"></i></button>
+                </div>` : ''}
+            </div>
+        `;
+    } else {
+        contentHtml = `
+            <div style="margin-top:20px; background:rgba(255,255,255,0.05); border-radius:12px; padding:16px; text-align:left; border:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
+                <div style="flex:1;">
+                    <div style="font-size:10px; color:#888; font-weight:700; text-transform:uppercase; margin-bottom:4px;">License Key / Gift Code</div>
+                    <div style="font-size:15px; font-weight:800; color:#22c55e; word-break:break-all;">${item.key}</div>
+                </div>
+                <button onclick="copyToClipboard('${item.key}', 'Key')" style="background:rgba(34,197,94,0.1); border:none; color:#22c55e; width:32px; height:32px; border-radius:8px; cursor:pointer;"><i class="far fa-copy"></i></button>
+            </div>
+        `;
+    }
+
+    const modalHtml = `
+        <div id="purchaseResultModal" style="position:fixed; inset:0; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:10000; backdrop-filter:blur(10px);">
+            <div style="background:linear-gradient(180deg, #1a1a1a 0%, #0d0d0d 100%); border:1px solid rgba(255,255,255,0.1); border-radius:28px; padding:32px; max-width:360px; width:92%; position:relative; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
+                
+                <div style="text-align:center;">
+                    <div style="width:72px; height:72px; background:linear-gradient(135deg, #22c55e 0%, #15803d 100%); border-radius:22px; display:flex; align-items:center; justify-content:center; margin:0 auto 20px; transform:rotate(-5deg); box-shadow:0 10px 20px rgba(34,197,94,0.3);">
+                        <i class="fas fa-check-circle" style="color:#fff; font-size:32px;"></i>
+                    </div>
+                    
+                    <h2 style="font-size:22px; font-weight:900; color:#fff; margin-bottom:4px;">Purchase Successful</h2>
+                    <p style="font-size:14px; color:#888; margin-bottom:12px;">Order ID: <span style="color:#f59e0b; font-weight:800;">${orderId}</span></p>
+                    
+                    <div style="font-size:16px; font-weight:800; color:#fff; background:rgba(255,255,255,0.05); padding:8px 16px; border-radius:12px; display:inline-block; border:1px solid rgba(255,255,255,0.1); margin-bottom:10px;">
+                        ${itemName}
+                    </div>
+
+                    ${contentHtml}
+
+                    <p style="font-size:11px; color:#666; margin-top:20px; line-height:1.4;">
+                        Please save this information. You can also find it in your <b>History</b> at any time.
+                    </p>
+
+                    <button onclick="document.getElementById('purchaseResultModal').remove()" style="margin-top:28px; width:100%; padding:16px; background:linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color:#fff; border:none; border-radius:18px; font-size:15px; font-weight:800; cursor:pointer; box-shadow:0 4px 12px rgba(59,130,246,0.3); transition:all 0.2s;" onmousedown="this.style.transform='scale(0.97)'" onmouseup="this.style.transform='scale(1)'">
+                        DONE
+                    </button>
+                    
+                    <div style="margin-top:16px; font-size:12px; color:rgba(255,255,255,0.4); font-weight:600;">
+                        Need Help? <span style="color:#3b82f6; cursor:pointer;" onclick="nav('support')">Contact Support</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+window.showPurchaseSuccessModal = showPurchaseSuccessModal;
+
+function copyToClipboard(text, label) {
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+        window.showToast(`✅ Copied ${label || 'text'} to clipboard`);
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+    });
+}
+window.copyToClipboard = copyToClipboard;
 
 function openAndBuyCard(id, type, price, name) {
     const isChatGPT = id && id.toLowerCase().includes('chatgpt');
@@ -8229,8 +8411,8 @@ document.addEventListener('DOMContentLoaded', async function () {
             }
         }
 
-        // Load payment platforms
-        loadPaymentPlatforms();
+        // Load config
+        loadConfig();
 
         // FETCH FEATURE FLAGS & CHECK JOIN REQUIREMENT
         const featuresRes = await fetch('/api/features').catch(() => ({ json: () => ({ success: false }) }));
@@ -10890,3 +11072,4 @@ function closeApiDocs() {
         document.body.style.overflow = '';
     }
 }
+

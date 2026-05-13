@@ -32,6 +32,29 @@
       "groupJoined": false,
       "history": [
         {
+          "id": "ORD-XYFBZ6SZ1",
+          "type": "shop_item_purchase",
+          "amount": 1,
+          "currency": "usd",
+          "shopId": "gemini 1 day",
+          "itemName": "gemini 1 day",
+          "date": 1778651440908,
+          "itemData": {
+            "type": "account",
+            "email": "vhgvyfyjvhvh",
+            "password": "nbjb m,jbk",
+            "twoFactor": ""
+          }
+        },
+        {
+          "type": "shop_item_purchase",
+          "amount": 1,
+          "currency": "usd",
+          "shopId": "gemini 1 day",
+          "itemName": "mamucnsilc",
+          "date": 1778650211034
+        },
+        {
           "type": "account_purchase",
           "amount": 50,
           "currency": "tokens",
@@ -962,14 +985,14 @@
       "joinedChannel": true,
       "joinedGroup": true,
       "language": "en",
-      "lastActive": 1778594210094,
+      "lastActive": 1778651432168,
       "lastDaily": 1778495256034,
       "lastName": "",
       "referralCode": "ref_95CMCD",
       "referralCount": 0,
       "successfulVerifications": 0,
       "tokens": 7475,
-      "usd": 0,
+      "usd": 3,
       "username": "TestUser",
       "verified": false,
       "supportLoan": 0,
@@ -978,9 +1001,30 @@
           "sender": "admin",
           "message": "Hello",
           "timestamp": "2026-05-06T09:22:56.299Z"
+        },
+        {
+          "sender": "admin",
+          "message": "hi",
+          "timestamp": "2026-05-13T05:22:35.955Z"
         }
       ],
       "notifications": [
+        {
+          "id": "1778649755955of0ng9",
+          "type": "message",
+          "title": "New Message from Admin",
+          "message": "hi",
+          "timestamp": "2026-05-13T05:22:35.955Z",
+          "read": false
+        },
+        {
+          "id": "1778640940779967u6h",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:40.779Z",
+          "read": false
+        },
         {
           "id": "1778521825457i6usfe",
           "type": "broadcast",
@@ -1655,6 +1699,14 @@
       "usd": 0,
       "notifications": [
         {
+          "id": "1778640940794x3wb58g",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:40.794Z",
+          "read": false
+        },
+        {
           "id": "1778521825471u9ad87",
           "type": "broadcast",
           "title": "System Announcement",
@@ -1726,6 +1778,14 @@
       "successfulVerifications": 0,
       "vpnsPurchased": 0,
       "notifications": [
+        {
+          "id": "1778640940802mya2a",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:40.802Z",
+          "read": false
+        },
         {
           "id": "17785218255020g8orn",
           "type": "broadcast",
@@ -1813,6 +1873,14 @@
       "usd": 0,
       "verified": false,
       "notifications": [
+        {
+          "id": "1778640940822sgyay7s",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:40.822Z",
+          "read": false
+        },
         {
           "id": "1778521825521d6hsa",
           "type": "broadcast",
@@ -1907,6 +1975,14 @@
       "verified": false,
       "notifications": [
         {
+          "id": "1778640940836q4uo3",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:40.836Z",
+          "read": false
+        },
+        {
           "id": "17785218255502klgpj",
           "type": "broadcast",
           "title": "System Announcement",
@@ -1980,6 +2056,14 @@
       "username": "Huhuhuhuooo",
       "notifications": [
         {
+          "id": "17786409408581p1wg",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:40.858Z",
+          "read": false
+        },
+        {
           "id": "17785218255653inlzg",
           "type": "broadcast",
           "title": "System Announcement",
@@ -2051,6 +2135,14 @@
       "referredBy": "8090212743",
       "successfulVerifications": 0,
       "notifications": [
+        {
+          "id": "1778640940875rg155a",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:40.875Z",
+          "read": false
+        },
         {
           "id": "1778521825585npiper",
           "type": "broadcast",
@@ -2126,6 +2218,14 @@
       "vpnsPurchased": 0,
       "notifications": [
         {
+          "id": "1778640940890xmuzjs",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:40.890Z",
+          "read": false
+        },
+        {
           "id": "1778521825604e7j75",
           "type": "broadcast",
           "title": "System Announcement",
@@ -2196,6 +2296,14 @@
       "successfulVerifications": 0,
       "username": "GroupAnonymousBot",
       "notifications": [
+        {
+          "id": "1778640940903og05to",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:40.903Z",
+          "read": false
+        },
         {
           "id": "17785218256222wa3uh",
           "type": "broadcast",
@@ -2272,6 +2380,14 @@
       "vpnsPurchased": 0,
       "notifications": [
         {
+          "id": "177864094092257d80h",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:40.922Z",
+          "read": false
+        },
+        {
           "id": "1778521825639usrlv",
           "type": "broadcast",
           "title": "System Announcement",
@@ -2343,6 +2459,14 @@
       "successfulVerifications": 0,
       "notifications": [
         {
+          "id": "17786409409351wd83c",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:40.936Z",
+          "read": false
+        },
+        {
           "id": "1778521825653hgc8qm",
           "type": "broadcast",
           "title": "System Announcement",
@@ -2413,6 +2537,14 @@
       "referralCount": 0,
       "successfulVerifications": 0,
       "notifications": [
+        {
+          "id": "1778640940943g1q4rp",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:40.944Z",
+          "read": false
+        },
         {
           "id": "1778521825662lxlubq",
           "type": "broadcast",
@@ -2487,6 +2619,14 @@
       "successfulVerifications": 1,
       "username": "Taskshift",
       "notifications": [
+        {
+          "id": "1778640940958aorr",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:40.958Z",
+          "read": false
+        },
         {
           "id": "1778521825672dnsrw4",
           "type": "broadcast",
@@ -2565,6 +2705,14 @@
       "username": "raihandaris",
       "vpnsPurchased": 0,
       "notifications": [
+        {
+          "id": "1778640940974gvjgu",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:40.974Z",
+          "read": false
+        },
         {
           "id": "1778521825684l3qvzu",
           "type": "broadcast",
@@ -2659,7 +2807,17 @@
       "referredByCode": "ref_GWZUP2",
       "referralVerified": true,
       "verified": true,
-      "verifiedAt": "2026-05-12T03:46:12.086Z"
+      "verifiedAt": "2026-05-12T03:46:12.086Z",
+      "notifications": [
+        {
+          "id": "1778640940989ywg799",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:40.989Z",
+          "read": false
+        }
+      ]
     },
     "1364506093": {
       "balance": 0,
@@ -2676,6 +2834,14 @@
       "username": "Maruf_450",
       "vpnsPurchased": 0,
       "notifications": [
+        {
+          "id": "1778640940999x3snaj",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:40.999Z",
+          "read": false
+        },
         {
           "id": "1778521825689wq7wqs",
           "type": "broadcast",
@@ -2749,6 +2915,14 @@
       "vpnsPurchased": 0,
       "notifications": [
         {
+          "id": "1778640941006xmym9h",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.006Z",
+          "read": false
+        },
+        {
           "id": "1778521825702oo9495",
           "type": "broadcast",
           "title": "System Announcement",
@@ -2819,6 +2993,14 @@
       "referralCount": 0,
       "successfulVerifications": 0,
       "notifications": [
+        {
+          "id": "1778640941013ktt647",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.013Z",
+          "read": false
+        },
         {
           "id": "17785218257062i0py",
           "type": "broadcast",
@@ -2912,6 +3094,14 @@
       "verified": false,
       "notifications": [
         {
+          "id": "1778640941023ctqrbf",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.023Z",
+          "read": false
+        },
+        {
           "id": "1778521825719b9md4a",
           "type": "broadcast",
           "title": "System Announcement",
@@ -2983,6 +3173,14 @@
       "referralCount": 1,
       "successfulVerifications": 1,
       "notifications": [
+        {
+          "id": "1778640941033wn0z5",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.033Z",
+          "read": false
+        },
         {
           "id": "1778521825725fmtj8o",
           "type": "broadcast",
@@ -3056,6 +3254,14 @@
       "successfulVerifications": 0,
       "notifications": [
         {
+          "id": "17786409410449fl4wd",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.044Z",
+          "read": false
+        },
+        {
           "id": "1778521825737pf3cu",
           "type": "broadcast",
           "title": "System Announcement",
@@ -3127,6 +3333,14 @@
       "referralCount": 0,
       "successfulVerifications": 0,
       "notifications": [
+        {
+          "id": "17786409410561rkv8b",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.056Z",
+          "read": false
+        },
         {
           "id": "1778521825742f4v7q",
           "type": "broadcast",
@@ -3201,6 +3415,14 @@
       "username": "refat202410",
       "notifications": [
         {
+          "id": "1778640941067xxi4t9",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.067Z",
+          "read": false
+        },
+        {
           "id": "1778521825757byx9cb",
           "type": "broadcast",
           "title": "System Announcement",
@@ -3271,6 +3493,14 @@
       "referralCount": 0,
       "successfulVerifications": 0,
       "notifications": [
+        {
+          "id": "1778640941076xnvndc",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.076Z",
+          "read": false
+        },
         {
           "id": "17785218257746qulff",
           "type": "broadcast",
@@ -3344,6 +3574,14 @@
       "successfulVerifications": 0,
       "notifications": [
         {
+          "id": "1778640941086ftgpf1",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.086Z",
+          "read": false
+        },
+        {
           "id": "1778521825788is0kkc",
           "type": "broadcast",
           "title": "System Announcement",
@@ -3416,6 +3654,14 @@
       "successfulVerifications": 0,
       "vpnsPurchased": 0,
       "notifications": [
+        {
+          "id": "17786409410971xggi",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.098Z",
+          "read": false
+        },
         {
           "id": "1778521825805jxhnaj",
           "type": "broadcast",
@@ -3492,6 +3738,14 @@
       "vpnsPurchased": 0,
       "notifications": [
         {
+          "id": "1778640941113r5zne",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.114Z",
+          "read": false
+        },
+        {
           "id": "1778521825821cy241v",
           "type": "broadcast",
           "title": "System Announcement",
@@ -3563,6 +3817,14 @@
       "referralCount": 0,
       "successfulVerifications": 0,
       "notifications": [
+        {
+          "id": "17786409411236e9vye",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.123Z",
+          "read": false
+        },
         {
           "id": "17785218258419biak5",
           "type": "broadcast",
@@ -3638,6 +3900,14 @@
       "username": "mzxhjj",
       "vpnsPurchased": 0,
       "notifications": [
+        {
+          "id": "1778640941139mc6lvh",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.140Z",
+          "read": false
+        },
         {
           "id": "1778521825854z9piph",
           "type": "broadcast",
@@ -3717,6 +3987,14 @@
       "usd": 0,
       "notifications": [
         {
+          "id": "17786409411546z17y9",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.155Z",
+          "read": false
+        },
+        {
           "id": "1778521825868yexc5i",
           "type": "broadcast",
           "title": "System Announcement",
@@ -3794,6 +4072,14 @@
       "vpnsPurchased": 0,
       "notifications": [
         {
+          "id": "177864094116694nkzl",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.166Z",
+          "read": false
+        },
+        {
           "id": "1778521825882m8fxsn",
           "type": "broadcast",
           "title": "System Announcement",
@@ -3865,6 +4151,14 @@
       "referralCount": 0,
       "successfulVerifications": 0,
       "notifications": [
+        {
+          "id": "1778640941176616m56",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.176Z",
+          "read": false
+        },
         {
           "id": "1778521825899h77oh8",
           "type": "broadcast",
@@ -3938,6 +4232,14 @@
       "successfulVerifications": 0,
       "vpnsPurchased": 0,
       "notifications": [
+        {
+          "id": "1778640941186q353qa",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.186Z",
+          "read": false
+        },
         {
           "id": "1778521825918hao075",
           "type": "broadcast",
@@ -4035,6 +4337,14 @@
       "verified": false,
       "notifications": [
         {
+          "id": "1778640941200mgxrs",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.200Z",
+          "read": false
+        },
+        {
           "id": "1778521825929ajj5x4",
           "type": "broadcast",
           "title": "System Announcement",
@@ -4110,6 +4420,14 @@
       "referralCount": 0,
       "successfulVerifications": 0,
       "notifications": [
+        {
+          "id": "1778640941215gsdmdx",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.215Z",
+          "read": false
+        },
         {
           "id": "1778521825938tj9hnq",
           "type": "broadcast",
@@ -4190,6 +4508,14 @@
       "usd": 0,
       "notifications": [
         {
+          "id": "1778640941226fb8nhs",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.227Z",
+          "read": false
+        },
+        {
           "id": "17785218259540lolcs",
           "type": "broadcast",
           "title": "System Announcement",
@@ -4263,6 +4589,14 @@
       "username": "AutoHubServices",
       "vpnsPurchased": 0,
       "notifications": [
+        {
+          "id": "17786409412417y5wfg",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.241Z",
+          "read": false
+        },
         {
           "id": "1778521825970m1ioy",
           "type": "broadcast",
@@ -4338,6 +4672,14 @@
       "vpnsPurchased": 0,
       "notifications": [
         {
+          "id": "17786409412522tupi9",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.252Z",
+          "read": false
+        },
+        {
           "id": "1778521825980ug1a5a",
           "type": "broadcast",
           "title": "System Announcement",
@@ -4408,6 +4750,14 @@
       "referralCount": 0,
       "successfulVerifications": 0,
       "notifications": [
+        {
+          "id": "1778640941265ledt4",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.265Z",
+          "read": false
+        },
         {
           "id": "1778521825994k57v08",
           "type": "broadcast",
@@ -4481,6 +4831,14 @@
       "referredBy": "1269254705",
       "successfulVerifications": 0,
       "notifications": [
+        {
+          "id": "1778640941279b1szu8",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.279Z",
+          "read": false
+        },
         {
           "id": "1778521826007vz53fg",
           "type": "broadcast",
@@ -4556,6 +4914,14 @@
       "vpnsPurchased": 0,
       "notifications": [
         {
+          "id": "17786409412912orzpys",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.291Z",
+          "read": false
+        },
+        {
           "id": "177852182602010kpob",
           "type": "broadcast",
           "title": "System Announcement",
@@ -4626,6 +4992,14 @@
       "referralCount": 0,
       "successfulVerifications": 0,
       "notifications": [
+        {
+          "id": "1778640941303k04b4s",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.303Z",
+          "read": false
+        },
         {
           "id": "1778521826026vo3wwq",
           "type": "broadcast",
@@ -4701,6 +5075,14 @@
       "vpnsPurchased": 0,
       "notifications": [
         {
+          "id": "1778640941318xv7t",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.318Z",
+          "read": false
+        },
+        {
           "id": "1778521826043l8ndo",
           "type": "broadcast",
           "title": "System Announcement",
@@ -4774,6 +5156,14 @@
       "successfulVerifications": 0,
       "notifications": [
         {
+          "id": "1778640941328xdqp1i",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.328Z",
+          "read": false
+        },
+        {
           "id": "1778521826048vo44mo",
           "type": "broadcast",
           "title": "System Announcement",
@@ -4846,6 +5236,14 @@
       "referralCount": 2,
       "successfulVerifications": 0,
       "notifications": [
+        {
+          "id": "17786409413421cyb8",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.342Z",
+          "read": false
+        },
         {
           "id": "17785218260679iylp3",
           "type": "broadcast",
@@ -4921,6 +5319,14 @@
       "vpnsPurchased": 0,
       "notifications": [
         {
+          "id": "1778640941349aoi55s",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.349Z",
+          "read": false
+        },
+        {
           "id": "1778521826072br3c6",
           "type": "broadcast",
           "title": "System Announcement",
@@ -4992,6 +5398,14 @@
       "referredBy": "6004852284",
       "successfulVerifications": 0,
       "notifications": [
+        {
+          "id": "1778640941375qajw2",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.375Z",
+          "read": false
+        },
         {
           "id": "17785218260865h2pnc",
           "type": "broadcast",
@@ -5065,6 +5479,14 @@
       "successfulVerifications": 0,
       "notifications": [
         {
+          "id": "1778640941384an0u1",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.385Z",
+          "read": false
+        },
+        {
           "id": "17785218260964c3hgk",
           "type": "broadcast",
           "title": "System Announcement",
@@ -5136,6 +5558,14 @@
       "referralCount": 0,
       "successfulVerifications": 0,
       "notifications": [
+        {
+          "id": "1778640941399uho9wf",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.399Z",
+          "read": false
+        },
         {
           "id": "1778521826109wr7wr",
           "type": "broadcast",
@@ -5232,6 +5662,14 @@
       "verified": true,
       "notifications": [
         {
+          "id": "17786409414093k6o5c",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.409Z",
+          "read": false
+        },
+        {
           "id": "1778521826120z55r2",
           "type": "broadcast",
           "title": "System Announcement",
@@ -5308,6 +5746,14 @@
       "successfulVerifications": 0,
       "notifications": [
         {
+          "id": "17786409414214kmv3",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.421Z",
+          "read": false
+        },
+        {
           "id": "1778521826126ukj0ar",
           "type": "broadcast",
           "title": "System Announcement",
@@ -5381,6 +5827,14 @@
       "vpnsPurchased": 0,
       "notifications": [
         {
+          "id": "17786409414360oxrg",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.436Z",
+          "read": false
+        },
+        {
           "id": "1778521826144n5y4l9",
           "type": "broadcast",
           "title": "System Announcement",
@@ -5452,6 +5906,14 @@
       "referralCount": 0,
       "successfulVerifications": 0,
       "notifications": [
+        {
+          "id": "1778640941449cia03ld",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.449Z",
+          "read": false
+        },
         {
           "id": "1778521826153tvd01t",
           "type": "broadcast",
@@ -5526,6 +5988,14 @@
       "referralCount": 0,
       "successfulVerifications": 1,
       "notifications": [
+        {
+          "id": "17786409414606ftlqt",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.460Z",
+          "read": false
+        },
         {
           "id": "1778521826161qy4xcg",
           "type": "broadcast",
@@ -5602,6 +6072,14 @@
       "vpnsPurchased": 0,
       "notifications": [
         {
+          "id": "177864094147815pyt",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.478Z",
+          "read": false
+        },
+        {
           "id": "177852182617659td4o",
           "type": "broadcast",
           "title": "System Announcement",
@@ -5675,6 +6153,14 @@
       "username": "arsfghj",
       "vpnsPurchased": 0,
       "notifications": [
+        {
+          "id": "1778640941494cv6z6",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.494Z",
+          "read": false
+        },
         {
           "id": "1778521826181qxe157",
           "type": "broadcast",
@@ -5750,6 +6236,14 @@
       "vpnsPurchased": 0,
       "notifications": [
         {
+          "id": "1778640941507bagkne",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.507Z",
+          "read": false
+        },
+        {
           "id": "17785218261949p3ef",
           "type": "broadcast",
           "title": "System Announcement",
@@ -5823,6 +6317,14 @@
       "successfulVerifications": 0,
       "username": "faghd7576",
       "notifications": [
+        {
+          "id": "1778640941519mgj7da",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.519Z",
+          "read": false
+        },
         {
           "id": "17785218262034p99b",
           "type": "broadcast",
@@ -5898,6 +6400,14 @@
       "vpnsPurchased": 0,
       "notifications": [
         {
+          "id": "17786409415342jf2oe",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.534Z",
+          "read": false
+        },
+        {
           "id": "17785218262097mb6pi",
           "type": "broadcast",
           "title": "System Announcement",
@@ -5970,6 +6480,14 @@
       "referredBy": "1917991331",
       "successfulVerifications": 0,
       "notifications": [
+        {
+          "id": "17786409415469hx3td",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.546Z",
+          "read": false
+        },
         {
           "id": "1778521826227rxphw6",
           "type": "broadcast",
@@ -6050,6 +6568,14 @@
       "usd": 0,
       "notifications": [
         {
+          "id": "1778640941559vuqu4c",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.559Z",
+          "read": false
+        },
+        {
           "id": "1778521826245fkvsje",
           "type": "broadcast",
           "title": "System Announcement",
@@ -6122,6 +6648,14 @@
       "username": "MdRabbi847",
       "notifications": [
         {
+          "id": "17786409415773ivsd",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.577Z",
+          "read": false
+        },
+        {
           "id": "1778521826255p615nm",
           "type": "broadcast",
           "title": "System Announcement",
@@ -6192,6 +6726,14 @@
       "referralCount": 0,
       "successfulVerifications": 0,
       "notifications": [
+        {
+          "id": "17786409415928ut1n",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.593Z",
+          "read": false
+        },
         {
           "id": "1778521826265bij01m",
           "type": "broadcast",
@@ -6272,6 +6814,14 @@
       "usd": 0,
       "notifications": [
         {
+          "id": "1778640941610d9p6el",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.610Z",
+          "read": false
+        },
+        {
           "id": "17785218262849qu7h",
           "type": "broadcast",
           "title": "System Announcement",
@@ -6349,6 +6899,14 @@
       "vpnsPurchased": 0,
       "notifications": [
         {
+          "id": "1778640941629ycjdto",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.629Z",
+          "read": false
+        },
+        {
           "id": "1778521826295td6yw",
           "type": "broadcast",
           "title": "System Announcement",
@@ -6419,6 +6977,14 @@
       "referralCount": 0,
       "successfulVerifications": 0,
       "notifications": [
+        {
+          "id": "1778640941642g9k6a",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.642Z",
+          "read": false
+        },
         {
           "id": "1778521826300ovpex",
           "type": "broadcast",
@@ -6495,6 +7061,14 @@
       "vpnsPurchased": 0,
       "notifications": [
         {
+          "id": "17786409416581keree",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.658Z",
+          "read": false
+        },
+        {
           "id": "1778521826316b6y7xe",
           "type": "broadcast",
           "title": "System Announcement",
@@ -6565,6 +7139,14 @@
       "referralCount": 0,
       "successfulVerifications": 0,
       "notifications": [
+        {
+          "id": "1778640941670imi4a",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.670Z",
+          "read": false
+        },
         {
           "id": "1778521826334pvtch",
           "type": "broadcast",
@@ -6642,6 +7224,14 @@
       "vpnsPurchased": 0,
       "notifications": [
         {
+          "id": "177864094168430wb6s",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.684Z",
+          "read": false
+        },
+        {
           "id": "17785218263504o331i",
           "type": "broadcast",
           "title": "System Announcement",
@@ -6703,7 +7293,7 @@
     },
     "7672601379": {
       "adminVerified": true,
-      "balance": 945,
+      "balance": 100,
       "balance_tokens": 945,
       "blocked": false,
       "cardsPurchased": 0,
@@ -6744,7 +7334,7 @@
         "Mamun50"
       ],
       "referralCode": "ref_GWZUP2",
-      "referralCount": 3,
+      "referralCount": 2,
       "referredBy": "7672601379p",
       "successfulVerifications": 0,
       "tasksDone": [
@@ -6755,6 +7345,14 @@
       "verified": true,
       "vpnsPurchased": 1,
       "notifications": [
+        {
+          "id": "1778640941707hk5uzd",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.707Z",
+          "read": false
+        },
         {
           "id": "1778521826380pfizdj",
           "type": "broadcast",
@@ -6861,6 +7459,14 @@
       "successfulVerifications": 0,
       "notifications": [
         {
+          "id": "1778640941707hk5uzd",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.707Z",
+          "read": false
+        },
+        {
           "id": "1778521826380pfizdj",
           "type": "broadcast",
           "title": "System Announcement",
@@ -6962,6 +7568,14 @@
       "successfulVerifications": 0,
       "notifications": [
         {
+          "id": "1778640941717v2upqe",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.717Z",
+          "read": false
+        },
+        {
           "id": "17785218263904fb67t",
           "type": "broadcast",
           "title": "System Announcement",
@@ -7033,6 +7647,14 @@
       "successfulVerifications": 0,
       "vpnsPurchased": 0,
       "notifications": [
+        {
+          "id": "17786409417284ggv1",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.728Z",
+          "read": false
+        },
         {
           "id": "17785218264043vda4i",
           "type": "broadcast",
@@ -7106,6 +7728,14 @@
       "referredBy": "1179622713",
       "successfulVerifications": 0,
       "notifications": [
+        {
+          "id": "17786409417416g3tof",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.741Z",
+          "read": false
+        },
         {
           "id": "1778521826420y9r53d",
           "type": "broadcast",
@@ -7182,6 +7812,14 @@
       "vpnsPurchased": 0,
       "notifications": [
         {
+          "id": "1778640941754gci9q7",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.754Z",
+          "read": false
+        },
+        {
           "id": "1778521826435grlam",
           "type": "broadcast",
           "title": "System Announcement",
@@ -7255,6 +7893,14 @@
       "successfulVerifications": 0,
       "vpnsPurchased": 0,
       "notifications": [
+        {
+          "id": "1778640941767vm2fea",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.767Z",
+          "read": false
+        },
         {
           "id": "1778521826448r8b01r",
           "type": "broadcast",
@@ -7333,6 +7979,14 @@
       "username": "Sabbir0fficials",
       "vpnsPurchased": 0,
       "notifications": [
+        {
+          "id": "1778640941783g310xd",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.783Z",
+          "read": false
+        },
         {
           "id": "1778521826463pmxbn",
           "type": "broadcast",
@@ -7428,6 +8082,14 @@
       "verified": false,
       "notifications": [
         {
+          "id": "177864094179912y73l",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.800Z",
+          "read": false
+        },
+        {
           "id": "1778521826485qikfmtn",
           "type": "broadcast",
           "title": "System Announcement",
@@ -7502,6 +8164,14 @@
       "username": "jonyislam4365",
       "notifications": [
         {
+          "id": "1778640941818n614f",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.818Z",
+          "read": false
+        },
+        {
           "id": "1778521826496fv7hhr",
           "type": "broadcast",
           "title": "System Announcement",
@@ -7574,6 +8244,14 @@
       "successfulVerifications": 0,
       "notifications": [
         {
+          "id": "1778640941842tpv4so",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.842Z",
+          "read": false
+        },
+        {
           "id": "1778521826509kwhant",
           "type": "broadcast",
           "title": "System Announcement",
@@ -7644,6 +8322,14 @@
       "referralCount": 0,
       "successfulVerifications": 0,
       "notifications": [
+        {
+          "id": "1778640941855gkyxhz",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.855Z",
+          "read": false
+        },
         {
           "id": "1778521826521y2ys1b",
           "type": "broadcast",
@@ -7716,6 +8402,14 @@
       "successfulVerifications": 0,
       "notifications": [
         {
+          "id": "1778640941866t39quo",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.866Z",
+          "read": false
+        },
+        {
           "id": "17785218265304wrl8w",
           "type": "broadcast",
           "title": "System Announcement",
@@ -7787,6 +8481,14 @@
       "successfulVerifications": 1,
       "username": "Andu_graphics",
       "notifications": [
+        {
+          "id": "1778640941877qposrs",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.877Z",
+          "read": false
+        },
         {
           "id": "1778521826546cq1x1r",
           "type": "broadcast",
@@ -7862,6 +8564,22 @@
       "username": "Riad_Al_Mamun",
       "notifications": [
         {
+          "id": "1778649742516ocz23o",
+          "type": "message",
+          "title": "New Message from Admin",
+          "message": "hi",
+          "timestamp": "2026-05-13T05:22:22.516Z",
+          "read": false
+        },
+        {
+          "id": "17786409418864zeki",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.886Z",
+          "read": false
+        },
+        {
           "id": "1778521826563la6ec",
           "type": "broadcast",
           "title": "System Announcement",
@@ -7930,7 +8648,14 @@
         }
       ],
       "verified": true,
-      "verifiedAt": "2026-05-12T12:47:49.497Z"
+      "verifiedAt": "2026-05-12T12:47:49.497Z",
+      "supportMessages": [
+        {
+          "sender": "admin",
+          "message": "hi",
+          "timestamp": "2026-05-13T05:22:22.503Z"
+        }
+      ]
     },
     "8128770916": {
       "balance": 50,
@@ -7945,6 +8670,14 @@
       "referredBy": "1269254705",
       "successfulVerifications": 0,
       "notifications": [
+        {
+          "id": "17786409419004ybkb",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.900Z",
+          "read": false
+        },
         {
           "id": "17785218265709fsgg",
           "type": "broadcast",
@@ -8017,6 +8750,14 @@
       "referredBy": "7672601379",
       "successfulVerifications": 0,
       "notifications": [
+        {
+          "id": "17786409419091s68xo",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.909Z",
+          "read": false
+        },
         {
           "id": "1778521826579yzy7g",
           "type": "broadcast",
@@ -8092,6 +8833,14 @@
       "vpnsPurchased": 0,
       "notifications": [
         {
+          "id": "1778640941924u1qnal",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.924Z",
+          "read": false
+        },
+        {
           "id": "1778521826593q16um",
           "type": "broadcast",
           "title": "System Announcement",
@@ -8164,6 +8913,14 @@
       "referredBy": "6560155211",
       "successfulVerifications": 0,
       "notifications": [
+        {
+          "id": "177864094193494a3ly",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.934Z",
+          "read": false
+        },
         {
           "id": "177852182660762xry",
           "type": "broadcast",
@@ -8238,6 +8995,14 @@
       "username": "Sourovraj09",
       "notifications": [
         {
+          "id": "1778640941950kl1az",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.950Z",
+          "read": false
+        },
+        {
           "id": "177852182662258tpgm",
           "type": "broadcast",
           "title": "System Announcement",
@@ -8311,6 +9076,14 @@
       "successfulVerifications": 0,
       "notifications": [
         {
+          "id": "177864094196451zxns",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.964Z",
+          "read": false
+        },
+        {
           "id": "1778521826639uxpp6",
           "type": "broadcast",
           "title": "System Announcement",
@@ -8382,6 +9155,14 @@
       "successfulVerifications": 0,
       "vpnsPurchased": 0,
       "notifications": [
+        {
+          "id": "1778640941977lawqxq",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.977Z",
+          "read": false
+        },
         {
           "id": "1778521826652wbivpl",
           "type": "broadcast",
@@ -8457,6 +9238,14 @@
       "vpnsPurchased": 0,
       "notifications": [
         {
+          "id": "1778640941991c779mi",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:41.991Z",
+          "read": false
+        },
+        {
           "id": "1778521826665fe0aak",
           "type": "broadcast",
           "title": "System Announcement",
@@ -8531,6 +9320,14 @@
       "username": "Jsmail112",
       "notifications": [
         {
+          "id": "1778640942007l02l6x",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:42.007Z",
+          "read": false
+        },
+        {
           "id": "1778521826682or7sea",
           "type": "broadcast",
           "title": "System Announcement",
@@ -8602,6 +9399,14 @@
       "referralCount": 0,
       "successfulVerifications": 0,
       "notifications": [
+        {
+          "id": "1778640942024ofvdeg",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:42.024Z",
+          "read": false
+        },
         {
           "id": "1778521826698jo6qks",
           "type": "broadcast",
@@ -8676,6 +9481,14 @@
       "successfulVerifications": 0,
       "notifications": [
         {
+          "id": "1778640942041u2cbdq",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:42.041Z",
+          "read": false
+        },
+        {
           "id": "1778521826711g3ito",
           "type": "broadcast",
           "title": "System Announcement",
@@ -8748,6 +9561,14 @@
       "successfulVerifications": 0,
       "notifications": [
         {
+          "id": "1778640942057ifq9jt",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:42.057Z",
+          "read": false
+        },
+        {
           "id": "1778521826723dup6t",
           "type": "broadcast",
           "title": "System Announcement",
@@ -8818,6 +9639,14 @@
       "referralCount": 0,
       "successfulVerifications": 0,
       "notifications": [
+        {
+          "id": "17786409420756gjpo9",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:42.075Z",
+          "read": false
+        },
         {
           "id": "1778521826737k0o2ko",
           "type": "broadcast",
@@ -8891,6 +9720,14 @@
       "successfulVerifications": 0,
       "notifications": [
         {
+          "id": "1778640942092c3pt22",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:42.092Z",
+          "read": false
+        },
+        {
           "id": "1778521826752jc3x5",
           "type": "broadcast",
           "title": "System Announcement",
@@ -8963,6 +9800,14 @@
       "referredBy": "7672601379",
       "successfulVerifications": 0,
       "notifications": [
+        {
+          "id": "1778640942112p9k01",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:42.112Z",
+          "read": false
+        },
         {
           "id": "177852182677363dvd",
           "type": "broadcast",
@@ -9041,6 +9886,14 @@
       "vpnsPurchased": 0,
       "notifications": [
         {
+          "id": "1778640942136f62rf",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:42.136Z",
+          "read": false
+        },
+        {
           "id": "17785218267978ia4jk",
           "type": "broadcast",
           "title": "System Announcement",
@@ -9114,6 +9967,14 @@
       "vpnsPurchased": 0,
       "notifications": [
         {
+          "id": "17786409421567ekcb",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:42.156Z",
+          "read": false
+        },
+        {
           "id": "1778521826811p9hh1e",
           "type": "broadcast",
           "title": "System Announcement",
@@ -9186,6 +10047,14 @@
       "referredBy": "7672601379",
       "successfulVerifications": 0,
       "notifications": [
+        {
+          "id": "17786409421714wsbw",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:42.171Z",
+          "read": false
+        },
         {
           "id": "1778521826822bv575",
           "type": "broadcast",
@@ -9261,6 +10130,14 @@
       "vpnsPurchased": 0,
       "notifications": [
         {
+          "id": "1778640942175g02jm2",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:42.175Z",
+          "read": false
+        },
+        {
           "id": "1778521826840r5ca0i",
           "type": "broadcast",
           "title": "System Announcement",
@@ -9332,6 +10209,14 @@
       "successfulVerifications": 0,
       "notifications": [
         {
+          "id": "1778640942189lgqyab",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:42.189Z",
+          "read": false
+        },
+        {
           "id": "1778521826846z7f5dc",
           "type": "broadcast",
           "title": "System Announcement",
@@ -9402,6 +10287,14 @@
       "referralCount": 0,
       "successfulVerifications": 0,
       "notifications": [
+        {
+          "id": "1778640942202ralkx",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:42.203Z",
+          "read": false
+        },
         {
           "id": "1778521826853htf7po",
           "type": "broadcast",
@@ -9475,6 +10368,14 @@
       "vpnsPurchased": 0,
       "notifications": [
         {
+          "id": "17786409422184k7fia",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:42.218Z",
+          "read": false
+        },
+        {
           "id": "17785218268681ba13d",
           "type": "broadcast",
           "title": "System Announcement",
@@ -9546,6 +10447,14 @@
       "successfulVerifications": 0,
       "vpnsPurchased": 0,
       "notifications": [
+        {
+          "id": "1778640942219i5l5a",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:42.219Z",
+          "read": false
+        },
         {
           "id": "1778521826869omvpg7",
           "type": "broadcast",
@@ -9619,6 +10528,14 @@
       "vpnsPurchased": 0,
       "notifications": [
         {
+          "id": "1778640942220moj6pu",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:42.220Z",
+          "read": false
+        },
+        {
           "id": "1778521826870h7r51",
           "type": "broadcast",
           "title": "System Announcement",
@@ -9691,6 +10608,14 @@
       "vpnsPurchased": 0,
       "notifications": [
         {
+          "id": "1778640942220eap3js",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:42.220Z",
+          "read": false
+        },
+        {
           "id": "1778521826871g3viua",
           "type": "broadcast",
           "title": "System Announcement",
@@ -9762,6 +10687,14 @@
       "successfulVerifications": 0,
       "vpnsPurchased": 0,
       "notifications": [
+        {
+          "id": "1778640942221q7qkdl",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:42.221Z",
+          "read": false
+        },
         {
           "id": "1778521826871unqzsg",
           "type": "broadcast",
@@ -9855,6 +10788,14 @@
       "pendingReferrer": null,
       "notifications": [
         {
+          "id": "1778640942222fv6s7q",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:42.222Z",
+          "read": false
+        },
+        {
           "id": "17785218268711kavgu",
           "type": "broadcast",
           "title": "System Announcement",
@@ -9910,7 +10851,17 @@
         }
       ],
       "tokens": 105,
-      "pendingReferrer": "ref_NBEAEX"
+      "pendingReferrer": "ref_NBEAEX",
+      "notifications": [
+        {
+          "id": "1778640942234xct0u",
+          "type": "broadcast",
+          "title": "System Announcement",
+          "message": "hi",
+          "timestamp": "2026-05-13T02:55:42.234Z",
+          "read": false
+        }
+      ]
     }
   },
   "groups": {
@@ -10735,9 +11686,9 @@
       "enabled": true,
       "intervalHours": 6,
       "keep": 30,
-      "lastBackupAt": 1778555793027,
-      "lastBackupFile": "auto_backup_1778555793027.json",
-      "nextBackupAt": 1778642160000
+      "lastBackupAt": 1778642192533,
+      "lastBackupFile": "auto_backup_1778642192533.json",
+      "nextBackupAt": 1778728560000
     },
     "gems": {
       "currentPrice": 1,
@@ -11022,28 +11973,7 @@
   "groupWarnings": {
     "-1002516230551_7672601379": 1
   },
-  "mailSessions": {
-    "premium_gmail_1778503484595_123": {
-      "email": "Mamunislam4.36.38.9.2@gmail.com",
-      "password": null,
-      "provider": "gmail",
-      "sessionId": "Mamunislam4.36.38.9.2@gmail.com",
-      "token": "Mamunislam4.36.38.9.2@gmail.com",
-      "userId": "123",
-      "createdAt": 1778503484608
-    },
-    "mail_student_1778517090896_123": {
-      "email": "student1778517095170151@college.edu",
-      "token": "student1778517095170151@college.edu",
-      "sessionId": "student1778517095170151@college.edu",
-      "provider": "fallback_student",
-      "password": null,
-      "isFallback": true,
-      "userId": "123",
-      "createdAt": 1778517095171,
-      "service": "student"
-    }
-  },
+  "mailSessions": {},
   "premiumMailSettings": {
     "emailCost": 50,
     "masterGmail": "",
@@ -11170,5 +12100,31 @@
   },
   "serviceSections": {
     "ma": "virtual-cards"
+  },
+  "shopStock": {
+    "gemini 1 day": [
+      {
+        "id": "stock_1778650087155_82fpf",
+        "type": "account",
+        "email": "mamucnsilc",
+        "password": "dfbfb",
+        "twoFactor": "",
+        "sold": true,
+        "addedAt": 1778650087155,
+        "soldTo": "123",
+        "soldAt": 1778650211034
+      },
+      {
+        "id": "stock_1778650765602_48nqu",
+        "type": "account",
+        "email": "vhgvyfyjvhvh",
+        "password": "nbjb m,jbk",
+        "twoFactor": "",
+        "sold": true,
+        "addedAt": 1778650765602,
+        "soldTo": "123",
+        "soldAt": 1778651440908
+      }
+    ]
   }
 }
