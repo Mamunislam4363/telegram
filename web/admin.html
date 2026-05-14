@@ -4698,8 +4698,6 @@
                         </div>
                     </div>
                 </div>
-            </div>
-
             <!-- AI GROUP ASSISTANT PAGE -->
             <div id="page-removebg" class="page">
                 <div class="glass-card p-4 md:p-6 rounded-2xl mb-6">
@@ -4790,16 +4788,6 @@
             <!-- SERVICES MANAGEMENT PAGE -->
             <div id="page-services" class="page">
                 <div class="space-y-6">
-                    <!-- Page Header -->
-                <div class="mb-6 flex justify-between items-center">
-                    <div>
-                        <h3 class="text-xl font-bold">Services & Inventory</h3>
-                        <p class="text-sm text-gray-400">Manage your product catalog</p>
-                    </div>
-                    <button onclick="loadServiceItems()" class="px-4 py-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-all">
-                        <i class="fas fa-sync-alt mr-2"></i>Refresh Data
-                    </button>
-                </div>
 
                 <!-- Category Tabs with Add Button -->
                 <div class="mb-6">
@@ -6410,13 +6398,20 @@
         }
 
         // DEPOSITS MANAGEMENT
-        let cryptoMethods = {}; async function loadDeposits() {
+        let cryptoMethods = {}; 
+        async function loadDeposits() {
             try {
-                const res = await
-                    fetch('/api/admin/deposits'); const data = await res.json(); if (data.success) {
-                        renderDeposits(data.pending,
-                            data.history);
-                    }
+                const cfgRes = await fetch('/api/deposit/config');
+                const cfgData = await cfgRes.json();
+                if (cfgData.success) {
+                    cryptoMethods = cfgData.cryptoMethods || {};
+                }
+
+                const res = await fetch('/api/admin/deposits'); 
+                const data = await res.json(); 
+                if (data.success) {
+                    renderDeposits(data.pending, data.history);
+                }
             } catch (e) { console.error('Failed to load deposits'); }
         } function
             renderDeposits(pending, history) {
@@ -6433,9 +6428,13 @@
                 pBody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-500 py-8">No pending requests</td></tr>';
             } else {
                 pBody.innerHTML = pending.map(d => {
-                    const method = cryptoMethods[d.method] || { name: d.method, isLocal: false };
-                    const displayAmount = method.isLocal ? `${d.amount} BDT` : `$${d.amount} USD`;
-                    const usdCredit = method.isLocal ? (d.amount / (adminSettings.bdtUsdRate || 125)).toFixed(2) : d.amount;
+                    const method = cryptoMethods[d.method] || { name: d.method, type: 'crypto' };
+                    const isLocal = method.type === 'local';
+                    const displayAmount = isLocal ? `${d.amount} BDT` : `$${d.amount} USD`;
+                    
+                    // Fetch current exchange rate from admin settings if available
+                    const rate = window.adminSettings?.bdtUsdRate || 125;
+                    const usdCredit = isLocal ? (d.amount / rate).toFixed(2) : d.amount;
 
                     return `
                     <tr>
@@ -6444,8 +6443,8 @@
                             ${method.name}
                         </td>
                         <td>
-                            <div class="font-bold text-sm">${displayAmount}</div>
-                            <div class="text-[10px] text-green-500">Credit: $${usdCredit}</div>
+                            <div class="font-bold text-sm text-green-400">+$${usdCredit} USD</div>
+                            ${isLocal ? `<div class="text-[10px] text-gray-400">Amount: ${d.amount} BDT</div>` : ''}
                         </td>
                         <td class="text-[10px] text-gray-400 font-mono">${d.txnId}</td>
                         <td>
@@ -6468,13 +6467,18 @@
 
             const hBody = document.querySelector('#depositHistoryTable tbody');
             hBody.innerHTML = history.map(d => {
-                const method = cryptoMethods[d.method] || { name: d.method, isLocal: false };
-                const displayAmount = method.isLocal ? `${d.amount} BDT` : `$${d.amount} USD`;
+                const method = cryptoMethods[d.method] || { name: d.method, type: 'crypto' };
+                const isLocal = method.type === 'local';
+                const rate = window.adminSettings?.bdtUsdRate || 125;
+                const usdCredit = isLocal ? (d.amount / rate).toFixed(2) : d.amount;
                 return `
                 <tr class="opacity-70">
                     <td class="text-xs">${d.userId}</td>
                     <td class="text-[10px] uppercase">${method.name}</td>
-                    <td class="font-bold text-xs">${displayAmount}</td>
+                    <td>
+                        <div class="font-bold text-xs text-green-400">+$${usdCredit} USD</div>
+                        ${isLocal ? `<div class="text-[9px] text-gray-500">Amount: ${d.amount} BDT</div>` : ''}
+                    </td>
                     <td class="text-[10px] font-mono">${d.txnId}</td>
                     <td>
                         ${d.screenshot ? `<a href="${d.screenshot}" target="_blank" class="text-blue-400"><i

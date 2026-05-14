@@ -4496,7 +4496,9 @@ app.get('/api/admin/users', (req, res) => {
             leftFrom: u.leftFrom || null,
             banned: u.banned || u.blocked || false,
             joinDate: u.joinDate || u.joinedAt || null,
-            lastActive: u.lastActive || null
+            lastActive: u.lastActive || null,
+            supportMessages: u.supportMessages || [],
+            pendingWebMessages: u.pendingWebMessages || []
         }));
         res.json({ success: true, users: list, total: list.length });
     } catch (err) {
@@ -4986,7 +4988,7 @@ app.post('/api/admin/deposits/action', (req, res) => {
         let creditAmount = deposit.amount;
 
         // Check if it's a local payment (BDT) and convert to USD
-        const isLocal = db.data.cryptoMethods && db.data.cryptoMethods[deposit.method] && db.data.cryptoMethods[deposit.method].isLocal;
+        const isLocal = db.data.cryptoMethods && db.data.cryptoMethods[deposit.method] && db.data.cryptoMethods[deposit.method].type === 'local';
         if (isLocal) {
             const bdtRate = parseFloat(db.data.adminSettings?.bdtUsdRate || 125);
             creditAmount = deposit.amount / bdtRate;
@@ -6029,6 +6031,8 @@ app.post('/api/user/send-message', async (req, res) => {
         message: message,
         timestamp: new Date().toISOString()
     });
+
+    await db.updateUser(user);
 
     // Notify Admin via Telegram if available
     const config = db.data.apiKeys || {};

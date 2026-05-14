@@ -5225,6 +5225,36 @@
                                 </button>
                             </div>
                         </div>
+
+                        <!-- VPN -->
+                        <div
+                            style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:10px 16px;">
+                            <div
+                                style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">
+                                VPN</div>
+                            <div class="copy-box">
+                                <div id="cardDetailVPN" style="font-size:16px; font-weight:600; color:#fff;">N/A
+                                </div>
+                                <button class="copy-btn" onclick="copyToClipboard('cardDetailVPN', this)">
+                                    <i class="fas fa-copy" style="color:#fff; font-size:11px;"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Name -->
+                        <div
+                            style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:10px 16px;">
+                            <div
+                                style="font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">
+                                NAME</div>
+                            <div class="copy-box">
+                                <div id="cardDetailFullName" style="font-size:16px; font-weight:600; color:#fff;">CARD HOLDER
+                                </div>
+                                <button class="copy-btn" onclick="copyToClipboard('cardDetailFullName', this)">
+                                    <i class="fas fa-copy" style="color:#fff; font-size:11px;"></i>
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
                 </div> <!-- End of #securedArea -->
@@ -8231,12 +8261,13 @@
                     let methodName = methodId.charAt(0).toUpperCase() + methodId.slice(1);
                     
                     // Try to get method name from cryptoConfig if available
-                    if (window.cryptoMethods && window.cryptoMethods[methodId]) {
-                        methodName = window.cryptoMethods[methodId].name || methodName;
+                    if (window.cryptoConfig && window.cryptoConfig[methodId]) {
+                        methodName = window.cryptoConfig[methodId].name || methodName;
                     } else if (methodId === 'bkash') methodName = 'bKash';
                     else if (methodId === 'nagad') methodName = 'Nagad';
 
                     const usdAmount = d.usdAmount || (d.amount / (window.bdtRate || 125)).toFixed(2);
+
 
                     return `
                         <div style="background:rgba(255,255,255,0.04); border-radius:16px; padding:16px; border:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center;">

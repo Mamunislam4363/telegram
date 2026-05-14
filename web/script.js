@@ -4006,6 +4006,7 @@ function renderRecentActivity(history) {
         'mail_renew': { icon: 'fas fa-sync', color: '#3b82f6', name: 'Email Renewed' },
         'number': { icon: 'fas fa-phone', color: '#9333ea', name: 'Virtual Number' },
         'redeem': { icon: 'fas fa-ticket-alt', color: '#22c55e', name: 'Code Redeemed' },
+        'deposit': { icon: 'fas fa-wallet', color: '#22c55e', name: 'Deposit' },
         'daily_bonus': { icon: 'fas fa-gift', color: '#fbbf24', name: 'Daily Bonus' },
         'verification': { icon: 'fas fa-shield-alt', color: '#10b981', name: 'Verification' },
         'transfer_in': { icon: 'fas fa-arrow-down', color: '#22c55e', name: 'Received' },
@@ -10400,9 +10401,12 @@ async function showGiftPopupFromId(giftId) {
 
 // Notifications handling
 async function loadNotifications() {
-    if (!userData || !userData.id) return;
+    // If userData is not ready, we'll wait or use the global UID
+    const uid = (userData && userData.id) || window.currentUserId;
+    if (!uid) return;
+    
     try {
-        const res = await fetch(`/api/user/notifications?userId=${userData.id}`);
+        const res = await fetch(`/api/user/notifications?userId=${uid}`);
         const data = await res.json();
 
         const list = document.getElementById('notificationsList');
@@ -10429,7 +10433,7 @@ async function loadNotifications() {
                 if (empty) empty.style.display = 'none';
                 if (list) {
                     list.innerHTML = notifs.map(n => {
-                        const isUnread = !n.read;
+                        const isUnread = n.read === false;
                         let icon = 'fa-bell';
                         let color = '#a78bfa';
                         let bg = 'rgba(139, 92, 246, 0.1)';
