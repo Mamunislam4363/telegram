@@ -56,7 +56,7 @@ async function trySmtpLabs() {
         const res = await axios.post(`${SMTP_API_BASE}/accounts`, {
             address: email,
             password: randomPass
-        }, { headers, timeout: 10000 });
+        }, { headers, timeout: 3500 });
 
         if (res.data && res.data.id) {
             const inbox = res.data.mailboxes?.find(m => m.path === 'INBOX');
@@ -95,7 +95,7 @@ async function tryApiGateway() {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json'
                 },
-                timeout: 10000
+                timeout: 3500
             });
 
             if (response.data && response.data.id) {
@@ -205,7 +205,7 @@ async function tryTempMailOrg() {
 // LEVEL 6: 10MinuteMail
 async function try10MinuteMail() {
     try {
-        const res = await axios.get('https://10minutemail.com/session/email', { timeout: 10000 });
+        const res = await axios.get('https://10minutemail.com/session/email', { timeout: 3500 });
         if (res.data && res.data.address) {
             return {
                 email: res.data.address,
@@ -278,7 +278,7 @@ async function tryTempMailAsia() {
 // LEVEL 10: EmailOnDeck
 async function tryEmailOnDeck() {
     try {
-        const res = await axios.get('https://api.emailondeck.com/v1/generate', { timeout: 10000 });
+        const res = await axios.get('https://api.emailondeck.com/v1/generate', { timeout: 3500 });
         if (res.data && res.data.email) {
             return {
                 email: res.data.email,
@@ -1242,10 +1242,10 @@ async function getOtp(token, email) {
 
                 // Try 1SecMail API first (works for many providers)
                 try {
-                    const res = await axios.get(`https://www.1secmail.com/api/v1/?action=getMessages&login=${user}&domain=${domain}`, { timeout: 5000 });
+                    const res = await axios.get(`https://www.1secmail.com/api/v1/?action=getMessages&login=${user}&domain=${domain}`, { timeout: 3500 });
                     if (res.data && res.data.length > 0) {
                         const id = res.data[0].id;
-                        const msgRes = await axios.get(`https://www.1secmail.com/api/v1/?action=readMessage&login=${user}&domain=${domain}&id=${id}`, { timeout: 5000 });
+                        const msgRes = await axios.get(`https://www.1secmail.com/api/v1/?action=readMessage&login=${user}&domain=${domain}&id=${id}`, { timeout: 3500 });
                         const body = msgRes.data.textBody || msgRes.data.body || '';
                         const subject = msgRes.data.subject || '';
 
@@ -1267,7 +1267,7 @@ async function getOtp(token, email) {
                 // Try Mail.tm API for temp-mail.org style emails
                 try {
                     // Some providers use mail.tm compatible APIs
-                    const tmRes = await axios.get(`https://api.mail.tm/addresses/${user}@${domain}/messages`, { timeout: 5000 });
+                    const tmRes = await axios.get(`https://api.mail.tm/addresses/${user}@${domain}/messages`, { timeout: 3500 });
                     if (tmRes.data && tmRes.data.length > 0) {
                         const msg = tmRes.data[0];
                         const body = msg.text || msg.html || '';
@@ -1287,7 +1287,7 @@ async function getOtp(token, email) {
 
                 // Try temp-mail.org API
                 try {
-                    const tmoRes = await axios.get(`https://api.temp-mail.org/request/mail/id/${Buffer.from(checkEmail).toString('base64')}/format/json`, { timeout: 5000 });
+                    const tmoRes = await axios.get(`https://api.temp-mail.org/request/mail/id/${Buffer.from(checkEmail).toString('base64')}/format/json`, { timeout: 3500 });
                     if (tmoRes.data && tmoRes.data.length > 0) {
                         const msg = tmoRes.data[0];
                         const body = msg.mail_text || msg.mail_html || '';

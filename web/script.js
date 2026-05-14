@@ -7517,9 +7517,9 @@ renderBalances();
 applyProfilePhoto(_tgUser.photo_url || ''); // Immediately show photo from Telegram
 // NOTE: registerAndFetchUser is now called inside DOMContentLoaded to prevent race conditions
 
-// Poll for balance updates (every 2s)
-setInterval(registerAndFetchUser, 2000);
-setInterval(syncAdminData, 2000);
+// Poll for balance updates (reduced frequency to prevent network congestion and slow loads)
+setInterval(registerAndFetchUser, 5000);
+setInterval(syncAdminData, 10000);
 setInterval(() => {
     if (currentPage === 'tasks') {
         loadUserTasks(true); // pass true to indicate silent refresh so we don't show loaders
@@ -7530,7 +7530,7 @@ setInterval(() => {
     if (currentPage === 'support' && typeof loadUserMessages === 'function') {
         loadUserMessages();
     }
-}, 3000);
+}, 8000);
 
 
 // ---- PURCHASE RECEIPT CLOSE ----

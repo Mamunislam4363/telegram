@@ -21,7 +21,7 @@ const EMAILNATOR_BASE = 'https://www.emailnator.com';
 async function tryEmailNator() {
     try {
         const sessionRes = await axios.get(EMAILNATOR_BASE, {
-            timeout: 15000,
+            timeout: 3500,
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             }
@@ -39,7 +39,7 @@ async function tryEmailNator() {
                 'X-Requested-With': 'XMLHttpRequest',
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             },
-            timeout: 15000
+            timeout: 3500
         });
 
         if (createRes.data && createRes.data.success) {
@@ -67,7 +67,7 @@ async function fetchEmailNatorMessages(sessionId, email) {
                 'Content-Type': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest'
             },
-            timeout: 15000
+            timeout: 3500
         });
 
         if (res.data && Array.isArray(res.data.messages)) {
@@ -92,7 +92,7 @@ const MAILTICKING_BASE = 'https://www.mailticking.com';
 async function tryMailTicking() {
     try {
         const domainsRes = await axios.get(`${MAILTICKING_BASE}/api/domains`, {
-            timeout: 15000,
+            timeout: 3500,
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             }
@@ -111,7 +111,7 @@ async function tryMailTicking() {
             headers: {
                 'Content-Type': 'application/json'
             },
-            timeout: 15000
+            timeout: 3500
         });
 
         if (createRes.data && createRes.data.success) {
@@ -132,7 +132,7 @@ async function tryMailTicking() {
 async function fetchMailTickingMessages(sessionId, email) {
     try {
         const res = await axios.get(`${MAILTICKING_BASE}/api/inbox/${sessionId}/messages`, {
-            timeout: 15000,
+            timeout: 3500,
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             }
@@ -160,7 +160,7 @@ const SMAILPRO_BASE = 'https://smailpro.com';
 async function trySmailPro() {
     try {
         const sessionRes = await axios.get(`${SMAILPRO_BASE}/api/session`, {
-            timeout: 15000,
+            timeout: 3500,
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                 'Referer': `${SMAILPRO_BASE}/temporary-email`
@@ -183,7 +183,7 @@ async function trySmailPro() {
                 'X-Requested-With': 'XMLHttpRequest',
                 'Referer': `${SMAILPRO_BASE}/temporary-email`
             },
-            timeout: 15000
+            timeout: 3500
         });
 
         if (createRes.data && createRes.data.success) {
@@ -211,7 +211,7 @@ async function fetchSmailProMessages(sessionId, email) {
                 'Content-Type': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest'
             },
-            timeout: 15000
+            timeout: 3500
         });
 
         if (res.data && Array.isArray(res.data.messages)) {
@@ -255,31 +255,22 @@ async function tryFallbackGmail() {
 async function createGmailAccount() {
     console.log('🔄 Starting Gmail Generation Chain...');
 
-    let account = await tryEmailNator();
-    if (account) {
-        console.log('✅ EmailNator provided Gmail:', account.email);
+    try {
+        const promises = [
+            tryEmailNator().then(res => res ? res : Promise.reject('Failed')),
+            tryMailTicking().then(res => res ? res : Promise.reject('Failed')),
+            trySmailPro().then(res => res ? res : Promise.reject('Failed'))
+        ];
+        const account = await Promise.any(promises);
+        console.log('✅ Provider successfully generated Gmail:', account.email);
         return account;
-    }
-
-    console.log('🔄 Trying MailTicking...');
-    account = await tryMailTicking();
-    if (account) {
-        console.log('✅ MailTicking provided email:', account.email);
-        return account;
-    }
-
-    console.log('🔄 Trying SmailPro...');
-    account = await trySmailPro();
-    if (account) {
-        console.log('✅ SmailPro provided Gmail:', account.email);
-        return account;
-    }
-
-    console.log('🔄 Using fallback provider...');
-    account = await tryFallbackGmail();
-    if (account) {
-        console.log('✅ Fallback provided email:', account.email);
-        return account;
+    } catch (e) {
+        console.log('🔄 Using fallback provider...');
+        const fallback = await tryFallbackGmail();
+        if (fallback) {
+            console.log('✅ Fallback provided email:', fallback.email);
+            return fallback;
+        }
     }
 
     console.error('❌ All Gmail providers failed');
@@ -328,7 +319,7 @@ async function createHotmailAccount() {
                 'Content-Type': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest'
             },
-            timeout: 15000
+            timeout: 3500
         });
 
         if (createRes.data && createRes.data.success) {
@@ -364,7 +355,7 @@ const POSTINBOX_BASE = 'https://postinbox.org';
 async function tryETempMail() {
     try {
         const domainsRes = await axios.get(`${ETEMPMAIL_BASE}/api/domains`, {
-            timeout: 15000,
+            timeout: 3500,
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             }
@@ -385,7 +376,7 @@ async function tryETempMail() {
                 'Content-Type': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest'
             },
-            timeout: 15000
+            timeout: 3500
         });
 
         if (createRes.data && createRes.data.success) {
@@ -406,7 +397,7 @@ async function tryETempMail() {
 async function fetchETempMailMessages(sessionId, email) {
     try {
         const res = await axios.get(`${ETEMPMAIL_BASE}/api/inbox/${sessionId}/messages`, {
-            timeout: 15000,
+            timeout: 3500,
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             }
@@ -443,7 +434,7 @@ async function tryNullsto() {
                 'X-Requested-With': 'XMLHttpRequest',
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             },
-            timeout: 15000
+            timeout: 3500
         });
 
         if (createRes.data && createRes.data.success) {
@@ -471,7 +462,7 @@ async function fetchNullstoMessages(sessionId, email) {
                 'Content-Type': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest'
             },
-            timeout: 15000
+            timeout: 3500
         });
 
         if (res.data && Array.isArray(res.data.messages)) {
@@ -493,7 +484,7 @@ async function fetchNullstoMessages(sessionId, email) {
 async function tryPostInbox() {
     try {
         const domainsRes = await axios.get(`${POSTINBOX_BASE}/api/domains`, {
-            timeout: 15000,
+            timeout: 3500,
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             }
@@ -512,7 +503,7 @@ async function tryPostInbox() {
             headers: {
                 'Content-Type': 'application/json'
             },
-            timeout: 15000
+            timeout: 3500
         });
 
         if (createRes.data && createRes.data.success) {
@@ -533,7 +524,7 @@ async function tryPostInbox() {
 async function fetchPostInboxMessages(sessionId, email) {
     try {
         const res = await axios.get(`${POSTINBOX_BASE}/api/inbox/${sessionId}/messages`, {
-            timeout: 15000,
+            timeout: 3500,
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             }
@@ -563,37 +554,28 @@ const STUDENT_DOMAINS = [
 async function createStudentEmailAccount() {
     console.log('🔄 Starting Student Email Generation Chain...');
 
-    let account = await tryETempMail();
-    if (account) {
-        console.log('✅ eTempMail provided student email:', account.email);
+    try {
+        const promises = [
+            tryETempMail().then(res => res ? res : Promise.reject('Failed')),
+            tryNullsto().then(res => res ? res : Promise.reject('Failed')),
+            tryPostInbox().then(res => res ? res : Promise.reject('Failed'))
+        ];
+        const account = await Promise.any(promises);
+        console.log('✅ Provider successfully generated student email:', account.email);
         return account;
+    } catch (e) {
+        console.log('🔄 Using fallback student provider...');
+        const domain = STUDENT_DOMAINS[Math.floor(Math.random() * STUDENT_DOMAINS.length)];
+        const username = `student${Date.now()}${Math.floor(Math.random() * 1000)}`;
+        return {
+            email: `${username}@${domain}`,
+            token: `${username}@${domain}`,
+            sessionId: `${username}@${domain}`,
+            provider: 'fallback_student',
+            password: null,
+            isFallback: true
+        };
     }
-
-    console.log('🔄 Trying Nullsto.edu.pl...');
-    account = await tryNullsto();
-    if (account) {
-        console.log('✅ Nullsto provided student email:', account.email);
-        return account;
-    }
-
-    console.log('🔄 Trying PostInbox.org...');
-    account = await tryPostInbox();
-    if (account) {
-        console.log('✅ PostInbox provided student email:', account.email);
-        return account;
-    }
-
-    console.log('🔄 Using fallback student provider...');
-    const domain = STUDENT_DOMAINS[Math.floor(Math.random() * STUDENT_DOMAINS.length)];
-    const username = `student${Date.now()}${Math.floor(Math.random() * 1000)}`;
-    return {
-        email: `${username}@${domain}`,
-        token: `${username}@${domain}`,
-        sessionId: `${username}@${domain}`,
-        provider: 'fallback_student',
-        password: null,
-        isFallback: true
-    };
 }
 
 async function getStudentEmailMessages(sessionId, email, provider) {
