@@ -83,8 +83,6 @@ db.dbReady.then(() => {
                     proxy: config.PROXY_URL
                 };
             }
-        } else {
-            console.log('ℹ️ No proxy configuration detected. Connecting directly to Telegram API.');
         }
 
         bot = new TelegramBot(finalToken, botOptions);
@@ -881,14 +879,8 @@ bot.onText(/\/admin/, async (msg) => {
         return bot.sendMessage(chatId, "⚠️ *Admin Access Only*\n\nThis command is restricted to administrators only.", { parse_mode: 'Markdown' });
     }
 
-    const publicUrl = (process.env.PUBLIC_URL || '').trim();
-    if (!publicUrl) {
-        console.error('PUBLIC_URL environment variable is not set.');
-        return bot.sendMessage(chatId, "❌ Error: PUBLIC_URL is not configured. Please contact the administrator.");
-    }
-
+    const publicUrl = (process.env.PUBLIC_URL || `http://localhost:3000`).trim();
     const adminUrl = `${publicUrl}/admin`;
-    console.log(`Admin Panel URL: ${adminUrl}`);
 
     const adminText = `👑 *Admin Panel Access*\n\n` +
         `Hello Admin *${username}*!\n\n` +
@@ -1632,9 +1624,8 @@ bot.on('callback_query', async (query) => {
 
             const msg = `⚙️ <b>Admin Panel</b>\n\nManage your bot from here:`;
 
-            const publicUrl = (process.env.PUBLIC_URL || '').trim();
+            const publicUrl = (process.env.PUBLIC_URL || `http://localhost:3000`).trim();
             const adminUrl = `${publicUrl}/admin`;
-            console.log(`Admin Panel URL: ${adminUrl}`);
 
             bot.sendMessage(chatId, msg, {
                 parse_mode: 'HTML',
