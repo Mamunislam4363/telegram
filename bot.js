@@ -16,7 +16,6 @@ process.on('uncaughtException', (err) => {
     }
 });
 const axios = require('axios');
-const SocksProxyAgent = require('socks-proxy-agent');
 
 
 console.log('🏁 Bot script starting...');
@@ -83,6 +82,8 @@ db.dbReady.then(() => {
                     proxy: config.PROXY_URL
                 };
             }
+        } else {
+            console.log('ℹ️ No proxy configuration detected. Connecting directly to Telegram API.');
         }
 
         bot = new TelegramBot(finalToken, botOptions);
