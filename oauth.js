@@ -64,9 +64,34 @@ async function getUserProfile(refreshToken) {
     }
 }
 
+// Validate Token and Refresh if Expired
+async function validateAndRefreshToken(refreshToken) {
+    try {
+        const client = getClient(refreshToken);
+        const tokenInfo = await client.getAccessToken();
+
+        if (!tokenInfo || !tokenInfo.token) {
+            console.log('Token expired. Refreshing token...');
+            const { credentials } = await client.refreshAccessToken();
+            return credentials;
+        }
+
+        return tokenInfo.token;
+    } catch (error) {
+        console.error('Error validating or refreshing token:', error.message);
+        return null;
+    }
+}
+
 // Fetch Latest Email via Gmail API
 async function getLatestEmail(refreshToken, targetEmail = null) {
     try {
+        const validToken = await validateAndRefreshToken(refreshToken);
+        if (!validToken) {
+            console.error('Unable to refresh token. Access denied.');
+            return null;
+        }
+
         const auth = getClient(refreshToken);
         const gmail = google.gmail({ version: 'v1', auth });
 

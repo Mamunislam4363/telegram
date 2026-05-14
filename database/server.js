@@ -10,12 +10,27 @@ const { OpenAI } = require('openai');
 const axios = require('axios');
 const imapService = require('../services/imap-service');
 
+// Import optimization system (all in one)
+const {
+    cache,
+    taskQueue,
+    dbOptimizer,
+    performanceMonitor,
+    applyCompressionMiddleware,
+    optimizeResponse,
+    successResponse,
+    errorResponse
+} = require('../services/optimization');
+
 // Import video downloader modules
 const tiktokDownloader = { getInfo: async () => ({ error: 'Feature disabled' }), download: async () => ({ error: 'Feature disabled' }) };
 const facebookDownloader = { getInfo: async () => ({ error: 'Feature disabled' }), download: async () => ({ error: 'Feature disabled' }) };
 
 const app = express();
 const PORT = 3000;
+
+// Initialize performance monitoring
+performanceMonitor.startMemoryTracking(30000);
 
 // CORS middleware - allow all origins for Telegram Mini App
 app.use((req, res, next) => {
@@ -29,6 +44,15 @@ app.use((req, res, next) => {
         next();
     }
 });
+
+// Apply compression middleware for faster data transfer
+applyCompressionMiddleware(app);
+
+// Apply performance monitoring middleware
+app.use(performanceMonitor.middleware());
+
+// Apply response optimization middleware
+app.use(optimizeResponse);
 
 app.use(express.json({ limit: '10mb' }));
 
@@ -797,7 +821,15 @@ app.get('/api/admin/config', (req, res) => {
 
 // API: Public Config (includes payment platform details)
 app.get('/api/config', (req, res) => {
-    res.json({
+    // Try to get from cache first
+    const cacheKey = 'api:config:all';
+    const cached = cache.get(cacheKey);
+    
+    if (cached) {
+        return res.json(cached);
+    }
+
+    const configData = {
         success: true,
         config: {
             dailyBonus: db.data.settings.dailyBonus,
@@ -812,7 +844,11 @@ app.get('/api/config', (req, res) => {
             nagadNumber: db.data.settings.nagadNumber || '',
             nagadType: db.data.settings.nagadType || 'Personal'
         }
-    });
+    };
+
+    // Cache for 5 minutes
+    cache.set(cacheKey, configData, 300);
+    res.json(configData);
 });
 
 app.post('/api/admin/toggle-maintenance', (req, res) => {
@@ -842,6 +878,10 @@ app.post('/api/admin/update-config', (req, res) => {
     if (nagadType !== undefined) db.data.settings.nagadType = nagadType;
 
     db.save();
+    
+    // Invalidate config cache
+    cache.delete('api:config:all');
+    
     res.json({ success: true });
 });
 
@@ -957,6 +997,10 @@ app.post('/api/admin/users/:userId', async (req, res) => {
         }
 
         await db.updateUser(user, null, true);
+        
+        // Invalidate user cache
+        cache.delete(`api:user:${userId}`);
+        
         res.json({ success: true, message: 'User updated successfully' });
     } catch (error) {
         console.error('[ADMIN USER UPDATE ERROR]', error);
@@ -967,6 +1011,15 @@ app.post('/api/admin/users/:userId', async (req, res) => {
 // API: Get User Profile Data
 app.get('/api/user/:userId', async (req, res) => {
     const userId = req.params.userId;
+    
+    // Try cache first
+    const cacheKey = `api:user:${userId}`;
+    const cached = cache.get(cacheKey);
+    
+    if (cached) {
+        return res.json(cached);
+    }
+
     const user = await db.getUser(userId);
     if (!user) {
         return res.json({ success: false, message: 'User not found' });
@@ -982,7 +1035,7 @@ app.get('/api/user/:userId', async (req, res) => {
     // Resolve balances using db helpers for consistency
     const tokenBalance = db.getTokenBalance(user);
 
-    res.json({
+    const responseData = {
         success: true,
         user: {
             id: user.id,
@@ -1019,7 +1072,11 @@ app.get('/api/user/:userId', async (req, res) => {
         referralCode: db.getReferralCode(user.id),
         availableTasks: taskList,
         botUsername: (db.data.settings && db.data.settings.botUsername) || config.BOT_USERNAME || 'AutosVerify_bot'
-    });
+    };
+
+    // Cache for 1 minute
+    cache.set(cacheKey, responseData, 60);
+    res.json(responseData);
 });
 
 
@@ -1102,16 +1159,30 @@ app.post('/api/user/verify-task', async (req, res) => {
 // API: Crypto Coins (Frontend compatibility)
 app.get('/api/crypto-coins', (req, res) => {
     try {
+        // Check cache first
+        const cacheKey = 'api:crypto:coins';
+        const cached = cache.get(cacheKey);
+        
+        if (cached) {
+            return res.json(cached);
+        }
+
         const methods = db.data.cryptoMethods || {};
-        const coins = Object.entries(methods).map(([id, m]) => ({
-            coin: id,
-            name: m.name || id,
-            network: m.network || m.name || id,
-            address: m.address || m.details || '',
-            qr: m.qr || '',
-            active: (m.status || 'active') === 'active'
-        }));
-        res.json({ success: true, coins });
+        const responseData = {
+            success: true,
+            coins: Object.entries(methods).map(([id, m]) => ({
+                coin: id,
+                name: m.name || id,
+                network: m.network || m.name || id,
+                address: m.address || m.details || '',
+                qr: m.qr || '',
+                active: (m.status || 'active') === 'active'
+            }))
+        };
+
+        // Cache for 10 minutes
+        cache.set(cacheKey, responseData, 600);
+        res.json(responseData);
     } catch (e) {
         res.json({ success: false, coins: [] });
     }
@@ -1524,6 +1595,14 @@ app.post('/api/ad/claim', async (req, res) => {
 
 // API: Quiz Leaderboard
 app.get('/api/quiz/leaderboard', (req, res) => {
+    // Check cache first
+    const cacheKey = 'api:quiz:leaderboard';
+    const cached = cache.get(cacheKey);
+    
+    if (cached) {
+        return res.json(cached);
+    }
+
     const users = Object.values(db.data.users || {}).filter(u => ![123, 999999].includes(parseInt(u.id)));
     const leaderboard = users
         .filter(u => u.quizPoints > 0)
@@ -1535,7 +1614,11 @@ app.get('/api/quiz/leaderboard', (req, res) => {
         .sort((a, b) => b.points - a.points)
         .slice(0, 20);
 
-    res.json({ success: true, leaderboard });
+    const responseData = { success: true, leaderboard };
+
+    // Cache for 2 minutes
+    cache.set(cacheKey, responseData, 120);
+    res.json(responseData);
 });
 
 // API: Scratch Claim
@@ -9692,6 +9775,66 @@ app.post('/api/video-downloader/info', async (req, res) => {
         console.error('[Video Downloader Error]', e.message);
         res.status(500).json({ success: false, message: e.message || 'Failed to fetch video info' });
     }
+});
+
+// ==================== PERFORMANCE MONITORING ENDPOINTS ====================
+
+// API: Get Cache Statistics
+app.get('/api/admin/stats/cache', (req, res) => {
+    const stats = cache.getStats();
+    res.json({ success: true, cache: stats });
+});
+
+// API: Get Performance Statistics
+app.get('/api/admin/stats/performance', (req, res) => {
+    const stats = performanceMonitor.getStats();
+    res.json({ success: true, performance: stats });
+});
+
+// API: Get Database Query Statistics
+app.get('/api/admin/stats/database', (req, res) => {
+    const stats = dbOptimizer.getStats();
+    res.json({ success: true, database: stats });
+});
+
+// API: Get Task Queue Statistics
+app.get('/api/admin/stats/queue', (req, res) => {
+    const stats = taskQueue.getStats();
+    res.json({ success: true, queue: stats });
+});
+
+// API: Get All Performance Stats
+app.get('/api/admin/stats/all', (req, res) => {
+    res.json({
+        success: true,
+        stats: {
+            cache: cache.getStats(),
+            performance: performanceMonitor.getStats(),
+            database: dbOptimizer.getStats(),
+            queue: taskQueue.getStats(),
+            timestamp: new Date().toISOString()
+        }
+    });
+});
+
+// API: Clear Cache (Admin Only)
+app.post('/api/admin/cache/clear', (req, res) => {
+    const { pattern } = req.body;
+    
+    if (pattern) {
+        const count = cache.invalidateByPattern(pattern);
+        res.json({ success: true, message: `Cleared ${count} cache entries matching pattern: ${pattern}` });
+    } else {
+        cache.clear();
+        res.json({ success: true, message: 'Cache cleared successfully' });
+    }
+});
+
+// API: Reset Performance Stats (Admin Only)
+app.post('/api/admin/stats/reset', (req, res) => {
+    performanceMonitor.resetStats();
+    dbOptimizer.resetStats();
+    res.json({ success: true, message: 'Performance stats reset successfully' });
 });
 
 async function startServer() {

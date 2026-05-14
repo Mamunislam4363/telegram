@@ -2,8 +2,8 @@
   "users": {
     "123": {
       "id": 123,
-      "balance": 25,
-      "balance_tokens": 25,
+      "balance": 15,
+      "balance_tokens": 15,
       "joinedAt": 1778752749664,
       "referrer": null,
       "lastDaily": 1778757984655,
@@ -17,19 +17,11 @@
       "blocked": false,
       "adminVerified": false,
       "language": "en",
-      "lastActive": 1778764843904,
+      "lastActive": 1778758054919,
       "dailyStreak": 1,
       "usd": 0,
       "apiStatus": "allow",
       "history": [
-        {
-          "type": "mission_reward",
-          "amount": 10,
-          "reward": "+10 TC",
-          "asset": "TC",
-          "date": 1778764881313,
-          "detail": "Completed task: Youtube Channel"
-        },
         {
           "type": "daily_bonus",
           "amount": 10,
@@ -160,16 +152,13 @@
       "country": "USA",
       "firstName": "Test",
       "lastName": "",
-      "tokens": 25,
+      "tokens": 15,
       "joinedChannel": true,
       "joinedGroup": true,
-      "Gems": 1,
+      "Gems": 0,
       "balance_Gems": 0,
       "verified": false,
-      "role": "off",
-      "completedTasks": [
-        "task_youtube"
-      ]
+      "role": "off"
     }
   },
   "groups": {
