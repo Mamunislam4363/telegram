@@ -5,22 +5,6 @@ function isValidUserId(userId) {
     return !isNaN(numericId) && numericId > 0;
 }
 
-// Helper: Safely open external links to prevent Telegram WebApp crash (white/black screen)
-window.safeOpenLink = function(url) {
-    if (!url) return;
-    setTimeout(() => {
-        try {
-            if (window.Telegram?.WebApp?.openLink) {
-                window.Telegram.WebApp.openLink(url, { try_instant_view: false });
-            } else {
-                window.open(url, '_blank');
-            }
-        } catch (e) {
-            window.open(url, '_blank');
-        }
-    }, 400);
-};
-
 // Success modal for code redemption
 function showRedeemSuccessModal(rewardAmount) {
     // Create modal if doesn't exist
@@ -2016,7 +2000,17 @@ function earn(buttonElement, type, amount) {
 
     // YouTube task - countdown then auto-complete (NO CLAIM BUTTON)
     if (type === 'yt') {
-        window.safeOpenLink('https://www.youtube.com/@MamunIslamyts');
+        setTimeout(() => {
+            if (window.Telegram?.WebApp?.openLink) {
+                try {
+                    window.Telegram.WebApp.openLink('https://www.youtube.com/@MamunIslamyts', { try_instant_view: false });
+                } catch(e) {
+                    window.open('https://www.youtube.com/@MamunIslamyts', '_blank');
+                }
+            } else {
+                window.open('https://www.youtube.com/@MamunIslamyts', '_blank');
+            }
+        }, 400);
 
         IN_PROGRESS_TASKS[type] = 'waiting';
         buttonElement.style.pointerEvents = 'none';
@@ -2343,6 +2337,17 @@ function showAdAndEarn(context = 'watch_ad') {
                         // ============================================
                         // OPTION 2: Monetag / Direct Links Fallback
                         // ============================================
+                        if (monetagDirectUrl) {
+                            setTimeout(() => {
+                                try {
+                                    if (window.Telegram?.WebApp?.openLink) window.Telegram.WebApp.openLink(monetagDirectUrl, { try_instant_view: false });
+                                    else window.open(monetagDirectUrl, '_blank');
+                                } catch (e) { window.open(monetagDirectUrl, '_blank'); }
+                            }, 400);
+                            showAdPlayingUI();
+                            return;
+                        }
+
                         if (monetagPublisherId) {
                             try {
                                 const monetagSDK = document.createElement('script');
@@ -2357,16 +2362,17 @@ function showAdAndEarn(context = 'watch_ad') {
                                     document.body.appendChild(inpageScript);
                                 }, 500);
                             } catch (e) { }
-
-                            if (monetagDirectUrl) {
-                                window.safeOpenLink(monetagDirectUrl);
-                            }
                             showAdPlayingUI();
                             return;
                         }
 
                         if (anyDirectUrl) {
-                            window.safeOpenLink(anyDirectUrl);
+                            setTimeout(() => {
+                                try {
+                                    if (window.Telegram?.WebApp?.openLink) window.Telegram.WebApp.openLink(anyDirectUrl, { try_instant_view: false });
+                                    else window.open(anyDirectUrl, '_blank');
+                                } catch (e) { window.open(anyDirectUrl, '_blank'); }
+                            }, 400);
                             showAdPlayingUI();
                             return;
                         }
@@ -2504,7 +2510,17 @@ async function claimAdReward() {
                 };
 
                 // Safely open the Task Link after a small delay to prevent WebView crash (white screen issue)
-                window.safeOpenLink(currentTaskData.url);
+                setTimeout(() => {
+                    try {
+                        if (window.Telegram?.WebApp?.openLink) {
+                            window.Telegram.WebApp.openLink(currentTaskData.url, { try_instant_view: false });
+                        } else {
+                            window.open(currentTaskData.url, '_blank');
+                        }
+                    } catch(e) {
+                        window.open(currentTaskData.url, '_blank');
+                    }
+                }, 400);
 
                 // Timer to reset to START after 1 minute if not completed
                 setTimeout(() => {
