@@ -2175,6 +2175,7 @@ let currentAdContext = 'watch_ad';
 function showAdAndEarn(context = 'watch_ad') {
     currentAdContext = context;
     adRewardClaimed = false;
+    ensureDirectAdVisibilityRecovery();
 
     // Show explicit loading state
     if (window.showToast) {
@@ -2325,32 +2326,47 @@ function showAdAndEarn(context = 'watch_ad') {
                         }
 
                         // ============================================
-                        // OPTION 2: Monetag / Direct Links Fallback
+                        // OPTION 2: Monetag in-app (libtl) — publisher / zone only
+                        // (Do not also open Smartlink here; SDK + external link together breaks WebView on return.)
                         // ============================================
                         if (monetagPublisherId) {
                             try {
-                                const monetagSDK = document.createElement('script');
-                                monetagSDK.src = '//libtl.com/sdk.js';
-                                monetagSDK.setAttribute('data-zone', monetagPublisherId);
-                                monetagSDK.setAttribute('data-sdk', 'show_' + monetagPublisherId);
-                                document.body.appendChild(monetagSDK);
-                                setTimeout(() => {
-                                    const inpageScript = document.createElement('script');
-                                    inpageScript.src = 'https://thubanoa.com/1?z=' + monetagPublisherId;
-                                    inpageScript.async = true;
-                                    document.body.appendChild(inpageScript);
-                                }, 500);
+                                const sdkSrc = 'https://libtl.com/sdk.js';
+                                const sdkSelector = 'script[src*="libtl.com/sdk.js"]';
+                                if (!document.querySelector(sdkSelector)) {
+                                    const monetagSDK = document.createElement('script');
+                                    monetagSDK.src = sdkSrc;
+                                    monetagSDK.setAttribute('data-zone', String(monetagPublisherId));
+                                    monetagSDK.setAttribute('data-sdk', 'show_' + String(monetagPublisherId));
+                                    monetagSDK.async = true;
+                                    document.body.appendChild(monetagSDK);
+                                }
+                                if (!window.__thubanoaAdScriptLoaded) {
+                                    window.__thubanoaAdScriptLoaded = true;
+                                    setTimeout(() => {
+                                        const inpageScript = document.createElement('script');
+                                        inpageScript.src = 'https://thubanoa.com/1?z=' + encodeURIComponent(monetagPublisherId);
+                                        inpageScript.async = true;
+                                        document.body.appendChild(inpageScript);
+                                    }, 500);
+                                }
                             } catch (e) { }
 
-                            if (monetagDirectUrl) {
-                                if (window.Telegram?.WebApp?.openLink) window.Telegram.WebApp.openLink(monetagDirectUrl);
-                                else window.open(monetagDirectUrl, '_blank');
-                            }
+                            showAdPlayingUI();
+                            return;
+                        }
+
+                        // MoneyTag / Monetag Smartlink only (no zone id — opens outside the mini app)
+                        if (monetagCfg && monetagDirectUrl) {
+                            markExternalDirectAdOpened();
+                            if (window.Telegram?.WebApp?.openLink) window.Telegram.WebApp.openLink(monetagDirectUrl);
+                            else window.open(monetagDirectUrl, '_blank');
                             showAdPlayingUI();
                             return;
                         }
 
                         if (anyDirectUrl) {
+                            markExternalDirectAdOpened();
                             if (window.Telegram?.WebApp?.openLink) window.Telegram.WebApp.openLink(anyDirectUrl);
                             else window.open(anyDirectUrl, '_blank');
                             showAdPlayingUI();
@@ -2412,6 +2428,72 @@ function showAdAndEarn(context = 'watch_ad') {
 
 
 
+
+/**
+ * Ad networks (libtl / interstitials) sometimes leave overflow locked on html/body
+ * or confuse Telegram WebApp viewport after dismiss. Re-apply our shell layout.
+ */
+function recoverUiAfterAdNetwork() {
+    try {
+        const ov = document.getElementById('ad-watching-overlay');
+        if (ov) {
+            ov.style.display = 'none';
+            ov.style.pointerEvents = 'none';
+        }
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+        const ms = document.getElementById('mainScroll');
+        if (ms && typeof currentPage === 'string' && currentPage !== 'scratch') {
+            ms.style.overflow = '';
+            ms.style.touchAction = '';
+        }
+        if (window.Telegram && window.Telegram.WebApp) {
+            try {
+                if (typeof window.Telegram.WebApp.expand === 'function') {
+                    window.Telegram.WebApp.expand();
+                }
+            } catch (e) { /* ignore */ }
+        }
+        const pageToShow = (typeof currentPage === 'string' && currentPage) ? currentPage : 'home';
+        if (typeof showPage === 'function') {
+            showPage(pageToShow);
+        }
+    } catch (e) {
+        console.warn('[recoverUiAfterAdNetwork]', e);
+    }
+}
+
+/** Smartlink / direct URL opens leave Telegram WebView; restore viewport when user comes back (overlay stays). */
+function markExternalDirectAdOpened() {
+    window.__adOpenedExternalDirect = true;
+    ensureDirectAdVisibilityRecovery();
+}
+
+function ensureDirectAdVisibilityRecovery() {
+    if (window.__directAdVisibilityBound) return;
+    window.__directAdVisibilityBound = true;
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState !== 'visible') return;
+        if (!window.__adOpenedExternalDirect) return;
+        window.__adOpenedExternalDirect = false;
+        try {
+            if (window.Telegram && window.Telegram.WebApp && typeof window.Telegram.WebApp.expand === 'function') {
+                window.Telegram.WebApp.expand();
+            }
+        } catch (e) { /* ignore */ }
+        try {
+            document.documentElement.style.overflow = '';
+            document.body.style.overflow = '';
+            document.body.style.position = '';
+            const ms = document.getElementById('mainScroll');
+            if (ms && typeof currentPage === 'string' && currentPage !== 'scratch') {
+                ms.style.overflow = '';
+                ms.style.touchAction = '';
+            }
+        } catch (e) { /* ignore */ }
+    });
+}
 
 function resetAdButtons() {
     const dailyBtn = document.getElementById('claimDailyBtn');
@@ -2510,10 +2592,7 @@ async function claimAdReward() {
                 // Gift Ad Completed - Now claim the gift
                 claimGiftReward(pendingGiftId);
             } else if (currentAdContext === 'watch_ad' || currentAdContext === 'zero_balance_trigger') {
-                // Ensure user goes back to the home page or previous active page to prevent blank screen
-                if (!currentPage || document.querySelectorAll('.page.active').length === 0) {
-                    showPage('home');
-                }
+                recoverUiAfterAdNetwork();
             }
         } else {
             window.showToast(data.message || 'Error claiming ad reward');

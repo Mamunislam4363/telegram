@@ -1,5 +1,58 @@
 {
-  "users": {},
+  "users": {
+    "123": {
+      "id": 123,
+      "balance": 110,
+      "balance_tokens": 110,
+      "joinedAt": 1778752749664,
+      "referrer": null,
+      "lastDaily": 0,
+      "tasksDone": [],
+      "referralCount": 0,
+      "referredBy": null,
+      "username": "TestUser",
+      "successfulVerifications": 0,
+      "failedVerifications": 0,
+      "cardsPurchased": 0,
+      "blocked": false,
+      "adminVerified": false,
+      "language": "en",
+      "lastActive": 1778753310988,
+      "dailyStreak": 0,
+      "usd": 0,
+      "apiStatus": "allow",
+      "history": [
+        {
+          "type": "ad_reward",
+          "amount": 5,
+          "currency": "tokens",
+          "date": 1778753339333,
+          "detail": "Watched Ad"
+        },
+        {
+          "type": "ad_reward",
+          "amount": 5,
+          "currency": "tokens",
+          "date": 1778753324467,
+          "detail": "Watched Ad"
+        },
+        {
+          "type": "bonus",
+          "amount": 100,
+          "reward": "+100 Tokens",
+          "date": 1778752749664,
+          "detail": "Welcome Bonus"
+        }
+      ],
+      "referralCode": "ref_QJ136Y",
+      "country": "USA",
+      "firstName": "Test",
+      "lastName": "",
+      "tokens": 110,
+      "joinedChannel": true,
+      "joinedGroup": true
+    }
+  },
   "groups": {
     "-1002516230551": {
       "id": -1002516230551,
@@ -1227,10 +1280,10 @@
   },
   "adSettings": {
     "moneytag": {
+      "publisherId": "",
       "adUnitId": "",
       "directUrl": "https://omg10.com/4/9729895",
-      "enabled": true,
-      "publisherId": ""
+      "enabled": true
     }
   },
   "emailPoolHistory": [
