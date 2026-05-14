@@ -2168,6 +2168,56 @@ function checkAllTasksCompleted() {
 // AD VIEWER (Watch & Earn)
 // ==========================================
 
+function loadAdsgramSdk() {
+    return new Promise((resolve) => {
+        if (window.Adsgram) {
+            resolve();
+            return;
+        }
+        const existing = document.querySelector('script[src*="sad.adsgram.ai"]');
+        if (existing) {
+            const done = () => resolve();
+            if (window.Adsgram) {
+                resolve();
+                return;
+            }
+            existing.addEventListener('load', done);
+            existing.addEventListener('error', done);
+            setTimeout(done, 8000);
+            return;
+        }
+        const s = document.createElement('script');
+        s.src = 'https://sad.adsgram.ai/js/sad.min.js';
+        s.async = true;
+        s.onload = () => resolve();
+        s.onerror = () => resolve();
+        document.head.appendChild(s);
+    });
+}
+
+/** Smartlinks / SDKs often leave iframes covering the scroll area (white block). */
+function stripThirdPartyAdArtifacts() {
+    try {
+        const re = /propeller|onetag|monetag|monetagads|omg\d*\.|popads|adsterra|doubleclick|googlesyndication|googleadservices|2mdn\.net|libtl|thubanoa|popcash|clickadu|histats|quantserve|exoclick|juicyads|reacheffect|smartadserver|amazon-adsystem|adsystem|adform\.net|taboola|outbrain|mgid|yandex\.ru\/ads/i;
+        document.querySelectorAll('iframe').forEach((fr) => {
+            const src = (fr.getAttribute('src') || '') + (fr.src || '');
+            if (re.test(src)) {
+                try { fr.remove(); } catch (e) { /* ignore */ }
+            }
+        });
+    } catch (e) { /* ignore */ }
+}
+
+function restoreMainScrollAfterAd() {
+    const ms = document.getElementById('mainScroll');
+    if (!ms) return;
+    if (typeof currentPage === 'string' && currentPage === 'scratch') return;
+    ms.style.overflowX = 'hidden';
+    ms.style.overflowY = 'auto';
+    try { ms.style.webkitOverflowScrolling = 'touch'; } catch (e) { /* ignore */ }
+    ms.style.touchAction = 'pan-y';
+}
+
 let adWatchTimer = null;
 let adRewardClaimed = false;
 let currentAdContext = 'watch_ad';
@@ -2298,30 +2348,33 @@ function showAdAndEarn(context = 'watch_ad') {
                         }
 
                         // ============================================
-                        // OPTION 1: Adsgram SDK
+                        // OPTION 1: Adsgram SDK (script loads only when Block ID is set)
                         // ============================================
-                        if (adsgramBlockId && window.Adsgram) {
-                            try {
-                                const AdController = window.Adsgram.init({ blockId: String(adsgramBlockId) });
-                                let handled = false;
-                                await AdController.show()
-                                    .then(() => {
-                                        handled = true;
-                                        showAdCompletionScreen();
-                                    })
-                                    .catch((result) => {
-                                        handled = true;
-                                        if (result && result.done) {
+                        if (adsgramBlockId) {
+                            await loadAdsgramSdk();
+                            if (window.Adsgram) {
+                                try {
+                                    const AdController = window.Adsgram.init({ blockId: String(adsgramBlockId) });
+                                    let handled = false;
+                                    await AdController.show()
+                                        .then(() => {
+                                            handled = true;
                                             showAdCompletionScreen();
-                                        } else {
-                                            watchBtn.disabled = false;
-                                            watchBtn.innerHTML = 'TAP TO WATCH AD';
-                                            window.showToast('Please watch the full ad to earn your reward.');
-                                        }
-                                    });
-                                if (handled) return;
-                            } catch (err) {
-                                console.warn('[Adsgram] SDK error:', err.message);
+                                        })
+                                        .catch((result) => {
+                                            handled = true;
+                                            if (result && result.done) {
+                                                showAdCompletionScreen();
+                                            } else {
+                                                watchBtn.disabled = false;
+                                                watchBtn.innerHTML = 'TAP TO WATCH AD';
+                                                window.showToast('Please watch the full ad to earn your reward.');
+                                            }
+                                        });
+                                    if (handled) return;
+                                } catch (err) {
+                                    console.warn('[Adsgram] SDK error:', err.message);
+                                }
                             }
                         }
 
@@ -2440,18 +2493,18 @@ function recoverUiAfterAdNetwork() {
             ov.style.display = 'none';
             ov.style.pointerEvents = 'none';
         }
+        stripThirdPartyAdArtifacts();
         document.documentElement.style.overflow = '';
         document.body.style.overflow = '';
         document.body.style.position = '';
-        const ms = document.getElementById('mainScroll');
-        if (ms && typeof currentPage === 'string' && currentPage !== 'scratch') {
-            ms.style.overflow = '';
-            ms.style.touchAction = '';
-        }
+        restoreMainScrollAfterAd();
         if (window.Telegram && window.Telegram.WebApp) {
             try {
                 if (typeof window.Telegram.WebApp.expand === 'function') {
                     window.Telegram.WebApp.expand();
+                }
+                if (typeof window.Telegram.WebApp.ready === 'function') {
+                    window.Telegram.WebApp.ready();
                 }
             } catch (e) { /* ignore */ }
         }
@@ -2459,6 +2512,18 @@ function recoverUiAfterAdNetwork() {
         if (typeof showPage === 'function') {
             showPage(pageToShow);
         }
+        stripThirdPartyAdArtifacts();
+        restoreMainScrollAfterAd();
+        requestAnimationFrame(() => {
+            stripThirdPartyAdArtifacts();
+            restoreMainScrollAfterAd();
+            if (typeof showPage === 'function') {
+                showPage(pageToShow);
+            }
+            if (pageToShow === 'tasks' && typeof loadUserTasks === 'function') {
+                loadUserTasks(true);
+            }
+        });
     } catch (e) {
         console.warn('[recoverUiAfterAdNetwork]', e);
     }
@@ -2486,11 +2551,8 @@ function ensureDirectAdVisibilityRecovery() {
             document.documentElement.style.overflow = '';
             document.body.style.overflow = '';
             document.body.style.position = '';
-            const ms = document.getElementById('mainScroll');
-            if (ms && typeof currentPage === 'string' && currentPage !== 'scratch') {
-                ms.style.overflow = '';
-                ms.style.touchAction = '';
-            }
+            stripThirdPartyAdArtifacts();
+            restoreMainScrollAfterAd();
         } catch (e) { /* ignore */ }
     });
 }
