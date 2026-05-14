@@ -2168,56 +2168,6 @@ function checkAllTasksCompleted() {
 // AD VIEWER (Watch & Earn)
 // ==========================================
 
-function loadAdsgramSdk() {
-    return new Promise((resolve) => {
-        if (window.Adsgram) {
-            resolve();
-            return;
-        }
-        const existing = document.querySelector('script[src*="sad.adsgram.ai"]');
-        if (existing) {
-            const done = () => resolve();
-            if (window.Adsgram) {
-                resolve();
-                return;
-            }
-            existing.addEventListener('load', done);
-            existing.addEventListener('error', done);
-            setTimeout(done, 8000);
-            return;
-        }
-        const s = document.createElement('script');
-        s.src = 'https://sad.adsgram.ai/js/sad.min.js';
-        s.async = true;
-        s.onload = () => resolve();
-        s.onerror = () => resolve();
-        document.head.appendChild(s);
-    });
-}
-
-/** Smartlinks / SDKs often leave iframes covering the scroll area (white block). */
-function stripThirdPartyAdArtifacts() {
-    try {
-        const re = /propeller|onetag|monetag|monetagads|omg\d*\.|popads|adsterra|doubleclick|googlesyndication|googleadservices|2mdn\.net|libtl|thubanoa|popcash|clickadu|histats|quantserve|exoclick|juicyads|reacheffect|smartadserver|amazon-adsystem|adsystem|adform\.net|taboola|outbrain|mgid|yandex\.ru\/ads/i;
-        document.querySelectorAll('iframe').forEach((fr) => {
-            const src = (fr.getAttribute('src') || '') + (fr.src || '');
-            if (re.test(src)) {
-                try { fr.remove(); } catch (e) { /* ignore */ }
-            }
-        });
-    } catch (e) { /* ignore */ }
-}
-
-function restoreMainScrollAfterAd() {
-    const ms = document.getElementById('mainScroll');
-    if (!ms) return;
-    if (typeof currentPage === 'string' && currentPage === 'scratch') return;
-    ms.style.overflowX = 'hidden';
-    ms.style.overflowY = 'auto';
-    try { ms.style.webkitOverflowScrolling = 'touch'; } catch (e) { /* ignore */ }
-    ms.style.touchAction = 'pan-y';
-}
-
 let adWatchTimer = null;
 let adRewardClaimed = false;
 let currentAdContext = 'watch_ad';
@@ -2225,7 +2175,6 @@ let currentAdContext = 'watch_ad';
 function showAdAndEarn(context = 'watch_ad') {
     currentAdContext = context;
     adRewardClaimed = false;
-    ensureDirectAdVisibilityRecovery();
 
     // Show explicit loading state
     if (window.showToast) {
@@ -2348,78 +2297,60 @@ function showAdAndEarn(context = 'watch_ad') {
                         }
 
                         // ============================================
-                        // OPTION 1: Adsgram SDK (script loads only when Block ID is set)
+                        // OPTION 1: Adsgram SDK
                         // ============================================
-                        if (adsgramBlockId) {
-                            await loadAdsgramSdk();
-                            if (window.Adsgram) {
-                                try {
-                                    const AdController = window.Adsgram.init({ blockId: String(adsgramBlockId) });
-                                    let handled = false;
-                                    await AdController.show()
-                                        .then(() => {
-                                            handled = true;
+                        if (adsgramBlockId && window.Adsgram) {
+                            try {
+                                const AdController = window.Adsgram.init({ blockId: String(adsgramBlockId) });
+                                let handled = false;
+                                await AdController.show()
+                                    .then(() => {
+                                        handled = true;
+                                        showAdCompletionScreen();
+                                    })
+                                    .catch((result) => {
+                                        handled = true;
+                                        if (result && result.done) {
                                             showAdCompletionScreen();
-                                        })
-                                        .catch((result) => {
-                                            handled = true;
-                                            if (result && result.done) {
-                                                showAdCompletionScreen();
-                                            } else {
-                                                watchBtn.disabled = false;
-                                                watchBtn.innerHTML = 'TAP TO WATCH AD';
-                                                window.showToast('Please watch the full ad to earn your reward.');
-                                            }
-                                        });
-                                    if (handled) return;
-                                } catch (err) {
-                                    console.warn('[Adsgram] SDK error:', err.message);
-                                }
+                                        } else {
+                                            watchBtn.disabled = false;
+                                            watchBtn.innerHTML = 'TAP TO WATCH AD';
+                                            window.showToast('Please watch the full ad to earn your reward.');
+                                        }
+                                    });
+                                if (handled) return;
+                            } catch (err) {
+                                console.warn('[Adsgram] SDK error:', err.message);
                             }
                         }
 
                         // ============================================
-                        // OPTION 2: Monetag in-app (libtl) — publisher / zone only
-                        // (Do not also open Smartlink here; SDK + external link together breaks WebView on return.)
+                        // OPTION 2: Monetag / Direct Links Fallback
                         // ============================================
                         if (monetagPublisherId) {
                             try {
-                                const sdkSrc = 'https://libtl.com/sdk.js';
-                                const sdkSelector = 'script[src*="libtl.com/sdk.js"]';
-                                if (!document.querySelector(sdkSelector)) {
-                                    const monetagSDK = document.createElement('script');
-                                    monetagSDK.src = sdkSrc;
-                                    monetagSDK.setAttribute('data-zone', String(monetagPublisherId));
-                                    monetagSDK.setAttribute('data-sdk', 'show_' + String(monetagPublisherId));
-                                    monetagSDK.async = true;
-                                    document.body.appendChild(monetagSDK);
-                                }
-                                if (!window.__thubanoaAdScriptLoaded) {
-                                    window.__thubanoaAdScriptLoaded = true;
-                                    setTimeout(() => {
-                                        const inpageScript = document.createElement('script');
-                                        inpageScript.src = 'https://thubanoa.com/1?z=' + encodeURIComponent(monetagPublisherId);
-                                        inpageScript.async = true;
-                                        document.body.appendChild(inpageScript);
-                                    }, 500);
-                                }
+                                const monetagSDK = document.createElement('script');
+                                monetagSDK.src = '//libtl.com/sdk.js';
+                                monetagSDK.setAttribute('data-zone', monetagPublisherId);
+                                monetagSDK.setAttribute('data-sdk', 'show_' + monetagPublisherId);
+                                document.body.appendChild(monetagSDK);
+                                setTimeout(() => {
+                                    const inpageScript = document.createElement('script');
+                                    inpageScript.src = 'https://thubanoa.com/1?z=' + monetagPublisherId;
+                                    inpageScript.async = true;
+                                    document.body.appendChild(inpageScript);
+                                }, 500);
                             } catch (e) { }
 
-                            showAdPlayingUI();
-                            return;
-                        }
-
-                        // MoneyTag / Monetag Smartlink only (no zone id — opens outside the mini app)
-                        if (monetagCfg && monetagDirectUrl) {
-                            markExternalDirectAdOpened();
-                            if (window.Telegram?.WebApp?.openLink) window.Telegram.WebApp.openLink(monetagDirectUrl);
-                            else window.open(monetagDirectUrl, '_blank');
+                            if (monetagDirectUrl) {
+                                if (window.Telegram?.WebApp?.openLink) window.Telegram.WebApp.openLink(monetagDirectUrl);
+                                else window.open(monetagDirectUrl, '_blank');
+                            }
                             showAdPlayingUI();
                             return;
                         }
 
                         if (anyDirectUrl) {
-                            markExternalDirectAdOpened();
                             if (window.Telegram?.WebApp?.openLink) window.Telegram.WebApp.openLink(anyDirectUrl);
                             else window.open(anyDirectUrl, '_blank');
                             showAdPlayingUI();
@@ -2481,88 +2412,6 @@ function showAdAndEarn(context = 'watch_ad') {
 
 
 
-
-/**
- * Ad networks (libtl / interstitials) sometimes leave overflow locked on html/body
- * or confuse Telegram WebApp viewport after dismiss. Re-apply our shell layout.
- * @param {string} [targetPage] - If set (e.g. 'home'), show that page after cleanup instead of currentPage.
- */
-function recoverUiAfterAdNetwork(targetPage) {
-    try {
-        const pageToShow = (typeof targetPage === 'string' && targetPage)
-            ? targetPage
-            : ((typeof currentPage === 'string' && currentPage) ? currentPage : 'home');
-
-        const ov = document.getElementById('ad-watching-overlay');
-        if (ov) {
-            ov.style.display = 'none';
-            ov.style.pointerEvents = 'none';
-            if (pageToShow === 'home') {
-                try { ov.innerHTML = ''; } catch (e) { /* ignore */ }
-            }
-        }
-        stripThirdPartyAdArtifacts();
-        document.documentElement.style.overflow = '';
-        document.body.style.overflow = '';
-        document.body.style.position = '';
-        restoreMainScrollAfterAd();
-        if (window.Telegram && window.Telegram.WebApp) {
-            try {
-                if (typeof window.Telegram.WebApp.expand === 'function') {
-                    window.Telegram.WebApp.expand();
-                }
-                if (typeof window.Telegram.WebApp.ready === 'function') {
-                    window.Telegram.WebApp.ready();
-                }
-            } catch (e) { /* ignore */ }
-        }
-        if (typeof showPage === 'function') {
-            showPage(pageToShow);
-        }
-        stripThirdPartyAdArtifacts();
-        restoreMainScrollAfterAd();
-        requestAnimationFrame(() => {
-            stripThirdPartyAdArtifacts();
-            restoreMainScrollAfterAd();
-            if (typeof showPage === 'function') {
-                showPage(pageToShow);
-            }
-            if (pageToShow === 'tasks' && typeof loadUserTasks === 'function') {
-                loadUserTasks(true);
-            }
-        });
-    } catch (e) {
-        console.warn('[recoverUiAfterAdNetwork]', e);
-    }
-}
-
-/** Smartlink / direct URL opens leave Telegram WebView; restore viewport when user comes back (overlay stays). */
-function markExternalDirectAdOpened() {
-    window.__adOpenedExternalDirect = true;
-    ensureDirectAdVisibilityRecovery();
-}
-
-function ensureDirectAdVisibilityRecovery() {
-    if (window.__directAdVisibilityBound) return;
-    window.__directAdVisibilityBound = true;
-    document.addEventListener('visibilitychange', function () {
-        if (document.visibilityState !== 'visible') return;
-        if (!window.__adOpenedExternalDirect) return;
-        window.__adOpenedExternalDirect = false;
-        try {
-            if (window.Telegram && window.Telegram.WebApp && typeof window.Telegram.WebApp.expand === 'function') {
-                window.Telegram.WebApp.expand();
-            }
-        } catch (e) { /* ignore */ }
-        try {
-            document.documentElement.style.overflow = '';
-            document.body.style.overflow = '';
-            document.body.style.position = '';
-            stripThirdPartyAdArtifacts();
-            restoreMainScrollAfterAd();
-        } catch (e) { /* ignore */ }
-    });
-}
 
 function resetAdButtons() {
     const dailyBtn = document.getElementById('claimDailyBtn');
@@ -2661,7 +2510,10 @@ async function claimAdReward() {
                 // Gift Ad Completed - Now claim the gift
                 claimGiftReward(pendingGiftId);
             } else if (currentAdContext === 'watch_ad' || currentAdContext === 'zero_balance_trigger') {
-                recoverUiAfterAdNetwork('home');
+                // Ensure user goes back to the home page or previous active page to prevent blank screen
+                if (!currentPage || document.querySelectorAll('.page.active').length === 0) {
+                    showPage('home');
+                }
             }
         } else {
             window.showToast(data.message || 'Error claiming ad reward');
@@ -2775,15 +2627,6 @@ async function claimGiftReward(giftId) {
 }
 
 // ==========================================
-
-/** Token cost for premium pool email (must match server costs.* defaults). */
-function getPremiumMailTokenCost(provider) {
-    const c = window.appCostConfig || {};
-    const p = (provider || 'gmail').toString().toLowerCase();
-    if (p === 'hotmail' || p === 'hot') return parseInt(c.hotMailCost, 10) || 25;
-    if (p === 'student') return parseInt(c.studentMailCost, 10) || 20;
-    return parseInt(c.premiumMailCost, 10) || 50;
-}
 
 function checkZeroBalanceAdTrigger(requiredAmount = 1) {
     const currentTokens = userData.tokens || 0;
@@ -6233,7 +6076,7 @@ function buyAccountFromCategory(category) {
     const cat = ACCOUNT_CATEGORIES[category];
     if (!cat) return;
 
-    if (checkZeroBalanceAdTrigger(cat.price)) return;
+    if (checkZeroBalanceAdTrigger()) return;
 
     if (userTokens < cat.price) {
         nav('earn');
@@ -6667,8 +6510,8 @@ function cancelNumberBySessionId(sessionId) {
 }
 
 function generateVirtualNumber() {
+    if (checkZeroBalanceAdTrigger()) return;
     const cost = 15;
-    if (checkZeroBalanceAdTrigger(cost)) return;
     if (Math.max(0, userData.tokens || 0) < cost) { nav('earn'); return; }
 
     // Deduct tokens immediately
@@ -7094,6 +6937,7 @@ function updateMailBalance(type) {
 }
 
 function generateTempMail(type) {
+    if (checkZeroBalanceAdTrigger()) return;
     if (!type) type = 'temp';
 
     // ✅ FIX: Premium/hotmail types must use premium email API, NOT temp mail API
@@ -7125,7 +6969,7 @@ function generateTempMail(type) {
         return;
     }
 
-    if (checkZeroBalanceAdTrigger(cost)) return;
+    if (Math.max(0, userData.tokens || 0) < cost) { nav('earn'); return; }
 
     // Show loading state immediately
     const addrEl = document.getElementById(type + "MailAddr");
@@ -7834,6 +7678,7 @@ function openTempMailDirect() {
 }
 
 function autoGenerateTempMail() {
+    if (checkZeroBalanceAdTrigger()) return;
     const type = 'temp';
     const cost = (parseInt(window.appCostConfig?.mailCost) || 10);
 
@@ -7847,7 +7692,12 @@ function autoGenerateTempMail() {
         return;
     }
 
-    if (checkZeroBalanceAdTrigger(cost)) return;
+    // Check tokens
+    if (Math.max(0, userData.tokens || 0) < cost) {
+        console.log('AutoGenerate: Insufficient tokens');
+        nav('earn');
+        return;
+    }
 
     const addrEl = document.getElementById(type + "MailAddr");
     if (addrEl) {
@@ -8063,16 +7913,6 @@ async function generatePremiumMail(provider) {
         addrEl.style.opacity = "0.8";
     }
 
-    const tokenCost = getPremiumMailTokenCost(provider);
-    if (checkZeroBalanceAdTrigger(tokenCost)) {
-        if (addrEl) {
-            addrEl.innerHTML = '<span style="color:#fbbf24;">Need more tokens — watch an ad or open Earn</span>';
-            addrEl.style.fontStyle = 'normal';
-            addrEl.style.opacity = '1';
-        }
-        return;
-    }
-
     try {
         const res = await fetch('/api/premium-emails/generate', {
             method: 'POST',
@@ -8211,13 +8051,14 @@ function openPremiumMailDirect() {
 }
 
 async function autoGeneratePremiumMailWrapper() {
+    if (checkZeroBalanceAdTrigger()) return;
+
     // Check if we already have an active session for this specific tab before generating
     if (mailSessions && mailSessions.premium && mailSessions.premium.type === (currentPremiumTab || 'gmail')) {
         return;
     }
 
-    const tab = currentPremiumTab || 'gmail';
-    const cost = getPremiumMailTokenCost(tab);
+    const cost = parseInt(window.appCostConfig?.premiumMailCost) || 50;
 
     if (!userData.id || userData.id === 0) {
         const addrEl = document.getElementById('premiumMailAddr');
@@ -8227,7 +8068,7 @@ async function autoGeneratePremiumMailWrapper() {
         return;
     }
 
-    if (checkZeroBalanceAdTrigger(cost)) return;
+    // Balance check removed to allow unlimited usage as requested
 
     const addrEl = document.getElementById('premiumMailAddr');
     if (addrEl) {
@@ -8236,7 +8077,7 @@ async function autoGeneratePremiumMailWrapper() {
         addrEl.style.opacity = '0.7';
     }
 
-    await generatePremiumMail(tab);
+    await generatePremiumMail(currentPremiumTab || 'gmail', cost);
 }
 
 function openHotmailDirect() {
@@ -8259,6 +8100,7 @@ function openHotmailDirect() {
 }
 
 function autoGenerateHotMail() {
+    if (checkZeroBalanceAdTrigger()) return;
     const type = 'hot';
     const cost = parseInt(window.appCostConfig?.hotMailCost) || 15;
 
@@ -8270,7 +8112,10 @@ function autoGenerateHotMail() {
         return;
     }
 
-    if (checkZeroBalanceAdTrigger(cost)) return;
+    if (Math.max(0, userData.tokens || 0) < cost) {
+        nav('earn');
+        return;
+    }
 
     const addrEl = document.getElementById(type + 'MailAddr');
     if (addrEl) {
@@ -8333,6 +8178,7 @@ function openStudentEmailDirect() {
 }
 
 function autoGenerateStudentMail() {
+    if (checkZeroBalanceAdTrigger()) return;
     const type = 'student';
     const cost = parseInt(window.appCostConfig?.studentMailCost) || 20;
 
@@ -8344,7 +8190,10 @@ function autoGenerateStudentMail() {
         return;
     }
 
-    if (checkZeroBalanceAdTrigger(cost)) return;
+    if (Math.max(0, userData.tokens || 0) < cost) {
+        nav('earn');
+        return;
+    }
 
     const addrEl = document.getElementById(type + 'MailAddr');
     if (addrEl) {

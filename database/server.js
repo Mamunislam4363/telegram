@@ -3800,15 +3800,6 @@ app.post('/api/premium-emails/generate', async (req, res) => {
         else if (provider === 'student') tokenCost = costs.student || 50;
         else if (provider === 'temp') tokenCost = costs.tempmail || 10;
 
-        const tokenBalance = db.getTokenBalance(user);
-        if (tokenBalance < tokenCost) {
-            genLocks.delete(lockKey);
-            return res.json({
-                success: false,
-                message: `Insufficient tokens. Need ${tokenCost} TC for ${provider}. You have ${tokenBalance} TC.`
-            });
-        }
-
         // Prevent double generation if already has a VERY fresh session (within 10 seconds)
         // This helps with accidental double clicks or concurrent auto-generations
         const now = Date.now();
