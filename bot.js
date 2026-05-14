@@ -16,6 +16,7 @@ process.on('uncaughtException', (err) => {
     }
 });
 const axios = require('axios');
+const SocksProxyAgent = require('socks-proxy-agent');
 
 
 console.log('🏁 Bot script starting...');

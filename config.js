@@ -22,6 +22,8 @@ module.exports = {
     SMTPLABS_API_KEY: process.env.SMTPLABS_API_KEY,
     BACKUP_BOT_TOKEN: process.env.BACKUP_BOT_TOKEN,
     BACKUP_CHAT_ID: process.env.BACKUP_CHAT_ID,
+    USE_PROXY: process.env.USE_PROXY === 'true',
+    PROXY_URL: process.env.PROXY_URL,
     PUBLIC_URL: process.env.APP_URL,
     MINI_APP_URL: process.env.APP_URL,
     ALLOWED_USER_IDS: process.env.ALLOWED_USER_IDS ? process.env.ALLOWED_USER_IDS.split(',') : []
