@@ -2,8 +2,8 @@
   "users": {
     "123": {
       "id": 123,
-      "balance": 110,
-      "balance_tokens": 110,
+      "balance": 0,
+      "balance_tokens": 0,
       "joinedAt": 1778752749664,
       "referrer": null,
       "lastDaily": 0,
@@ -17,11 +17,81 @@
       "blocked": false,
       "adminVerified": false,
       "language": "en",
-      "lastActive": 1778753310988,
+      "lastActive": 1778756188270,
       "dailyStreak": 0,
       "usd": 0,
       "apiStatus": "allow",
       "history": [
+        {
+          "type": "gmail_email",
+          "amount": -20,
+          "date": "2026-05-14T10:57:44.042Z",
+          "reward": "-20 Tokens",
+          "detail": "Mamunislam4.3.6389.2@gmail.com"
+        },
+        {
+          "type": "ad_reward",
+          "amount": 5,
+          "currency": "tokens",
+          "date": 1778756255777,
+          "detail": "Watched Ad"
+        },
+        {
+          "type": "gmail_email",
+          "amount": -20,
+          "date": "2026-05-14T10:57:01.006Z",
+          "reward": "-20 Tokens",
+          "detail": "Mamunislam4.3.63892@gmail.com"
+        },
+        {
+          "type": "ad_reward",
+          "amount": 5,
+          "currency": "tokens",
+          "date": 1778756201052,
+          "detail": "Watched Ad"
+        },
+        {
+          "type": "ad_reward",
+          "amount": 5,
+          "currency": "tokens",
+          "date": 1778756157689,
+          "detail": "Watched Ad"
+        },
+        {
+          "type": "ad_reward",
+          "amount": 5,
+          "currency": "tokens",
+          "date": 1778756150263,
+          "detail": "Watched Ad"
+        },
+        {
+          "type": "ad_reward",
+          "amount": 5,
+          "currency": "tokens",
+          "date": 1778756119167,
+          "detail": "Watched Ad"
+        },
+        {
+          "type": "gmail_email",
+          "amount": -20,
+          "date": "2026-05-14T10:55:12.027Z",
+          "reward": "-20 Tokens",
+          "detail": "Mamunislam4.36.3.8.9.2@gmail.com"
+        },
+        {
+          "type": "temp_mail",
+          "amount": -10,
+          "date": "2026-05-14T10:44:35.537Z",
+          "reward": "-10 Tokens",
+          "detail": "mro0wl@wshu.net"
+        },
+        {
+          "type": "gmail_email",
+          "amount": -20,
+          "date": "2026-05-14T10:44:15.980Z",
+          "reward": "-20 Tokens",
+          "detail": "Mamunislam4.36.3.8.92@gmail.com"
+        },
         {
           "type": "ad_reward",
           "amount": 5,
@@ -48,9 +118,13 @@
       "country": "USA",
       "firstName": "Test",
       "lastName": "",
-      "tokens": 110,
+      "tokens": 0,
       "joinedChannel": true,
-      "joinedGroup": true
+      "joinedGroup": true,
+      "Gems": 0,
+      "balance_Gems": 0,
+      "verified": false,
+      "role": "off"
     }
   },
   "groups": {
@@ -222,30 +296,6 @@
   },
   "emailPool": {
     "gmail": [
-      {
-        "addedAt": 1777777317962,
-        "email": "Mamunislam4.36.3.8.92@gmail.com",
-        "note": "",
-        "status": "available"
-      },
-      {
-        "addedAt": 1777777318221,
-        "email": "Mamunislam4.36.3.8.9.2@gmail.com",
-        "note": "",
-        "status": "available"
-      },
-      {
-        "addedAt": 1777777318668,
-        "email": "Mamunislam4.3.63892@gmail.com",
-        "note": "",
-        "status": "available"
-      },
-      {
-        "addedAt": 1777777318966,
-        "email": "Mamunislam4.3.6389.2@gmail.com",
-        "note": "",
-        "status": "available"
-      },
       {
         "addedAt": 1777777319284,
         "email": "Mamunislam4.3.638.92@gmail.com",
@@ -1288,6 +1338,30 @@
   },
   "emailPoolHistory": [
     {
+      "email": "Mamunislam4.3.6389.2@gmail.com",
+      "type": "gmail",
+      "assignedTo": "123",
+      "assignedAt": "2026-05-14T10:57:44.034Z"
+    },
+    {
+      "email": "Mamunislam4.3.63892@gmail.com",
+      "type": "gmail",
+      "assignedTo": "123",
+      "assignedAt": "2026-05-14T10:57:00.980Z"
+    },
+    {
+      "email": "Mamunislam4.36.3.8.9.2@gmail.com",
+      "type": "gmail",
+      "assignedTo": "123",
+      "assignedAt": "2026-05-14T10:55:12.027Z"
+    },
+    {
+      "email": "Mamunislam4.36.3.8.92@gmail.com",
+      "type": "gmail",
+      "assignedTo": "123",
+      "assignedAt": "2026-05-14T10:44:15.980Z"
+    },
+    {
       "email": "Mamunislam4.36.3.89.2@gmail.com",
       "type": "gmail",
       "assignedTo": "123",
@@ -1303,7 +1377,53 @@
   "groupWarnings": {
     "-1002516230551_7672601379": 1
   },
-  "mailSessions": {},
+  "mailSessions": {
+    "premium_gmail_1778755455980_123": {
+      "email": "Mamunislam4.36.3.8.92@gmail.com",
+      "password": null,
+      "provider": "gmail",
+      "sessionId": "Mamunislam4.36.3.8.92@gmail.com",
+      "token": "Mamunislam4.36.3.8.92@gmail.com",
+      "userId": "123",
+      "createdAt": 1778755455980
+    },
+    "mail_temp_1778755474210_123": {
+      "email": "mro0wl@wshu.net",
+      "password": "bzzi4q",
+      "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJpYXQiOjE3Nzg3NTU0NzUsInJvbGVzIjpbIlJPTEVfVVNFUiJdLCJhZGRyZXNzIjoibXJvMHdsQHdzaHUubmV0IiwiaWQiOiI2YTA1YTc5MzYwMTM2MTY3YzMwM2Q5YjIiLCJtZXJjdXJlIjp7InN1YnNjcmliZSI6WyIvYWNjb3VudHMvNmEwNWE3OTM2MDEzNjE2N2MzMDNkOWIyIl19fQ.9twxr7md9UAEAAy9ijPFC5g4g9G_xEsTFNDK_E2BJX6mPK8ZGu9FBWIbHT_QqZPYoD6WSuSPOkUL7i1aNmSYbA",
+      "provider": "mail.tm",
+      "userId": "123",
+      "createdAt": 1778755475537,
+      "service": "temp"
+    },
+    "premium_gmail_1778756112028_123": {
+      "email": "Mamunislam4.36.3.8.9.2@gmail.com",
+      "password": null,
+      "provider": "gmail",
+      "sessionId": "Mamunislam4.36.3.8.9.2@gmail.com",
+      "token": "Mamunislam4.36.3.8.9.2@gmail.com",
+      "userId": "123",
+      "createdAt": 1778756112028
+    },
+    "premium_gmail_1778756221006_123": {
+      "email": "Mamunislam4.3.63892@gmail.com",
+      "password": null,
+      "provider": "gmail",
+      "sessionId": "Mamunislam4.3.63892@gmail.com",
+      "token": "Mamunislam4.3.63892@gmail.com",
+      "userId": "123",
+      "createdAt": 1778756221007
+    },
+    "premium_gmail_1778756264042_123": {
+      "email": "Mamunislam4.3.6389.2@gmail.com",
+      "password": null,
+      "provider": "gmail",
+      "sessionId": "Mamunislam4.3.6389.2@gmail.com",
+      "token": "Mamunislam4.3.6389.2@gmail.com",
+      "userId": "123",
+      "createdAt": 1778756264048
+    }
+  },
   "premiumMailSettings": {
     "emailCost": 50,
     "masterGmail": "",

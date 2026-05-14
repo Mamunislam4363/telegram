@@ -2769,6 +2769,15 @@ async function claimGiftReward(giftId) {
 
 // ==========================================
 
+/** Token cost for premium pool email (must match server costs.* defaults). */
+function getPremiumMailTokenCost(provider) {
+    const c = window.appCostConfig || {};
+    const p = (provider || 'gmail').toString().toLowerCase();
+    if (p === 'hotmail' || p === 'hot') return parseInt(c.hotMailCost, 10) || 25;
+    if (p === 'student') return parseInt(c.studentMailCost, 10) || 20;
+    return parseInt(c.premiumMailCost, 10) || 50;
+}
+
 function checkZeroBalanceAdTrigger(requiredAmount = 1) {
     const currentTokens = userData.tokens || 0;
     if (currentTokens < requiredAmount) {
@@ -6217,7 +6226,7 @@ function buyAccountFromCategory(category) {
     const cat = ACCOUNT_CATEGORIES[category];
     if (!cat) return;
 
-    if (checkZeroBalanceAdTrigger()) return;
+    if (checkZeroBalanceAdTrigger(cat.price)) return;
 
     if (userTokens < cat.price) {
         nav('earn');
@@ -6651,8 +6660,8 @@ function cancelNumberBySessionId(sessionId) {
 }
 
 function generateVirtualNumber() {
-    if (checkZeroBalanceAdTrigger()) return;
     const cost = 15;
+    if (checkZeroBalanceAdTrigger(cost)) return;
     if (Math.max(0, userData.tokens || 0) < cost) { nav('earn'); return; }
 
     // Deduct tokens immediately
@@ -7078,7 +7087,6 @@ function updateMailBalance(type) {
 }
 
 function generateTempMail(type) {
-    if (checkZeroBalanceAdTrigger()) return;
     if (!type) type = 'temp';
 
     // ✅ FIX: Premium/hotmail types must use premium email API, NOT temp mail API
@@ -7110,7 +7118,7 @@ function generateTempMail(type) {
         return;
     }
 
-    if (Math.max(0, userData.tokens || 0) < cost) { nav('earn'); return; }
+    if (checkZeroBalanceAdTrigger(cost)) return;
 
     // Show loading state immediately
     const addrEl = document.getElementById(type + "MailAddr");
@@ -7819,7 +7827,6 @@ function openTempMailDirect() {
 }
 
 function autoGenerateTempMail() {
-    if (checkZeroBalanceAdTrigger()) return;
     const type = 'temp';
     const cost = (parseInt(window.appCostConfig?.mailCost) || 10);
 
@@ -7833,12 +7840,7 @@ function autoGenerateTempMail() {
         return;
     }
 
-    // Check tokens
-    if (Math.max(0, userData.tokens || 0) < cost) {
-        console.log('AutoGenerate: Insufficient tokens');
-        nav('earn');
-        return;
-    }
+    if (checkZeroBalanceAdTrigger(cost)) return;
 
     const addrEl = document.getElementById(type + "MailAddr");
     if (addrEl) {
@@ -8054,6 +8056,16 @@ async function generatePremiumMail(provider) {
         addrEl.style.opacity = "0.8";
     }
 
+    const tokenCost = getPremiumMailTokenCost(provider);
+    if (checkZeroBalanceAdTrigger(tokenCost)) {
+        if (addrEl) {
+            addrEl.innerHTML = '<span style="color:#fbbf24;">Need more tokens — watch an ad or open Earn</span>';
+            addrEl.style.fontStyle = 'normal';
+            addrEl.style.opacity = '1';
+        }
+        return;
+    }
+
     try {
         const res = await fetch('/api/premium-emails/generate', {
             method: 'POST',
@@ -8192,14 +8204,13 @@ function openPremiumMailDirect() {
 }
 
 async function autoGeneratePremiumMailWrapper() {
-    if (checkZeroBalanceAdTrigger()) return;
-
     // Check if we already have an active session for this specific tab before generating
     if (mailSessions && mailSessions.premium && mailSessions.premium.type === (currentPremiumTab || 'gmail')) {
         return;
     }
 
-    const cost = parseInt(window.appCostConfig?.premiumMailCost) || 50;
+    const tab = currentPremiumTab || 'gmail';
+    const cost = getPremiumMailTokenCost(tab);
 
     if (!userData.id || userData.id === 0) {
         const addrEl = document.getElementById('premiumMailAddr');
@@ -8209,7 +8220,7 @@ async function autoGeneratePremiumMailWrapper() {
         return;
     }
 
-    // Balance check removed to allow unlimited usage as requested
+    if (checkZeroBalanceAdTrigger(cost)) return;
 
     const addrEl = document.getElementById('premiumMailAddr');
     if (addrEl) {
@@ -8218,7 +8229,7 @@ async function autoGeneratePremiumMailWrapper() {
         addrEl.style.opacity = '0.7';
     }
 
-    await generatePremiumMail(currentPremiumTab || 'gmail', cost);
+    await generatePremiumMail(tab);
 }
 
 function openHotmailDirect() {
@@ -8241,7 +8252,6 @@ function openHotmailDirect() {
 }
 
 function autoGenerateHotMail() {
-    if (checkZeroBalanceAdTrigger()) return;
     const type = 'hot';
     const cost = parseInt(window.appCostConfig?.hotMailCost) || 15;
 
@@ -8253,10 +8263,7 @@ function autoGenerateHotMail() {
         return;
     }
 
-    if (Math.max(0, userData.tokens || 0) < cost) {
-        nav('earn');
-        return;
-    }
+    if (checkZeroBalanceAdTrigger(cost)) return;
 
     const addrEl = document.getElementById(type + 'MailAddr');
     if (addrEl) {
@@ -8319,7 +8326,6 @@ function openStudentEmailDirect() {
 }
 
 function autoGenerateStudentMail() {
-    if (checkZeroBalanceAdTrigger()) return;
     const type = 'student';
     const cost = parseInt(window.appCostConfig?.studentMailCost) || 20;
 
@@ -8331,10 +8337,7 @@ function autoGenerateStudentMail() {
         return;
     }
 
-    if (Math.max(0, userData.tokens || 0) < cost) {
-        nav('earn');
-        return;
-    }
+    if (checkZeroBalanceAdTrigger(cost)) return;
 
     const addrEl = document.getElementById(type + 'MailAddr');
     if (addrEl) {
