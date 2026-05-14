@@ -2,11 +2,11 @@
   "users": {
     "123": {
       "id": 123,
-      "balance": 0,
-      "balance_tokens": 0,
+      "balance": 15,
+      "balance_tokens": 15,
       "joinedAt": 1778752749664,
       "referrer": null,
-      "lastDaily": 0,
+      "lastDaily": 1778757984655,
       "tasksDone": [],
       "referralCount": 0,
       "referredBy": null,
@@ -17,11 +17,45 @@
       "blocked": false,
       "adminVerified": false,
       "language": "en",
-      "lastActive": 1778756188270,
-      "dailyStreak": 0,
+      "lastActive": 1778757854395,
+      "dailyStreak": 1,
       "usd": 0,
       "apiStatus": "allow",
       "history": [
+        {
+          "type": "daily_bonus",
+          "amount": 10,
+          "streak": 1,
+          "date": 1778757984655
+        },
+        {
+          "type": "ad_reward",
+          "amount": 5,
+          "currency": "tokens",
+          "date": 1778757932047,
+          "detail": "Watched Ad"
+        },
+        {
+          "type": "temp_mail",
+          "amount": -10,
+          "date": "2026-05-14T11:25:20.117Z",
+          "reward": "-10 Tokens",
+          "detail": "nnfn66@wshu.net"
+        },
+        {
+          "type": "ad_reward",
+          "amount": 5,
+          "currency": "tokens",
+          "date": 1778757884302,
+          "detail": "Watched Ad"
+        },
+        {
+          "type": "ad_reward",
+          "amount": 5,
+          "currency": "tokens",
+          "date": 1778757870897,
+          "detail": "Watched Ad"
+        },
         {
           "type": "gmail_email",
           "amount": -20,
@@ -118,7 +152,7 @@
       "country": "USA",
       "firstName": "Test",
       "lastName": "",
-      "tokens": 0,
+      "tokens": 15,
       "joinedChannel": true,
       "joinedGroup": true,
       "Gems": 0,
@@ -1422,6 +1456,15 @@
       "token": "Mamunislam4.3.6389.2@gmail.com",
       "userId": "123",
       "createdAt": 1778756264048
+    },
+    "mail_temp_1778757918809_123": {
+      "email": "nnfn66@wshu.net",
+      "password": "vsqnx",
+      "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJpYXQiOjE3Nzg3NTc5MjAsInJvbGVzIjpbIlJPTEVfVVNFUiJdLCJhZGRyZXNzIjoibm5mbjY2QHdzaHUubmV0IiwiaWQiOiI2YTA1YjExZjkzZGQ0MjViZjgwZmMxODIiLCJtZXJjdXJlIjp7InN1YnNjcmliZSI6WyIvYWNjb3VudHMvNmEwNWIxMWY5M2RkNDI1YmY4MGZjMTgyIl19fQ.mEDtOCUqXtyw_5mwB_fOWjgiOSdXVU30ZW2yvSJwVOOrp1mWbTWG2SXlQ01aW4EykYn5r7--GEW-sGpcCrXLPw",
+      "provider": "mail.tm",
+      "userId": "123",
+      "createdAt": 1778757920118,
+      "service": "temp"
     }
   },
   "premiumMailSettings": {

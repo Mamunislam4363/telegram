@@ -2485,13 +2485,21 @@ function showAdAndEarn(context = 'watch_ad') {
 /**
  * Ad networks (libtl / interstitials) sometimes leave overflow locked on html/body
  * or confuse Telegram WebApp viewport after dismiss. Re-apply our shell layout.
+ * @param {string} [targetPage] - If set (e.g. 'home'), show that page after cleanup instead of currentPage.
  */
-function recoverUiAfterAdNetwork() {
+function recoverUiAfterAdNetwork(targetPage) {
     try {
+        const pageToShow = (typeof targetPage === 'string' && targetPage)
+            ? targetPage
+            : ((typeof currentPage === 'string' && currentPage) ? currentPage : 'home');
+
         const ov = document.getElementById('ad-watching-overlay');
         if (ov) {
             ov.style.display = 'none';
             ov.style.pointerEvents = 'none';
+            if (pageToShow === 'home') {
+                try { ov.innerHTML = ''; } catch (e) { /* ignore */ }
+            }
         }
         stripThirdPartyAdArtifacts();
         document.documentElement.style.overflow = '';
@@ -2508,7 +2516,6 @@ function recoverUiAfterAdNetwork() {
                 }
             } catch (e) { /* ignore */ }
         }
-        const pageToShow = (typeof currentPage === 'string' && currentPage) ? currentPage : 'home';
         if (typeof showPage === 'function') {
             showPage(pageToShow);
         }
@@ -2654,7 +2661,7 @@ async function claimAdReward() {
                 // Gift Ad Completed - Now claim the gift
                 claimGiftReward(pendingGiftId);
             } else if (currentAdContext === 'watch_ad' || currentAdContext === 'zero_balance_trigger') {
-                recoverUiAfterAdNetwork();
+                recoverUiAfterAdNetwork('home');
             }
         } else {
             window.showToast(data.message || 'Error claiming ad reward');
