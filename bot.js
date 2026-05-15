@@ -393,9 +393,26 @@ process.on('uncaughtException', (e) => { console.error('uncaughtException:', e);
 // Manage State 
 const userState = {};
 
-// Helper: Check authorization
+// Helper: Check authorization (Main Admin + Helper Admins)
 function isAdmin(userId) {
-    return String(userId) === String(config.ADMIN_ID) || config.ALLOWED_USER_IDS.includes(String(userId));
+    // Main admin
+    if (String(userId) === String(config.ADMIN_ID)) return true;
+    
+    // Allowed user IDs from config
+    if (config.ALLOWED_USER_IDS.includes(String(userId))) return true;
+    
+    // ✅ NEW: Check helper admins from database
+    const user = db.getUser(userId);
+    if (user && user.role === 'helper_admin' && user.helperAdminEnabled === true) {
+        return true;
+    }
+    
+    return false;
+}
+
+// ✅ NEW: Check if user is main admin (not helper)
+function isMainAdmin(userId) {
+    return String(userId) === String(config.ADMIN_ID);
 }
 
 // Helper: Generate user authentication token for web panel
@@ -1392,20 +1409,49 @@ bot.on('chat_join_request', async (msg) => {
 bot.on('chat_member', async (update) => {
     try {
         const chatId = update.chat.id;
+        const chatType = update.chat.type; // 'channel', 'group', 'supergroup'
         const chatUsername = update.chat.username ? '@' + update.chat.username : String(chatId);
         const newStatus = update.new_chat_member.status;
         const userId = update.new_chat_member.user.id;
         const isBot = update.new_chat_member.user.is_bot;
         if (isBot) return; // Ignore bot status changes
 
-        const requiredChannel = (config.REQUIRED_CHANNEL || '').toString().trim().toLowerCase();
-        const requiredGroup = (config.REQUIRED_GROUP || '').toString().trim().toLowerCase();
-        const chatTag = chatUsername.toLowerCase();
+        // ✅ FIX: Get channel/group IDs from both config and database
+        const apiKeys = db.data?.apiKeys || {};
+        const settings = db.data?.settings || {};
+        
+        const requiredChannelId = apiKeys.requiredChannelId || config.REQUIRED_CHANNEL_ID || '';
+        const requiredChannelName = apiKeys.requiredChannel || settings.requiredChannel || config.REQUIRED_CHANNEL || '';
+        
+        const requiredGroupId = apiKeys.requiredGroupId || config.REQUIRED_GROUP_ID || '';
+        const requiredGroupName = apiKeys.requiredGroup || settings.requiredGroup || config.REQUIRED_GROUP || '';
 
-        const isRequiredChat = (chatTag === requiredChannel || chatTag === requiredGroup ||
-            String(chatId) === requiredChannel || String(chatId) === requiredGroup);
+        // ✅ FIX: Check if this chat matches any of our required chats
+        const chatIdStr = String(chatId);
+        const chatUsernameClean = chatUsername.replace('@', '').toLowerCase();
+        
+        const isRequiredChannel = (
+            chatIdStr === requiredChannelId ||
+            chatIdStr === requiredChannelName ||
+            chatUsernameClean === requiredChannelName.replace('@', '').toLowerCase() ||
+            (chatType === 'channel' && (chatIdStr === '-1002516230551' || chatUsernameClean === 'autosverifych'))
+        );
+        
+        const isRequiredGroup = (
+            chatIdStr === requiredGroupId ||
+            chatIdStr === requiredGroupName ||
+            chatUsernameClean === requiredGroupName.replace('@', '').toLowerCase() ||
+            (chatType === 'supergroup' && (chatIdStr === '-1002502678666' || chatUsernameClean === 'autosverify'))
+        );
 
-        if (!isRequiredChat) return; // Not a monitored chat
+        const isRequiredChat = isRequiredChannel || isRequiredGroup;
+
+        if (!isRequiredChat) {
+            console.log(`[chat_member] Ignoring non-required chat: ${chatUsername} (${chatId})`);
+            return; // Not a monitored chat
+        }
+
+        console.log(`[chat_member] Detected event in required chat: ${chatUsername} (${chatId}, type: ${chatType})`);
 
         const leftStatuses = ['left', 'kicked', 'banned'];
         const joinStatuses = ['member', 'administrator', 'creator'];
@@ -1422,8 +1468,10 @@ bot.on('chat_member', async (update) => {
                 db.updateUser(user);
                 console.log(`[VERIFICATION] User ${userId} marked as VERIFIED (joined ${chatUsername})`);
 
+                // ✅ FIX: Send welcome message for channel joins
                 const botUsername = db.data.settings?.botUsername || 'YourBot';
-                const welcomeText = `🎉 **Welcome to our Channel!**\n\nThanks for joining **${chatUsername}**.\n\n🚀 You are now verified! Click below to open the bot and use all features!`;
+                const chatName = update.chat.title || chatUsername;
+                const welcomeText = `🎉 **Welcome to ${chatName}!**\n\nThanks for joining our community.\n\n🚀 You are now verified! Click below to open the bot and use all features!`;
 
                 bot.sendMessage(userId, welcomeText, {
                     parse_mode: 'Markdown',
@@ -1432,7 +1480,9 @@ bot.on('chat_member', async (update) => {
                             [{ text: '💎 Open Bot', url: `https://t.me/${botUsername}?start=joined` }]
                         ]
                     }
-                }).catch(() => { });
+                }).catch((err) => {
+                    console.log(`[chat_member] Could not send welcome message to ${userId}: ${err.message}`);
+                });
             }
             return; // Done for join
         }

@@ -4027,6 +4027,185 @@ app.delete('/api/admin/users/:userId', (req, res) => {
     res.json({ success: true, message: 'User deleted successfully' });
 });
 
+// ✅ NEW: API - Get All Helper Admins
+app.get('/api/admin/helper-admins', (req, res) => {
+    try {
+        const users = getUsersObj();
+        const helperAdmins = Object.values(users).filter(u => u.role === 'helper_admin');
+        
+        const helperList = helperAdmins.map(u => ({
+            id: u.id,
+            firstName: u.firstName || u.first_name || 'Unknown',
+            username: u.username || '',
+            enabled: u.helperAdminEnabled !== false,
+            addedAt: u.helperAdminAddedAt || null,
+            addedBy: u.helperAdminAddedBy || null,
+            messagesSent: u.helperAdminMessagesSent || 0,
+            broadcastsSent: u.helperAdminBroadcastsSent || 0
+        }));
+        
+        res.json({ success: true, helpers: helperList });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// ✅ NEW: API - Add Helper Admin
+app.post('/api/admin/helper-admins/add', async (req, res) => {
+    try {
+        const { adminUserId, targetUserId } = req.body;
+        
+        // Only main admin can add helpers
+        if (String(adminUserId) !== String(process.env.ADMIN_ID)) {
+            return res.json({ success: false, message: 'Only main admin can add helper admins' });
+        }
+        
+        const users = getUsersObj();
+        const targetUser = users[targetUserId];
+        
+        if (!targetUser) {
+            return res.json({ success: false, message: 'User not found' });
+        }
+        
+        // Set helper admin role
+        targetUser.role = 'helper_admin';
+        targetUser.helperAdminEnabled = true;
+        targetUser.helperAdminAddedAt = new Date().toISOString();
+        targetUser.helperAdminAddedBy = adminUserId;
+        targetUser.helperAdminMessagesSent = 0;
+        targetUser.helperAdminBroadcastsSent = 0;
+        
+        saveUsersObj(users);
+        
+        // Notify the new helper admin via bot
+        if (bot) {
+            bot.sendMessage(targetUserId,
+                `🎉 **Congratulations!**\n\n` +
+                `You have been promoted to **Helper Admin**!\n\n` +
+                `You now have access to the admin panel and can help manage the bot.\n\n` +
+                `⚠️ Note: The main admin can disable your access at any time.`,
+                { parse_mode: 'Markdown' }
+            ).catch(() => {});
+        }
+        
+        res.json({ success: true, message: 'Helper admin added successfully' });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// ✅ NEW: API - Toggle Helper Admin Status
+app.post('/api/admin/helper-admins/:userId/toggle', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { adminUserId, enabled } = req.body;
+        
+        // Only main admin can toggle helpers
+        if (String(adminUserId) !== String(process.env.ADMIN_ID)) {
+            return res.json({ success: false, message: 'Only main admin can manage helper admins' });
+        }
+        
+        const users = getUsersObj();
+        const targetUser = users[userId];
+        
+        if (!targetUser || targetUser.role !== 'helper_admin') {
+            return res.json({ success: false, message: 'Helper admin not found' });
+        }
+        
+        targetUser.helperAdminEnabled = enabled;
+        
+        if (!enabled) {
+            targetUser.helperAdminDisabledAt = new Date().toISOString();
+        }
+        
+        saveUsersObj(users);
+        
+        // Notify the helper admin
+        if (bot) {
+            const statusMsg = enabled 
+                ? `✅ Your helper admin access has been **enabled**!`
+                : `⚠️ Your helper admin access has been **disabled** by the main admin.`;
+            
+            bot.sendMessage(userId, statusMsg, { parse_mode: 'Markdown' }).catch(() => {});
+        }
+        
+        res.json({ success: true, message: `Helper admin ${enabled ? 'enabled' : 'disabled'} successfully` });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// ✅ NEW: API - Remove Helper Admin (and delete their messages)
+app.delete('/api/admin/helper-admins/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { adminUserId, deleteMessages } = req.body;
+        
+        // Only main admin can remove helpers
+        if (String(adminUserId) !== String(process.env.ADMIN_ID)) {
+            return res.json({ success: false, message: 'Only main admin can remove helper admins' });
+        }
+        
+        const users = getUsersObj();
+        const targetUser = users[userId];
+        
+        if (!targetUser || targetUser.role !== 'helper_admin') {
+            return res.json({ success: false, message: 'Helper admin not found' });
+        }
+        
+        // Remove helper admin role
+        delete targetUser.role;
+        delete targetUser.helperAdminEnabled;
+        delete targetUser.helperAdminAddedAt;
+        delete targetUser.helperAdminAddedBy;
+        
+        saveUsersObj(users);
+        
+        // ✅ Delete all messages sent by this helper admin if requested
+        let deletedCount = 0;
+        if (deleteMessages && bot) {
+            // Delete from broadcast history
+            if (db.data.broadcasts) {
+                db.data.broadcasts = db.data.broadcasts.filter(b => {
+                    if (b.sentBy === userId) {
+                        deletedCount++;
+                        return false;
+                    }
+                    return true;
+                });
+            }
+            
+            // Delete from user notifications
+            Object.values(users).forEach(u => {
+                if (u.notifications) {
+                    u.notifications = u.notifications.filter(n => n.sentBy !== userId);
+                }
+            });
+            
+            saveUsersObj(users);
+            db.save();
+        }
+        
+        // Notify the removed helper
+        if (bot) {
+            bot.sendMessage(userId,
+                `⚠️ **Helper Admin Access Removed**\n\n` +
+                `Your helper admin privileges have been revoked by the main admin.\n\n` +
+                (deleteMessages ? `All your sent messages have been deleted.` : ''),
+                { parse_mode: 'Markdown' }
+            ).catch(() => {});
+        }
+        
+        res.json({ 
+            success: true, 
+            message: 'Helper admin removed successfully',
+            deletedMessages: deletedCount
+        });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
 // API: Admin - User Detail + Full History
 app.get('/api/admin/user-detail/:userId', (req, res) => {
     const { userId } = req.params;
@@ -6418,7 +6597,7 @@ app.post('/api/admin/broadcast', async (req, res) => {
     }
 
     if (normalizedTarget === 'channels' || normalizedTarget === 'all') {
-        // Priority: Use main channel from API Management
+        // ✅ FIX: Priority - Use main channel from API Management
         if (mainChannelId) {
             targetIds.push(mainChannelId);
             console.log(`[BROADCAST] Using main channel from API Management: ${mainChannelId}`);
@@ -6426,16 +6605,21 @@ app.post('/api/admin/broadcast', async (req, res) => {
             // Fallback: Get channels from database
             const groups = db.getGroups();
             const onlyChannels = groups.filter(g => g.type === 'channel');
-            if (onlyChannels.length > 0) targetIds.push(...onlyChannels.map(g => g.id));
+            if (onlyChannels.length > 0) {
+                targetIds.push(...onlyChannels.map(g => g.id));
+                console.log(`[BROADCAST] Using ${onlyChannels.length} channels from database`);
+            }
         }
     }
 
     if (normalizedTarget === 'groups') {
-        // Only send to groups if explicitly selected (not when 'all' is selected)
-        // Because if channel is linked to group, channel post will auto appear in group
+        // ✅ FIX: Send to groups only when explicitly selected
         const groups = db.getGroups();
         const onlyGroups = groups.filter(g => g.type === 'group' || g.type === 'supergroup');
-        if (onlyGroups.length > 0) targetIds.push(...onlyGroups.map(g => g.id));
+        if (onlyGroups.length > 0) {
+            targetIds.push(...onlyGroups.map(g => g.id));
+            console.log(`[BROADCAST] Using ${onlyGroups.length} groups from database`);
+        }
     }
 
     if (normalizedTarget === 'all') {

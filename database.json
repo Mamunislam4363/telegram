@@ -16,9 +16,9 @@
         "virtualnumber",
         "store"
       ],
-      "balance": 7455,
-      "balance_Gems": 1,
-      "balance_tokens": 7455,
+      "balance": 7255,
+      "balance_Gems": 2,
+      "balance_tokens": 7255,
       "blocked": false,
       "cardsPurchased": 0,
       "channelJoined": false,
@@ -31,6 +31,50 @@
       "firstName": "Test",
       "groupJoined": false,
       "history": [
+        {
+          "type": "daily_bonus",
+          "amount": 10,
+          "streak": 1,
+          "date": 1778864675126
+        },
+        {
+          "type": "live2fa",
+          "date": "2026-05-15T16:46:26.749Z",
+          "reward": "-5 Tokens"
+        },
+        {
+          "type": "live2fa",
+          "date": "2026-05-15T16:46:15.871Z",
+          "reward": "-5 Tokens"
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "adobeexpress",
+          "date": 1778862907514
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "adobeexpress",
+          "date": 1778862906841
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "adobeexpress",
+          "date": 1778862905582
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "adobeexpress",
+          "date": 1778862899970
+        },
         {
           "type": "gmail_email",
           "amount": -20,
@@ -1004,14 +1048,14 @@
       "joinedChannel": true,
       "joinedGroup": true,
       "language": "en",
-      "lastActive": 1778861924937,
-      "lastDaily": 1778495256034,
+      "lastActive": 1778864521064,
+      "lastDaily": 1778864675126,
       "lastName": "",
       "referralCode": "ref_95CMCD",
       "referralCount": 0,
       "successfulVerifications": 0,
-      "tokens": 7455,
-      "usd": 0,
+      "tokens": 7255,
+      "usd": 100,
       "username": "TestUser",
       "verified": false,
       "supportLoan": 0,
@@ -1650,249 +1694,30 @@
           "category": "adobeexpress",
           "purchasedAt": 1778581279240,
           "instructions": ""
+        },
+        {
+          "category": "adobeexpress",
+          "purchasedAt": 1778862899970,
+          "instructions": ""
+        },
+        {
+          "category": "adobeexpress",
+          "purchasedAt": 1778862905582,
+          "instructions": ""
+        },
+        {
+          "category": "adobeexpress",
+          "purchasedAt": 1778862906841,
+          "instructions": ""
+        },
+        {
+          "category": "adobeexpress",
+          "purchasedAt": 1778862907514,
+          "instructions": ""
         }
       ],
-      "flags": {}
-    },
-    "12345": {
-      "adminVerified": false,
-      "apiKeyCreatedAt": 1777656828738,
-      "apiRevokedAt": 1777663921400,
-      "apiStatus": "pending",
-      "balance": 100,
-      "balance_tokens": 100,
-      "blocked": false,
-      "cardsPurchased": 0,
-      "dailyStreak": 0,
-      "failedVerifications": 0,
-      "history": [],
-      "id": 12345,
-      "joinedAt": 1777656828730,
-      "language": "en",
-      "lastActive": 1777656828730,
-      "lastDaily": 0,
-      "referralCount": 0,
-      "successfulVerifications": 0,
-      "usd": 0,
-      "notifications": [
-        {
-          "id": "1778521825471u9ad87",
-          "type": "broadcast",
-          "title": "System Announcement",
-          "message": "hi",
-          "timestamp": "2026-05-11T17:50:25.471Z",
-          "read": false
-        },
-        {
-          "id": "1778521666989urai8",
-          "type": "broadcast",
-          "title": "System Announcement",
-          "message": "hi",
-          "timestamp": "2026-05-11T17:47:46.990Z",
-          "read": false
-        },
-        {
-          "id": "notif_1778518544129_rjkn0",
-          "type": "gift",
-          "title": "Admin Gift",
-          "message": "🎁 You received a gift of 10 TC from Admin!",
-          "giftId": "gift_1778518543616_ql5g5",
-          "date": 1778518544129,
-          "read": false
-        },
-        {
-          "id": "177851826323347y1xb",
-          "type": "broadcast",
-          "title": "System Announcement",
-          "message": "hi",
-          "timestamp": "2026-05-11T16:51:03.233Z",
-          "read": false
-        },
-        {
-          "id": "1778517778550310zfb",
-          "type": "broadcast",
-          "title": "System Announcement",
-          "message": "hi",
-          "timestamp": "2026-05-11T16:42:58.550Z",
-          "read": false
-        },
-        {
-          "id": "17785156935860uxwo5",
-          "type": "broadcast",
-          "title": "System Announcement",
-          "message": "hi",
-          "timestamp": "2026-05-11T16:08:13.586Z",
-          "read": false
-        }
-      ],
-      "pendingGifts": [
-        {
-          "id": "gift_1778518543616_ql5g5",
-          "currency": "tokens",
-          "amount": 10,
-          "claimed": false,
-          "date": 1778518544129
-        }
-      ]
-    },
-    "777000": {
-      "balance": 0,
-      "blocked": false,
-      "cardsPurchased": 0,
-      "failedVerifications": 0,
-      "id": 777000,
-      "joinedAt": 1770729093478,
-      "language": "en",
-      "referralCount": 0,
-      "successfulVerifications": 0,
-      "vpnsPurchased": 0,
-      "notifications": [
-        {
-          "id": "17785218255020g8orn",
-          "type": "broadcast",
-          "title": "System Announcement",
-          "message": "hi",
-          "timestamp": "2026-05-11T17:50:25.502Z",
-          "read": false
-        },
-        {
-          "id": "1778521667037hbgay",
-          "type": "broadcast",
-          "title": "System Announcement",
-          "message": "hi",
-          "timestamp": "2026-05-11T17:47:47.037Z",
-          "read": false
-        },
-        {
-          "id": "notif_1778518544639_5pyy5",
-          "type": "gift",
-          "title": "Admin Gift",
-          "message": "🎁 You received a gift of 10 TC from Admin!",
-          "giftId": "gift_1778518543616_ql5g5",
-          "date": 1778518544639,
-          "read": false
-        },
-        {
-          "id": "1778518263236r4rale",
-          "type": "broadcast",
-          "title": "System Announcement",
-          "message": "hi",
-          "timestamp": "2026-05-11T16:51:03.236Z",
-          "read": false
-        },
-        {
-          "id": "1778517778554or694",
-          "type": "broadcast",
-          "title": "System Announcement",
-          "message": "hi",
-          "timestamp": "2026-05-11T16:42:58.554Z",
-          "read": false
-        },
-        {
-          "id": "17785156935905weizp",
-          "type": "broadcast",
-          "title": "System Announcement",
-          "message": "hi",
-          "timestamp": "2026-05-11T16:08:13.590Z",
-          "read": false
-        }
-      ],
-      "pendingGifts": [
-        {
-          "id": "gift_1778518543616_ql5g5",
-          "currency": "tokens",
-          "amount": 10,
-          "claimed": false,
-          "date": 1778518544639
-        }
-      ]
-    },
-    "999999": {
-      "adminVerified": false,
-      "balance": 100,
-      "balance_tokens": 100,
-      "blocked": false,
-      "cardsPurchased": 0,
-      "channelJoined": false,
-      "country": "BD",
-      "dailyStreak": 0,
-      "failedVerifications": 0,
-      "groupJoined": false,
-      "history": [],
-      "id": 999999,
-      "joinedAt": 1776535267922,
-      "joinedChannel": false,
-      "joinedGroup": false,
-      "language": "en",
-      "lastActive": 1776797203138,
-      "lastDaily": 0,
-      "lastName": "",
-      "referralCode": "ref_UJARBP",
-      "referralCount": 0,
-      "successfulVerifications": 0,
-      "tokens": 100,
-      "usd": 0,
-      "verified": false,
-      "notifications": [
-        {
-          "id": "1778521825521d6hsa",
-          "type": "broadcast",
-          "title": "System Announcement",
-          "message": "hi",
-          "timestamp": "2026-05-11T17:50:25.521Z",
-          "read": false
-        },
-        {
-          "id": "17785216670704hi4i",
-          "type": "broadcast",
-          "title": "System Announcement",
-          "message": "hi",
-          "timestamp": "2026-05-11T17:47:47.070Z",
-          "read": false
-        },
-        {
-          "id": "notif_1778518545157_1271m",
-          "type": "gift",
-          "title": "Admin Gift",
-          "message": "🎁 You received a gift of 10 TC from Admin!",
-          "giftId": "gift_1778518543616_ql5g5",
-          "date": 1778518545157,
-          "read": false
-        },
-        {
-          "id": "1778518263247jb19dq",
-          "type": "broadcast",
-          "title": "System Announcement",
-          "message": "hi",
-          "timestamp": "2026-05-11T16:51:03.247Z",
-          "read": false
-        },
-        {
-          "id": "1778517778558fcd8z",
-          "type": "broadcast",
-          "title": "System Announcement",
-          "message": "hi",
-          "timestamp": "2026-05-11T16:42:58.558Z",
-          "read": false
-        },
-        {
-          "id": "1778515693599yedxeq",
-          "type": "broadcast",
-          "title": "System Announcement",
-          "message": "hi",
-          "timestamp": "2026-05-11T16:08:13.599Z",
-          "read": false
-        }
-      ],
-      "pendingGifts": [
-        {
-          "id": "gift_1778518543616_ql5g5",
-          "currency": "tokens",
-          "amount": 10,
-          "claimed": false,
-          "date": 1778518545157
-        }
-      ]
+      "flags": {},
+      "role": "off"
     },
     "36356254": {
       "Gems": 3,
@@ -5231,12 +5056,20 @@
       "failedVerifications": 0,
       "firstName": "Onlin Income (Admin)",
       "groupJoined": false,
-      "history": [],
+      "history": [
+        {
+          "type": "bonus",
+          "amount": 100,
+          "reward": "+100 Tokens",
+          "date": 1778862319925,
+          "detail": "Welcome Bonus"
+        }
+      ],
       "id": 6915386689,
       "joinedAt": 1770566699567,
       "joinedChannel": false,
       "joinedGroup": false,
-      "lastActive": 1777847763777,
+      "lastActive": 1778862581063,
       "lastDaily": 1770722478067,
       "lastName": "",
       "photo_url": "https://t.me/i/userpic/320/UJnmZwyAzNUY1ZaCek8VmtASJCrKxfnyfq38LVaFR7CpvD8JJr8VZHQLBQ2fukuP.svg",
@@ -10041,70 +9874,6 @@
         "address": "222 Regent St",
         "city": "London",
         "country": "UK",
-        "cvv": "233",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/28",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804052031|05|2028|233",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804052031",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "240",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/28",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804094611|05|2028|240",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804094611",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "391",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/28",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804094520|05|2028|391",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804094520",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
-        "cvv": "567",
-        "district": "Westminster (Soho area)",
-        "expiry": "05/28",
-        "full_billing_text": "VPN: UrbanVPN - UK Vpn Use\nCountry: UK\nType: Visa CARD\nName: Rohit Deshmukh\nState: London\nCity: London\nDistrict: Westminster (Soho area)\nAddress 1: 222 Regent St\nPostal Code: W1B 5AH",
-        "full_card": "4266841804011581|05|2028|567",
-        "name": "Rohit Deshmukh",
-        "number": "4266841804011581",
-        "state": "London",
-        "type": "Visa CARD",
-        "vpn": "UrbanVPN - UK Vpn Use",
-        "zip": "W1B 5AH"
-      },
-      {
-        "address": "222 Regent St",
-        "city": "London",
-        "country": "UK",
         "cvv": "965",
         "district": "Westminster (Soho area)",
         "expiry": "05/28",
@@ -12094,7 +11863,18 @@
   },
   "providers": {},
   "broadcasts": [],
-  "pendingDeposits": [],
+  "pendingDeposits": [
+    {
+      "id": "dep_1778864539525n2kg8",
+      "userId": "123",
+      "method": "bkash",
+      "amount": 100,
+      "txnId": "v vfbcc",
+      "screenshot": null,
+      "date": 1778864539526,
+      "status": "pending"
+    }
+  ],
   "cryptoMethods": {
     "binance": {
       "details": "39996280",
@@ -12428,7 +12208,7 @@
     "WhatsApp": 0,
     "instagram": 3,
     "other": 2,
-    "telegram": 31,
+    "telegram": 35,
     "tiktok": 7,
     "twitter": 5,
     "whatsapp": 3

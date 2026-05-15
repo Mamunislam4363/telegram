@@ -4229,7 +4229,7 @@ function renderBalances() {
     const isRestrictedGuest = featureFlags?.requireTelegram === true && isDemoMode;
     const tokens = isRestrictedGuest ? 0 : Math.max(0, userData.tokens || 0);
     const gems = isRestrictedGuest ? 0 : Math.max(0, userData.Gems || 0);
-    const usd = isRestrictedGuest ? 0 : Math.max(0, userData.usd || 0.00);
+    const usd = isRestrictedGuest ? 0 : Math.max(0, userData.usd || 0);
 
     const rawName = userData.firstName || userData.username || _tgUser.first_name || 'Guest';
     const displayName = getShortName(rawName);
@@ -4237,11 +4237,16 @@ function renderBalances() {
     const formattedTokens = formatCompact(tokens);
     const formattedGems = formatCompact(gems);
 
+    // ✅ FIX: USD display without .00 for whole numbers
     let formattedUsd = '$0';
     if (usd > 0) {
         if (usd >= 1000) {
             formattedUsd = '$' + formatCompact(usd);
+        } else if (Number.isInteger(usd)) {
+            // ✅ FIX: Show whole number without decimals
+            formattedUsd = '$' + usd;
         } else {
+            // Show decimals only if needed
             formattedUsd = '$' + usd.toFixed(2);
         }
     }
@@ -4715,13 +4720,36 @@ function renderShopItems() {
                 ? `<img src="${item.imageUrl}" style="width:100%; height:100%; object-fit:cover;" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-box\\' style=\\'font-size:36px; color:#f59e0b;\\'></i>'">`
                 : `<i class="fas fa-box" style="font-size:36px; color:#f59e0b;"></i>`;
 
-            // Fix price display to ensure $ if not present
-            let priceDisp = item.price || '$0.00';
-            if (typeof priceDisp === 'number') priceDisp = '$' + priceDisp.toFixed(2);
-            else if (!priceDisp.includes('$') && !priceDisp.toLowerCase().includes('tc')) priceDisp = '$' + priceDisp;
+            // ✅ FIX: Determine currency and price
+            let priceValue = item.price || 0;
+            let currency = 'USD'; // Default to USD for shop items
+            let priceDisp = '';
+            
+            if (typeof priceValue === 'string') {
+                if (priceValue.includes('TC') || priceValue.toLowerCase().includes('token')) {
+                    currency = 'TC';
+                    priceValue = parseFloat(priceValue.replace(/[^0-9.]/g, '')) || 0;
+                    priceDisp = priceValue + ' TC';
+                } else if (priceValue.includes('$')) {
+                    currency = 'USD';
+                    priceValue = parseFloat(priceValue.replace(/[^0-9.]/g, '')) || 0;
+                    priceDisp = '$' + (Number.isInteger(priceValue) ? priceValue : priceValue.toFixed(2));
+                } else {
+                    // No symbol, assume USD
+                    priceValue = parseFloat(priceValue) || 0;
+                    priceDisp = '$' + (Number.isInteger(priceValue) ? priceValue : priceValue.toFixed(2));
+                }
+            } else {
+                // Number, assume USD
+                priceDisp = '$' + (Number.isInteger(priceValue) ? priceValue : priceValue.toFixed(2));
+            }
+
+            // ✅ FIX: Add onclick with confirmation
+            const itemPage = item.page || 'deposit';
+            const onclickHandler = `showPurchaseConfirmation('${item.name}', ${priceValue}, '${currency}', () => nav('${itemPage}'))`;
 
             return `
-            <div onclick="nav('${item.page || 'deposit'}')"
+            <div onclick="${onclickHandler}"
                 style="background:var(--bg-card); border-radius:16px; overflow:hidden; border:1px solid var(--border-color); cursor:pointer; transition:0.2s;"
                 onmousedown="this.style.transform='scale(0.97)'" onmouseup="this.style.transform='scale(1)'">
                 <div style="background:${item.bgColor || '#0d0d0d'}; padding:0; display:flex; align-items:center; justify-content:center; height:120px; overflow:hidden;">
@@ -5409,6 +5437,65 @@ function buyServiceAccount(serviceId, price) {
         .catch(() => window.showToast('Network error'));
 }
 window.buyServiceAccount = buyServiceAccount;
+
+// ✅ NEW: Universal Purchase Confirmation Popup
+function showPurchaseConfirmation(itemName, price, currency, onConfirm) {
+    // Check if user has enough balance
+    const userBalance = currency === 'USD' ? (userData.usd || 0) : (userData.tokens || 0);
+    const currencySymbol = currency === 'USD' ? '$' : 'TC';
+    
+    if (userBalance < price) {
+        // Insufficient balance - redirect to deposit
+        const modal = document.createElement('div');
+        modal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.9); z-index:999999; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(10px);';
+        modal.innerHTML = `
+            <div style="background:linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius:24px; padding:32px; max-width:320px; width:90%; text-align:center; border:2px solid #ef4444;">
+                <div style="width:70px; height:70px; background:rgba(239,68,68,0.2); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 20px;">
+                    <i class="fas fa-exclamation-triangle" style="font-size:32px; color:#ef4444;"></i>
+                </div>
+                <h3 style="color:#ef4444; font-size:20px; margin:0 0 12px 0; font-weight:800;">Insufficient Balance!</h3>
+                <p style="color:#aaa; font-size:14px; margin:0 0 8px 0;">You need <strong style="color:#fff;">${currencySymbol}${price}</strong> to purchase this item.</p>
+                <p style="color:#888; font-size:13px; margin:0 0 24px 0;">Your balance: <strong style="color:#ef4444;">${currencySymbol}${userBalance.toFixed(currency === 'USD' ? 2 : 0)}</strong></p>
+                <button onclick="this.closest('div[style*=fixed]').remove(); nav('deposit');" style="width:100%; padding:14px; background:linear-gradient(135deg, #22c55e, #16a34a); color:#fff; border:none; border-radius:16px; font-weight:800; font-size:15px; cursor:pointer; margin-bottom:10px;">
+                    <i class="fas fa-wallet"></i> DEPOSIT NOW
+                </button>
+                <button onclick="this.closest('div[style*=fixed]').remove();" style="width:100%; padding:14px; background:rgba(255,255,255,0.1); color:#fff; border:none; border-radius:16px; font-weight:700; font-size:14px; cursor:pointer;">
+                    Cancel
+                </button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        return;
+    }
+    
+    // Sufficient balance - show confirmation
+    const modal = document.createElement('div');
+    modal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.9); z-index:999999; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(10px);';
+    modal.innerHTML = `
+        <div style="background:linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius:24px; padding:32px; max-width:320px; width:90%; text-align:center; border:2px solid #f59e0b;">
+            <div style="width:70px; height:70px; background:rgba(245,158,11,0.2); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 20px;">
+                <i class="fas fa-shopping-cart" style="font-size:32px; color:#f59e0b;"></i>
+            </div>
+            <h3 style="color:#f59e0b; font-size:20px; margin:0 0 12px 0; font-weight:800;">Confirm Purchase</h3>
+            <p style="color:#fff; font-size:15px; margin:0 0 8px 0; font-weight:700;">${itemName}</p>
+            <p style="color:#aaa; font-size:14px; margin:0 0 24px 0;">Price: <strong style="color:#22c55e; font-size:18px;">${currencySymbol}${price}</strong></p>
+            <p style="color:#888; font-size:12px; margin:0 0 24px 0;">Your balance after purchase: <strong style="color:#fff;">${currencySymbol}${(userBalance - price).toFixed(currency === 'USD' ? 2 : 0)}</strong></p>
+            <button id="confirmPurchaseBtn" style="width:100%; padding:14px; background:linear-gradient(135deg, #22c55e, #16a34a); color:#fff; border:none; border-radius:16px; font-weight:800; font-size:15px; cursor:pointer; margin-bottom:10px;">
+                <i class="fas fa-check"></i> CONFIRM PURCHASE
+            </button>
+            <button onclick="this.closest('div[style*=fixed]').remove();" style="width:100%; padding:14px; background:rgba(255,255,255,0.1); color:#fff; border:none; border-radius:16px; font-weight:700; font-size:14px; cursor:pointer;">
+                Cancel
+            </button>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    
+    // Add confirm handler
+    document.getElementById('confirmPurchaseBtn').onclick = () => {
+        modal.remove();
+        onConfirm();
+    };
+}
 
 function openAndBuyCard(id, type, price, name) {
     const isChatGPT = id && id.toLowerCase().includes('chatgpt');
@@ -6943,8 +7030,15 @@ function openEmailMessage(msgId, type) {
 
     const content = msg.subject + " " + (msg.body || msg.preview);
 
-    // Extract OTP (4-8 digits)
-    const otpMatch = content.match(/\b\d{4,8}\b/);
+    // ✅ FIX: Use robust OTP extraction (same as inbox list)
+    let otpCode = null;
+    if (msg.otp) {
+        otpCode = msg.otp;
+    } else {
+        // Try to extract from content
+        const extracted = extractOtp(content);
+        otpCode = extracted;
+    }
 
     // Extract URL/Link
     const urlRegex = /(https?:\/\/[^\s<>'"{}|\^`\[\]]+)/i;
@@ -6954,9 +7048,9 @@ function openEmailMessage(msgId, type) {
     const linkContainer = document.getElementById("mdLinkContainer");
 
     // Show OTP if found
-    if (otpMatch) {
+    if (otpCode) {
         otpContainer.style.display = "block";
-        document.getElementById("mdOtpCode").textContent = otpMatch[0];
+        document.getElementById("mdOtpCode").textContent = otpCode;
     } else {
         otpContainer.style.display = "none";
     }
