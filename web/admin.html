@@ -3186,7 +3186,7 @@
                         <div class="flex gap-2">
                             <button onclick="clearEmailPoolAssigned()"
                                 class="p-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-all shadow-lg shadow-red-500/5"
-                                title="Clear All Assigned (Used) Emails">
+                                title="Delete ALL emails in this pool (available + assigned)">
                                 <i class="fas fa-trash-alt text-lg"></i>
                             </button>
                             <button onclick="showGlobalEmailInbox()"
@@ -12676,7 +12676,7 @@
                         <td class="py-3 text-xs text-gray-400">-</td>
                         <td class="py-3 text-xs text-gray-500">${e.addedAt ? new Date(e.addedAt).toLocaleDateString() : '-'}</td>
                         <td class="py-3 text-right">
-                            <button onclick="deletePoolEmail('${type}', '${e.email}')" class="text-xs bg-red-500/10 hover:bg-red-500/30 text-red-400 border border-red-500/20 px-3 py-1.5 rounded-lg transition-all">
+                            <button type="button" data-pool-type="${type}" data-pool-email="${encodeURIComponent(e.email)}" class="pool-delete-btn text-xs bg-red-500/10 hover:bg-red-500/30 text-red-400 border border-red-500/20 px-3 py-1.5 rounded-lg transition-all">
                                 <i class="fas fa-trash-alt mr-1"></i>Delete
                             </button>
                         </td>
@@ -12696,7 +12696,7 @@
                         <td class="py-3 text-xs text-blue-400 font-bold">${h.assignedTo || '-'}</td>
                         <td class="py-3 text-xs text-gray-500">${h.assignedAt ? new Date(h.assignedAt).toLocaleDateString() : '-'}</td>
                         <td class="py-3 text-right">
-                            <button onclick="deletePoolEmail('${type}', '${h.email}')" class="text-xs bg-red-500/10 hover:bg-red-500/30 text-red-400 border border-red-500/20 px-3 py-1.5 rounded-lg transition-all">
+                            <button type="button" data-pool-type="${type}" data-pool-email="${encodeURIComponent(h.email)}" class="pool-delete-btn text-xs bg-red-500/10 hover:bg-red-500/30 text-red-400 border border-red-500/20 px-3 py-1.5 rounded-lg transition-all">
                                 <i class="fas fa-trash-alt mr-1"></i>Delete
                             </button>
                         </td>
@@ -12704,6 +12704,9 @@
                 `).join('');
 
                 tbody.innerHTML = html;
+                tbody.querySelectorAll('.pool-delete-btn').forEach(btn => {
+                    btn.onclick = () => deletePoolEmail(btn.dataset.poolType, decodeURIComponent(btn.dataset.poolEmail || ''));
+                });
             } catch (err) {
                 tbody.innerHTML = '<tr><td colspan="7" class="text-center text-red-400 py-8">Error loading pool</td></tr>';
             }
@@ -12785,9 +12788,9 @@
 
         async function clearEmailPoolAssigned() {
             const type = currentPoolTab;
-            if (!confirm(`Are you sure you want to clear ALL assigned (used) emails from the ${type} pool? Valid emails will stay.`)) return;
+            if (!confirm(`Delete ALL ${type} emails from pool (available + assigned)? This cannot be undone.`)) return;
             try {
-                const res = await fetch('/api/admin/email-pool/clear-assigned', {
+                const res = await fetch('/api/admin/email-pool/clear-all', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ type })
@@ -12813,7 +12816,9 @@
                 });
                 const data = await res.json();
                 if (data.success) {
+                    showToast(data.message || 'Email deleted');
                     loadEmailPool(type);
+                    loadEmailPoolStats();
                 } else {
                     alert(data.message || 'Error deleting email');
                 }

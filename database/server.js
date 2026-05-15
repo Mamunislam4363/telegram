@@ -3847,7 +3847,7 @@ app.delete('/api/admin/email-pool/delete', (req, res) => {
         }
 
         if (removed) {
-            db.save();
+            db.save(true);
             res.json({ success: true, message: 'Email removed from pool and history' });
         } else {
             res.json({ success: false, message: 'Email not found in pool or history' });
@@ -3857,7 +3857,7 @@ app.delete('/api/admin/email-pool/delete', (req, res) => {
     }
 });
 
-// API: Admin - Clear ALL Assigned (Used) Emails from Pool
+// API: Admin - Clear ALL Assigned (Used) Emails from History only
 app.post('/api/admin/email-pool/clear-assigned', (req, res) => {
     try {
         const { type } = req.body;
@@ -3871,8 +3871,38 @@ app.post('/api/admin/email-pool/clear-assigned', (req, res) => {
 
         const cleared = initialCount - (db.data.emailPoolHistory ? db.data.emailPoolHistory.length : 0);
 
-        db.save();
+        db.save(true);
         res.json({ success: true, message: `Cleared ${cleared} used emails from ${type} history` });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// API: Admin - Clear ENTIRE pool (available + assigned history) for a type
+app.post('/api/admin/email-pool/clear-all', (req, res) => {
+    try {
+        const { type } = req.body;
+        if (!type) return res.json({ success: false, message: 'Type required' });
+
+        let poolCount = 0;
+        let historyCount = 0;
+
+        if (db.data.emailPool && db.data.emailPool[type]) {
+            poolCount = db.data.emailPool[type].length;
+            db.data.emailPool[type] = [];
+        }
+        if (db.data.emailPoolHistory) {
+            const before = db.data.emailPoolHistory.length;
+            db.data.emailPoolHistory = db.data.emailPoolHistory.filter(h => h.type !== type);
+            historyCount = before - db.data.emailPoolHistory.length;
+        }
+
+        db.save(true);
+        res.json({
+            success: true,
+            message: `Deleted all ${type} emails (${poolCount} in pool + ${historyCount} in history)`,
+            cleared: poolCount + historyCount
+        });
     } catch (e) {
         res.json({ success: false, message: e.message });
     }
@@ -3885,10 +3915,30 @@ function assignEmailFromPool(type) {
     return available || null;
 }
 
+/** Reject fake/demo/fallback accounts that cannot receive mail */
+function isRealEmailAccount(emailData) {
+    if (!emailData || !emailData.email || typeof emailData.email !== 'string') return false;
+    if (emailData.isFallback === true) return false;
+    const provider = String(emailData.provider || '').toLowerCase();
+    if (provider.startsWith('fallback')) return false;
+    if (emailData.email.includes('demo_')) return false;
+    return true;
+}
+
+const NO_EMAIL_MESSAGES = {
+    gmail: '❌ No Gmail available right now. Admin pool is empty. Please try again later.',
+    hotmail: '❌ No Hotmail available right now. Admin pool is empty. Please try again later.',
+    student: '❌ No Student email available right now. Please try again later.',
+    temp: '❌ No temporary email available right now. Please try again later.'
+};
+
 // API: Generate Premium Email (Gmail, Hotmail) - ADMIN POOL ONLY
 const genLocks = new Set();
+const emailGenCooldowns = new Map(); // userId_provider -> last success timestamp
+const EMAIL_GEN_COOLDOWN_MS = 7000; // 7s between new emails (balance speed vs abuse)
+
 app.post('/api/premium-emails/generate', async (req, res) => {
-    const { userId, provider } = req.body;
+    const { userId, provider, forceNew } = req.body;
 
     // Sequential generation lock per user/provider
     const lockKey = `gen_${userId}_${provider}`;
@@ -3913,16 +3963,29 @@ app.post('/api/premium-emails/generate', async (req, res) => {
         else if (provider === 'student') tokenCost = costs.student || 50;
         else if (provider === 'temp') tokenCost = costs.tempmail || 10;
 
-        // Prevent double generation if already has a VERY fresh session (within 10 seconds)
-        // This helps with accidental double clicks or concurrent auto-generations
+        const cooldownKey = `${userId}_${provider}`;
+        const lastGenAt = emailGenCooldowns.get(cooldownKey) || 0;
+        const cooldownLeft = EMAIL_GEN_COOLDOWN_MS - (Date.now() - lastGenAt);
+        if (lastGenAt > 0 && cooldownLeft > 0) {
+            genLocks.delete(lockKey);
+            const waitSec = Math.ceil(cooldownLeft / 1000);
+            return res.json({
+                success: false,
+                message: `⏳ Please wait ${waitSec} second(s) before requesting another email.`,
+                cooldownSeconds: waitSec
+            });
+        }
+
+        // Prevent accidental double-generation (skip when user explicitly requests NEW EMAIL)
         const now = Date.now();
-        if (db.data.mailSessions) {
+        if (!forceNew && db.data.mailSessions) {
             const existingSession = Object.values(db.data.mailSessions).find(s =>
                 String(s.userId) === String(userId) &&
                 s.provider === provider &&
                 (now - (s.createdAt || 0)) < 10000
             );
             if (existingSession) {
+                genLocks.delete(lockKey);
                 return res.json({
                     success: true,
                     email: existingSession.email,
@@ -3943,7 +4006,7 @@ app.post('/api/premium-emails/generate', async (req, res) => {
             if (available.length === 0) {
                 try {
                     const generated = provider === 'gmail' ? await createGmailAccount() : await createHotmailAccount();
-                    if (generated && generated.email) {
+                    if (isRealEmailAccount(generated)) {
                         emailData = {
                             email: generated.email,
                             password: generated.password || null,
@@ -3952,11 +4015,13 @@ app.post('/api/premium-emails/generate', async (req, res) => {
                             token: generated.token || generated.email
                         };
                     } else {
-                        return res.json({ success: false, message: `❌ No ${provider.toUpperCase()} emails available in pool and fallback failed.` });
+                        genLocks.delete(lockKey);
+                        return res.json({ success: false, message: NO_EMAIL_MESSAGES[provider] || `❌ No ${provider} emails available.` });
                     }
                 } catch (e) {
-                    console.error(`Automation fallback failed for ${provider}:`, e.message);
-                    return res.json({ success: false, message: `❌ No ${provider.toUpperCase()} emails available in pool and fallback failed.` });
+                    console.error(`Automation failed for ${provider}:`, e.message);
+                    genLocks.delete(lockKey);
+                    return res.json({ success: false, message: NO_EMAIL_MESSAGES[provider] || `❌ No ${provider} emails available.` });
                 }
             } else {
                 const poolEmail = available[0];
@@ -4003,15 +4068,22 @@ app.post('/api/premium-emails/generate', async (req, res) => {
             } else {
                 try {
                     const unifiedProviders = require('../services/providers');
-                    emailData = await unifiedProviders.createStudentEmailAccount();
+                    const generated = await unifiedProviders.createStudentEmailAccount();
+                    if (isRealEmailAccount(generated)) {
+                        emailData = generated;
+                    }
                 } catch (e) {
                     console.error('Student Email Generation Error:', e.message);
                 }
             }
         }
 
-        if (!emailData || !emailData.email) {
-            return res.json({ success: false, message: 'No emails available in pool. Please contact admin.' });
+        if (!isRealEmailAccount(emailData)) {
+            genLocks.delete(lockKey);
+            return res.json({
+                success: false,
+                message: NO_EMAIL_MESSAGES[provider] || '❌ No email available. Please try again later or contact admin.'
+            });
         }
 
         // Deduct tokens
@@ -4043,6 +4115,7 @@ app.post('/api/premium-emails/generate', async (req, res) => {
             createdAt: Date.now()
         };
         db.save();
+        emailGenCooldowns.set(cooldownKey, Date.now());
 
         // Return email as plain STRING (not object) to avoid [object Object] on frontend
         res.json({
@@ -4050,7 +4123,8 @@ app.post('/api/premium-emails/generate', async (req, res) => {
             email: emailData.email,    // ← plain string!
             sessionId,
             newBalance: db.getTokenBalance(user),
-            provider: emailData.provider
+            provider: emailData.provider,
+            cooldownSeconds: Math.ceil(EMAIL_GEN_COOLDOWN_MS / 1000)
         });
     } catch (err) {
         console.error("Gen Error:", err);
@@ -4260,7 +4334,7 @@ app.post('/api/mail/generate', async (req, res) => {
             if (!poolEmail) {
                 try {
                     const generated = await createHotmailAccount();
-                    if (generated && generated.email) {
+                    if (isRealEmailAccount(generated)) {
                         emailData = {
                             email: generated.email,
                             password: generated.password || null,
@@ -4269,11 +4343,11 @@ app.post('/api/mail/generate', async (req, res) => {
                             token: generated.token || generated.email
                         };
                     } else {
-                        return res.json({ success: false, message: 'No Hot Mail emails available in pool and fallback failed.' });
+                        return res.json({ success: false, message: NO_EMAIL_MESSAGES.hotmail });
                     }
                 } catch (e) {
-                    console.error('Automation fallback failed for hotmail:', e.message);
-                    return res.json({ success: false, message: 'No Hot Mail emails available in pool and fallback failed.' });
+                    console.error('Automation failed for hotmail:', e.message);
+                    return res.json({ success: false, message: NO_EMAIL_MESSAGES.hotmail });
                 }
             } else {
                 emailData = {
@@ -4303,7 +4377,7 @@ app.post('/api/mail/generate', async (req, res) => {
             if (!poolEmail) {
                 try {
                     const generated = await createGmailAccount();
-                    if (generated && generated.email) {
+                    if (isRealEmailAccount(generated)) {
                         emailData = {
                             email: generated.email,
                             password: generated.password || null,
@@ -4312,11 +4386,11 @@ app.post('/api/mail/generate', async (req, res) => {
                             token: generated.token || generated.email
                         };
                     } else {
-                        return res.json({ success: false, message: 'No Gmail emails available in pool and fallback failed.' });
+                        return res.json({ success: false, message: NO_EMAIL_MESSAGES.gmail });
                     }
                 } catch (e) {
-                    console.error('Automation fallback failed for gmail:', e.message);
-                    return res.json({ success: false, message: 'No Gmail emails available in pool and fallback failed.' });
+                    console.error('Automation failed for gmail:', e.message);
+                    return res.json({ success: false, message: NO_EMAIL_MESSAGES.gmail });
                 }
             } else {
                 emailData = {
@@ -4342,7 +4416,8 @@ app.post('/api/mail/generate', async (req, res) => {
             }
         } else if (requestedService === 'student') {
             const { createStudentEmailAccount } = require('../services/providers');
-            emailData = await createStudentEmailAccount();
+            const generated = await createStudentEmailAccount();
+            if (isRealEmailAccount(generated)) emailData = generated;
         } else {
             const tempMail = require('../services/tempmail-providers');
             emailData = await tempMail.createAccount();
@@ -4351,9 +4426,12 @@ app.post('/api/mail/generate', async (req, res) => {
         console.error('Mail createAccount error:', e.message);
     }
 
-    if (!emailData || !emailData.email) {
+    if (!isRealEmailAccount(emailData)) {
         console.error('❌ Mail generation failed for:', requestedService);
-        return res.json({ success: false, message: 'Email not available. Please try again later or contact admin.' });
+        return res.json({
+            success: false,
+            message: NO_EMAIL_MESSAGES[requestedService] || '❌ Email not available. Please try again later or contact admin.'
+        });
     }
 
     if (currency === 'Gems' || currency === 'gem') {
@@ -6036,6 +6114,17 @@ app.get('/api/public/costs', (req, res) => {
             liveTiktokCurrency: costs.liveTiktokCurrency || 'token',
             liveTwitterCurrency: costs.liveTwitterCurrency || 'token',
             liveThreadsCurrency: costs.liveThreadsCurrency || 'token',
+            mailCost: costs.tempmail || settings.tempMailCost || 10,
+            premiumMailCost: settings.premiumEmailCost || costs.gmail || 20,
+            hotMailCost: costs.hotmail || 25,
+            studentMailCost: costs.student || 50,
+            tempMailCost: costs.tempmail || 10,
+            gmailCost: costs.gmail || 20,
+            hotmailCost: costs.hotmail || 25,
+            gmailCurrency: costs.gmailCurrency || 'token',
+            hotmailCurrency: costs.hotmailCurrency || 'token',
+            studentCurrency: costs.studentCurrency || 'token',
+            tempmailCurrency: costs.tempmailCurrency || 'token',
             usdToToken: settings.usdToToken || 100,
             gemToToken: settings.gemToToken || 100,
             tokenToGem: settings.tokenToGem || 1,
@@ -6150,6 +6239,9 @@ app.post('/api/admin/costs', (req, res) => {
     }
 
     db.save(true);
+    try {
+        realtimeUpdater.broadcast({ type: 'settings_updated', costs: db.data.settings?.costs || {}, settings: db.getSettings() });
+    } catch (e) { /* optional */ }
     res.json({ success: true, message: 'All cost configurations saved successfully' });
 });
 
@@ -10756,75 +10848,6 @@ app.get('/api/admin/removebg-status', (req, res) => {
             remainingCredits: totalLimit - totalUsage
         }
     });
-});
-
-// ==========================================
-// EMAIL POOL ROUTES
-// ==========================================
-
-app.get('/api/admin/email-pool/list', (req, res) => {
-    const { type } = req.query;
-    if (!db.data.emailPool) db.data.emailPool = { gmail: [], hotmail: [] };
-
-    if (type) {
-        const emails = db.data.emailPool[type] || [];
-        const available = emails.filter(e => !e.assignedTo).length;
-        const totalUsed = emails.filter(e => e.assignedTo).length;
-        res.json({ success: true, emails: emails.filter(e => !e.assignedTo), stats: { available, totalUsed, recentHistory: emails.filter(e => e.assignedTo).slice(-50) } });
-    } else {
-        const stats = {};
-        ['gmail', 'hotmail'].forEach(t => {
-            const list = db.data.emailPool[t] || [];
-            stats[t] = {
-                available: list.filter(e => !e.assignedTo).length,
-                totalUsed: list.filter(e => e.assignedTo).length
-            };
-        });
-        res.json({ success: true, stats });
-    }
-});
-
-app.post('/api/admin/email-pool/add', (req, res) => {
-    const { type, email, password, note } = req.body;
-    if (!db.data.emailPool) db.data.emailPool = { gmail: [], hotmail: [] };
-    if (!db.data.emailPool[type]) db.data.emailPool[type] = [];
-
-    // Duplicate check
-    if (db.data.emailPool[type].some(e => e.email === email)) {
-        return res.json({ success: false, message: 'Email already exists in pool' });
-    }
-
-    db.data.emailPool[type].push({
-        email,
-        password,
-        note,
-        addedAt: new Date().toISOString(),
-        assignedTo: null,
-        assignedAt: null
-    });
-    db.save();
-    res.json({ success: true, message: 'Email added to pool' });
-});
-
-app.delete('/api/admin/email-pool/delete', (req, res) => {
-    const { type, email } = req.body;
-    if (db.data.emailPool && db.data.emailPool[type]) {
-        db.data.emailPool[type] = db.data.emailPool[type].filter(e => e.email !== email);
-        db.save();
-    }
-    res.json({ success: true, message: 'Email deleted from pool' });
-});
-
-app.post('/api/admin/email-pool/clear-assigned', (req, res) => {
-    const { type } = req.body;
-    if (db.data.emailPool && db.data.emailPool[type]) {
-        const count = db.data.emailPool[type].filter(e => e.assignedTo).length;
-        db.data.emailPool[type] = db.data.emailPool[type].filter(e => !e.assignedTo);
-        db.save();
-        res.json({ success: true, message: `Cleared ${count} assigned emails` });
-    } else {
-        res.json({ success: false, message: 'Pool not found' });
-    }
 });
 
 // ==========================================

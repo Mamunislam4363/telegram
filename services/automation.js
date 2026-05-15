@@ -476,20 +476,11 @@ async function createGmailAccount() {
         result = await mailTicking.generateGmail(sessionId);
     }
 
-    // Fallback: generate a working temp email if APIs fail
     if (!result) {
-        console.log('⚠️ All Gmail providers failed, using fallback...');
-        const username = `user${Date.now()}${Math.floor(Math.random() * 1000)}`;
-        result = {
-            email: `${username}@gmail.com`,
-            token: sessionId,
-            sessionId: sessionId,
-            provider: 'fallback_gmail',
-            password: null
-        };
+        console.log('❌ All Gmail providers failed — no fake fallback email');
     }
 
-    return result;
+    return result || null;
 }
 
 async function createHotmailAccount() {
@@ -499,20 +490,11 @@ async function createHotmailAccount() {
     const emailNator = new EmailNatorProvider();
     let result = await emailNator.generateHotmail(sessionId);
 
-    // Fallback: generate outlook-style email if API fails
     if (!result) {
-        console.log('⚠️ Hotmail provider failed, using fallback...');
-        const username = `user${Date.now()}${Math.floor(Math.random() * 1000)}`;
-        result = {
-            email: `${username}@hotmail.com`,
-            token: sessionId,
-            sessionId: sessionId,
-            provider: 'fallback_hotmail',
-            password: null
-        };
+        console.log('❌ Hotmail provider failed — no fake fallback email');
     }
 
-    return result;
+    return result || null;
 }
 
 async function getGmailMessages(sessionId, email) {

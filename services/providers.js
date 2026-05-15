@@ -230,27 +230,6 @@ async function fetchSmailProMessages(sessionId, email) {
     return [];
 }
 
-// FALLBACK DOMAINS
-const GMAIL_FALLBACK_DOMAINS = [
-    'tempgmail.com', 'gmailtemp.com', 'tempmailgmail.com', 'gmailgen.com',
-    'fakegmail.com', 'tempmail.org', 'temp-mail.org', 'tempmailaddress.com',
-    'throwawaymail.com', 'tempmail.ninja', 'burnermail.io', 'tempinbox.com',
-    'mailinator.com', 'guerrillamail.com', 'sharklasers.com', 'spam4.me'
-];
-
-async function tryFallbackGmail() {
-    const domain = GMAIL_FALLBACK_DOMAINS[Math.floor(Math.random() * GMAIL_FALLBACK_DOMAINS.length)];
-    const username = `user${Date.now()}${Math.floor(Math.random() * 1000)}`;
-    return {
-        email: `${username}@${domain}`,
-        token: `${username}@${domain}`,
-        sessionId: `${username}@${domain}`,
-        provider: 'fallback',
-        password: null,
-        isFallback: true
-    };
-}
-
 // MAIN GMAIL GENERATOR
 async function createGmailAccount() {
     console.log('🔄 Starting Gmail Generation Chain...');
@@ -265,15 +244,9 @@ async function createGmailAccount() {
         console.log('✅ Provider successfully generated Gmail:', account.email);
         return account;
     } catch (e) {
-        console.log('🔄 Using fallback provider...');
-        const fallback = await tryFallbackGmail();
-        if (fallback) {
-            console.log('✅ Fallback provided email:', fallback.email);
-            return fallback;
-        }
+        console.error('❌ All Gmail providers failed:', e.message || e);
     }
 
-    console.error('❌ All Gmail providers failed');
     return null;
 }
 
@@ -300,10 +273,6 @@ async function getGmailMessages(sessionId, email, provider) {
 }
 
 // HOTMAIL PROVIDER
-const HOTMAIL_FALLBACK_DOMAINS = [
-    'hotmail.com', 'outlook.com', 'live.com', 'msn.com', 'passport.com'
-];
-
 async function createHotmailAccount() {
     console.log('🔄 Starting Hotmail Generation Chain...');
 
@@ -335,16 +304,8 @@ async function createHotmailAccount() {
         console.error('EmailNator Hotmail Error:', e.message);
     }
 
-    const domain = 'outlook.com';
-    const username = `user${Date.now()}${Math.floor(Math.random() * 1000)}`;
-    return {
-        email: `${username}@${domain}`,
-        token: `${username}@${domain}`,
-        sessionId: `${username}@${domain}`,
-        provider: 'fallback_hotmail',
-        password: null,
-        isFallback: true
-    };
+    console.error('❌ All Hotmail providers failed');
+    return null;
 }
 
 // STUDENT EMAIL PROVIDERS
@@ -546,11 +507,6 @@ async function fetchPostInboxMessages(sessionId, email) {
     return [];
 }
 
-const STUDENT_DOMAINS = [
-    'edu.pl', 'edu.temp', 'student.edu', 'edu.mail',
-    'campus.edu', 'uni.edu', 'college.edu', 'school.edu'
-];
-
 async function createStudentEmailAccount() {
     console.log('🔄 Starting Student Email Generation Chain...');
 
@@ -564,18 +520,10 @@ async function createStudentEmailAccount() {
         console.log('✅ Provider successfully generated student email:', account.email);
         return account;
     } catch (e) {
-        console.log('🔄 Using fallback student provider...');
-        const domain = STUDENT_DOMAINS[Math.floor(Math.random() * STUDENT_DOMAINS.length)];
-        const username = `student${Date.now()}${Math.floor(Math.random() * 1000)}`;
-        return {
-            email: `${username}@${domain}`,
-            token: `${username}@${domain}`,
-            sessionId: `${username}@${domain}`,
-            provider: 'fallback_student',
-            password: null,
-            isFallback: true
-        };
+        console.error('❌ All student email providers failed:', e.message || e);
     }
+
+    return null;
 }
 
 async function getStudentEmailMessages(sessionId, email, provider) {

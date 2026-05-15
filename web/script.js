@@ -1,4 +1,4 @@
-// Helper: Check if userId is valid before making API calls
+﻿// Helper: Check if userId is valid before making API calls
 function isValidUserId(userId) {
     if (!userId) return false;
     const numericId = typeof userId === 'number' ? userId : parseInt(userId);
@@ -361,7 +361,7 @@ function checkFeatureOrComingSoon(flagKey, title) {
     if (enabled) return true;
     // Use showAlert instead of showPopup for v6.0 compatibility
     if (tg && typeof window.showToast === 'function') {
-        window.showToast('⏳ Coming soon: ' + (title || 'This feature') + ' is currently disabled by admin.');
+        window.showToast('â³ Coming soon: ' + (title || 'This feature') + ' is currently disabled by admin.');
     }
     return false;
 }
@@ -619,7 +619,7 @@ function showPage(targetId) {
     // --- TELEGRAM REQUIREMENT CHECK ---
     const isRestrictedGuest = featureFlags?.requireTelegram === true && isDemoMode;
     if (isRestrictedGuest && targetId !== 'home') {
-        window.showToast('🚀 Please access via Telegram to unlock all features!');
+        window.showToast('ðŸš€ Please access via Telegram to unlock all features!');
         if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('warning');
         return;
     }
@@ -1162,7 +1162,7 @@ function exchangeTokens() {
                 // Save to history locally
                 saveExchangeHistory(fromCur, toCur, amt, res.toAmount ?? preview.toAmount);
 
-                window.showToast('✅ EXCHANGE SUCCESSFUL\n\n' + formatCurrencyAmount(amt, fromCur) + ' ➔ ' + formatCurrencyAmount(res.toAmount ?? preview.toAmount, toCur));
+                window.showToast('âœ… EXCHANGE SUCCESSFUL\n\n' + formatCurrencyAmount(amt, fromCur) + ' âž” ' + formatCurrencyAmount(res.toAmount ?? preview.toAmount, toCur));
             })
             .catch(() => {
                 window.showToast('Network error. Please try again.');
@@ -1924,7 +1924,7 @@ async function completeTask(taskId, reward, button, url) {
                 userData.tokens += parseInt(reward) || 0;
             }
 
-            showToast(`✅ Task completed! +${reward} tokens`);
+            showToast(`âœ… Task completed! +${reward} tokens`);
             renderBalances();
 
             if (!userData.completedTasks) userData.completedTasks = [];
@@ -2066,7 +2066,7 @@ function verifyAndComplete(type, buttonElement, amount) {
                     buttonElement.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
 
                     const channel = type === 'tg' ? '@AutosVerifych' : '@AutosVerify';
-                    window.showToast(`❌ Verification failed.\nPlease join ${channel} then click START again.`);
+                    window.showToast(`âŒ Verification failed.\nPlease join ${channel} then click START again.`);
                 }
             })
             .catch(err => {
@@ -2075,7 +2075,7 @@ function verifyAndComplete(type, buttonElement, amount) {
                 buttonElement.innerHTML = 'START';
                 buttonElement.style.pointerEvents = 'auto';
                 buttonElement.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
-                window.showToast('⚠️ Network Error. Please ensure bot connection is active.');
+                window.showToast('âš ï¸ Network Error. Please ensure bot connection is active.');
             });
     } else {
         // Other tasks (YouTube, etc) - direct complete
@@ -2117,7 +2117,7 @@ function completeTaskReward(type, buttonElement, amount) {
                 // Update local in-progress state for checkAllTasksCompleted
                 IN_PROGRESS_TASKS[type] = 'completed';
 
-                window.showToast(`🎉 Task Completed! +${amount} Tokens`);
+                window.showToast(`ðŸŽ‰ Task Completed! +${amount} Tokens`);
 
                 if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
                 checkAllTasksCompleted();
@@ -2188,7 +2188,7 @@ function showAdAndEarn(context = 'watch_ad') {
 
     // Show explicit loading state
     if (window.showToast) {
-        window.showToast('🚀 Fetching Reward Ad...');
+        window.showToast('ðŸš€ Fetching Reward Ad...');
     }
 
     // Ensure ad overlay is ready and visible immediately
@@ -2216,7 +2216,7 @@ function showAdAndEarn(context = 'watch_ad') {
         if (overlay.style.display !== 'none' && !adRewardClaimed) {
             const content = document.getElementById('ad-content-box');
             if (content && content.innerHTML.includes('Loading Ad...')) {
-                window.showToast('⚠️ Taking too long. Switching to reward...');
+                window.showToast('âš ï¸ Taking too long. Switching to reward...');
                 // Attempt auto-reward instead of just closing
                 overlay.style.display = 'none';
                 claimAdReward();
@@ -2467,12 +2467,12 @@ async function claimAdReward() {
                 confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
             }
 
-            let msg = `🎉 Reward claimed!`;
-            if (currentAdContext === 'watch_ad' || currentAdContext === 'zero_balance_trigger') msg = `📺 +${data.reward || parseInt(window.appCostConfig?.zeroBalanceAdReward) || 5} Tokens rewarded for Watching Ad!`;
-            else if (currentAdContext === 'quiz_direct') msg = `🧠 Quiz unlocked! Good luck.`;
-            else if (currentAdContext === 'scratch_ad' || currentAdContext === 'scratch_retry') msg = `✨ Scratch card unlocked!`;
-            else if (currentAdContext === 'task_verification') msg = `✅ Ad verification complete. Please Verify the task.`;
-            else if (currentAdContext === 'gift_claim') msg = `🎁 Gift ad verified! Claiming your gift...`;
+            let msg = `ðŸŽ‰ Reward claimed!`;
+            if (currentAdContext === 'watch_ad' || currentAdContext === 'zero_balance_trigger') msg = `ðŸ“º +${data.reward || parseInt(window.appCostConfig?.zeroBalanceAdReward) || 5} Tokens rewarded for Watching Ad!`;
+            else if (currentAdContext === 'quiz_direct') msg = `ðŸ§  Quiz unlocked! Good luck.`;
+            else if (currentAdContext === 'scratch_ad' || currentAdContext === 'scratch_retry') msg = `âœ¨ Scratch card unlocked!`;
+            else if (currentAdContext === 'task_verification') msg = `âœ… Ad verification complete. Please Verify the task.`;
+            else if (currentAdContext === 'gift_claim') msg = `ðŸŽ Gift ad verified! Claiming your gift...`;
 
             window.showToast(msg);
 
@@ -2588,7 +2588,7 @@ function showGiftPopup(gift) {
             <div style="width:90px; height:90px; background:linear-gradient(135deg,#f59e0b,#d97706); border-radius:28px; display:flex; align-items:center; justify-content:center; margin:0 auto 24px; box-shadow:0 12px 32px rgba(245,158,11,0.4); animation: pulse 2s ease-in-out infinite;">
                 <i class="fas fa-gift" style="font-size:40px; color:#fff;"></i>
             </div>
-            <div style="font-size:24px; font-weight:900; margin-bottom:8px; color:#f59e0b;">🎁 You Got a Gift!</div>
+            <div style="font-size:24px; font-weight:900; margin-bottom:8px; color:#f59e0b;">ðŸŽ You Got a Gift!</div>
             <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:20px; padding:20px; margin-bottom:20px;">
                 <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:8px;">
                     <i class="fas ${currencyIcon}" style="font-size:28px; color:${currencyColor};"></i>
@@ -2636,7 +2636,7 @@ async function claimGiftReward(giftId) {
             updateBalanceUI();
             loadRecentActivity();
 
-            window.showToast(`🎁 Gift claimed! +${data.amount} ${data.currency === 'tokens' ? 'Tokens' : data.currency === 'Gems' ? 'Gems' : 'USD'}`);
+            window.showToast(`ðŸŽ Gift claimed! +${data.amount} ${data.currency === 'tokens' ? 'Tokens' : data.currency === 'Gems' ? 'Gems' : 'USD'}`);
 
             // Check for more pending gifts
             pendingGiftId = null;
@@ -2823,7 +2823,7 @@ function claimDaily() {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> AD LOADING...';
     btn.style.opacity = '0.7';
 
-    window.showToast("📺 Please watch a short ad to claim your Daily Reward");
+    window.showToast("ðŸ“º Please watch a short ad to claim your Daily Reward");
 
     // We replace the original function with an ad-triggered one
     showAdAndEarn('daily_claim_ad');
@@ -2854,7 +2854,7 @@ function claimDaily() {
                 userData.tokens = data.newBalance;
                 userData.dailyStreak = data.streak;
                 userData.lastDailyClaim = Date.now();
-                window.showToast(`✅ Daily reward claimed! +${data.reward} Tokens`);
+                window.showToast(`âœ… Daily reward claimed! +${data.reward} Tokens`);
                 renderDailyGrid();
                 renderBalances();
                 startDailyCountdown();
@@ -2864,7 +2864,7 @@ function claimDaily() {
             }
         } catch (err) {
             console.error('Error claiming daily:', err);
-            window.showToast('❌ Error claiming daily reward');
+            window.showToast('âŒ Error claiming daily reward');
             renderDailyGrid();
         }
     };
@@ -2900,7 +2900,7 @@ async function redeemCode() {
             loadRecentActivity(); // Refresh history
             input.value = '';
         } else {
-            window.showToast(`❌ ${data.message || 'Invalid code'}`);
+            window.showToast(`âŒ ${data.message || 'Invalid code'}`);
         }
     } catch (e) {
         window.showToast('Network error');
@@ -3013,7 +3013,7 @@ function renderPodiumLeaderboard(type, period, ids) {
         const progressEl = document.getElementById(ids.progressId);
 
         if (tlEl) tlEl.textContent = `${daysLeft}d ${hoursLeft}h left`;
-        if (cycleEl) cycleEl.textContent = `Current cycle • ${percentage}% complete`;
+        if (cycleEl) cycleEl.textContent = `Current cycle â€¢ ${percentage}% complete`;
         if (progressEl) progressEl.style.width = `${percentage}%`;
 
         const top3 = data.top.slice(0, 3);
@@ -3286,7 +3286,7 @@ function renderReferralHistory() {
             container.innerHTML = data.referrals.map(h => {
                 const date = new Date(h.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                 const time = new Date(h.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-                // ✅ FIX: Show profile photo if available, else colored initial avatar
+                // âœ… FIX: Show profile photo if available, else colored initial avatar
                 const avatarUrl = h.photo_url || `/api/proxy-avatar?userId=${h.userId}`;
                 const avatarHtml = `<img src="${avatarUrl}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid var(--border-color)" onerror="this.outerHTML='<div style=\'width:36px;height:36px;background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#000;font-weight:800;font-size:14px;\'>${h.name.charAt(0).toUpperCase()}</div>'">`;
                 return `
@@ -3295,7 +3295,7 @@ function renderReferralHistory() {
                         ${avatarHtml}
                         <div>
                             <div style="font-size:13px; font-weight:700; color:var(--text-main)">${h.name}</div>
-                            <div style="font-size:10px; color:var(--text-sub)">${date} • ${time}</div>
+                            <div style="font-size:10px; color:var(--text-sub)">${date} â€¢ ${time}</div>
                         </div>
                     </div>
                     <div style="text-align:right">
@@ -3419,7 +3419,7 @@ function shareViaWhatsApp() {
     if (!linkEl) return;
 
     const referralLink = linkEl.textContent || linkEl.innerText;
-    const shareText = `🎁 Join me and earn rewards!\n\nGet free tokens when you sign up using my referral link:\n${referralLink}\n\n🚀 Join now and start earning!`;
+    const shareText = `ðŸŽ Join me and earn rewards!\n\nGet free tokens when you sign up using my referral link:\n${referralLink}\n\nðŸš€ Join now and start earning!`;
 
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
     window.open(whatsappUrl, '_blank');
@@ -3431,9 +3431,9 @@ function shareViaTelegram() {
     if (!linkEl) return;
 
     const referralLink = linkEl.textContent || linkEl.innerText;
-    const shareText = `🎁 Join me and earn rewards! Get free tokens when you sign up using my referral link: ${referralLink}`;
+    const shareText = `ðŸŽ Join me and earn rewards! Get free tokens when you sign up using my referral link: ${referralLink}`;
 
-    const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent('🎁 Join me and earn free tokens!')}`;
+    const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent('ðŸŽ Join me and earn free tokens!')}`;
     window.open(telegramUrl, '_blank');
 }
 
@@ -3481,7 +3481,7 @@ function shareInviteViaTelegram() {
 
     const referralLink = linkEl.textContent || linkEl.innerText;
     const userName = userData.firstName || userData.username || 'I';
-    const shareText = `🎁 Join ${userName === 'I' ? 'me' : userName}'s bot and earn rewards!\n\nGet free tokens when you sign up using this link:\n${referralLink}\n\n🚀 Join AutosVerify Bot now!`;
+    const shareText = `ðŸŽ Join ${userName === 'I' ? 'me' : userName}'s bot and earn rewards!\n\nGet free tokens when you sign up using this link:\n${referralLink}\n\nðŸš€ Join AutosVerify Bot now!`;
 
     const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent(shareText)}`;
     window.open(telegramUrl, '_blank');
@@ -3495,7 +3495,7 @@ function shareInviteViaWhatsApp() {
 
     const referralLink = linkEl.textContent || linkEl.innerText;
     const userName = userData.firstName || userData.username || 'I';
-    const shareText = `🎁 Join ${userName === 'I' ? 'me' : userName}'s bot and earn rewards!\n\nGet free tokens when you sign up using this link:\n${referralLink}\n\n🚀 Join AutosVerify Bot now!`;
+    const shareText = `ðŸŽ Join ${userName === 'I' ? 'me' : userName}'s bot and earn rewards!\n\nGet free tokens when you sign up using this link:\n${referralLink}\n\nðŸš€ Join AutosVerify Bot now!`;
 
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
     window.open(whatsappUrl, '_blank');
@@ -3659,7 +3659,7 @@ async function registerAndFetchUser() {
                 if (keepApiKey && !userData.apiKey) {
                     userData.apiKey = keepApiKey;
                 }
-                console.log("💾 Loaded from cache:", userData.completedTasks?.length || 0, "tasks");
+                console.log("ðŸ’¾ Loaded from cache:", userData.completedTasks?.length || 0, "tasks");
                 if (userData.completedTasks) {
                     userData.completedTasks.forEach(tid => { IN_PROGRESS_TASKS[tid] = 'completed'; });
                 }
@@ -3758,7 +3758,7 @@ async function registerAndFetchUser() {
                 });
             }
 
-            // 💾 PERSIST TO LOCAL STORAGE FOR INSTANT UI NEXT TIME
+            // ðŸ’¾ PERSIST TO LOCAL STORAGE FOR INSTANT UI NEXT TIME
             localStorage.setItem(`userData_${userData.id}`, JSON.stringify(userData));
 
             updateProfileStatusIcons();
@@ -3936,11 +3936,11 @@ function renderFullHistory() {
                 <div class="activity-info">
                     <div class="activity-name">${config.name}</div>
                     <div class="activity-meta">
-                        ${dateStr} • ${timeStr}
+                        ${dateStr} â€¢ ${timeStr}
                         ${item.id ? `<span style="color:#f59e0b; font-weight:700; margin-left:4px;">#${item.id}</span>` : ''}
                     </div>
                     ${detail ? `<div style="font-size:10px; color:rgba(255,255,255,0.5); margin-top:2px;">${detail}</div>` : ''}
-                    ${item.type === 'exchange' ? `<div style="font-size:10px; color:rgba(255,255,255,0.5); margin-top:2px;">${item.fromAmount} ${item.from.toUpperCase()} → ${item.toAmount} ${item.to.toUpperCase()}</div>` : ''}
+                    ${item.type === 'exchange' ? `<div style="font-size:10px; color:rgba(255,255,255,0.5); margin-top:2px;">${item.fromAmount} ${item.from.toUpperCase()} â†’ ${item.toAmount} ${item.to.toUpperCase()}</div>` : ''}
                 </div>
             </div>
             <div class="activity-reward">
@@ -3959,14 +3959,14 @@ function loadBroadcast() {
 
     // Default messages - with @ symbol and yellow username
     const defaultMessages = [
-        '💰 <span class="bcp-user">@Riad</span> Netflix -50 TC',
-        '⭐ <span class="bcp-user">@Ali</span> +25 TC',
-        '🛒 <span class="bcp-user">@Mamun</span> Spotify -40 TC',
-        '⭐ <span class="bcp-user">@Karim</span> +10 TC',
-        '📧 <span class="bcp-user">@Hasan</span> Temp Mail -10 TC',
-        '💎 <span class="bcp-user">@Rahim</span> Gems -100 TC',
-        '🎯 <span class="bcp-user">@Jodu</span> Verify -20 TC',
-        '🚀 <span class="bcp-user">@Kodu</span> ChatGPT -15 TC'
+        'ðŸ’° <span class="bcp-user">@Riad</span> Netflix -50 TC',
+        'â­ <span class="bcp-user">@Ali</span> +25 TC',
+        'ðŸ›’ <span class="bcp-user">@Mamun</span> Spotify -40 TC',
+        'â­ <span class="bcp-user">@Karim</span> +10 TC',
+        'ðŸ“§ <span class="bcp-user">@Hasan</span> Temp Mail -10 TC',
+        'ðŸ’Ž <span class="bcp-user">@Rahim</span> Gems -100 TC',
+        'ðŸŽ¯ <span class="bcp-user">@Jodu</span> Verify -20 TC',
+        'ðŸš€ <span class="bcp-user">@Kodu</span> ChatGPT -15 TC'
     ];
 
     // Try to get real user activity from API
@@ -3988,15 +3988,15 @@ function loadBroadcast() {
 
                     if (action === 'purchase' || action === 'spend' || action === 'transfer_out') {
                         const shortItem = item.replace('purchased ', '').replace('bought ', '').replace('generated ', '');
-                        return `💰 ${userSpan} ${shortItem} <span style="color:#ef4444; font-weight:700;">-${amount} ${currency}</span>`;
+                        return `ðŸ’° ${userSpan} ${shortItem} <span style="color:#ef4444; font-weight:700;">-${amount} ${currency}</span>`;
                     } else if (action === 'earn' || action === 'reward' || action === 'transfer_in') {
-                        return `⭐ ${userSpan} ${item || 'Earned'} <span style="color:#22c55e; font-weight:700;">+${amount} ${currency}</span>`;
+                        return `â­ ${userSpan} ${item || 'Earned'} <span style="color:#22c55e; font-weight:700;">+${amount} ${currency}</span>`;
                     } else if (action === 'mail' || item.includes('mail')) {
-                        return `📧 ${userSpan} Temp Mail <span style="color:#ef4444; font-weight:700;">-${amount} ${currency}</span>`;
+                        return `ðŸ“§ ${userSpan} Temp Mail <span style="color:#ef4444; font-weight:700;">-${amount} ${currency}</span>`;
                     } else if (action === 'verify') {
-                        return `🎯 ${userSpan} Verify <span style="color:#ef4444; font-weight:700;">-${amount} ${currency}</span>`;
+                        return `ðŸŽ¯ ${userSpan} Verify <span style="color:#ef4444; font-weight:700;">-${amount} ${currency}</span>`;
                     } else {
-                        return `🔥 ${userSpan} ${item} <span style="color:#ef4444; font-weight:700;">-${amount} ${currency}</span>`;
+                        return `ðŸ”¥ ${userSpan} ${item} <span style="color:#ef4444; font-weight:700;">-${amount} ${currency}</span>`;
                     }
                 });
 
@@ -4133,7 +4133,7 @@ function renderRecentActivity(history) {
                 </div>
                 <div class="activity-info">
                     <div class="activity-name">${config.name}</div>
-                    <div class="activity-meta">${date} • ${time}</div>
+                    <div class="activity-meta">${date} â€¢ ${time}</div>
                 </div>
             </div>
             <div class="activity-reward">
@@ -4197,9 +4197,9 @@ async function handleSupportClick() {
 
             // Show toast notification
             if (data.supportLoan > 0) {
-                window.showToast(`📞 Support: -${SUPPORT_LOAN_AMOUNT} TC (Loan: ${data.supportLoan} TC)`);
+                window.showToast(`ðŸ“ž Support: -${SUPPORT_LOAN_AMOUNT} TC (Loan: ${data.supportLoan} TC)`);
             } else {
-                window.showToast(`📞 Support: -${SUPPORT_LOAN_AMOUNT} TC deducted`);
+                window.showToast(`ðŸ“ž Support: -${SUPPORT_LOAN_AMOUNT} TC deducted`);
             }
 
             // Update balance display
@@ -4209,11 +4209,11 @@ async function handleSupportClick() {
             // Open support link
             window.open(supportLink, '_blank');
         } else {
-            window.showToast('❌ Failed to process support contact');
+            window.showToast('âŒ Failed to process support contact');
         }
     } catch (e) {
         console.error('Support error:', e);
-        window.showToast('❌ Network error. Please try again.');
+        window.showToast('âŒ Network error. Please try again.');
     }
 }
 
@@ -4591,20 +4591,30 @@ window.appCostConfig = window.appCostConfig || {
 
 async function loadAppCostConfig() {
     try {
-        const res = await fetch('/api/admin/costs');
+        const res = await fetch('/api/public/costs?t=' + Date.now(), { cache: 'no-store' });
         const data = await res.json();
         if (!data?.success || !data.costs) return;
         const c = data.costs;
+
+        // Sync exchange rates so Tokenâ†”Gems conversion UI updates live
+        if (typeof exchangeRates !== 'undefined') {
+            if (c.usdToToken) exchangeRates.usd_to_tokens = parseInt(c.usdToToken) || 100;
+            if (c.gemToToken) exchangeRates.Gems_to_tokens = parseInt(c.gemToToken) || 100;
+        }
+        window.serviceCostConfig = window.serviceCostConfig || {};
+        if (c.gemToToken) window.serviceCostConfig.gemToToken = parseInt(c.gemToToken);
+        if (c.tokenToGem) window.serviceCostConfig.tokenToGem = parseFloat(c.tokenToGem);
         window.appCostConfig.adReward = parseInt(c.adReward) || 5;
         window.appCostConfig.zeroBalanceAdReward = parseInt(c.zeroBalanceAdReward) || 5;
         window.appCostConfig.mailCost = parseInt(c.mailCost) || 10;
         // Premium mail cost uses token-based cost if present; otherwise fallback to 50
         window.appCostConfig.premiumMailCost = parseInt(c.premiumMailCost || c.gmailCost || 0) || 50;
-        // Hot mail cost
-        window.appCostConfig.hotMailCost = parseInt(c.hotMailCost) || 15;
-        // Student mail cost
+        window.appCostConfig.gmailCost = parseInt(c.gmailCost || c.premiumMailCost || 0) || 50;
+        window.appCostConfig.hotMailCost = parseInt(c.hotMailCost || c.hotmailCost) || 15;
         window.appCostConfig.studentMailCost = parseInt(c.studentMailCost) || 20;
+        window.appCostConfig.studentEmailCost = window.appCostConfig.studentMailCost;
 
+        updateCostBadgesWithCurrency(c);
         const tempBadge = document.getElementById('tempMailCostBadge');
         if (tempBadge) tempBadge.textContent = `${window.appCostConfig.mailCost} TC / Email`;
         const premBadge = document.getElementById('premiumMailCostBadge');
@@ -4616,6 +4626,28 @@ async function loadAppCostConfig() {
     } catch (e) {
         // silent
     }
+}
+
+function getCurrencyLabel(cur) {
+    if (cur === 'Gems' || cur === 'gem') return 'Gems';
+    if (cur === 'usd' || cur === 'USD') return 'USD';
+    return 'TC';
+}
+
+function updateCostBadgesWithCurrency(c) {
+    if (!c) return;
+    const fmt = (amount, cur) => `${amount} ${getCurrencyLabel(cur)}`;
+    const map = [
+        ['tempMailCostBadge', c.mailCost || c.tempMailCost || 10, c.tempmailCurrency || 'token'],
+        ['premiumMailCostBadge', c.premiumMailCost || c.gmailCost || 50, c.gmailCurrency || 'token'],
+        ['hotMailCostBadge', c.hotMailCost || c.hotmailCost || 15, c.hotmailCurrency || 'token'],
+        ['studentMailCostBadge', c.studentMailCost || 20, c.studentCurrency || 'token']
+    ];
+    map.forEach(([id, amount, cur]) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = `${fmt(parseInt(amount) || 0, cur)} / Email`;
+    });
+    if (typeof updateExchangeBalances === 'function') updateExchangeBalances();
 }
 
 // Global state syncer for real-time updates from admin
@@ -4631,7 +4663,8 @@ async function smartSync(force = false) {
     // Always sync admin config (features, services, costs)
     const adminSyncPromises = [
         typeof loadFeatureFlags === 'function' ? loadFeatureFlags() : Promise.resolve(),
-        typeof syncAdminData === 'function' ? syncAdminData() : Promise.resolve()
+        typeof syncAdminData === 'function' ? syncAdminData() : Promise.resolve(),
+        typeof loadAppCostConfig === 'function' ? loadAppCostConfig() : Promise.resolve()
     ];
 
     // Sync user balance every 15 seconds for real-time balance updates
@@ -4662,7 +4695,7 @@ async function smartSync(force = false) {
                             try { localStorage.setItem(`userData_${userData.id}`, JSON.stringify(userData)); } catch (e) { }
                         }
                     })
-                    .catch(() => { /* silent – no network = keep cached */ })
+                    .catch(() => { /* silent â€“ no network = keep cached */ })
             );
         }
     }
@@ -4670,7 +4703,7 @@ async function smartSync(force = false) {
     return Promise.allSettled(adminSyncPromises).catch(() => { });
 }
 
-// Start auto-syncer (every 15 seconds – optimized to reduce network congestion)
+// Start auto-syncer (every 15 seconds â€“ optimized to reduce network congestion)
 setInterval(() => smartSync(), 15000);
 
 
@@ -4732,6 +4765,7 @@ function syncAdminData() {
                 localStorage.setItem('adminCosts', JSON.stringify(data.costs));
                 // Update global config if needed
                 window.ADMIN_CONFIG = data.costs;
+                if (typeof loadAppCostConfig === 'function') loadAppCostConfig();
 
                 const c = data.costs || {};
                 const getCurrencyLabel = (val) => {
@@ -5009,7 +5043,7 @@ function renderCards() {
                     <div class="sc-info" style="flex:1;">
                         <h3 style="font-size:15px; font-weight:700; color:#fff; margin:0;">${card.cardName || 'Virtual Card'}</h3>
                         <p style="font-size:12px; color:rgba(255,255,255,0.7); margin:4px 0 0 0; font-family:monospace; letter-spacing:1px;">${cardNumber}</p>
-                        <p style="font-size:10px; color:rgba(255,255,255,0.5); margin:2px 0 0 0;">Type: ${card.cardType || 'Visa'} • IP: ${card.cardIP || 'N/A'}</p>
+                        <p style="font-size:10px; color:rgba(255,255,255,0.5); margin:2px 0 0 0;">Type: ${card.cardType || 'Visa'} â€¢ IP: ${card.cardIP || 'N/A'}</p>
                     </div>
                 </div>
                 <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
@@ -5035,7 +5069,7 @@ async function buyUserCard(cardId, price) {
     const balance = userData.tokens || 0;
 
     if (balance < price) {
-        window.showToast('❌ Insufficient balance!');
+        window.showToast('âŒ Insufficient balance!');
         return;
     }
 
@@ -5050,7 +5084,7 @@ async function buyUserCard(cardId, price) {
         if (data.success) {
             userData.tokens = data.newBalance;
             renderBalances();
-            window.showToast('✅ Card purchased successfully!');
+            window.showToast('âœ… Card purchased successfully!');
             loadRecentActivity();
 
             // Show details if it's a card
@@ -5078,7 +5112,7 @@ async function buyUserCard(cardId, price) {
                 window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
             }
         } else {
-            window.showToast('❌ ' + data.message);
+            window.showToast('âŒ ' + data.message);
         }
     } catch (e) {
         window.showToast('Error purchasing card');
@@ -5139,7 +5173,7 @@ function copyToClipboard(elementId, button) {
 
         // Show toast
         if (window.showToast) {
-            window.showToast('✅ Copied to clipboard!');
+            window.showToast('âœ… Copied to clipboard!');
         }
 
         // Haptic feedback
@@ -5148,7 +5182,7 @@ function copyToClipboard(elementId, button) {
         }
     }).catch(() => {
         if (window.showToast) {
-            window.showToast('❌ Failed to copy');
+            window.showToast('âŒ Failed to copy');
         }
     });
 }
@@ -5385,7 +5419,7 @@ function buyPremiumAccount(accountId, type, price) {
                         }
 
                         nav('chatgpt');
-                        window.showToast('✅ ChatGPT Card purchased! Details shown below.');
+                        window.showToast('âœ… ChatGPT Card purchased! Details shown below.');
                     } else if (isGemini) {
                         // Fill Gemini page
                         if (document.getElementById('geminiCardHolder')) document.getElementById('geminiCardHolder').textContent = 'CARD HOLDER';
@@ -5404,7 +5438,7 @@ function buyPremiumAccount(accountId, type, price) {
                         }
 
                         nav('gemini');
-                        window.showToast('✅ Gemini Card purchased! Details shown below.');
+                        window.showToast('âœ… Gemini Card purchased! Details shown below.');
                     } else {
                         // Fallback to generic card detail
                         showCardDetail({
@@ -5415,11 +5449,11 @@ function buyPremiumAccount(accountId, type, price) {
                             expiry: card.instructions || (card.month ? `${card.month}/${card.year}` : 'MM/YYYY'),
                             country: card.country || 'Global'
                         });
-                        window.showToast('✅ Card purchased! Details shown below.');
+                        window.showToast('âœ… Card purchased! Details shown below.');
                     }
                 } else {
                     // Show regular account details
-                    window.showToast(`✅ Account purchased!\n\nEmail: ${res.account.email}\nPassword: ${res.account.password}${res.account.instructions ? '\nNotes: ' + res.account.instructions : ''}\n\nPlease save these details!`);
+                    window.showToast(`âœ… Account purchased!\n\nEmail: ${res.account.email}\nPassword: ${res.account.password}${res.account.instructions ? '\nNotes: ' + res.account.instructions : ''}\n\nPlease save these details!`);
                 }
 
                 renderAccounts(); // Refresh
@@ -5490,7 +5524,7 @@ function confirmPurchase(serviceId, price) {
             if (data.success) {
                 userData.tokens = data.newBalance;
                 renderBalances();
-                window.showToast('✅ Payment Successful!');
+                window.showToast('âœ… Payment Successful!');
 
                 const isChatGPT = serviceId.toLowerCase().includes('chatgpt');
                 const isGemini = serviceId.toLowerCase().includes('gemini');
@@ -5609,7 +5643,7 @@ function confirmPurchase(serviceId, price) {
                     }
                 }
             } else {
-                window.showToast('❌ ' + data.message);
+                window.showToast('âŒ ' + data.message);
             }
         })
         .catch(() => window.showToast('Network error'));
@@ -5774,11 +5808,11 @@ function confirmAdminShopPurchase(shopId, price) {
         if (data.success) {
             userData.usd = data.newBalance;
             renderBalances();
-            window.showToast('✅ Purchase Successful!');
+            window.showToast('âœ… Purchase Successful!');
             showPurchaseSuccessModal(data);
             nav('history');
         } else {
-            window.showToast('❌ ' + (data.message || 'Purchase failed.'));
+            window.showToast('âŒ ' + (data.message || 'Purchase failed.'));
         }
     })
     .catch(e => {
@@ -5874,7 +5908,7 @@ window.showPurchaseSuccessModal = showPurchaseSuccessModal;
 function copyToClipboard(text, label) {
     if (!text) return;
     navigator.clipboard.writeText(text).then(() => {
-        window.showToast(`✅ Copied ${label || 'text'} to clipboard`);
+        window.showToast(`âœ… Copied ${label || 'text'} to clipboard`);
     }).catch(err => {
         console.error('Failed to copy:', err);
     });
@@ -6282,7 +6316,7 @@ function loadNumPlatforms() {
                     // Add "POPULAR" badge for platforms marked as popular
                     let badge = '';
                     if (p.isPopular) {
-                        badge = `<div style="position:absolute; top:-6px; right:-6px; background:#9333ea; color:#fff; font-size:8px; padding:2px 6px; border-radius:10px; font-weight:900;">🔥 POPULAR</div>`;
+                        badge = `<div style="position:absolute; top:-6px; right:-6px; background:#9333ea; color:#fff; font-size:8px; padding:2px 6px; border-radius:10px; font-weight:900;">ðŸ”¥ POPULAR</div>`;
                     }
 
                     btn.innerHTML = `
@@ -6432,7 +6466,7 @@ function renderActiveNumbers() {
         const isSuccess = session.status === 'success';
         const isFailed = session.status === 'failed';
         const statusColor = isSuccess ? '#22c55e' : (isFailed ? '#ef4444' : 'var(--text-sub)');
-        let statusText = isSuccess ? 'SUCCESS ✓' : (isFailed ? 'FAIL ✗ - 15 TC Refunded' : 'Waiting for OTP...');
+        let statusText = isSuccess ? 'SUCCESS âœ“' : (isFailed ? 'FAIL âœ— - 15 TC Refunded' : 'Waiting for OTP...');
 
         return `
             <div data-session-id="${session.id}" class="active-number-card" style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:12px; display:flex; flex-direction:column; gap:12px; margin-bottom:12px;">
@@ -6631,10 +6665,10 @@ function addNumHistory(number, status) {
             '<i class="fas fa-times-circle" style="color:#ef4444;"></i>';
 
     const item = `<div id="num-hist-${number.replace(/[^0-9]/g, '')}" style="background:var(--bg-card);border-radius:12px;padding:12px 14px;border:1px solid rgba(147,51,234,0.2);display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-        <div style="width:36px;height:36px;background:rgba(147,51,234,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#9333ea;font-size:16px;">📱</div>
+        <div style="width:36px;height:36px;background:rgba(147,51,234,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#9333ea;font-size:16px;">ðŸ“±</div>
         <div style="flex:1;">
             <div style="font-size:13px;font-weight:700;color:var(--text-main);">${number}</div>
-            <div style="font-size:10px;color:var(--text-sub);">${selectedNumPlatform} • ${time}</div>
+            <div style="font-size:10px;color:var(--text-sub);">${selectedNumPlatform} â€¢ ${time}</div>
         </div>
         <div style="display:flex;align-items:center;gap:6px;">
             <span style="font-size:11px;font-weight:700;color:#ef4444;">-15 TC</span>
@@ -6679,7 +6713,7 @@ function pollForOTP() {
                     <button onclick="copyNumOtp('${data.otp}')" style="background:#22c55e; color:#fff; border:none; border-radius:10px; padding:8px 20px; font-size:12px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:8px;">
                         <i class="fas fa-copy"></i> COPY OTP
                     </button>
-                    <div style="font-size:10px; color:#22c55e; font-weight:700; margin-top:10px; text-transform:uppercase;">OTP RECEIVED ✅</div>
+                    <div style="font-size:10px; color:#22c55e; font-weight:700; margin-top:10px; text-transform:uppercase;">OTP RECEIVED âœ…</div>
                 </div>`;
             } else if (data.text) {
                 // Try manual extract if otp field missing
@@ -6693,7 +6727,7 @@ function pollForOTP() {
                         <button onclick="copyNumOtp('${extracted}')" style="background:#22c55e; color:#fff; border:none; border-radius:10px; padding:8px 20px; font-size:12px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:8px;">
                             <i class="fas fa-copy"></i> COPY OTP
                         </button>
-                        <div style="font-size:11px; color:#22c55e; font-weight:700; margin-top:10px; text-transform:uppercase;">EXTRACTED CODE ✅</div>
+                        <div style="font-size:11px; color:#22c55e; font-weight:700; margin-top:10px; text-transform:uppercase;">EXTRACTED CODE âœ…</div>
                     </div>`;
                 }
             }
@@ -6706,8 +6740,8 @@ function extractOtp(text) {
 
     // 1. Try common labels first
     const patterns = [
-        /(?:code|otp|verification|pin|🔑|验证码)[:\s-]*([0-9]{4,8})/i,
-        /(?:is|密码为)[:\s-]*([0-9]{4,8})/i,
+        /(?:code|otp|verification|pin|ðŸ”‘|éªŒè¯ç )[:\s-]*([0-9]{4,8})/i,
+        /(?:is|å¯†ç ä¸º)[:\s-]*([0-9]{4,8})/i,
         /([0-9]{4,8})(?:\s)*(?:is your|is the)/i
     ];
 
@@ -6850,7 +6884,7 @@ function copyNumberWithTick() {
                 copyBtn.style.color = '';
             }, 2000);
         }
-        window.showToast('✅ Number copied: ' + text);
+        window.showToast('âœ… Number copied: ' + text);
     }).catch((err) => {
         console.log('copyNumberWithTick: Clipboard error', err);
         // Fallback
@@ -6873,7 +6907,7 @@ function copyNumberWithTick() {
                 copyBtn.style.color = '';
             }, 2000);
         }
-        window.showToast('✅ Number copied: ' + text);
+        window.showToast('âœ… Number copied: ' + text);
     });
 }
 
@@ -6883,7 +6917,7 @@ function copyTextById(elId) {
     const el = document.getElementById(elId);
     if (!el) return;
     navigator.clipboard.writeText(el.textContent).then(() => {
-        window.showToast('✅ Copied to clipboard!');
+        window.showToast('âœ… Copied to clipboard!');
     }).catch(() => {
         const ta = document.createElement('textarea');
         ta.value = el.textContent;
@@ -6891,7 +6925,7 @@ function copyTextById(elId) {
         ta.select();
         document.execCommand('copy');
         document.body.removeChild(ta);
-        window.showToast('✅ Copied!');
+        window.showToast('âœ… Copied!');
     });
 }
 
@@ -6975,23 +7009,26 @@ function generateTempMail(type) {
     if (checkZeroBalanceAdTrigger()) return;
     if (!type) type = 'temp';
 
-    // ✅ FIX: Premium/hotmail types must use premium email API, NOT temp mail API
-    // Clear any existing session so NEW EMAIL always generates fresh
+    // Premium/hotmail/student use premium API â€” always force a fresh real email
     if (type === 'premium') {
-        // Clear session to force new email generation
+        clearPremiumMailCache('gmail');
         mailSessions.premium = null;
         window._isAutoGeneratingPremium = false;
-        generatePremiumMail('gmail');
+        generatePremiumMail('gmail', 0, true);
         return;
     }
     if (type === 'hot' || type === 'hotmail') {
+        clearPremiumMailCache('hotmail');
         mailSessions.hot = null;
-        generatePremiumMail('hotmail');
+        mailSessions.premium = null;
+        generatePremiumMail('hotmail', 0, true);
         return;
     }
     if (type === 'student') {
+        clearPremiumMailCache('student');
         mailSessions.student = null;
-        generatePremiumMail('student');
+        mailSessions.premium = null;
+        generatePremiumMail('student', 0, true);
         return;
     }
 
@@ -7042,7 +7079,7 @@ function generateTempMail(type) {
                     addrEl.style.fontStyle = "normal";
                     addrEl.style.opacity = "1";
                 }
-                window.showToast("❌ " + (data.message || "Email generation failed. Please try again."));
+                window.showToast("âŒ " + (data.message || "Email generation failed. Please try again."));
             }
         })
         .catch(() => {
@@ -7051,7 +7088,7 @@ function generateTempMail(type) {
                 addrEl.style.fontStyle = "normal";
                 addrEl.style.opacity = "1";
             }
-            window.showToast("❌ Network error. Please check your connection and try again.");
+            window.showToast("âŒ Network error. Please check your connection and try again.");
         });
 }
 
@@ -7072,7 +7109,7 @@ function renewTempMail(type) {
     }
 
     if (!previousMailSessions[type]) {
-        window.showToast(`❌ No previous ${type} session found to restore.`);
+        window.showToast(`âŒ No previous ${type} session found to restore.`);
         return;
     }
 
@@ -7086,7 +7123,7 @@ function renewTempMail(type) {
     if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
 }
 
-// ─── Custom Renew Modal Logic ──────────────────────────────────────────────
+// â”€â”€â”€ Custom Renew Modal Logic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let currentRenewType = '';
 
 function openRenewMailModal(type) {
@@ -7146,7 +7183,7 @@ async function confirmRenewCustomEmail() {
         const data = await res.json();
 
         if (data.success) {
-            window.showToast('✅ Email renewed successfully!', 'success');
+            window.showToast('âœ… Email renewed successfully!', 'success');
 
             // Set the new session properly
             const type = currentRenewType === 'premium' ? 'premium' : (currentRenewType === 'hot' ? 'hot' : 'student');
@@ -7160,7 +7197,7 @@ async function confirmRenewCustomEmail() {
                 sessionId: data.sessionId || (mailSessions[type]?.sessionId)
             };
 
-            // ✅ FIX: Only replace the email address in the UI, no page reload
+            // âœ… FIX: Only replace the email address in the UI, no page reload
             const addrElId = type === 'premium' ? 'premiumMailAddr' : (type === 'hot' ? 'hotMailAddr' : 'studentMailAddr');
             const addrEl = document.getElementById(addrElId);
             if (addrEl) {
@@ -7184,7 +7221,7 @@ async function confirmRenewCustomEmail() {
 
             if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
         } else {
-            window.showToast('❌ ' + (data.message || 'Renewal failed'), 'error');
+            window.showToast('âŒ ' + (data.message || 'Renewal failed'), 'error');
             if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
         }
     } catch (e) {
@@ -7220,7 +7257,7 @@ function refreshInbox(type) {
     // Deduct 1 token per inbox refresh (temp only)
     const refreshCost = 0; // Auto-poll should not charge tokens
     if (refreshCost > 0 && Math.max(0, userData.tokens || 0) < refreshCost) {
-        window.showToast(`❌ Insufficient tokens!\n\nYou need ${refreshCost} TC to refresh inbox.\nYour balance: ${Math.max(0, userData.tokens || 0)} TC`);
+        window.showToast(`âŒ Insufficient tokens!\n\nYou need ${refreshCost} TC to refresh inbox.\nYour balance: ${Math.max(0, userData.tokens || 0)} TC`);
         return;
     }
 
@@ -7237,7 +7274,7 @@ function refreshInbox(type) {
 
     // Choose endpoint based on type
     let endpoint = `/api/mail/inbox?sessionId=${sessionId}&userId=${userData.id}&cost=${refreshCost}`;
-    // ✅ FIX: Premium, hotmail, hot and student all use the premium emails inbox (IMAP-based)
+    // âœ… FIX: Premium, hotmail, hot and student all use the premium emails inbox (IMAP-based)
     if (type === 'premium' || type === 'hotmail' || type === 'hot' || type === 'student') {
         endpoint = `/api/premium-emails/inbox?sessionId=${sessionId}&userId=${userData.id}`;
     }
@@ -7280,6 +7317,27 @@ function refreshInbox(type) {
         });
 }
 
+function normalizeMailMessage(msg) {
+    if (!msg) return msg;
+    const m = { ...msg };
+    const isoRe = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+    let subject = (m.subject || '').trim();
+    let date = m.date || m.time || '';
+
+    if (isoRe.test(subject) && !isoRe.test(String(date))) {
+        if (!date) date = subject;
+        subject = m.from ? `Message from ${String(m.from).split('<')[0].trim()}` : '(No Subject)';
+    }
+    if (!subject || isoRe.test(subject)) {
+        const preview = (m.snippet || m.preview || m.body || '').replace(/<[^>]+>/g, ' ').trim();
+        subject = preview ? preview.substring(0, 80) : '(No Subject)';
+    }
+    m.subject = subject;
+    m.date = date;
+    m.time = m.time || getTimeAgo(date);
+    return m;
+}
+
 function getTimeAgo(isoString) {
     if (!isoString) return '';
     const date = new Date(isoString);
@@ -7299,6 +7357,8 @@ function renderInbox(emails, type, serverMsg = null) {
     const listEl = document.getElementById(type + "InboxList");
     const otpListEl = document.getElementById(type + "OtpList");
     if (!listEl) return;
+
+    emails = (emails || []).map(normalizeMailMessage);
 
     // Show at most 10 messages
     if (Array.isArray(emails) && emails.length > 10) {
@@ -7358,9 +7418,19 @@ function renderInbox(emails, type, serverMsg = null) {
         }
     }
 
+    const useTableLayout = (type === 'premium' || type === 'hot' || type === 'student');
+    const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/'/g, '&#39;');
+
     // Render Inbox List
-    listEl.innerHTML = emails.map(email => `
-        <div class="inbox-item" onclick="openEmailMessage('${email.id}', '${type}')" style="cursor:pointer; transition:all 0.2s; border-left: 3px solid transparent;">
+    listEl.innerHTML = emails.map(email => {
+        if (useTableLayout) {
+            return `<div class="inbox-item" onclick="openEmailMessage('${esc(email.id)}', '${type}')" style="cursor:pointer;display:grid;grid-template-columns:1fr 1fr 60px;gap:8px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border-color);">
+                <div style="font-weight:700;color:#fff;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(email.from || email.sender || 'Unknown')}</div>
+                <div style="font-size:11px;color:var(--text-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(email.subject)}</div>
+                <div style="text-align:center;"><i class="fas fa-chevron-right" style="font-size:10px;color:var(--text-sub);"></i></div>
+            </div>`;
+        }
+        return `<div class="inbox-item" onclick="openEmailMessage('${esc(email.id)}', '${type}')" style="cursor:pointer; transition:all 0.2s; border-left: 3px solid transparent;">
             <div class="ii-icon" style="background:rgba(245,158,11,0.1);"><i class="fas fa-envelope" style="color:#f59e0b;"></i></div>
             <div class="ii-body" style="flex:1; min-width:0;">
                 <div class="ii-top" style="margin-bottom:2px; display:flex; justify-content:space-between; align-items:center;">
@@ -7376,8 +7446,8 @@ function renderInbox(emails, type, serverMsg = null) {
                 </button>
                 <i class="fas fa-chevron-right" style="font-size:10px; color:var(--text-sub); opacity:0.5;"></i>
             </div>
-        </div>
-    `).join("");
+        </div>`;
+    }).join("");
 
     window[`_emails_${type}`] = emails;
 }
@@ -7434,7 +7504,17 @@ function openEmailMessage(msgId, type) {
     document.getElementById("mdFrom").textContent = msg.from || msg.sender || "Unknown";
     document.getElementById("mdTo").textContent = mailSessions[type] ? mailSessions[type].email : "...";
     document.getElementById("mdDate").textContent = msg.time || "Recent";
-    document.getElementById("mdBody").innerHTML = msg.body || msg.preview;
+    const bodyEl = document.getElementById("mdBody");
+    const rawBody = msg.body || msg.preview || '';
+    if (bodyEl) {
+        bodyEl.innerHTML = rawBody;
+        bodyEl.style.color = '#e2e8f0';
+        bodyEl.querySelectorAll('*').forEach(el => {
+            if (el.style && (el.style.color === 'white' || el.style.color === '#ffffff' || el.style.color === 'rgb(255, 255, 255)')) {
+                el.style.color = '#10b981';
+            }
+        });
+    }
 
     const content = msg.subject + " " + (msg.body || msg.preview);
 
@@ -7578,7 +7658,7 @@ function copyReceiptField(fieldId) {
         document.body.removeChild(ta);
     }
     if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
-    window.showToast('✅ Copied!');
+    window.showToast('âœ… Copied!');
 }
 
 // ---- EMAIL SERVICE TOGGLES & NAVIGATION ----
@@ -7691,7 +7771,7 @@ function submitCheckoutPayment() {
         return;
     }
 
-    window.showToast('✅ Payment submitted!\n\nWe will verify your transaction and deliver your order shortly.');
+    window.showToast('âœ… Payment submitted!\n\nWe will verify your transaction and deliver your order shortly.');
     nav('home');
 }
 
@@ -7800,25 +7880,15 @@ function autoGenerateTempMail() {
         });
 }
 
-function generateDemoTempMail(type, cost) {
-    console.log('DemoMail: Generating demo email for', type);
-    const domains = type === "temp" ? ["tempmail.dev", "mailnull.com", "inboxkitten.com"] : ["premium-inbox.com", "private-mail.net"];
-    const email = "user" + Math.floor(Math.random() * 99999) + "@" + domains[Math.floor(Math.random() * domains.length)];
-    console.log('DemoMail: Generated email', email);
-    mailSessions[type] = { email, id: "demo_" + Date.now(), type, sessionId: "demo_" + Date.now() };
-    userData.tokens = Math.max(0, (userData.tokens || 0) - (parseInt(cost) || 0));
-    renderBalances();
-    // Clear loading state and show email
-    const addrEl = document.getElementById(type + "MailAddr");
-    console.log('DemoMail: addrEl found?', !!addrEl);
-    if (addrEl) {
-        addrEl.innerHTML = email; // Use innerHTML to ensure display
-        addrEl.style.fontStyle = "normal";
-        addrEl.style.opacity = "1";
-        console.log('DemoMail: Email set to element');
-    }
-    updateMailBalance(type);
-    refreshInbox(type);
+function clearPremiumMailCache(provider) {
+    const tab = provider || currentPremiumTab || 'gmail';
+    const uid = (userData && userData.id) ? userData.id : 0;
+    try {
+        localStorage.removeItem('premiumEmail_' + tab + '_' + uid);
+        localStorage.removeItem('premiumEmail_gmail_' + uid);
+        localStorage.removeItem('premiumEmail_hotmail_' + uid);
+        localStorage.removeItem('premiumEmail_student_' + uid);
+    } catch (e) { /* ignore */ }
 }
 
 var assignedPremiumEmail = null;
@@ -7977,10 +8047,11 @@ async function loadPremiumEmailsFromAdmin() {
     }, 500);
 }
 
-async function generatePremiumMail(provider) {
+async function generatePremiumMail(provider, _cost, forceNew) {
+    const prov = provider || 'gmail';
     let addrElId = 'premiumMailAddr';
-    if (provider === 'hotmail') addrElId = 'hotMailAddr';
-    else if (provider === 'student') addrElId = 'studentMailAddr';
+    if (prov === 'hotmail') addrElId = 'hotMailAddr';
+    else if (prov === 'student') addrElId = 'studentMailAddr';
 
     const addrEl = document.getElementById(addrElId);
     if (addrEl) {
@@ -7989,34 +8060,50 @@ async function generatePremiumMail(provider) {
         addrEl.style.opacity = "0.8";
     }
 
+    if (forceNew) clearPremiumMailCache(prov);
+
+    if (window._emailGenCooldownUntil && Date.now() < window._emailGenCooldownUntil) {
+        const waitSec = Math.ceil((window._emailGenCooldownUntil - Date.now()) / 1000);
+        if (addrEl) addrEl.innerHTML = `<span style="color:#fbbf24;">Wait ${waitSec}s...</span>`;
+        window.showToast(`â³ Please wait ${waitSec} second(s) before new email`);
+        return;
+    }
+
     try {
         const res = await fetch('/api/premium-emails/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 userId: userData.id,
-                provider: provider || 'gmail'
+                provider: prov,
+                forceNew: !!forceNew
             })
         });
         const data = await res.json();
         if (data.success) {
-            // data.email can be an object {email, id} or a string — extract string
             const emailStr = (typeof data.email === 'object' && data.email !== null)
                 ? (data.email.email || JSON.stringify(data.email))
                 : (data.email || '');
 
-            let assignedPremiumEmail = {
+            const sessionObj = {
                 id: data.sessionId,
                 email: emailStr,
-                type: provider || 'gmail'
+                type: prov,
+                sessionId: data.sessionId
             };
 
-            // Map the provider to the correct frontend type string usually used in mailSessions
             let sessionType = 'premium';
-            if (provider === 'hotmail') sessionType = 'hot';
-            if (provider === 'student') sessionType = 'student';
+            if (prov === 'hotmail') sessionType = 'hot';
+            if (prov === 'student') sessionType = 'student';
 
-            mailSessions[sessionType] = assignedPremiumEmail;
+            mailSessions[sessionType] = sessionObj;
+            mailSessions.premium = sessionObj;
+            currentPremiumTab = prov;
+
+            const cacheKey = 'premiumEmail_' + prov + '_' + (userData.id || 0);
+            try {
+                localStorage.setItem(cacheKey, JSON.stringify({ email: emailStr, session: sessionObj }));
+            } catch (e) { /* ignore */ }
 
             if (addrEl) {
                 if (emailStr) {
@@ -8032,16 +8119,22 @@ async function generatePremiumMail(provider) {
                 renderBalances();
             }
 
+            const cooldownSec = data.cooldownSeconds || 7;
+            window._emailGenCooldownUntil = Date.now() + (cooldownSec * 1000);
+
             refreshInbox(sessionType);
             if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-            window.showToast('✅ ' + (provider === 'hotmail' ? 'Hotmail' : (provider === 'student' ? 'Student Email' : 'Gmail')) + ' generated successfully!');
+            window.showToast('âœ… ' + (prov === 'hotmail' ? 'Hotmail' : (prov === 'student' ? 'Student Email' : 'Gmail')) + ' generated successfully!');
         } else {
+            if (data.cooldownSeconds) {
+                window._emailGenCooldownUntil = Date.now() + (data.cooldownSeconds * 1000);
+            }
             if (addrEl) {
                 addrEl.innerHTML = '<span style="color:#f87171;">' + (data.message || 'No email available.') + '</span>';
                 addrEl.style.fontStyle = "normal";
                 addrEl.style.opacity = "1";
             }
-            window.showToast('❌ ' + (data.message || 'No email in pool. Admin needs to add more.'));
+            window.showToast('âŒ ' + (data.message || 'No email in pool. Admin needs to add more.'));
         }
     } catch (e) {
         console.error('Error generating premium mail:', e);
@@ -8050,62 +8143,33 @@ async function generatePremiumMail(provider) {
             addrEl.style.fontStyle = "normal";
             addrEl.style.opacity = "1";
         }
-        window.showToast('❌ Network error. Please try again.');
+        window.showToast('âŒ Network error. Please try again.');
     }
 }
 
 
 async function loadPremiumEmailMessages(sessionId) {
-    const listEl = document.getElementById('premiumInboxList');
-    if (!listEl) return;
-
-    listEl.innerHTML = '<div style="padding:20px; text-align:center;"><i class="fas fa-spinner fa-spin"></i> Loading messages...</div>';
-
+    if (!sessionId) return;
     try {
         const uid = (window.userData && window.userData.id) ? window.userData.id : (userData && userData.id ? userData.id : 0);
         const res = await fetch(`/api/premium-emails/inbox?sessionId=${sessionId}&userId=${uid}`);
         const data = await res.json();
 
         if (data.success && data.messages) {
-            if (data.messages.length === 0) {
-                listEl.innerHTML = '<div style="padding:40px; text-align:center; color:var(--text-sub); font-size:13px;">No messages received matching your filters yet.</div>';
-            } else {
-                listEl.innerHTML = '';
-                data.messages.forEach(msg => {
-                    const item = document.createElement('div');
-                    item.className = 'inbox-item';
-                    item.style.padding = '15px';
-                    item.style.borderBottom = '1px solid var(--border-color)';
-                    item.onclick = () => openPremiumEmailMessage(msg);
-                    item.innerHTML = `
-                        <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                            <span style="font-weight:700; color:var(--text-main); font-size:14px;">${msg.from || 'Unknown'}</span>
-                            <span style="font-size:11px; color:var(--text-sub);">${msg.date || ''}</span>
-                        </div>
-                        <div style="font-weight:600; font-size:13px; color:var(--text-main); margin-bottom:4px;">${msg.subject || '(No Subject)'}</div>
-                        <div style="font-size:12px; color:var(--text-sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${msg.snippet || msg.body?.substring(0, 50) || ''}</div>
-                    `;
-                    listEl.appendChild(item);
-                });
-            }
-        } else {
-            listEl.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-sub);">Error loading inbox.</div>';
+            renderInbox(data.messages, 'premium', data.message || data.note);
         }
     } catch (e) {
-        listEl.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-sub);">Connection error.</div>';
+        console.warn('loadPremiumEmailMessages:', e);
     }
 }
 
 function openPremiumEmailMessage(msg) {
-    const modal = document.getElementById('emailMessageModal');
-    if (!modal) return;
-
-    document.getElementById('msgFrom').textContent = msg.from;
-    document.getElementById('msgSubject').textContent = msg.subject;
-    document.getElementById('msgDate').textContent = msg.date;
-    document.getElementById('msgBody').innerHTML = msg.html || msg.body;
-
-    modal.style.display = 'block';
+    const type = window._currentMailType || 'premium';
+    const normalized = normalizeMailMessage(msg);
+    const list = window[`_emails_${type}`] || [];
+    if (!list.find(e => e.id == normalized.id)) list.unshift(normalized);
+    window[`_emails_${type}`] = list;
+    openEmailMessage(normalized.id, type);
 }
 
 function selectPremiumEmail(id) {
@@ -8177,61 +8241,12 @@ function openHotmailDirect() {
 
 function autoGenerateHotMail() {
     if (checkZeroBalanceAdTrigger()) return;
-    const type = 'hot';
-    const cost = parseInt(window.appCostConfig?.hotMailCost) || 15;
-
     if (!userData.id || userData.id === 0) {
-        const addrEl = document.getElementById(type + 'MailAddr');
-        if (addrEl) {
-            addrEl.innerHTML = '<span style="color:#f87171;">Please login first</span>';
-        }
+        const addrEl = document.getElementById('hotMailAddr');
+        if (addrEl) addrEl.innerHTML = '<span style="color:#f87171;">Please login first</span>';
         return;
     }
-
-    if (Math.max(0, userData.tokens || 0) < cost) {
-        nav('earn');
-        return;
-    }
-
-    const addrEl = document.getElementById(type + 'MailAddr');
-    if (addrEl) {
-        addrEl.innerHTML = '<i class="fas fa-circle-notch fa-spin" style="margin-right:8px;"></i>generating...';
-        addrEl.style.fontStyle = 'italic';
-        addrEl.style.opacity = '0.7';
-    }
-
-    fetch('/api/mail/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: userData.id, cost, type })
-    })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success && data.email) {
-                userData.tokens = (typeof data.newBalance === 'number') ? data.newBalance : Math.max(0, (userData.tokens || 0) - cost);
-                renderBalances();
-                mailSessions[type] = { ...data, createdAt: Date.now() };
-                if (addrEl) {
-                    addrEl.textContent = data.email;
-                    addrEl.style.fontStyle = 'normal';
-                    addrEl.style.opacity = '1';
-                }
-                updateMailBalance(type);
-                refreshInbox(type);
-                if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-            } else {
-                if (addrEl) {
-                    addrEl.innerHTML = '<span style="color:#f87171;">Failed: ' + (data.message || 'Try again') + '</span>';
-                    addrEl.style.fontStyle = 'normal';
-                }
-            }
-        })
-        .catch(() => {
-            if (addrEl) {
-                addrEl.innerHTML = '<span style="color:#f87171;">Network error. Tap NEW EMAIL</span>';
-                addrEl.style.fontStyle = 'normal';
-            }
-        });
+    generatePremiumMail('hotmail', 0, false);
 }
 
 function openStudentEmailDirect() {
@@ -8255,61 +8270,12 @@ function openStudentEmailDirect() {
 
 function autoGenerateStudentMail() {
     if (checkZeroBalanceAdTrigger()) return;
-    const type = 'student';
-    const cost = parseInt(window.appCostConfig?.studentMailCost) || 20;
-
     if (!userData.id || userData.id === 0) {
-        const addrEl = document.getElementById(type + 'MailAddr');
-        if (addrEl) {
-            addrEl.innerHTML = '<span style="color:#f87171;">Please login first</span>';
-        }
+        const addrEl = document.getElementById('studentMailAddr');
+        if (addrEl) addrEl.innerHTML = '<span style="color:#f87171;">Please login first</span>';
         return;
     }
-
-    if (Math.max(0, userData.tokens || 0) < cost) {
-        nav('earn');
-        return;
-    }
-
-    const addrEl = document.getElementById(type + 'MailAddr');
-    if (addrEl) {
-        addrEl.innerHTML = '<i class="fas fa-circle-notch fa-spin" style="margin-right:8px;"></i>generating...';
-        addrEl.style.fontStyle = 'italic';
-        addrEl.style.opacity = '0.7';
-    }
-
-    fetch('/api/mail/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: userData.id, cost, type })
-    })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success && data.email) {
-                userData.tokens = (typeof data.newBalance === 'number') ? data.newBalance : Math.max(0, (userData.tokens || 0) - cost);
-                renderBalances();
-                mailSessions[type] = { ...data, createdAt: Date.now() };
-                if (addrEl) {
-                    addrEl.textContent = data.email;
-                    addrEl.style.fontStyle = 'normal';
-                    addrEl.style.opacity = '1';
-                }
-                updateMailBalance(type);
-                refreshInbox(type);
-                if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-            } else {
-                if (addrEl) {
-                    addrEl.innerHTML = '<span style="color:#f87171;">Failed: ' + (data.message || 'Try again') + '</span>';
-                    addrEl.style.fontStyle = 'normal';
-                }
-            }
-        })
-        .catch(() => {
-            if (addrEl) {
-                addrEl.innerHTML = '<span style="color:#f87171;">Network error. Tap NEW EMAIL</span>';
-                addrEl.style.fontStyle = 'normal';
-            }
-        });
+    generatePremiumMail('student', 0, false);
 }
 
 function refreshPremiumInbox() {
@@ -8329,14 +8295,13 @@ function autoGeneratePremiumMail() {
     loadPremiumEmailsFromAdmin();
 }
 
-function generateDemoPremiumMail(type, cost) {
-    const domains = ["premium-inbox.com", "private-mail.net"];
-    const email = "user" + Math.floor(Math.random() * 99999) + "@" + domains[Math.floor(Math.random() * domains.length)];
-    mailSessions[type] = { email, id: "demo_" + Date.now(), type, sessionId: "demo_" + Date.now() };
-    userData.tokens = Math.max(0, (userData.tokens || 0) - cost);
-    renderBalances();
-    updateMailBalance(type);
-    refreshInbox(type);
+function generateDemoPremiumMail(type) {
+    window.showToast('âŒ No email available. Please login and try again.');
+    const addrEl = document.getElementById((type || 'premium') + 'MailAddr');
+    if (addrEl) {
+        addrEl.innerHTML = '<span style="color:#f87171;">No email available</span>';
+        addrEl.style.fontStyle = 'normal';
+    }
 }
 
 function changeMailEmail(type) {
@@ -8356,18 +8321,18 @@ function copyMailEmail(type) {
     const email = mailSessions[type]?.email;
     if (email) {
         copyText(email);
-        window.showToast('✅ Email copied: ' + email);
+        window.showToast('âœ… Email copied: ' + email);
     } else {
-        window.showToast('❌ No email to copy');
+        window.showToast('âŒ No email to copy');
     }
 }
 
 function copyMailOtp(otp) {
     if (otp) {
         copyText(otp);
-        window.showToast('✅ OTP copied: ' + otp);
+        window.showToast('âœ… OTP copied: ' + otp);
     } else {
-        window.showToast('❌ No OTP to copy');
+        window.showToast('âŒ No OTP to copy');
     }
 }
 
@@ -8375,7 +8340,16 @@ window.openTempMailDirect = openTempMailDirect;
 window.generateTempMail = generateTempMail;
 window.renewTempMail = renewTempMail;
 window.autoGenerateTempMail = autoGenerateTempMail;
+function generateDemoTempMail(type) {
+    window.showToast('âŒ No email available. Please login and try again.');
+    const addrEl = document.getElementById((type || 'temp') + 'MailAddr');
+    if (addrEl) {
+        addrEl.innerHTML = '<span style="color:#f87171;">No email available</span>';
+        addrEl.style.fontStyle = 'normal';
+    }
+}
 window.generateDemoTempMail = generateDemoTempMail;
+window.clearPremiumMailCache = clearPremiumMailCache;
 window.openPremiumMailDirect = openPremiumMailDirect;
 window.openPremiumGmailDirect = openPremiumGmailDirect;
 window.autoGeneratePremiumMail = autoGeneratePremiumMail;
@@ -8397,12 +8371,12 @@ let REQUIRED_JOINS = {
     channel: {
         id: '-1002188442004', // @AutosVerifych
         username: 'AutosVerifych',
-        name: '📢 AutosVerify Channel'
+        name: 'ðŸ“¢ AutosVerify Channel'
     },
     group: {
         id: '-1002088203586', // @AutosVerify
         username: 'AutosVerify',
-        name: '💬 AutosVerify Group'
+        name: 'ðŸ’¬ AutosVerify Group'
     }
 };
 
@@ -8475,7 +8449,7 @@ function showJoinRequiredModal(missing) {
             text-align: center;
             box-shadow: 0 20px 60px rgba(0,0,0,0.5);
         ">
-            <div style="font-size: 48px; margin-bottom: 15px;">🔒</div>
+            <div style="font-size: 48px; margin-bottom: 15px;">ðŸ”’</div>
             <h2 style="color: #f97316; margin-bottom: 10px; font-size: 22px;">Join Required</h2>
             <p style="color: #aaa; margin-bottom: 25px; font-size: 14px;">
                 You must join our channel and group to use the web panel.
@@ -8523,7 +8497,7 @@ function showJoinRequiredModal(missing) {
                 gap: 8px;
                 transition: 0.2s;
             ">
-                <span>✓ I've Joined</span>
+                <span>âœ“ I've Joined</span>
             </button>
             <p style="color: #666; margin-top: 15px; font-size: 12px;">
                 Click "I've Joined" after joining both
@@ -8547,12 +8521,12 @@ async function verifyJoinsAndProceed() {
         if (jrm) jrm.style.display = 'none';
         // Show verification toast if user was just verified
         if (result.verified && !result.adminVerified) {
-            showToast('✅ You are now verified! Full access granted.');
+            showToast('âœ… You are now verified! Full access granted.');
         }
         // Continue with normal initialization
         continueInitialization();
     } else {
-        btn.innerHTML = '<span>✗ Not Joined Yet</span>';
+        btn.innerHTML = '<span>âœ— Not Joined Yet</span>';
         btn.style.background = '#ef4444';
 
         // Brief delay then update the modal UI to reflect which ones are now joined
@@ -8597,9 +8571,9 @@ async function continueInitialization() {
     try {
         const joinCheck = await checkRequiredJoins();
         if (joinCheck.adminVerified) {
-            showToast('👑 Welcome Admin! You have full verified access.');
+            showToast('ðŸ‘‘ Welcome Admin! You have full verified access.');
         } else if (joinCheck.verified) {
-            showToast('✅ Welcome! You are verified and have full access.');
+            showToast('âœ… Welcome! You are verified and have full access.');
         }
     } catch (e) {
         // Silently ignore errors
@@ -8684,7 +8658,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                 color: #fff;
                 font-family: system-ui, -apple-system, sans-serif;
             ">
-                <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
+                <div style="font-size: 48px; margin-bottom: 20px;">âš ï¸</div>
                 <h2 style="color: #f97316; margin-bottom: 10px;">Something went wrong</h2>
                 <p style="color: #aaa; margin-bottom: 20px; max-width: 300px;">
                     The app failed to load. Please try refreshing or check your connection.
@@ -8698,7 +8672,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                     font-weight: 600;
                     font-size: 16px;
                     cursor: pointer;
-                ">🔄 Reload App</button>
+                ">ðŸ”„ Reload App</button>
                 <p style="color: #666; margin-top: 15px; font-size: 12px;">
                     Error: ${error.message || 'Unknown error'}
                 </p>
@@ -8781,14 +8755,14 @@ window.copyUserId = copyUserId;
 function copyNumOtp(otp) {
     if (!otp) return;
     copyText(otp);
-    window.showToast('✅ OTP copied!');
+    window.showToast('âœ… OTP copied!');
 }
 
 window.copyNumOtp = copyNumOtp;
 window.extractOtp = extractOtp;
 
 // =============================================
-// LIVE PAGES — Routing & Titles
+// LIVE PAGES â€” Routing & Titles
 // =============================================
 PAGE_TITLES['live2fa'] = '2FA LIVE';
 PAGE_TITLES['liveInstagram'] = 'INSTAGRAM LIVE';
@@ -8798,7 +8772,7 @@ PAGE_TITLES['liveTwitter'] = 'TWITTER LIVE';
 PAGE_TITLES['liveThreads'] = 'THREADS LIVE';
 
 // =============================================
-// 2FA TOTP LIVE — START / RESTART Logic
+// 2FA TOTP LIVE â€” START / RESTART Logic
 // =============================================
 var _twofaInterval = null;
 
@@ -8827,7 +8801,7 @@ function generateTOTP(secretBase32) {
     let c = counter;
     for (let i = 7; i >= 0; i--) { msg[i] = c & 0xff; c >>>= 8; }
 
-    // HMAC-SHA1 via SubtleCrypto (async – handled via Promise)
+    // HMAC-SHA1 via SubtleCrypto (async â€“ handled via Promise)
     return window.crypto.subtle.importKey(
         'raw', new Uint8Array(bytes), { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']
     ).then(key => window.crypto.subtle.sign('HMAC', key, msg))
@@ -8873,20 +8847,20 @@ function start2faLive() {
             if (clearBtn) clearBtn.style.display = 'none';
         }
 
-        window.showToast('🛑 2FA service stopped and data cleared.');
+        window.showToast('ðŸ›‘ 2FA service stopped and data cleared.');
         return;
     }
 
     const input = document.getElementById('twofa-input');
     const secret = input ? input.value.trim() : '';
     if (!secret) {
-        window.showToast('⚠️ Please enter a 2FA secret key first!');
+        window.showToast('âš ï¸ Please enter a 2FA secret key first!');
         return;
     }
 
     // Call server to deduct tokens
     if (!userData || !userData.id) {
-        window.showToast('⚠️ User data not found. Please reload.');
+        window.showToast('âš ï¸ User data not found. Please reload.');
         return;
     }
 
@@ -8902,7 +8876,7 @@ function start2faLive() {
             if (startBtn) startBtn.disabled = false;
 
             if (!data.success) {
-                window.showToast(`❌ ${data.message}`);
+                window.showToast(`âŒ ${data.message}`);
                 return;
             }
 
@@ -8922,7 +8896,7 @@ function start2faLive() {
                 copyBtn.onclick = copy2faCode;
             }
 
-            window.showToast('🚀 2FA service started.');
+            window.showToast('ðŸš€ 2FA service started.');
 
             // Refresh balance and history
             if (typeof checkUserStatus === 'function') checkUserStatus();
@@ -8930,7 +8904,7 @@ function start2faLive() {
         })
         .catch(err => {
             if (startBtn) startBtn.disabled = false;
-            window.showToast('❌ Failed to start service. Try again.');
+            window.showToast('âŒ Failed to start service. Try again.');
             console.error(err);
         });
 }
@@ -8940,12 +8914,12 @@ function copy2faCode() {
     const code = result ? result.textContent.trim() : '';
     if (code && code !== '------' && code !== 'ERROR') {
         navigator.clipboard.writeText(code).then(() => {
-            window.showToast('📋 Code copied to clipboard!');
+            window.showToast('ðŸ“‹ Code copied to clipboard!');
         }).catch(() => {
-            window.showToast('❌ Failed to copy!');
+            window.showToast('âŒ Failed to copy!');
         });
     } else {
-        window.showToast('⚠️ No code to copy!');
+        window.showToast('âš ï¸ No code to copy!');
     }
 }
 
@@ -8957,9 +8931,9 @@ function pasteFromClipboard() {
             const btn = document.getElementById('twofa-clear-btn');
             if (btn) btn.style.display = text ? 'block' : 'none';
         }
-        window.showToast('📋 Pasted from clipboard!');
+        window.showToast('ðŸ“‹ Pasted from clipboard!');
     }).catch(err => {
-        window.showToast('❌ Failed to read clipboard!');
+        window.showToast('âŒ Failed to read clipboard!');
         console.error(err);
     });
 }
@@ -9514,14 +9488,14 @@ async function submitItemForSale() {
         const data = await res.json();
 
         if (data.success) {
-            window.showToast('✅ ' + data.message);
+            window.showToast('âœ… ' + data.message);
             resetSellCategory();
             loadMySales();
             if (window.Telegram?.WebApp?.HapticFeedback) {
                 window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
             }
         } else {
-            window.showToast('❌ ' + data.message);
+            window.showToast('âŒ ' + data.message);
         }
     } catch (e) {
         window.showToast('Error submitting item');
@@ -9542,32 +9516,32 @@ async function loadMySales() {
                 list.innerHTML = data.items.map(item => {
                     let statusColor = '#f59e0b';
                     let statusText = 'PENDING';
-                    let statusMessage = '⏳ Waiting for a buyer...';
+                    let statusMessage = 'â³ Waiting for a buyer...';
 
                     if (item.status === 'pending') {
                         statusColor = '#f59e0b';
                         statusText = 'UNDER REVIEW';
-                        statusMessage = '⏳ Admin is reviewing your item...';
+                        statusMessage = 'â³ Admin is reviewing your item...';
                     }
                     else if (item.status === 'approved') {
                         statusColor = '#10b981';
                         statusText = 'LISTED';
-                        statusMessage = `💰 You will receive ${item.rewardOffer || 0} ${item.rewardCurrency || 'Tokens'} after sale`;
+                        statusMessage = `ðŸ’° You will receive ${item.rewardOffer || 0} ${item.rewardCurrency || 'Tokens'} after sale`;
                     }
                     else if (item.status === 'sold') {
                         statusColor = '#3b82f6';
-                        statusText = 'SOLD ✓';
-                        statusMessage = `✅ Payment of ${item.rewardOffer || 0} ${item.rewardCurrency || 'Tokens'} received!`;
+                        statusText = 'SOLD âœ“';
+                        statusMessage = `âœ… Payment of ${item.rewardOffer || 0} ${item.rewardCurrency || 'Tokens'} received!`;
                     }
                     else if (item.status === 'rejected') {
                         statusColor = '#ef4444';
                         statusText = 'REJECTED';
-                        statusMessage = '❌ Item was not approved';
+                        statusMessage = 'âŒ Item was not approved';
                     }
                     else if (item.status === 'offer_sent') {
                         statusColor = '#8b5cf6';
                         statusText = 'COUNTER OFFER';
-                        statusMessage = '💬 Admin sent a price offer';
+                        statusMessage = 'ðŸ’¬ Admin sent a price offer';
                     }
 
                     const displayName = item.customName || item.serviceName || item.itemType;
@@ -9630,11 +9604,11 @@ async function respondToOffer(saleId, action) {
             body: JSON.stringify({ saleId, action, userId: userData.id })
         });
         const data = await res.json();
-        window.showToast(data.success ? '✅ ' + data.message : '❌ ' + data.message);
+        window.showToast(data.success ? 'âœ… ' + data.message : 'âŒ ' + data.message);
         loadMySales();
     } catch (e) {
         console.error(e);
-        window.showToast('❌ Error responding to offer');
+        window.showToast('âŒ Error responding to offer');
     }
 }
 
@@ -10031,7 +10005,7 @@ function handleServiceFileUpload(type) {
     btn.style.pointerEvents = 'auto';
 
     if (window.showToast) {
-        window.showToast('✅ File ready for processing!');
+        window.showToast('âœ… File ready for processing!');
     }
 
     if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
@@ -10042,7 +10016,7 @@ window.handleServiceFileUpload = handleServiceFileUpload;
 
 function openMonitorChannel() {
     if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
-    window.showToast('🚀 Running Monitor... Redirecting to Bot');
+    window.showToast('ðŸš€ Running Monitor... Redirecting to Bot');
     setTimeout(() => {
         const botUrl = `https://t.me/AutoVerify_Monitor_Bot`;
         tg.openTelegramLink(botUrl);
@@ -10065,7 +10039,7 @@ function isActionOnCooldown(key, seconds) {
     const diff = (now - parseInt(last, 10)) / 1000;
     if (diff < seconds) {
         const remaining = Math.ceil(seconds - diff);
-        window.showToast(`⏱️ Please wait ${remaining}s...`);
+        window.showToast(`â±ï¸ Please wait ${remaining}s...`);
         return true;
     }
     return false;
@@ -10088,7 +10062,7 @@ function startQuizFlow() {
     // Set immediate cooldown to prevent double clicks
     localStorage.setItem('cooldown_quiz', Date.now());
 
-    window.showToast("🎬 Preparing Quiz...");
+    window.showToast("ðŸŽ¬ Preparing Quiz...");
     showAdAndEarn('quiz_direct');
 }
 
@@ -10097,7 +10071,7 @@ async function loadQuiz() {
     const oEl = document.getElementById('quizOptions');
     if (!qEl || !oEl) return;
 
-    qEl.textContent = '🧠 Generating dynamic question...';
+    qEl.textContent = 'ðŸ§  Generating dynamic question...';
     oEl.innerHTML = '';
 
     try {
@@ -10158,7 +10132,7 @@ async function submitQuizAnswer(idx) {
         if (data.success) {
             if (isCorrect && window.confetti) confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
 
-            window.showToast(isCorrect ? `✅ CORRECT! +10 Tokens` : `❌ WRONG! +5 Tokens for trying.`);
+            window.showToast(isCorrect ? `âœ… CORRECT! +10 Tokens` : `âŒ WRONG! +5 Tokens for trying.`);
             userData.tokens = data.newBalance;
             renderBalances();
             loadRecentActivity(); // Refresh history after quiz
@@ -10352,7 +10326,7 @@ async function claimScratchReward(reward) {
         });
         const data = await res.json();
         if (data.success) {
-            window.showToast(`🎁 You won ${reward} tokens!`);
+            window.showToast(`ðŸŽ You won ${reward} tokens!`);
             userData.tokens = data.newBalance;
             renderBalances();
         } else {
@@ -10376,7 +10350,7 @@ window.initScratchCard = initScratchCard;
 function showWebAdminMessage(message) {
     if (message && typeof message === 'object' && message.isGift && message.giftId) {
         const overlayId = 'admin-gift-' + Date.now();
-        const text = message.message || '🎁 You received a gift!';
+        const text = message.message || 'ðŸŽ You received a gift!';
         const html = `
         <div id="${overlayId}" style="position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
             <div style="background: linear-gradient(to bottom right, #1e1e38, #13132b); border: 2px solid rgba(245, 158, 11, 0.45); border-radius: 20px; padding: 24px; max-width: 90%; width: 400px; position: relative; box-shadow: 0 10px 30px rgba(245, 158, 11, 0.18); animation: scaleIn 0.3s ease-out;">
@@ -11214,7 +11188,7 @@ window.generateNewApiKey = async function (btnElement) {
 
     const startRegen = async () => {
         try {
-            window.showToast('⏳ Initializing Key Regeneration...');
+            window.showToast('â³ Initializing Key Regeneration...');
             console.log(`[API_UI] Starting generation for ${userId}. First time: ${isFirstTime}`);
             if (btn) {
                 btn.disabled = true;
@@ -11228,7 +11202,7 @@ window.generateNewApiKey = async function (btnElement) {
 
             const data = await res.json();
             if (data.success) {
-                window.showToast('✅ API Key generated successfully!');
+                window.showToast('âœ… API Key generated successfully!');
 
                 // Update local storage and memory
                 if (userData) userData.apiKey = data.apiKey;
@@ -11253,12 +11227,12 @@ window.generateNewApiKey = async function (btnElement) {
                     window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
                 }
             } else {
-                window.showToast('❌ Failed: ' + (data.message || 'Server error'));
+                window.showToast('âŒ Failed: ' + (data.message || 'Server error'));
                 if (btn) btn.innerHTML = originalContent; // Restore on failure
             }
         } catch (e) {
             console.error('[API_UI] Fatal Exception:', e);
-            window.showToast('❌ ' + (e.message || 'Connection error.'));
+            window.showToast('âŒ ' + (e.message || 'Connection error.'));
             if (btn) btn.innerHTML = originalContent; // Restore on failure
         } finally {
             if (btn) btn.disabled = false;

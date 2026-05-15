@@ -240,50 +240,6 @@ async function fetchSmailProMessages(sessionId, email) {
 }
 
 // ==========================================
-// FALLBACK PROVIDERS (Generic Gmail-like)
-// ==========================================
-
-// If premium providers fail, use these fallback domains
-const GMAIL_FALLBACK_DOMAINS = [
-    'tempgmail.com',
-    'gmailtemp.com',
-    'tempmailgmail.com',
-    'gmailgen.com',
-    'fakegmail.com',
-    'tempmail.org',
-    'temp-mail.org',
-    'tempmailaddress.com',
-    'throwawaymail.com',
-    'tempmail.ninja',
-    'burnermail.io',
-    'tempinbox.com',
-    'mailinator.com',
-    'guerrillamail.com',
-    'sharklasers.com',
-    'spam4.me'
-];
-
-async function tryFallbackGmail() {
-    try {
-        const domain = GMAIL_FALLBACK_DOMAINS[Math.floor(Math.random() * GMAIL_FALLBACK_DOMAINS.length)];
-        const username = `user${Date.now()}${Math.floor(Math.random() * 1000)}`;
-        const email = `${username}@${domain}`;
-
-        return {
-            email: email,
-            token: email,
-            sessionId: email,
-            provider: 'fallback_gmail',
-            password: null,
-            isFallback: true
-        };
-    } catch (e) {
-        console.error('Fallback Gmail Error:', e.message);
-    }
-    return null;
-}
-
-// ==========================================
 // MAIN GENERATOR - For Gmail specifically
 // ==========================================
 
@@ -310,14 +266,6 @@ async function createGmailAccount() {
     account = await trySmailPro();
     if (account) {
         console.log('✅ SmailPro provided Gmail:', account.email);
-        return account;
-    }
-
-    // Fallback to generic temp mail
-    console.log('🔄 Using fallback provider...');
-    account = await tryFallbackGmail();
-    if (account) {
-        console.log('✅ Fallback provided email:', account.email);
         return account;
     }
 
@@ -359,14 +307,6 @@ async function getGmailMessages(sessionId, email, provider) {
 // HOTMAIL PROVIDER (using similar approach)
 // ==========================================
 
-const HOTMAIL_FALLBACK_DOMAINS = [
-    'hotmail.com',
-    'outlook.com',
-    'live.com',
-    'msn.com',
-    'passport.com'
-];
-
 async function createHotmailAccount() {
     console.log('🔄 Starting Hotmail Generation Chain...');
 
@@ -399,19 +339,8 @@ async function createHotmailAccount() {
         console.error('EmailNator Hotmail Error:', e.message);
     }
 
-    // Fallback to Outlook domain
-    const domain = 'outlook.com';
-    const username = `user${Date.now()}${Math.floor(Math.random() * 1000)}`;
-    const email = `${username}@${domain}`;
-
-    return {
-        email: email,
-        token: email,
-        sessionId: email,
-        provider: 'fallback_hotmail',
-        password: null,
-        isFallback: true
-    };
+    console.error('❌ All Hotmail providers failed');
+    return null;
 }
 
 // ==========================================
@@ -630,21 +559,6 @@ async function fetchPostInboxMessages(sessionId, email) {
 }
 
 // ==========================================
-// FALLBACK STUDENT DOMAINS
-// ==========================================
-
-const STUDENT_DOMAINS = [
-    'edu.pl',
-    'edu.temp',
-    'student.edu',
-    'edu.mail',
-    'campus.edu',
-    'uni.edu',
-    'college.edu',
-    'school.edu'
-];
-
-// ==========================================
 // MAIN STUDENT EMAIL GENERATOR
 // ==========================================
 
@@ -674,20 +588,8 @@ async function createStudentEmailAccount() {
         return account;
     }
 
-    // Fallback to generic student domain
-    console.log('🔄 Using fallback student provider...');
-    const domain = STUDENT_DOMAINS[Math.floor(Math.random() * STUDENT_DOMAINS.length)];
-    const username = `student${Date.now()}${Math.floor(Math.random() * 1000)}`;
-    const email = `${username}@${domain}`;
-
-    return {
-        email: email,
-        token: email,
-        sessionId: email,
-        provider: 'fallback_student',
-        password: null,
-        isFallback: true
-    };
+    console.error('❌ All student email providers failed');
+    return null;
 }
 
 // ==========================================
