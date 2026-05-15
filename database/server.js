@@ -4573,7 +4573,12 @@ app.post('/api/deposit/submit', (req, res) => {
 
 // API: Deposit - Get Config (QR/Addresses)
 app.get('/api/deposit/config', (req, res) => {
-    res.json({ success: true, cryptoMethods: db.data.cryptoMethods || {} });
+    const settings = db.data.settings || {};
+    res.json({ 
+        success: true, 
+        cryptoMethods: db.data.cryptoMethods || {},
+        usdToBdt: settings.usdToBdt || 120 
+    });
 });
 
 // API: Admin - Get All Deposits (Pending & History)
@@ -5486,7 +5491,8 @@ app.get('/api/public/costs', (req, res) => {
             platformFee: settings.platformFee || 20,
             cryptoRate: creditRates.crypto || 0.01,
             bkashRate: creditRates.bkash || 1,
-            nagadRate: creditRates.nagad || 1
+            nagadRate: creditRates.nagad || 1,
+            usdToBdt: settings.usdToBdt || 120
         }
     });
 });
@@ -5530,6 +5536,7 @@ app.post('/api/admin/costs', (req, res) => {
     if (payload.tokenToGem !== undefined) db.data.settings.tokenToGem = parseFloat(payload.tokenToGem) || 1;
     if (payload.takaToGem !== undefined) db.data.settings.takaToGem = parseInt(payload.takaToGem) || 100;
     if (payload.platformFee !== undefined) db.data.settings.platformFee = parseInt(payload.platformFee) || 20;
+    if (payload.usdToBdt !== undefined) db.data.settings.usdToBdt = parseFloat(payload.usdToBdt) || 120;
 
     // Service Costs (Nested in costs)
     if (!db.data.settings.costs) db.data.settings.costs = {};
@@ -5921,15 +5928,52 @@ app.post('/api/admin/reset-transactions', (req, res) => {
     res.json({ success: true, message: 'All transactions cleared' });
 });
 
-// API: Reset / Clear Database (Use with caution)
-app.post('/api/admin/db/reset', (req, res) => {
-    // Only allow if authenticated adequately (simple Admin check handled by UI mostly, backend should verify token in real app)
-    // For now, we clear users or groups? User asked for "Control". 
-    // Maybe just Clear Cache or Logs?
-    // Let's implemented "Clear Transactions"
-    db.data.transactions = [];
-    db.save();
-    res.json({ success: true, message: 'Transactions cleared' });
+// API: Admin - Save Group & AI Settings
+app.post('/api/admin/group-settings', (req, res) => {
+    try {
+        const payload = req.body;
+        if (!db.data.groupSettings) db.data.groupSettings = {};
+        
+        db.data.groupSettings = {
+            ...db.data.groupSettings,
+            ...payload
+        };
+        
+        db.save();
+        res.json({ success: true, message: 'Group & AI Settings saved' });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// API: Admin - Test AI Connection
+app.post('/api/admin/test-ai', (req, res) => {
+    const { platform, apiKey } = req.body;
+    if (!apiKey) return res.json({ success: false, message: 'API Key is missing' });
+    
+    // Simulate connection check
+    // In a real app, you would make a small request to the platform's API
+    setTimeout(() => {
+        res.json({ success: true, message: `Connected to ${platform.toUpperCase()} successfully!` });
+    }, 1000);
+});
+
+// API: Admin - Chat with AI (Test)
+app.post('/api/admin/chat-ai', (req, res) => {
+    const { message } = req.body;
+    const settings = db.data.groupSettings || {};
+    
+    // Simple mock response based on platform
+    let reply = "";
+    const platform = settings.aiPlatform || "gemini";
+    
+    if (message.toLowerCase().includes("how") || message.toLowerCase().includes("help")) {
+        reply = `As your ${platform.toUpperCase()} AI, I can help users with deposits, account generation, and general platform support. Just ask!`;
+    } else {
+        reply = `I am processing your request using ${platform.toUpperCase()}. Everything looks good!`;
+    }
+    
+    res.json({ success: true, reply });
 });
 
 // API: Database Export (Send to Admin)

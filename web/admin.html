@@ -2104,6 +2104,11 @@
                                     <input id="shop-btn" placeholder="#f59e0b"
                                         class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
                                 </div>
+                                <div>
+                                    <label class="text-xs text-gray-400 uppercase font-bold block mb-1">Stock</label>
+                                    <input id="shop-stock" type="number" placeholder="100"
+                                        class="w-full bg-black/30 border border-white/10 p-3 rounded-lg text-white">
+                                </div>
                             </div>
                             <button onclick="saveShopItem()"
                                 class="w-full gold-gradient py-3 rounded-xl font-bold text-black">SAVE ITEM</button>
@@ -2145,9 +2150,10 @@
                             <table id="manualNumbersTable" class="w-full">
                                 <thead>
                                     <tr class="text-gray-400 text-xs border-b border-white/10">
-                                        <th class="pb-3 text-left">AVAILABLE NUMBERS</th>
+                                        <th class="pb-3 text-left">NUMBER</th>
                                         <th class="pb-3 text-left">PLATFORM</th>
-                                        <th class="pb-3 text-left">STATUS</th>
+                                        <th class="pb-3 text-left">STATUS / OTP</th>
+                                        <th class="pb-3 text-right">ACTIONS</th>
                                     </tr>
                                 </thead>
                                 <tbody id="manualNumbersBody">
@@ -2432,7 +2438,7 @@
                                     class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5">
                             </div>
                         </div>
-                        <!-- ✅ NEW: BDT to USD Rate -->
+                        <!-- ✅ BDT to USD Rate -->
                         <div class="mt-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-4">
                             <h5 class="text-sm font-bold text-emerald-400 mb-3 flex items-center">
                                 <i class="fas fa-bangladeshi-taka-sign mr-2"></i> Bangladesh Local Payment (bKash/Nagad)
@@ -2440,16 +2446,16 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label class="text-xs text-gray-400 uppercase font-bold block mb-2">1 USD = ? BDT</label>
-                                    <input type="number" id="conf-usd-to-bdt" placeholder="120" step="0.01"
+                                    <input type="number" id="conf-usd-to-bdt" placeholder="120" step="0.1"
                                         class="w-full bg-black/40 border border-white/10 focus:border-emerald-500 rounded-lg p-2.5">
                                     <p class="text-[10px] text-gray-500 mt-1">Current market rate (e.g., 120 BDT = 1 USD)</p>
                                 </div>
                                 <div>
                                     <label class="text-xs text-gray-400 uppercase font-bold block mb-2">Example Conversion</label>
                                     <div class="bg-black/40 border border-white/10 rounded-lg p-2.5 text-sm text-gray-300">
-                                        <span id="bdt-example">1000 BDT = $8.33 USD</span>
+                                        <span id="bdt-example-calc">1000 BDT = $8.33 USD</span>
                                     </div>
-                                    <p class="text-[10px] text-gray-500 mt-1">Users will see BDT amount converted to USD</p>
+                                    <p class="text-[10px] text-gray-500 mt-1">Users will see BDT amount converted to USD automatically</p>
                                 </div>
                             </div>
                         </div>
@@ -4421,35 +4427,69 @@
                         </div>
                     </div>
 
-                    <!-- Groups Table -->
-                    <div class="glass-card p-4 md:p-6 rounded-2xl mt-6">
-                        <div class="flex items-center justify-between mb-4">
-                            <h4 class="font-bold flex items-center gap-2">
-                                <i class="fas fa-list text-blue-400"></i> Active Groups & Channels
-                            </h4>
-                            <button onclick="loadGroups()"
-                                class="bg-blue-500/20 text-blue-400 px-3 py-1.5 rounded-lg text-sm hover:bg-blue-500/30">
-                                <i class="fas fa-sync-alt mr-1"></i> Refresh
+                        </div>
+                    </div>
+
+                    <!-- Manual Channel Configuration -->
+                    <div class="glass-card p-4 md:p-6 rounded-2xl">
+                        <h4 class="font-bold mb-4 flex items-center gap-2">
+                            <i class="fas fa-bullhorn text-orange-400"></i> Manual Channel Control
+                        </h4>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="text-xs text-gray-400 uppercase font-bold block mb-2">Channel Username/ID</label>
+                                <input id="manual_channel_id" type="text" placeholder="@yourchannel"
+                                    class="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white text-sm focus:border-orange-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400 uppercase font-bold block mb-2">Join Link</label>
+                                <input id="manual_channel_link" type="text" placeholder="https://t.me/..."
+                                    class="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white text-sm focus:border-orange-500 outline-none">
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                                <div class="text-sm">Force Join Required</div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="gm_forceJoin" class="sr-only peer">
+                                    <div
+                                        class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500">
+                                    </div>
+                                </label>
+                            </div>
+                            <button onclick="saveManualChannelSettings()" class="w-full bg-orange-500/20 text-orange-400 border border-orange-500/30 py-3 rounded-xl font-bold text-sm hover:bg-orange-500/30 transition-all">
+                                UPDATE CHANNEL
                             </button>
                         </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left text-sm">
-                                <thead class="text-gray-400 text-xs border-b border-white/10 uppercase">
-                                    <tr>
-                                        <th class="py-3">Type</th>
-                                        <th class="py-3">Name</th>
-                                        <th class="py-3">ID</th>
-                                        <th class="py-3">Members</th>
-                                        <th class="py-3 text-right">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="groupsTableBody">
-                                    <tr>
-                                        <td colspan="5" class="py-4 text-center text-gray-400">Loading groups...</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Groups Table at Bottom -->
+                <div class="glass-card p-4 md:p-6 rounded-2xl mt-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="font-bold flex items-center gap-2">
+                            <i class="fas fa-list text-blue-400"></i> Active Groups & Channels
+                        </h4>
+                        <button onclick="loadGroups()"
+                            class="bg-blue-500/20 text-blue-400 px-3 py-1.5 rounded-lg text-sm hover:bg-blue-500/30">
+                            <i class="fas fa-sync-alt mr-1"></i> Refresh
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="text-gray-400 text-xs border-b border-white/10 uppercase">
+                                <tr>
+                                    <th class="py-3">Type</th>
+                                    <th class="py-3">Name</th>
+                                    <th class="py-3">ID</th>
+                                    <th class="py-3">Members</th>
+                                    <th class="py-3 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="groupsTableBody">
+                                <tr>
+                                    <td colspan="5" class="py-4 text-center text-gray-400">Loading groups...</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -4946,69 +4986,71 @@
         }
 
         async function saveShopItem() {
-            const editId = document.getElementById('shop-edit-id').value;
-            const item = {
-                id: document.getElementById('shop-id').value.trim() || editId,
-                name: document.getElementById('shop-name').value.trim(),
-                price: parseFloat(document.getElementById('shop-price').value.replace('$', '').trim()) || 0,
-                imageUrl: document.getElementById('shop-img').value.trim(),
-                bgColor: document.getElementById('shop-bg').value.trim() || '#0d0d0d',
-                btnColor: document.getElementById('shop-btn').value.trim() || '#f59e0b',
-                page: 'deposit' // Default mapping page
-            };
+            const id = document.getElementById('shop-id').value.trim();
+            const name = document.getElementById('shop-name').value.trim();
+            const price = document.getElementById('shop-price').value.trim();
+            const imageUrl = document.getElementById('shop-image').value.trim();
+            const bgColor = document.getElementById('shop-bg').value.trim();
+            const btnColor = document.getElementById('shop-btn').value.trim();
+            const stock = parseInt(document.getElementById('shop-stock').value) || 0;
 
-            if (!item.id || !item.name) return alert('ID and Name are required');
+            if (!id || !name || !price) return alert('ID, Name and Price required');
 
             try {
                 const res = await fetch('/api/admin/shop', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(item)
+                    body: JSON.stringify({ id, name, price, imageUrl, bgColor, btnColor, stock })
                 });
                 const data = await res.json();
                 if (data.success) {
-                    showToast('Shop item saved successfully!');
                     clearShopForm();
-                    loadShopManage();
-                    if(typeof loadShopItems === 'function') loadShopItems();
+                    renderAdminShop();
                 } else {
-                    alert('❌ Failed: ' + data.message);
+                    alert(data.message);
                 }
-            } catch (e) {
-                alert('❌ Network error');
-            }
+            } catch (e) { alert('Network error'); }
         }
 
-        function clearShopForm() {
-            document.getElementById('shop-edit-id').value = '';
-            document.getElementById('shop-id').value = '';
-            document.getElementById('shop-id').disabled = false;
-            document.getElementById('shop-name').value = '';
-            document.getElementById('shop-price').value = '';
-            document.getElementById('shop-img').value = '';
-            document.getElementById('shop-bg').value = '';
-            document.getElementById('shop-btn').value = '';
+        async function renderAdminShop() {
+            try {
+                const res = await fetch('/api/shop');
+                const data = await res.json();
+                const container = document.getElementById('admin-shop-list');
+                if (data.success && container) {
+                    container.innerHTML = data.shopItems.map(item => `
+                        <div class="p-3 bg-white/5 rounded-xl border border-white/10 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-black/40 flex items-center justify-center overflow-hidden">
+                                    ${item.imageUrl ? `<img src="${item.imageUrl}" class="w-full h-full object-cover">` : '<i class="fas fa-box text-gray-600"></i>'}
+                                </div>
+                                <div>
+                                    <div class="font-bold text-sm">${item.name}</div>
+                                    <div class="text-xs text-green-400 font-bold">$${item.price} <span class="text-gray-500 ml-2">Stock: ${item.stock || 0}</span></div>
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="editShopItem('${item.id}')" class="p-2 bg-blue-500/20 text-blue-400 rounded-lg"><i class="fas fa-edit"></i></button>
+                                <button onclick="deleteShopItem('${item.id}')" class="p-2 bg-red-500/20 text-red-400 rounded-lg"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                    `).join('') || '<div class="text-center py-8 text-gray-500">No items added</div>';
+                }
+            } catch (e) { }
         }
 
         async function editShopItem(id) {
             try {
-                const res = await fetch('/api/admin/shop');
+                const res = await fetch('/api/shop');
                 const data = await res.json();
-                const item = (data.shopItems || []).find(i => i.id === id);
+                const item = data.shopItems.find(i => i.id === id);
                 if (item) {
-                    document.getElementById('shop-edit-id').value = item.id;
                     document.getElementById('shop-id').value = item.id;
-                    document.getElementById('shop-id').disabled = true; // Prevent changing ID during edit
-                    document.getElementById('shop-name').value = item.name || '';
-                    document.getElementById('shop-price').value = item.price || '';
-                    document.getElementById('shop-img').value = item.imageUrl || '';
+                    document.getElementById('shop-name').value = item.name;
+                    document.getElementById('shop-price').value = item.price;
+                    document.getElementById('shop-image').value = item.imageUrl || '';
                     document.getElementById('shop-bg').value = item.bgColor || '';
                     document.getElementById('shop-btn').value = item.btnColor || '';
-                    
-                    nav('shopmanage');
-                    window.scrollTo(0, 0);
-                }
-            } catch (e) {
                 alert('❌ Error loading item data');
             }
         }
@@ -5435,6 +5477,8 @@
                     if (document.getElementById('conf-zerobalance-adreward'))
                         document.getElementById('conf-zerobalance-adreward').value = c.zeroBalanceAdReward || 5;
                     document.getElementById('conf-taskreward').value = c.taskReward || 0;
+                    if (document.getElementById('conf-usd-to-bdt'))
+                        document.getElementById('conf-usd-to-bdt').value = c.usdToBdt || 120;
                     // System Costs
                     if (document.getElementById('conf-premium-email-cost'))
                         document.getElementById('conf-premium-email-cost').value = c.premiumEmailCost || 0;
@@ -11802,14 +11846,23 @@
                     }
                 });
 
-                body.innerHTML = Object.values(groups).map(g => `
+                body.innerHTML = data.numbers.map((n, i) => `
                     <tr class="border-b border-white/5 hover:bg-white/5 transition-all">
-                        <td class="py-4 font-bold text-white">${g.count} / ${g.total}</td>
-                        <td class="py-4 font-medium text-gray-400 capitalize">${g.platform}</td>
+                        <td class="py-4 font-mono text-white">${n.number}</td>
+                        <td class="py-4 font-medium text-gray-400 capitalize">${n.platform}</td>
                         <td class="py-4">
-                            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${g.count > 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">
-                                ${g.count > 0 ? 'ACTIVE' : 'INACTIVE'}
-                            </span>
+                            <div class="flex items-center gap-2">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${n.status === 'available' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">
+                                    ${n.status.toUpperCase()}
+                                </span>
+                                ${n.otp ? `<span class="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded font-mono font-bold">OTP: ${n.otp}</span>` : ''}
+                            </div>
+                        </td>
+                        <td class="py-4 text-right">
+                             <div class="flex justify-end gap-2">
+                                <button onclick="openOtpModal('${n.id}')" class="p-2 bg-blue-500/10 text-blue-400 rounded-lg" title="Manual OTP"><i class="fas fa-key"></i></button>
+                                <button onclick="deleteManualNumber('${n.id}')" class="p-2 bg-red-500/10 text-red-400 rounded-lg" title="Delete"><i class="fas fa-trash"></i></button>
+                             </div>
                         </td>
                     </tr>
                 `).join('');

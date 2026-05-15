@@ -967,6 +967,7 @@ function showPage(targetId) {
     if (targetId === 'itemSell') {
         loadMySales();
         resetSellCategory();
+        setSellItemType('subscription'); // Ensure cards are shown
     }
     // Refresh Exchange UI when entering exchange page
     if (targetId === 'exchange') {
@@ -1629,6 +1630,16 @@ function selectLocalMethod(method) {
     const numberLabel = document.getElementById('localPaymentNumber');
     const submitBtn = document.getElementById('btnLocalSubmit');
 
+    // Find the number from cache
+    let foundNumber = 'Not Configured';
+    for(const key in depositMethodsCache) {
+        const p = depositMethodsCache[key];
+        if (p.type === 'local' && p.name.toLowerCase().includes(method.toLowerCase()) && p.status === 'active') {
+            foundNumber = p.details || 'No number provided';
+            break;
+        }
+    }
+
     if (method === 'bkash') {
         btnBkash.style.background = '#e1147e';
         btnBkash.style.opacity = '1';
@@ -1639,7 +1650,7 @@ function selectLocalMethod(method) {
         btnNagad.style.border = '1px solid rgba(255,255,255,0.1)';
 
         nameLabel.innerText = 'BKASH NUMBER (PERSONAL)';
-        numberLabel.innerText = '01700000000'; // Set default or dynamic Bkash num here
+        numberLabel.innerText = foundNumber;
         if (submitBtn) submitBtn.style.background = 'linear-gradient(135deg,#e1147e,#f7931e)';
     } else {
         btnNagad.style.background = '#f7931e';
@@ -1651,7 +1662,7 @@ function selectLocalMethod(method) {
         btnBkash.style.border = '1px solid rgba(255,255,255,0.1)';
 
         nameLabel.innerText = 'NAGAD NUMBER (PERSONAL)';
-        numberLabel.innerText = '01800000000'; // Set default or dynamic Nagad num here
+        numberLabel.innerText = foundNumber;
         if (submitBtn) submitBtn.style.background = 'linear-gradient(135deg,#f7931e,#e1147e)';
     }
 }
@@ -1690,6 +1701,14 @@ async function submitFaucetDeposit() {
             
             // Reload deposit history
             loadRecentDeposits();
+            // Auto refresh every 30 seconds while on this page
+            if (window._depositRefreshInterval) clearInterval(window._depositRefreshInterval);
+            window._depositRefreshInterval = setInterval(() => {
+                if (activePage === 'deposit') loadRecentDeposits();
+                else clearInterval(window._depositRefreshInterval);
+            }, 30000);
+            
+            nav('deposit');
         } else {
             window.showToast(data.message || 'Error submitting deposit.');
         }
@@ -1713,22 +1732,32 @@ async function convertBdtToUsd() {
     usdDisplay.textContent = `$${usdAmount} USD`;
 }
 
-// ✅ NEW: Load BDT rate from server
+// ✅ Load BDT rate and Local Payment Config from server
+let depositMethodsCache = {};
 async function loadBdtRate() {
     try {
-        const res = await fetch('/api/admin/costs');
+        const res = await fetch('/api/deposit/config');
         const data = await res.json();
-        if (data.success && data.costs) {
-            bdtToUsdRate = data.costs.usdToBdt || 120;
+        if (data.success) {
+            bdtToUsdRate = data.usdToBdt || 120;
+            depositMethodsCache = data.cryptoMethods || {};
+            
             const rateDisplay = document.getElementById('bdtRateDisplay');
             if (rateDisplay) {
                 rateDisplay.textContent = bdtToUsdRate;
             }
+            
+            // Auto-update the active method's number
+            selectLocalMethod(activeLocalPayMethod);
+            
+            // Trigger conversion update if input has value
+            convertBdtToUsd();
         }
     } catch (e) {
         console.error('Failed to load BDT rate:', e);
     }
 }
+window.loadBdtRate = loadBdtRate;
 
 // ✅ NEW: Load recent deposits with status
 async function loadRecentDeposits() {
@@ -4809,7 +4838,7 @@ function renderShopItems() {
     let accountCardsHtml = '';
     let cardCardsHtml = '';
 
-    const adminItems = getShopItems();
+    const adminItems = getShopItems().filter(item => (item.stock === undefined || item.stock > 0));
 
     // 1. Process Admin Items (Always in main shop)
     if (grid) {

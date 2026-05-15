@@ -16,9 +16,9 @@
         "virtualnumber",
         "store"
       ],
-      "balance": 7255,
+      "balance": 7155,
       "balance_Gems": 2,
-      "balance_tokens": 7255,
+      "balance_tokens": 7155,
       "blocked": false,
       "cardsPurchased": 0,
       "channelJoined": false,
@@ -31,6 +31,13 @@
       "firstName": "Test",
       "groupJoined": false,
       "history": [
+        {
+          "type": "account_purchase",
+          "amount": 100,
+          "currency": "tokens",
+          "category": "ma",
+          "date": 1778879564417
+        },
         {
           "type": "daily_bonus",
           "amount": 10,
@@ -151,13 +158,13 @@
       "joinedChannel": true,
       "joinedGroup": true,
       "language": "en",
-      "lastActive": 1778867272238,
+      "lastActive": 1778882302062,
       "lastDaily": 1778864675126,
       "lastName": "",
       "referralCode": "ref_95CMCD",
       "referralCount": 0,
       "successfulVerifications": 0,
-      "tokens": 7255,
+      "tokens": 7155,
       "usd": 100,
       "username": "TestUser",
       "verified": false,
@@ -816,6 +823,11 @@
         {
           "category": "adobeexpress",
           "purchasedAt": 1778862907514,
+          "instructions": ""
+        },
+        {
+          "category": "ma",
+          "purchasedAt": 1778879564414,
           "instructions": ""
         }
       ],
@@ -8872,7 +8884,15 @@
     "transferCost": 10,
     "supportCost": 10,
     "botUsername": "AutosVerify_bot",
-    "codes": {},
+    "codes": {
+      "m": {
+        "amount": 100,
+        "maxUses": 1,
+        "uses": 0,
+        "createdAt": 1778879895659,
+        "redeemedBy": []
+      }
+    },
     "groupRules": {
       "allowFiles": false,
       "allowForward": true,
@@ -9852,13 +9872,7 @@
         "key": "5154622323140685|01|2029|359"
       }
     ],
-    "ma": [
-      {
-        "key": "5154622323140685|01|2029|359",
-        "info": "",
-        "addedAt": 1778571351154
-      }
-    ],
+    "ma": [],
     "spotify": [],
     "chatgptplus": [
       {
@@ -10591,7 +10605,85 @@
       }
     ]
   },
-  "manualNumbers": [],
+  "manualNumbers": [
+    {
+      "id": "17788799543817uo3ux6vn",
+      "number": "1231325",
+      "platform": "telegram",
+      "countryCode": "1",
+      "otpApi": null,
+      "status": "available",
+      "otp": null,
+      "createdAt": 1778879954385,
+      "updatedAt": 1778879954385
+    },
+    {
+      "id": "1778879954385qjusniceo",
+      "number": "2313213",
+      "platform": "telegram",
+      "countryCode": "1",
+      "otpApi": null,
+      "status": "available",
+      "otp": null,
+      "createdAt": 1778879954385,
+      "updatedAt": 1778879954385
+    },
+    {
+      "id": "1778879954385t18ubhztl",
+      "number": "5313",
+      "platform": "telegram",
+      "countryCode": "1",
+      "otpApi": null,
+      "status": "available",
+      "otp": null,
+      "createdAt": 1778879954385,
+      "updatedAt": 1778879954385
+    },
+    {
+      "id": "1778879954385bc4n77s1b",
+      "number": "2",
+      "platform": "telegram",
+      "countryCode": "1",
+      "otpApi": null,
+      "status": "available",
+      "otp": null,
+      "createdAt": 1778879954385,
+      "updatedAt": 1778879954385
+    },
+    {
+      "id": "17788799744968bove9jzu",
+      "number": "53456465",
+      "platform": "telegram",
+      "countryCode": "880",
+      "otpApi": null,
+      "status": "available",
+      "otp": null,
+      "createdAt": 1778879974496,
+      "updatedAt": 1778879974496
+    },
+    {
+      "id": "1778879974496um0u74dpc",
+      "number": "3516",
+      "platform": "telegram",
+      "countryCode": "880",
+      "otpApi": null,
+      "status": "available",
+      "otp": null,
+      "createdAt": 1778879974496,
+      "updatedAt": 1778879974496
+    },
+    {
+      "id": "17788799744962r8b1bjf4",
+      "number": "56",
+      "platform": "telegram",
+      "countryCode": "880",
+      "otpApi": null,
+      "status": "available",
+      "otp": null,
+      "createdAt": 1778879974496,
+      "updatedAt": 1778879974496
+    }
+  ],
   "apiKeys": {
     "adminId": "8125978050",
     "backupBotToken": "8395111217:AAEGWAPDvBbWThgZ6FGB_5ok58l_B3X3Zqo",
@@ -10919,6 +11011,16 @@
   "broadcasts": [],
   "pendingDeposits": [
     {
+      "id": "dep_1778879603930b7nmt",
+      "userId": "123",
+      "method": "bkash",
+      "amount": 0.82,
+      "txnId": "dvc",
+      "screenshot": null,
+      "date": 1778879603933,
+      "status": "pending"
+    },
+    {
       "id": "dep_1778867291497b6mnl",
       "userId": "123",
       "method": "bkash",
@@ -10993,6 +11095,7 @@
     "telegram": 0,
     "discord": 0
   },
+  "agents": {},
   "adSettings": {
     "moneytag": {
       "adUnitId": "",
@@ -11001,56 +11104,7 @@
       "publisherId": ""
     }
   },
-  "emailPoolHistory": [
-    {
-      "email": "Mamunislam4.3.638.9.2@gmail.com",
-      "type": "gmail",
-      "assignedTo": "123",
-      "assignedAt": "2026-05-15T16:20:16.369Z"
-    },
-    {
-      "email": "Mamunislam4.3.638.92@gmail.com",
-      "type": "gmail",
-      "assignedTo": "123",
-      "assignedAt": "2026-05-15T16:20:05.604Z"
-    },
-    {
-      "email": "Mamunislam4.3.6389.2@gmail.com",
-      "type": "gmail",
-      "assignedTo": "123",
-      "assignedAt": "2026-05-15T16:19:45.877Z"
-    },
-    {
-      "email": "Mamunislam4.3.63892@gmail.com",
-      "type": "gmail",
-      "assignedTo": "123",
-      "assignedAt": "2026-05-15T16:19:35.293Z"
-    },
-    {
-      "email": "Mamunislam4.36.3.8.9.2@gmail.com",
-      "type": "gmail",
-      "assignedTo": "123",
-      "assignedAt": "2026-05-15T16:19:17.829Z"
-    },
-    {
-      "email": "Mamunislam4.36.3.8.92@gmail.com",
-      "type": "gmail",
-      "assignedTo": "123",
-      "assignedAt": "2026-05-15T15:49:55.613Z"
-    },
-    {
-      "email": "Mamunislam4.36.3.89.2@gmail.com",
-      "type": "gmail",
-      "assignedTo": "123",
-      "assignedAt": "2026-05-15T15:49:41.870Z"
-    },
-    {
-      "email": "Mamunislam4.36.3.892@gmail.com",
-      "type": "gmail",
-      "assignedTo": "123",
-      "assignedAt": "2026-05-15T15:49:10.578Z"
-    }
-  ],
+  "emailPoolHistory": [],
   "groupWarnings": {
     "-1002516230551_7672601379": 1
   },
@@ -11273,5 +11327,6 @@
   },
   "serviceSections": {
     "ma": "virtual-cards"
-  }
+  },
+  "removeBgApiKeys": []
 }
