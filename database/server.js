@@ -84,8 +84,6 @@ app.use(performanceMonitor.middleware());
 // Apply response optimization middleware
 app.use(optimizeResponse);
 
-app.use(express.json({ limit: '10mb' }));
-
 const db = require('../db');
 const config = require('../config');
 
@@ -6750,29 +6748,36 @@ app.post('/api/admin/manual-numbers/bulk', (req, res) => {
 
     if (!db.data.manualNumbers) db.data.manualNumbers = [];
 
+    const existingSet = new Set(
+        db.data.manualNumbers
+            .filter(n => n.platform === platform.toLowerCase() && n.countryCode === countryCode)
+            .map(n => n.number)
+    );
+
     let added = 0;
+    const now = Date.now();
+    const newItems = [];
+
     numbers.forEach(num => {
-        // Prevent duplicate numbers in the same platform/country
-        const exists = db.data.manualNumbers.find(n => n.number === num && n.platform === platform && n.countryCode === countryCode);
-        if (!exists) {
-            db.data.manualNumbers.push({
-                id: Date.now() + Math.random().toString(36).substr(2, 9),
-                number: num,
+        const cleanNum = String(num).trim();
+        if (cleanNum && !existingSet.has(cleanNum)) {
+            newItems.push({
+                id: now + Math.random().toString(36).substr(2, 9),
+                number: cleanNum,
                 platform: platform.toLowerCase(),
                 countryCode,
                 otpApi: otpApi || null,
                 status: 'available',
                 otp: null,
-                createdAt: Date.now(),
-                updatedAt: Date.now()
+                createdAt: now,
+                updatedAt: now
             });
+            existingSet.add(cleanNum);
             added++;
-        } else if (otpApi) {
-            // Update OTP API if it already exists
-            exists.otpApi = otpApi;
-            exists.updatedAt = Date.now();
         }
     });
+
+    if (newItems.length > 0) db.data.manualNumbers.push(...newItems);
 
     db.save();
     res.json({ success: true, added });
@@ -8397,7 +8402,7 @@ app.post('/api/admin/services/items', (req, res) => {
                         email: item.value,
                         password: item.info,
                         addedAt: Date.now()
-                    });
+                    }, true);
                     addedCount++;
                 } else {
                     // Fallback if addVPN doesn't exist
@@ -8430,7 +8435,7 @@ app.post('/api/admin/services/items', (req, res) => {
                 };
 
                 if (db.addCard) {
-                    db.addCard(serviceId, cardDetails);
+                    db.addCard(serviceId, cardDetails, true);
                     addedCount++;
                 }
             });
@@ -10862,20 +10867,36 @@ app.post('/api/admin/manual-numbers/add', (req, res) => {
     const { platform, values, otpApi } = req.body;
     if (!db.data.manualNumbers) db.data.manualNumbers = [];
 
+    const existingSet = new Set(
+        db.data.manualNumbers
+            .filter(n => n.platform === platform.toLowerCase())
+            .map(n => n.number)
+    );
+
     const lines = values.split('\n').filter(l => l.trim());
+    const now = Date.now();
+    const newItems = [];
+
     lines.forEach(num => {
-        db.data.manualNumbers.push({
-            id: 'MN' + Date.now() + Math.random().toString(36).substr(2, 5),
-            platform,
-            number: num.trim(),
+        const clean = num.trim();
+        if (clean && !existingSet.has(clean)) {
+            newItems.push({
+                id: 'MN' + now + Math.random().toString(36).substr(2, 5),
+                platform: platform.toLowerCase(),
+                number: clean,
             otp: null,
             otpApi: otpApi || null,
             status: 'available',
-            addedAt: new Date().toISOString()
+                addedAt: now
         });
+            existingSet.add(clean);
+        }
     });
+
+    if (newItems.length > 0) db.data.manualNumbers.push(...newItems);
+
     db.save();
-    res.json({ success: true, message: `Added ${lines.length} numbers` });
+    res.json({ success: true, message: `Added ${newItems.length} numbers` });
 });
 
 app.delete('/api/admin/manual-numbers/:id', (req, res) => {

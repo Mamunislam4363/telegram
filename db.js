@@ -1190,11 +1190,11 @@ class Database {
     }
 
     // Card Management
-    addCard(service, details) {
+    addCard(service, details, skipSave = false) {
         if (!this.data.cards) this.data.cards = { "gemini": [], "chatgpt": [], "spotify": [] };
         if (!this.data.cards[service]) this.data.cards[service] = [];
         this.data.cards[service].push(details);
-        this.save();
+        if (!skipSave) this.save();
         return true;
     }
 
@@ -2174,7 +2174,7 @@ class Database {
     // ==================== VPN ACCOUNT SYSTEM (Card System Clone) ====================
 
     // Add VPN Account
-    addVPN(service, vpnData) {
+    addVPN(service, vpnData, skipSave = false) {
         if (!this.data.vpnAccounts) this.data.vpnAccounts = {};
         if (!this.data.vpnAccounts[service]) this.data.vpnAccounts[service] = [];
 
@@ -2183,7 +2183,7 @@ class Database {
             password: vpnData.password,
             addedAt: Date.now()
         });
-        this.save();
+        if (!skipSave) this.save();
     }
 
     // Get VPN Account (for purchase)
