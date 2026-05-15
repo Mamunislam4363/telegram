@@ -27,7 +27,7 @@ const db = require('./db.js');
 const { languages, getText, getUserLanguage } = require('./languages.js');
 const fs = require('fs');
 const path = require('path');
-const { apiGateway } = require('./services/core');
+const apiGateway = require('./services/api-gateway.js');
 
 // Store original console.log for internal logging
 const originalConsoleLog = console.log.bind(console);
@@ -395,10 +395,7 @@ const userState = {};
 
 // Helper: Check authorization
 function isAdmin(userId) {
-    if (!userId) return false;
-    const adminId = String(config.ADMIN_ID || '');
-    const allowedIds = config.ALLOWED_USER_IDS || [];
-    return String(userId) === adminId || allowedIds.includes(String(userId));
+    return String(userId) === String(config.ADMIN_ID) || config.ALLOWED_USER_IDS.includes(String(userId));
 }
 
 // Helper: Generate user authentication token for web panel
@@ -789,16 +786,20 @@ bot.onText(/\/start/, async (msg) => {
             membership = await checkMembership(userId);
         } catch (membershipError) {
             console.error('[ERROR] checkMembership failed:', membershipError.message);
-            membership = { channel: true, group: true, error: membershipError.message };
+            // ✅ FIX: On error, assume not joined to show join screen
+            membership = { channel: false, group: false, error: membershipError.message };
         }
 
         console.log(`[DEBUG] Membership check result: ${JSON.stringify(membership)}`);
 
-        if (!membership.channel || !membership.group) {
+        // ✅ FIX: Check if join is required from feature flags
+        const joinRequired = !shouldSkipMembershipCheck();
+
+        if (joinRequired && (!membership.channel || !membership.group)) {
             // User not joined, show mandatory join screen (first time)
 
             // Remove lingering keyboard if it exists
-            const cleanupMsg = await bot.sendMessage(chatId, "⏳ Initializing...", { reply_markup: { Remove_keyboard: true } });
+            const cleanupMsg = await bot.sendMessage(chatId, "⏳ Initializing...", { reply_markup: { remove_keyboard: true } });
             bot.deleteMessage(chatId, cleanupMsg.message_id).catch(() => { });
 
             showMandatoryJoin(chatId, membership, null, true);
@@ -813,8 +814,14 @@ bot.onText(/\/start/, async (msg) => {
             console.log(`[REFERRAL] Auto-verified referral for user ${userId} on start (already member)`);
         }
 
+        // ✅ FIX: Mark user as verified if they passed membership check
+        if (user && !user.verified) {
+            user.verified = true;
+            db.updateUser(user);
+        }
+
         // Cleanup old persistent keyboards before sending the menu
-        const cleanupMsg2 = await bot.sendMessage(chatId, "⏳ Initializing...", { reply_markup: { Remove_keyboard: true } });
+        const cleanupMsg2 = await bot.sendMessage(chatId, "⏳ Initializing...", { reply_markup: { remove_keyboard: true } });
         bot.deleteMessage(chatId, cleanupMsg2.message_id).catch(() => { });
 
         // User is member, show main menu
@@ -1583,22 +1590,31 @@ bot.on('callback_query', async (query) => {
             const allJoined = membership.channel && membership.group;
 
             if (allJoined) {
+                // ✅ FIX: Mark user as verified in database
+                if (user) {
+                    user.verified = true;
+                    db.updateUser(user);
+                }
+
                 // Verification Success
-                bot.editMessageText(`✅ *Verification Success!*\n\nTime: ${new Date().toLocaleString()}`, {
+                bot.editMessageText(`✅ *Verification Success!*\n\nWelcome to the bot!\n\nTime: ${new Date().toLocaleString()}`, {
                     chat_id: chatId,
                     message_id: msgId,
                     parse_mode: 'Markdown'
                 }).catch(() => { });
 
                 // PROCESS PENDING REFERRAL - Verify and give reward
-                if (user.pendingReferrer) {
+                if (user && user.pendingReferrer) {
                     db.verifyReferral(userId);
                     user.pendingReferrer = null;
                     db.updateUser(user);
                 }
 
-                bot.deleteMessage(chatId, msgId).catch(() => { });
-                sendMainMenu(chatId, user);
+                // ✅ FIX: Wait a moment before deleting and showing main menu
+                setTimeout(() => {
+                    bot.deleteMessage(chatId, msgId).catch(() => { });
+                    sendMainMenu(chatId, user);
+                }, 1500);
             } else {
                 // Still missing communities
                 showMandatoryJoin(chatId, membership, msgId);

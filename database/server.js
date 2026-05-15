@@ -8,49 +8,7 @@ const path = require('path');
 const oauth = require('../oauth');
 const { OpenAI } = require('openai');
 const axios = require('axios');
-const {
-    imapService,
-    tokenManager,
-    realtimeUpdater,
-    PerformanceOptimizer,
-    createOptimizedRoutes,
-    firebaseSync,
-    createFirebaseSyncRoutes
-} = require('../services/core');
-
-// IMAP inbox cache: avoids hitting the slow IMAP server on every poll
-// Key: "type_email", Value: { messages, ts }
-const _imapInboxCache = new Map();
-const IMAP_CACHE_TTL = 10000; // 10 seconds
-
-function getCachedImapInbox(type, email) {
-    const key = type + '_' + email;
-    const entry = _imapInboxCache.get(key);
-    if (entry && (Date.now() - entry.ts) < IMAP_CACHE_TTL) return entry.messages;
-    return null;
-}
-
-function setCachedImapInbox(type, email, messages) {
-    const key = type + '_' + email;
-    _imapInboxCache.set(key, { messages, ts: Date.now() });
-    // Evict old entries to prevent memory leak
-    if (_imapInboxCache.size > 200) {
-        const oldest = _imapInboxCache.keys().next().value;
-        _imapInboxCache.delete(oldest);
-    }
-}
-
-// Import optimization system (all in one)
-const {
-    cache,
-    taskQueue,
-    dbOptimizer,
-    performanceMonitor,
-    applyCompressionMiddleware,
-    optimizeResponse,
-    successResponse,
-    errorResponse
-} = require('../services/optimization');
+const imapService = require('../services/imap-service');
 
 // Import video downloader modules
 const tiktokDownloader = { getInfo: async () => ({ error: 'Feature disabled' }), download: async () => ({ error: 'Feature disabled' }) };
@@ -58,9 +16,6 @@ const facebookDownloader = { getInfo: async () => ({ error: 'Feature disabled' }
 
 const app = express();
 const PORT = 3000;
-
-// Initialize performance monitoring
-performanceMonitor.startMemoryTracking(30000);
 
 // CORS middleware - allow all origins for Telegram Mini App
 app.use((req, res, next) => {
@@ -75,14 +30,7 @@ app.use((req, res, next) => {
     }
 });
 
-// Apply compression middleware for faster data transfer
-applyCompressionMiddleware(app);
-
-// Apply performance monitoring middleware
-app.use(performanceMonitor.middleware());
-
-// Apply response optimization middleware
-app.use(optimizeResponse);
+app.use(express.json({ limit: '10mb' }));
 
 const db = require('../db');
 const config = require('../config');
@@ -847,38 +795,6 @@ app.get('/api/admin/config', (req, res) => {
     });
 });
 
-// API: Public Config (includes payment platform details)
-app.get('/api/config', (req, res) => {
-    // Try to get from cache first
-    const cacheKey = 'api:config:all';
-    const cached = cache.get(cacheKey);
-    
-    if (cached) {
-        return res.json(cached);
-    }
-
-    const configData = {
-        success: true,
-        config: {
-            dailyBonus: db.data.settings.dailyBonus,
-            welcomeCredits: db.data.settings.welcomeCredits || db.data.settings.welcomeBonus,
-            maintenance: db.data.meta?.maintenance || false,
-            countryAdRewards: db.data.settings.countryAdRewards || {},
-            // Payment platform details
-            bkashName: db.data.settings.bkashName || 'bKash Personal',
-            bkashNumber: db.data.settings.bkashNumber || '',
-            bkashType: db.data.settings.bkashType || 'Personal',
-            nagadName: db.data.settings.nagadName || 'Nagad Personal',
-            nagadNumber: db.data.settings.nagadNumber || '',
-            nagadType: db.data.settings.nagadType || 'Personal'
-        }
-    };
-
-    // Cache for 5 minutes
-    cache.set(cacheKey, configData, 300);
-    res.json(configData);
-});
-
 app.post('/api/admin/toggle-maintenance', (req, res) => {
     const { userId } = req.body;
     if (String(userId) !== String(process.env.ADMIN_ID)) return res.json({ success: false, message: 'Unauthorized' });
@@ -890,26 +806,14 @@ app.post('/api/admin/toggle-maintenance', (req, res) => {
 });
 
 app.post('/api/admin/update-config', (req, res) => {
-    const { userId, dailyBonus, welcomeCredits, countryAdRewards, bkashName, bkashNumber, bkashType, nagadName, nagadNumber, nagadType } = req.body;
+    const { userId, dailyBonus, welcomeCredits, countryAdRewards } = req.body;
     if (String(userId) !== String(process.env.ADMIN_ID)) return res.json({ success: false, message: 'Unauthorized' });
 
     if (dailyBonus !== undefined) db.data.settings.dailyBonus = parseInt(dailyBonus);
     if (welcomeCredits !== undefined) db.data.settings.welcomeCredits = parseInt(welcomeCredits);
     if (countryAdRewards !== undefined) db.data.settings.countryAdRewards = countryAdRewards;
 
-    // Payment platform details
-    if (bkashName !== undefined) db.data.settings.bkashName = bkashName;
-    if (bkashNumber !== undefined) db.data.settings.bkashNumber = bkashNumber;
-    if (bkashType !== undefined) db.data.settings.bkashType = bkashType;
-    if (nagadName !== undefined) db.data.settings.nagadName = nagadName;
-    if (nagadNumber !== undefined) db.data.settings.nagadNumber = nagadNumber;
-    if (nagadType !== undefined) db.data.settings.nagadType = nagadType;
-
     db.save();
-    
-    // Invalidate config cache
-    cache.delete('api:config:all');
-    
     res.json({ success: true });
 });
 
@@ -959,21 +863,21 @@ app.post('/api/admin/config', (req, res) => {
 async function deleteHelperAdminMessages(userId) {
     const user = await db.getUser(userId);
     if (!user || !user.helperAdminMessages) return;
-
+    
     const TelegramBot = require('node-telegram-bot-api');
     const config = require('../config');
     const botToken = config.TELEGRAM_BOT_TOKEN;
-
+    
     if (!botToken) {
         console.error('[HELPER ADMIN] Cannot delete messages: Bot token missing');
         return;
     }
-
+    
     // Use global bot if available
     const activeBot = bot || new TelegramBot(botToken, { polling: false });
-
+    
     console.log(`[HELPER ADMIN] Deleting ${user.helperAdminMessages.length} messages for user ${userId}`);
-
+    
     for (const msg of user.helperAdminMessages) {
         try {
             await activeBot.deleteMessage(msg.chatId, msg.messageId);
@@ -983,7 +887,7 @@ async function deleteHelperAdminMessages(userId) {
         }
         await new Promise(r => setTimeout(r, 100));
     }
-
+    
     user.helperAdminMessages = [];
     await db.updateUser(user);
 }
@@ -1016,7 +920,7 @@ app.post('/api/admin/users/:userId', async (req, res) => {
         if (role !== undefined) {
             const oldRole = user.role || 'user';
             user.role = role;
-
+            
             // If role changed from helper_admin to user (disabled)
             if (oldRole === 'helper_admin' && role === 'user') {
                 console.log(`[HELPER ADMIN] Disabling helper admin ${userId} and deleting messages...`);
@@ -1025,10 +929,6 @@ app.post('/api/admin/users/:userId', async (req, res) => {
         }
 
         await db.updateUser(user, null, true);
-        
-        // Invalidate user cache
-        cache.delete(`api:user:${userId}`);
-        
         res.json({ success: true, message: 'User updated successfully' });
     } catch (error) {
         console.error('[ADMIN USER UPDATE ERROR]', error);
@@ -1039,15 +939,6 @@ app.post('/api/admin/users/:userId', async (req, res) => {
 // API: Get User Profile Data
 app.get('/api/user/:userId', async (req, res) => {
     const userId = req.params.userId;
-    
-    // Try cache first
-    const cacheKey = `api:user:${userId}`;
-    const cached = cache.get(cacheKey);
-    
-    if (cached) {
-        return res.json(cached);
-    }
-
     const user = await db.getUser(userId);
     if (!user) {
         return res.json({ success: false, message: 'User not found' });
@@ -1063,7 +954,7 @@ app.get('/api/user/:userId', async (req, res) => {
     // Resolve balances using db helpers for consistency
     const tokenBalance = db.getTokenBalance(user);
 
-    const responseData = {
+    res.json({
         success: true,
         user: {
             id: user.id,
@@ -1100,11 +991,7 @@ app.get('/api/user/:userId', async (req, res) => {
         referralCode: db.getReferralCode(user.id),
         availableTasks: taskList,
         botUsername: (db.data.settings && db.data.settings.botUsername) || config.BOT_USERNAME || 'AutosVerify_bot'
-    };
-
-    // Cache for 1 minute
-    cache.set(cacheKey, responseData, 60);
-    res.json(responseData);
+    });
 });
 
 
@@ -1187,30 +1074,16 @@ app.post('/api/user/verify-task', async (req, res) => {
 // API: Crypto Coins (Frontend compatibility)
 app.get('/api/crypto-coins', (req, res) => {
     try {
-        // Check cache first
-        const cacheKey = 'api:crypto:coins';
-        const cached = cache.get(cacheKey);
-        
-        if (cached) {
-            return res.json(cached);
-        }
-
         const methods = db.data.cryptoMethods || {};
-        const responseData = {
-            success: true,
-            coins: Object.entries(methods).map(([id, m]) => ({
-                coin: id,
-                name: m.name || id,
-                network: m.network || m.name || id,
-                address: m.address || m.details || '',
-                qr: m.qr || '',
-                active: (m.status || 'active') === 'active'
-            }))
-        };
-
-        // Cache for 10 minutes
-        cache.set(cacheKey, responseData, 600);
-        res.json(responseData);
+        const coins = Object.entries(methods).map(([id, m]) => ({
+            coin: id,
+            name: m.name || id,
+            network: m.network || m.name || id,
+            address: m.address || m.details || '',
+            qr: m.qr || '',
+            active: (m.status || 'active') === 'active'
+        }));
+        res.json({ success: true, coins });
     } catch (e) {
         res.json({ success: false, coins: [] });
     }
@@ -1221,9 +1094,9 @@ app.get('/api/user/sync/:userId', async (req, res) => {
     const userId = req.params.userId;
     const user = await db.getUser(userId);
     if (!user) return res.json({ success: false, message: 'User not found' });
-
+    
     const tokenBalance = db.getTokenBalance(user);
-
+    
     res.json({
         success: true,
         tokens: tokenBalance,
@@ -1235,8 +1108,7 @@ app.get('/api/user/sync/:userId', async (req, res) => {
         apiKey: user.apiKey || '',
         completedTasks: user.completedTasks || [],
         lastClaim: user.lastDaily || 0,
-        dailyStreak: user.dailyStreak || 0,
-        bdtRate: parseFloat(db.data.adminSettings?.bdtUsdRate || 125)
+        dailyStreak: user.dailyStreak || 0
     });
 });
 
@@ -1374,9 +1246,7 @@ app.post('/api/register', async (req, res) => {
         apiStatus: user.apiStatus || 'allow',
         apiKey: user.apiKey || null,
         banned: user.banned || user.blocked || false,
-        webMessages: webMessages,
-        bdtRate: parseFloat(db.data.adminSettings?.bdtUsdRate || 125),
-        purchasedAccounts: user.purchasedAccounts || []
+        webMessages: webMessages
     });
 });
 
@@ -1480,11 +1350,7 @@ app.get('/api/history/:userId', async (req, res) => {
     }
 
     const history = user.history || [];
-    res.json({ 
-        success: true, 
-        history: history,
-        purchasedAccounts: user.purchasedAccounts || []
-    });
+    res.json({ success: true, history: history });
 });
 
 // API: Generate Quiz with AI
@@ -1623,14 +1489,6 @@ app.post('/api/ad/claim', async (req, res) => {
 
 // API: Quiz Leaderboard
 app.get('/api/quiz/leaderboard', (req, res) => {
-    // Check cache first
-    const cacheKey = 'api:quiz:leaderboard';
-    const cached = cache.get(cacheKey);
-    
-    if (cached) {
-        return res.json(cached);
-    }
-
     const users = Object.values(db.data.users || {}).filter(u => ![123, 999999].includes(parseInt(u.id)));
     const leaderboard = users
         .filter(u => u.quizPoints > 0)
@@ -1642,11 +1500,7 @@ app.get('/api/quiz/leaderboard', (req, res) => {
         .sort((a, b) => b.points - a.points)
         .slice(0, 20);
 
-    const responseData = { success: true, leaderboard };
-
-    // Cache for 2 minutes
-    cache.set(cacheKey, responseData, 120);
-    res.json(responseData);
+    res.json({ success: true, leaderboard });
 });
 
 // API: Scratch Claim
@@ -1860,14 +1714,14 @@ app.post('/api/accounts/buy-category', async (req, res) => {
     }
 
     let account = null;
-
+    
     // Check in cards first
     const categoryKey = Object.keys(db.data.cards || {}).find(k => k.toLowerCase() === category.toLowerCase());
     if (categoryKey && db.data.cards[categoryKey] && db.data.cards[categoryKey].length > 0) {
         account = db.data.cards[categoryKey].shift(); // Remove from start (FIFO)
         db.save(); // Save database
     }
-
+    
     if (!account) {
         return res.json({ success: false, message: 'Sorry, currently no card or service available.' });
     }
@@ -1882,10 +1736,9 @@ app.post('/api/accounts/buy-category', async (req, res) => {
     db.setTokenBalance(user, userTokens - priceInt);
 
     // Prepare response data
-    // Handle both email/password (legacy/VPN) and key/info (Cards) formats
     const accountData = {
-        email: account.key || account.email || '',
-        password: account.info || account.password || '',
+        email: account.email,
+        password: account.password,
         category: category,
         purchasedAt: Date.now(),
         instructions: account.instructions || ''
@@ -1915,67 +1768,6 @@ app.post('/api/accounts/buy-category', async (req, res) => {
             password: accountData.password,
             instructions: accountData.instructions
         }
-    });
-});
-
-// API: Buy Admin Shop Item (USD)
-app.post('/api/accounts/buy-shop-item', async (req, res) => {
-    const { userId, shopId, price } = req.body;
-    if (!userId || !shopId || isNaN(price)) return res.json({ success: false, message: 'Invalid request' });
-
-    const users = typeof getUsersObj === 'function' ? getUsersObj() : (db.data.users || {});
-    const user = users[userId];
-    if (!user) return res.json({ success: false, message: 'User not found' });
-
-    const userUsd = user.usd || 0;
-    if (userUsd < price) return res.json({ success: false, message: 'Insufficient USD balance' });
-
-    // Check stock
-    const stockList = db.data.shopStock?.[shopId] || [];
-    const availableStock = stockList.filter(s => !s.sold);
-    if (availableStock.length === 0) return res.json({ success: false, message: 'Out of stock' });
-
-    // Take one stock item
-    const item = availableStock[0];
-    item.sold = true; // Mark as sold
-    item.soldTo = userId;
-    item.soldAt = Date.now();
-
-    // Deduct USD
-    user.usd -= price;
-
-    const orderId = 'ORD-' + Math.random().toString(36).substr(2, 9).toUpperCase();
-    const shopItem = db.data.shopItems?.[shopId] || { name: 'Shop Item' };
-
-    // Record history
-    if (!user.history) user.history = [];
-    const historyEntry = {
-        id: orderId,
-        type: 'shop_item_purchase',
-        amount: price,
-        currency: 'usd',
-        shopId: shopId,
-        itemName: shopItem.name,
-        date: Date.now(),
-        itemData: {
-            type: item.type,
-            email: item.email,
-            password: item.password,
-            twoFactor: item.twoFactor,
-            key: item.key
-        }
-    };
-    user.history.unshift(historyEntry);
-
-    await db.updateUser(user);
-    db.save(); // Save stock changes
-
-    return res.json({
-        success: true,
-        newBalance: user.usd,
-        orderId: orderId,
-        itemName: shopItem.name,
-        item: historyEntry.itemData
     });
 });
 
@@ -2020,7 +1812,7 @@ app.post('/api/generate/:service', (req, res) => {
     const cost = (settings.costs && settings.costs[service]) || 10;
 
     const currency = settings.costs[`${service}Currency`] || 'token';
-
+    
     if (currency === 'Gems' || currency === 'gem') {
         const userGems = user.Gems || 0;
         if (userGems < cost) {
@@ -2200,7 +1992,7 @@ app.post('/api/redeem', async (req, res) => {
         if (maxLimit > 0 && codeData.uses >= maxLimit) {
             delete codes[code];
             console.log(`[REDEEM] Code '${code}' reached max uses and was automatically deleted.`);
-
+            
             // Remove this code from all users' redeemed arrays to allow re-claiming if recreated
             const users = await db.getUsers();
             for (const uId in users) {
@@ -2326,9 +2118,9 @@ app.post('/api/user/apikey/generate', async (req, res) => {
         const currentGems = user.Gems || user.gems || 0;
 
         if (currentGems < cost) {
-            return res.status(400).json({
-                success: false,
-                message: `Insufficient gems. You need ${cost} gems to ${isRegeneration ? 'regenerate' : 'create'} an API key.`
+            return res.status(400).json({ 
+                success: false, 
+                message: `Insufficient gems. You need ${cost} gems to ${isRegeneration ? 'regenerate' : 'create'} an API key.` 
             });
         }
 
@@ -2868,12 +2660,8 @@ app.post('/api/complete-task', async (req, res) => {
         const user = users[userId];
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-        // Initialize both arrays to keep them in sync
         if (!user.completedTasks) user.completedTasks = [];
-        if (!user.tasksDone) user.tasksDone = [];
-
-        // Check if already completed (check both arrays)
-        if (user.completedTasks.includes(finalTaskId) || user.tasksDone.includes(finalTaskId)) {
+        if (user.completedTasks.includes(finalTaskId)) {
             return res.json({ success: false, message: 'Task already completed' });
         }
 
@@ -2891,9 +2679,8 @@ app.post('/api/complete-task', async (req, res) => {
             }
         }
 
-        // Mark as completed - add to BOTH arrays to keep sync
+        // Mark as completed
         user.completedTasks.push(finalTaskId);
-        user.tasksDone.push(finalTaskId);
 
         // Add rewards
         db.setTokenBalance(user, db.getTokenBalance(user) + finalReward);
@@ -2914,13 +2701,6 @@ app.post('/api/complete-task', async (req, res) => {
 
         saveUsersObj(users);
         db.save();
-
-        // Invalidate user cache so next request gets fresh data
-        try {
-            cache.del(`api:user:${userId}`);
-        } catch (e) {
-            console.log('Cache invalidation error (non-critical):', e.message);
-        }
 
         res.json({
             success: true,
@@ -3330,446 +3110,6 @@ app.get('/api/mother-email/inbox', async (req, res) => {
 })();
 
 // ==========================================
-// GROUP MODERATION & AI SYSTEM
-// ==========================================
-
-// API: Get Group Moderation Settings
-app.get('/api/admin/group-moderation', (req, res) => {
-    try {
-        if (!db.data.adminSettings) db.data.adminSettings = {};
-        if (!db.data.adminSettings.groupModeration) {
-            db.data.adminSettings.groupModeration = {
-                enabled: false,
-                autoDetailsEnabled: false,
-                aiAccessUrl: '',
-                aiApiKey: '',
-                respondToVotesOnly: true,
-                restrictedKeywords: ['crypto', 'scam', 'hack', 'illegal'],
-                allowedCommands: ['vote', '/vote', '!vote']
-            };
-            db.save();
-        }
-        res.json({ success: true, settings: db.data.adminSettings.groupModeration });
-    } catch (e) {
-        res.json({ success: false, message: e.message });
-    }
-});
-
-// API: Update Group Moderation Settings
-app.post('/api/admin/group-moderation', (req, res) => {
-    try {
-        if (!db.data.adminSettings) db.data.adminSettings = {};
-        const { enabled, autoDetailsEnabled, aiAccessUrl, aiApiKey, respondToVotesOnly } = req.body;
-        
-        const moderation = db.data.adminSettings.groupModeration || {};
-        if (enabled !== undefined) moderation.enabled = enabled;
-        if (autoDetailsEnabled !== undefined) moderation.autoDetailsEnabled = autoDetailsEnabled;
-        if (aiAccessUrl !== undefined) moderation.aiAccessUrl = aiAccessUrl;
-        if (aiApiKey !== undefined) moderation.aiApiKey = aiApiKey;
-        if (respondToVotesOnly !== undefined) moderation.respondToVotesOnly = respondToVotesOnly;
-        
-        db.data.adminSettings.groupModeration = moderation;
-        db.save();
-        
-        res.json({ success: true, message: 'Group moderation settings updated', settings: moderation });
-    } catch (e) {
-        res.json({ success: false, message: e.message });
-    }
-});
-
-// ==========================================
-// CURRENCY & DEPOSIT MANAGEMENT
-// ==========================================
-
-// API: Get Currency Settings (BDT to USD conversion)
-app.get('/api/admin/currency', (req, res) => {
-    try {
-        if (!db.data.adminSettings) db.data.adminSettings = {};
-        if (!db.data.adminSettings.currency) {
-            db.data.adminSettings.currency = {
-                bdtToUsdRate: 126,
-                lastUpdated: Date.now()
-            };
-            db.save();
-        }
-        res.json({ success: true, currency: db.data.adminSettings.currency });
-    } catch (e) {
-        res.json({ success: false, message: e.message });
-    }
-});
-
-// API: Update Currency Rate
-app.post('/api/admin/currency/rate', (req, res) => {
-    try {
-        const { rate } = req.body;
-        if (!rate || isNaN(rate) || rate <= 0) {
-            return res.json({ success: false, message: 'Invalid rate provided' });
-        }
-        
-        if (!db.data.adminSettings) db.data.adminSettings = {};
-        if (!db.data.adminSettings.currency) db.data.adminSettings.currency = {};
-        
-        db.data.adminSettings.currency.bdtToUsdRate = parseFloat(rate);
-        db.data.adminSettings.currency.lastUpdated = Date.now();
-        db.save();
-        
-        res.json({ success: true, message: 'Currency rate updated', rate: parseFloat(rate) });
-    } catch (e) {
-        res.json({ success: false, message: e.message });
-    }
-});
-
-// API: Get Deposit History with USD Conversion
-app.get('/api/user/:userId/deposit-history', async (req, res) => {
-    try {
-        const { userId } = req.params;
-        const user = await db.getUser(userId);
-        if (!user) return res.json({ success: false, message: 'User not found' });
-        
-        const rate = db.data.adminSettings?.currency?.bdtToUsdRate || 126;
-        const history = user.depositHistory || [];
-        
-        const convertedHistory = history.map(deposit => ({
-            id: deposit.id || `dep_${Date.now()}`,
-            amount: deposit.amount,
-            amountUsd: (deposit.amount / rate).toFixed(2),
-            method: deposit.method,
-            status: deposit.status || 'pending',
-            date: deposit.date,
-            proof: deposit.proof,
-            approvedBy: deposit.approvedBy,
-            approvedAt: deposit.approvedAt
-        }));
-        
-        res.json({ success: true, history: convertedHistory, exchangeRate: rate });
-    } catch (e) {
-        res.json({ success: false, message: e.message });
-    }
-});
-
-// API: Add Deposit (Payment Proof Submission)
-app.post('/api/user/:userId/deposit', async (req, res) => {
-    try {
-        const { userId } = req.params;
-        const { amount, method, proof } = req.body;
-        
-        if (!userId || !amount || !method) {
-            return res.json({ success: false, message: 'Missing required fields' });
-        }
-        
-        const user = await db.getUser(userId);
-        if (!user) return res.json({ success: false, message: 'User not found' });
-        
-        if (!user.depositHistory) user.depositHistory = [];
-        
-        const rate = db.data.adminSettings?.currency?.bdtToUsdRate || 126;
-        const depositId = `dep_${Math.random().toString(36).substr(2, 9)}`;
-        
-        user.depositHistory.push({
-            id: depositId,
-            amount: parseInt(amount),
-            amountUsd: (parseInt(amount) / rate).toFixed(2),
-            method: method,
-            status: 'pending',
-            date: Date.now(),
-            proof: proof || null,
-            approvedBy: null,
-            approvedAt: null
-        });
-        
-        await db.updateUser(user);
-        
-        res.json({
-            success: true,
-            message: 'Deposit submitted successfully. Status: Pending Admin Approval',
-            depositId: depositId,
-            amountUsd: (parseInt(amount) / rate).toFixed(2),
-            status: 'pending'
-        });
-    } catch (e) {
-        res.json({ success: false, message: e.message });
-    }
-});
-
-// API: Admin - Approve/Reject Deposit
-app.post('/api/admin/deposit/approve', async (req, res) => {
-    try {
-        const { userId, depositId, approved } = req.body;
-        
-        if (!userId || !depositId) {
-            return res.json({ success: false, message: 'Missing userId or depositId' });
-        }
-        
-        const user = await db.getUser(userId);
-        if (!user) return res.json({ success: false, message: 'User not found' });
-        
-        const deposit = user.depositHistory?.find(d => d.id === depositId);
-        if (!deposit) return res.json({ success: false, message: 'Deposit not found' });
-        
-        if (approved) {
-            deposit.status = 'approved';
-            deposit.approvedAt = Date.now();
-            deposit.approvedBy = req.body.adminId || 'admin';
-            
-            // Add USD to user balance
-            user.usd = (user.usd || 0) + parseFloat(deposit.amountUsd);
-            
-            if (!user.history) user.history = [];
-            user.history.unshift({
-                type: 'deposit_approved',
-                amount: deposit.amount,
-                amountUsd: deposit.amountUsd,
-                currency: 'usd',
-                date: Date.now(),
-                detail: `Deposit approved: ${deposit.amount} BDT = $${deposit.amountUsd}`
-            });
-        } else {
-            deposit.status = 'rejected';
-            deposit.approvedAt = Date.now();
-            deposit.approvedBy = req.body.adminId || 'admin';
-        }
-        
-        await db.updateUser(user);
-        
-        res.json({
-            success: true,
-            message: `Deposit ${approved ? 'approved' : 'rejected'}`,
-            newBalance: user.usd || 0
-        });
-    } catch (e) {
-        res.json({ success: false, message: e.message });
-    }
-});
-
-// ==========================================
-// API COST TRACKING & DISPLAY
-// ==========================================
-
-// API: Get API Usage Costs (Track actual spending)
-app.get('/api/user/:userId/api-costs', async (req, res) => {
-    try {
-        const { userId } = req.params;
-        const user = await db.getUser(userId);
-        if (!user) return res.json({ success: false, message: 'User not found' });
-        
-        const apiHistory = user.apiUsageHistory || [];
-        const totalCost = apiHistory.reduce((sum, entry) => sum + (entry.cost || 0), 0);
-        
-        res.json({
-            success: true,
-            totalCost: totalCost,
-            totalCalls: user.apiTotalCalls || 0,
-            history: apiHistory.slice(0, 100),
-            creditSpent: totalCost,
-            creditAvailable: db.getTokenBalance(user) || 0
-        });
-    } catch (e) {
-        res.json({ success: false, message: e.message });
-    }
-});
-
-// ==========================================
-// NOTIFICATION SYSTEM FIXES
-// ==========================================
-
-// API: Send Notification (Messages/Gifts)
-app.post('/api/notification/send', async (req, res) => {
-    try {
-        const { userId, type, title, message, data } = req.body;
-        
-        if (!userId || !type) {
-            return res.json({ success: false, message: 'Missing userId or type' });
-        }
-        
-        const user = await db.getUser(userId);
-        if (!user) return res.json({ success: false, message: 'User not found' });
-        
-        if (!user.notifications) user.notifications = [];
-        
-        const notification = {
-            id: `notif_${Math.random().toString(36).substr(2, 9)}`,
-            type: type, // 'message', 'gift', 'alert', etc
-            title: title || 'Notification',
-            message: message,
-            read: false,
-            date: Date.now(),
-            data: data || {}
-        };
-        
-        user.notifications.unshift(notification);
-        
-        // Keep only last 100 notifications
-        if (user.notifications.length > 100) {
-            user.notifications = user.notifications.slice(0, 100);
-        }
-        
-        await db.updateUser(user);
-        
-        // Send Telegram notification if bot is available
-        if (bot && user.id) {
-            try {
-                const msgText = `📬 ${title || type.toUpperCase()}\n\n${message}`;
-                await bot.sendMessage(user.id, msgText);
-            } catch (e) {
-                console.error(`[NOTIFICATION] Failed to send Telegram message to ${userId}:`, e.message);
-            }
-        }
-        
-        res.json({ success: true, notification });
-    } catch (e) {
-        res.json({ success: false, message: e.message });
-    }
-});
-
-// API: Get Notifications
-app.get('/api/user/:userId/notifications', async (req, res) => {
-    try {
-        const { userId } = req.params;
-        const user = await db.getUser(userId);
-        if (!user) return res.json({ success: false, message: 'User not found' });
-        
-        const notifications = user.notifications || [];
-        
-        res.json({
-            success: true,
-            notifications: notifications,
-            unreadCount: notifications.filter(n => !n.read).length
-        });
-    } catch (e) {
-        res.json({ success: false, message: e.message });
-    }
-});
-
-// API: Mark Notification as Read
-app.post('/api/user/:userId/notification/read', async (req, res) => {
-    try {
-        const { userId } = req.params;
-        const { notificationId } = req.body;
-        
-        const user = await db.getUser(userId);
-        if (!user) return res.json({ success: false, message: 'User not found' });
-        
-       const notification = user.notifications?.find(n => n.id === notificationId);
-        if (!notification) return res.json({ success: false, message: 'Notification not found' });
-        
-        notification.read = true;
-        await db.updateUser(user);
-        
-        res.json({ success: true, message: 'Notification marked as read' });
-    } catch (e) {
-        res.json({ success: false, message: e.message });
-    }
-});
-
-// ==========================================
-// DYNAMIC SERVICE CONFIGURATION
-// ==========================================
-
-// API: Get Service Configuration (Standard vs Custom)
-app.get('/api/admin/services-config', (req, res) => {
-    try {
-        if (!db.data.adminSettings) db.data.adminSettings = {};
-        if (!db.data.adminSettings.servicesConfig) {
-            db.data.adminSettings.servicesConfig = {
-                configType: 'standard', // 'standard' or 'custom'
-                standardApiKey: '',
-                customServices: []
-            };
-            db.save();
-        }
-        res.json({ success: true, config: db.data.adminSettings.servicesConfig });
-    } catch (e) {
-        res.json({ success: false, message: e.message });
-    }
-});
-
-// API: Update Service Configuration
-app.post('/api/admin/services-config', (req, res) => {
-    try {
-        const { configType, standardApiKey, customServices } = req.body;
-        
-        if (!db.data.adminSettings) db.data.adminSettings = {};
-        
-        const config = db.data.adminSettings.servicesConfig || {};
-        
-        if (configType) config.configType = configType;
-        if (standardApiKey !== undefined) config.standardApiKey = standardApiKey;
-        if (Array.isArray(customServices)) config.customServices = customServices;
-        
-        db.data.adminSettings.servicesConfig = config;
-        db.save();
-        
-        res.json({ success: true, message: 'Service configuration updated', config });
-    } catch (e) {
-        res.json({ success: false, message: e.message });
-    }
-});
-
-// API: Add Custom Service
-app.post('/api/admin/services-config/add-service', (req, res) => {
-    try {
-        const { name, apiKey, apiUrl, status } = req.body;
-        
-        if (!name || !apiKey || !apiUrl) {
-            return res.json({ success: false, message: 'Missing required fields' });
-        }
-        
-        if (!db.data.adminSettings) db.data.adminSettings = {};
-        if (!db.data.adminSettings.servicesConfig) {
-            db.data.adminSettings.servicesConfig = { configType: 'custom', customServices: [] };
-        }
-        
-        const service = {
-            id: `service_${Math.random().toString(36).substr(2, 9)}`,
-            name: name,
-            apiKey: apiKey,
-            apiUrl: apiUrl,
-            status: status || 'active',
-            addedAt: Date.now()
-        };
-        
-        if (!db.data.adminSettings.servicesConfig.customServices) {
-            db.data.adminSettings.servicesConfig.customServices = [];
-        }
-        
-        db.data.adminSettings.servicesConfig.customServices.push(service);
-        db.data.adminSettings.servicesConfig.configType = 'custom';
-        db.save();
-        
-        res.json({ success: true, message: 'Custom service added', service });
-    } catch (e) {
-        res.json({ success: false, message: e.message });
-    }
-});
-
-// API: Remove Custom Service
-app.delete('/api/admin/services-config/service/:serviceId', (req, res) => {
-    try {
-        const { serviceId } = req.params;
-        
-        if (!db.data.adminSettings?.servicesConfig?.customServices) {
-            return res.json({ success: false, message: 'No custom services configured' });
-        }
-        
-        const index = db.data.adminSettings.servicesConfig.customServices.findIndex(s => s.id === serviceId);
-        if (index === -1) {
-            return res.json({ success: false, message: 'Service not found' });
-        }
-        
-        const removed = db.data.adminSettings.servicesConfig.customServices.splice(index, 1);
-        db.save();
-        
-        res.json({ success: true, message: 'Service removed', removed: removed[0] });
-    } catch (e) {
-        res.json({ success: false, message: e.message });
-    }
-});
-
-// ==========================================
-// SERVER INITIALIZATION & EXPORT
-// ==========================================
-
-// ==========================================
 // ADMIN EMAIL POOL MANAGEMENT
 // ==========================================
 
@@ -3799,70 +3139,6 @@ app.post('/api/admin/email-pool/add', (req, res) => {
         db.save();
         res.json({ success: true, message: 'Email added to pool', total: db.data.emailPool[type].length });
     } catch (e) {
-        res.json({ success: false, message: e.message });
-    }
-});
-
-// API: Admin - Bulk Add Emails to Pool
-app.post('/api/admin/email-pool/bulk', (req, res) => {
-    try {
-        const { type, emails } = req.body;
-        if (!type || !Array.isArray(emails) || emails.length === 0) {
-            return res.json({ success: false, message: 'type and emails array required' });
-        }
-
-        if (!db.data.emailPool) db.data.emailPool = {};
-        if (!db.data.emailPool[type]) db.data.emailPool[type] = [];
-
-        let added = 0;
-        let failed = 0;
-        const duplicates = [];
-
-        for (const emailData of emails) {
-            const { email, password, note } = emailData;
-            
-            // Validate email
-            if (!email || !email.includes('@')) {
-                failed++;
-                continue;
-            }
-
-            // Check if already exists
-            const exists = db.data.emailPool[type].find(e => e.email.toLowerCase() === email.toLowerCase());
-            if (exists) {
-                failed++;
-                duplicates.push(email);
-                continue;
-            }
-
-            // Add to pool
-            db.data.emailPool[type].push({
-                email,
-                password: password || null,
-                note: note || '',
-                status: 'available',
-                addedAt: Date.now(),
-                assignedTo: null,
-                sessionId: null
-            });
-            added++;
-        }
-
-        db.save();
-
-        const message = added > 0 ? `✅ Added ${added} emails` : 'No emails added';
-        const details = failed > 0 ? ` (${failed} duplicates/invalid)` : '';
-        
-        res.json({ 
-            success: true, 
-            message: message + details,
-            added,
-            failed,
-            duplicates: duplicates.length > 0 ? duplicates : undefined,
-            total: db.data.emailPool[type].length 
-        });
-    } catch (e) {
-        console.error('Bulk add error:', e.message);
         res.json({ success: false, message: e.message });
     }
 });
@@ -3921,7 +3197,7 @@ app.delete('/api/admin/email-pool/delete', (req, res) => {
         }
 
         if (removed) {
-            db.save(true);
+            db.save();
             res.json({ success: true, message: 'Email removed from pool and history' });
         } else {
             res.json({ success: false, message: 'Email not found in pool or history' });
@@ -3931,7 +3207,7 @@ app.delete('/api/admin/email-pool/delete', (req, res) => {
     }
 });
 
-// API: Admin - Clear ALL Assigned (Used) Emails from History only
+// API: Admin - Clear ALL Assigned (Used) Emails from Pool
 app.post('/api/admin/email-pool/clear-assigned', (req, res) => {
     try {
         const { type } = req.body;
@@ -3945,38 +3221,8 @@ app.post('/api/admin/email-pool/clear-assigned', (req, res) => {
 
         const cleared = initialCount - (db.data.emailPoolHistory ? db.data.emailPoolHistory.length : 0);
 
-        db.save(true);
+        db.save();
         res.json({ success: true, message: `Cleared ${cleared} used emails from ${type} history` });
-    } catch (e) {
-        res.json({ success: false, message: e.message });
-    }
-});
-
-// API: Admin - Clear ENTIRE pool (available + assigned history) for a type
-app.post('/api/admin/email-pool/clear-all', (req, res) => {
-    try {
-        const { type } = req.body;
-        if (!type) return res.json({ success: false, message: 'Type required' });
-
-        let poolCount = 0;
-        let historyCount = 0;
-
-        if (db.data.emailPool && db.data.emailPool[type]) {
-            poolCount = db.data.emailPool[type].length;
-            db.data.emailPool[type] = [];
-        }
-        if (db.data.emailPoolHistory) {
-            const before = db.data.emailPoolHistory.length;
-            db.data.emailPoolHistory = db.data.emailPoolHistory.filter(h => h.type !== type);
-            historyCount = before - db.data.emailPoolHistory.length;
-        }
-
-        db.save(true);
-        res.json({
-            success: true,
-            message: `Deleted all ${type} emails (${poolCount} in pool + ${historyCount} in history)`,
-            cleared: poolCount + historyCount
-        });
     } catch (e) {
         res.json({ success: false, message: e.message });
     }
@@ -3989,31 +3235,11 @@ function assignEmailFromPool(type) {
     return available || null;
 }
 
-/** Reject fake/demo/fallback accounts that cannot receive mail */
-function isRealEmailAccount(emailData) {
-    if (!emailData || !emailData.email || typeof emailData.email !== 'string') return false;
-    if (emailData.isFallback === true) return false;
-    const provider = String(emailData.provider || '').toLowerCase();
-    if (provider.startsWith('fallback')) return false;
-    if (emailData.email.includes('demo_')) return false;
-    return true;
-}
-
-const NO_EMAIL_MESSAGES = {
-    gmail: '❌ No Gmail available right now. Admin pool is empty. Please try again later.',
-    hotmail: '❌ No Hotmail available right now. Admin pool is empty. Please try again later.',
-    student: '❌ No Student email available right now. Please try again later.',
-    temp: '❌ No temporary email available right now. Please try again later.'
-};
-
 // API: Generate Premium Email (Gmail, Hotmail) - ADMIN POOL ONLY
 const genLocks = new Set();
-const emailGenCooldowns = new Map(); // userId_provider -> last success timestamp
-const EMAIL_GEN_COOLDOWN_MS = 7000; // 7s between new emails (balance speed vs abuse)
-
 app.post('/api/premium-emails/generate', async (req, res) => {
-    const { userId, provider, forceNew } = req.body;
-
+    const { userId, provider } = req.body;
+    
     // Sequential generation lock per user/provider
     const lockKey = `gen_${userId}_${provider}`;
     if (genLocks.has(lockKey)) {
@@ -4031,181 +3257,157 @@ app.post('/api/premium-emails/generate', async (req, res) => {
 
         const settings = db.getSettings();
         const costs = settings.costs || {};
-        let tokenCost = 20;
-        if (provider === 'gmail') tokenCost = costs.gmail || 20;
-        else if (provider === 'hotmail') tokenCost = costs.hotmail || 25;
-        else if (provider === 'student') tokenCost = costs.student || 50;
-        else if (provider === 'temp') tokenCost = costs.tempmail || 10;
+    let tokenCost = 20;
+    if (provider === 'gmail') tokenCost = costs.gmail || 20;
+    else if (provider === 'hotmail') tokenCost = costs.hotmail || 25;
+    else if (provider === 'student') tokenCost = costs.student || 50;
+    else if (provider === 'temp') tokenCost = costs.tempmail || 10;
 
-        const cooldownKey = `${userId}_${provider}`;
-        const lastGenAt = emailGenCooldowns.get(cooldownKey) || 0;
-        const cooldownLeft = EMAIL_GEN_COOLDOWN_MS - (Date.now() - lastGenAt);
-        if (lastGenAt > 0 && cooldownLeft > 0) {
-            genLocks.delete(lockKey);
-            const waitSec = Math.ceil(cooldownLeft / 1000);
-            return res.json({
-                success: false,
-                message: `⏳ Please wait ${waitSec} second(s) before requesting another email.`,
-                cooldownSeconds: waitSec
+    // Prevent double generation if already has a VERY fresh session (within 10 seconds)
+    // This helps with accidental double clicks or concurrent auto-generations
+    const now = Date.now();
+    if (db.data.mailSessions) {
+        const existingSession = Object.values(db.data.mailSessions).find(s => 
+            String(s.userId) === String(userId) && 
+            s.provider === provider && 
+            (now - (s.createdAt || 0)) < 10000
+        );
+        if (existingSession) {
+             return res.json({
+                success: true,
+                email: existingSession.email,
+                sessionId: Object.keys(db.data.mailSessions).find(k => db.data.mailSessions[k] === existingSession),
+                newBalance: db.getTokenBalance(user),
+                provider: existingSession.provider,
+                note: 'Restored recent session'
             });
         }
-
-        // Prevent accidental double-generation (skip when user explicitly requests NEW EMAIL)
-        const now = Date.now();
-        if (!forceNew && db.data.mailSessions) {
-            const existingSession = Object.values(db.data.mailSessions).find(s =>
-                String(s.userId) === String(userId) &&
-                s.provider === provider &&
-                (now - (s.createdAt || 0)) < 10000
-            );
-            if (existingSession) {
-                genLocks.delete(lockKey);
-                return res.json({
-                    success: true,
-                    email: existingSession.email,
-                    sessionId: Object.keys(db.data.mailSessions).find(k => db.data.mailSessions[k] === existingSession),
-                    newBalance: db.getTokenBalance(user),
-                    provider: existingSession.provider,
-                    note: 'Restored recent session'
-                });
-            }
-        }
-
-        let emailData = null;
-
-        // Gmail & Hotmail: use ADMIN POOL only
-        if (provider === 'gmail' || provider === 'hotmail') {
-            const pool = db.data.emailPool?.[provider] || [];
-            const available = pool.filter(e => !e.status || e.status === 'available');
-            if (available.length === 0) {
-                try {
-                    const generated = provider === 'gmail' ? await createGmailAccount() : await createHotmailAccount();
-                    if (isRealEmailAccount(generated)) {
-                        emailData = {
-                            email: generated.email,
-                            password: generated.password || null,
-                            provider: `automation_${provider}`,
-                            sessionId: generated.sessionId || generated.email,
-                            token: generated.token || generated.email
-                        };
-                    } else {
-                        genLocks.delete(lockKey);
-                        return res.json({ success: false, message: NO_EMAIL_MESSAGES[provider] || `❌ No ${provider} emails available.` });
-                    }
-                } catch (e) {
-                    console.error(`Automation failed for ${provider}:`, e.message);
-                    genLocks.delete(lockKey);
-                    return res.json({ success: false, message: NO_EMAIL_MESSAGES[provider] || `❌ No ${provider} emails available.` });
-                }
-            } else {
-                const poolEmail = available[0];
-                emailData = {
-                    email: poolEmail.email,
-                    password: poolEmail.password || null,
-                    provider: `admin_pool_${provider}`,
-                    sessionId: poolEmail.email,
-                    token: poolEmail.email
-                };
-                // REMOVE from pool after assignment (admin sees it's been used)
-                db.data.emailPool[provider] = pool.filter(e => e.email !== poolEmail.email);
-                // Save usage record in admin history
-                if (!db.data.emailPoolHistory) db.data.emailPoolHistory = [];
-                db.data.emailPoolHistory.unshift({
-                    email: poolEmail.email,
-                    type: provider,
-                    assignedTo: userId,
-                    assignedAt: new Date().toISOString()
-                });
-                db.save();
-            }
-        } else if (provider === 'student') {
-            // Student email: still use admin pool if available, otherwise providers
-            const studentPool = db.data.emailPool?.['student'] || [];
-            const availableStudent = studentPool.filter(e => !e.status || e.status === 'available');
-            if (availableStudent.length > 0) {
-                const poolEmail = availableStudent[0];
-                emailData = {
-                    email: poolEmail.email,
-                    password: poolEmail.password || null,
-                    provider: 'admin_pool_student',
-                    sessionId: poolEmail.email,
-                    token: poolEmail.email
-                };
-                // Remove from pool
-                db.data.emailPool['student'] = studentPool.filter(e => e.email !== poolEmail.email);
-                if (!db.data.emailPoolHistory) db.data.emailPoolHistory = [];
-                db.data.emailPoolHistory.unshift({
-                    email: poolEmail.email, type: 'student',
-                    assignedTo: userId, assignedAt: new Date().toISOString()
-                });
-                db.save();
-            } else {
-                try {
-                    const unifiedProviders = require('../services/providers');
-                    const generated = await unifiedProviders.createStudentEmailAccount();
-                    if (isRealEmailAccount(generated)) {
-                        emailData = generated;
-                    }
-                } catch (e) {
-                    console.error('Student Email Generation Error:', e.message);
-                }
-            }
-        }
-
-        if (!isRealEmailAccount(emailData)) {
-            genLocks.delete(lockKey);
-            return res.json({
-                success: false,
-                message: NO_EMAIL_MESSAGES[provider] || '❌ No email available. Please try again later or contact admin.'
-            });
-        }
-
-        // Deduct tokens
-        db.setTokenBalance(user, db.getTokenBalance(user) - tokenCost);
-        if (!user.history) user.history = [];
-
-        let historyType = 'premium_email';
-        if (provider === 'gmail') historyType = 'gmail_email';
-        else if (provider === 'hotmail') historyType = 'hotmail_email';
-        else if (provider === 'student') historyType = 'student_email';
-        else if (provider === 'temp') historyType = 'temp_mail';
-
-        user.history.unshift({
-            type: historyType,
-            amount: -tokenCost,
-            date: new Date().toISOString(),
-            reward: `-${tokenCost} Tokens`,
-            detail: emailData.email
-        });
-        saveUsersObj(users);
-
-        // Store session — userId stored as string for consistent comparison
-        const sessionId = `premium_${provider}_${Date.now()}_${userId}`;
-        if (!db.data.mailSessions) db.data.mailSessions = {};
-        db.data.mailSessions[sessionId] = {
-            ...emailData,
-            userId: String(userId),
-            provider,
-            createdAt: Date.now()
-        };
-        db.save();
-        emailGenCooldowns.set(cooldownKey, Date.now());
-
-        // Return email as plain STRING (not object) to avoid [object Object] on frontend
-        res.json({
-            success: true,
-            email: emailData.email,    // ← plain string!
-            sessionId,
-            newBalance: db.getTokenBalance(user),
-            provider: emailData.provider,
-            cooldownSeconds: Math.ceil(EMAIL_GEN_COOLDOWN_MS / 1000)
-        });
-    } catch (err) {
-        console.error("Gen Error:", err);
-        res.json({ success: false, message: err.message });
-    } finally {
-        genLocks.delete(lockKey);
     }
+
+    let emailData = null;
+
+    // Gmail & Hotmail: use ADMIN POOL only
+    if (provider === 'gmail' || provider === 'hotmail') {
+        const pool = db.data.emailPool?.[provider] || [];
+        const available = pool.filter(e => !e.status || e.status === 'available');
+        if (available.length === 0) {
+            try {
+                const generated = provider === 'gmail' ? await createGmailAccount() : await createHotmailAccount();
+                if (generated && generated.email) {
+                    emailData = {
+                        email: generated.email,
+                        password: generated.password || null,
+                        provider: `automation_${provider}`,
+                        sessionId: generated.sessionId || generated.email,
+                        token: generated.token || generated.email
+                    };
+                } else {
+                    return res.json({ success: false, message: `❌ No ${provider.toUpperCase()} emails available in pool and fallback failed.` });
+                }
+            } catch (e) {
+                console.error(`Automation fallback failed for ${provider}:`, e.message);
+                return res.json({ success: false, message: `❌ No ${provider.toUpperCase()} emails available in pool and fallback failed.` });
+            }
+        } else {
+            const poolEmail = available[0];
+            emailData = {
+                email: poolEmail.email,
+                password: poolEmail.password || null,
+                provider: `admin_pool_${provider}`,
+                sessionId: poolEmail.email,
+                token: poolEmail.email
+            };
+            // REMOVE from pool after assignment (admin sees it's been used)
+            db.data.emailPool[provider] = pool.filter(e => e.email !== poolEmail.email);
+            // Save usage record in admin history
+            if (!db.data.emailPoolHistory) db.data.emailPoolHistory = [];
+            db.data.emailPoolHistory.unshift({
+                email: poolEmail.email,
+                type: provider,
+                assignedTo: userId,
+                assignedAt: new Date().toISOString()
+            });
+            db.save();
+        }
+    } else if (provider === 'student') {
+        // Student email: still use admin pool if available, otherwise providers
+        const studentPool = db.data.emailPool?.['student'] || [];
+        const availableStudent = studentPool.filter(e => !e.status || e.status === 'available');
+        if (availableStudent.length > 0) {
+            const poolEmail = availableStudent[0];
+            emailData = {
+                email: poolEmail.email,
+                password: poolEmail.password || null,
+                provider: 'admin_pool_student',
+                sessionId: poolEmail.email,
+                token: poolEmail.email
+            };
+            // Remove from pool
+            db.data.emailPool['student'] = studentPool.filter(e => e.email !== poolEmail.email);
+            if (!db.data.emailPoolHistory) db.data.emailPoolHistory = [];
+            db.data.emailPoolHistory.unshift({
+                email: poolEmail.email, type: 'student',
+                assignedTo: userId, assignedAt: new Date().toISOString()
+            });
+            db.save();
+        } else {
+            try {
+                const unifiedProviders = require('../services/providers');
+                emailData = await unifiedProviders.createStudentEmailAccount();
+            } catch (e) {
+                console.error('Student Email Generation Error:', e.message);
+            }
+        }
+    }
+
+    if (!emailData || !emailData.email) {
+        return res.json({ success: false, message: 'No emails available in pool. Please contact admin.' });
+    }
+
+    // Deduct tokens
+    db.setTokenBalance(user, db.getTokenBalance(user) - tokenCost);
+    if (!user.history) user.history = [];
+    
+    let historyType = 'premium_email';
+    if(provider === 'gmail') historyType = 'gmail_email';
+    else if(provider === 'hotmail') historyType = 'hotmail_email';
+    else if(provider === 'student') historyType = 'student_email';
+    else if(provider === 'temp') historyType = 'temp_mail';
+
+    user.history.unshift({
+        type: historyType,
+        amount: -tokenCost,
+        date: new Date().toISOString(),
+        reward: `-${tokenCost} Tokens`,
+        detail: emailData.email
+    });
+    saveUsersObj(users);
+
+    // Store session — userId stored as string for consistent comparison
+    const sessionId = `premium_${provider}_${Date.now()}_${userId}`;
+    if (!db.data.mailSessions) db.data.mailSessions = {};
+    db.data.mailSessions[sessionId] = {
+        ...emailData,
+        userId: String(userId),
+        provider,
+        createdAt: Date.now()
+    };
+    db.save();
+
+    // Return email as plain STRING (not object) to avoid [object Object] on frontend
+    res.json({
+        success: true,
+        email: emailData.email,    // ← plain string!
+        sessionId,
+        newBalance: db.getTokenBalance(user),
+        provider: emailData.provider
+    });
+} catch (err) {
+    console.error("Gen Error:", err);
+    res.json({ success: false, message: err.message });
+} finally {
+    genLocks.delete(lockKey);
+}
 });
 
 
@@ -4243,22 +3445,14 @@ app.get('/api/premium-emails/inbox', async (req, res) => {
     try {
         // ─── ADMIN POOL GMAIL → use IMAP Mother Email ───
         if (providerStr.startsWith('admin_pool_gmail') || providerStr === 'gmail') {
-            // Check cache first for instant response
-            const cached = getCachedImapInbox('gmail', targetEmail);
-            if (cached) {
-                messages = cached;
-            } else if (imapService.isConnected('gmail')) {
+            if (imapService.isConnected('gmail')) {
                 messages = await imapService.fetchMessagesForEmail('gmail', targetEmail, 60);
-                setCachedImapInbox('gmail', targetEmail, messages);
             } else {
                 // Try auto-reconnect
                 const saved = db.data.adminSettings?.motherEmailConfigs?.gmail;
                 if (saved) {
                     const ok = await imapService.connect('gmail', saved);
-                    if (ok) {
-                        messages = await imapService.fetchMessagesForEmail('gmail', targetEmail, 60);
-                        setCachedImapInbox('gmail', targetEmail, messages);
-                    }
+                    if (ok) messages = await imapService.fetchMessagesForEmail('gmail', targetEmail, 60);
                 }
                 if (messages.length === 0) {
                     return res.json({
@@ -4271,21 +3465,13 @@ app.get('/api/premium-emails/inbox', async (req, res) => {
 
             // ─── ADMIN POOL HOTMAIL → use IMAP Mother Email ───
         } else if (providerStr.startsWith('admin_pool_hotmail') || providerStr === 'hotmail' || service === 'hotmail') {
-            // Check cache first for instant response
-            const cached = getCachedImapInbox('hotmail', targetEmail);
-            if (cached) {
-                messages = cached;
-            } else if (imapService.isConnected('hotmail')) {
+            if (imapService.isConnected('hotmail')) {
                 messages = await imapService.fetchMessagesForEmail('hotmail', targetEmail, 60);
-                setCachedImapInbox('hotmail', targetEmail, messages);
             } else {
                 const saved = db.data.adminSettings?.motherEmailConfigs?.hotmail;
                 if (saved) {
                     const ok = await imapService.connect('hotmail', saved);
-                    if (ok) {
-                        messages = await imapService.fetchMessagesForEmail('hotmail', targetEmail, 60);
-                        setCachedImapInbox('hotmail', targetEmail, messages);
-                    }
+                    if (ok) messages = await imapService.fetchMessagesForEmail('hotmail', targetEmail, 60);
                 }
                 if (messages.length === 0) {
                     return res.json({
@@ -4314,11 +3500,11 @@ app.get('/api/premium-emails/inbox', async (req, res) => {
             subject: m.subject || '(No Subject)',
             body: m.body || m.snippet || '',
             preview: String(m.body || m.snippet || '').substring(0, 120),
-            otp: m.otp || (function (text) {
+            otp: m.otp || (function(text) {
                 if (!text) return null;
                 // Exclude common false positives like Microsoft Redmond Zip (98052) or Google MV Zip (94043)
                 const blacklist = ['98052', '94043', '98034', '94040', '95014'];
-
+                
                 // Try to find code near "code" or "otp" keyword first (High confidence)
                 const contextRegex = /(?:code|otp|verification|verify|pin|passcode|security)\D*(\d{4,8})\b/i;
                 const contextMatch = text.match(contextRegex);
@@ -4381,7 +3567,7 @@ app.post('/api/mail/generate', async (req, res) => {
     else if (requestedService === 'hotmail' || requestedService === 'hot') currency = costs.hotmailCurrency || 'token';
     else if (requestedService === 'student') currency = costs.studentCurrency || 'token';
     else currency = costs.tempmailCurrency || 'token';
-
+    
     // Balance check based on currency
     if (currency === 'Gems' || currency === 'gem') {
         const userGems = user.Gems || 0;
@@ -4408,7 +3594,7 @@ app.post('/api/mail/generate', async (req, res) => {
             if (!poolEmail) {
                 try {
                     const generated = await createHotmailAccount();
-                    if (isRealEmailAccount(generated)) {
+                    if (generated && generated.email) {
                         emailData = {
                             email: generated.email,
                             password: generated.password || null,
@@ -4417,11 +3603,11 @@ app.post('/api/mail/generate', async (req, res) => {
                             token: generated.token || generated.email
                         };
                     } else {
-                        return res.json({ success: false, message: NO_EMAIL_MESSAGES.hotmail });
+                        return res.json({ success: false, message: 'No Hot Mail emails available in pool and fallback failed.' });
                     }
                 } catch (e) {
-                    console.error('Automation failed for hotmail:', e.message);
-                    return res.json({ success: false, message: NO_EMAIL_MESSAGES.hotmail });
+                    console.error('Automation fallback failed for hotmail:', e.message);
+                    return res.json({ success: false, message: 'No Hot Mail emails available in pool and fallback failed.' });
                 }
             } else {
                 emailData = {
@@ -4451,7 +3637,7 @@ app.post('/api/mail/generate', async (req, res) => {
             if (!poolEmail) {
                 try {
                     const generated = await createGmailAccount();
-                    if (isRealEmailAccount(generated)) {
+                    if (generated && generated.email) {
                         emailData = {
                             email: generated.email,
                             password: generated.password || null,
@@ -4460,11 +3646,11 @@ app.post('/api/mail/generate', async (req, res) => {
                             token: generated.token || generated.email
                         };
                     } else {
-                        return res.json({ success: false, message: NO_EMAIL_MESSAGES.gmail });
+                        return res.json({ success: false, message: 'No Gmail emails available in pool and fallback failed.' });
                     }
                 } catch (e) {
-                    console.error('Automation failed for gmail:', e.message);
-                    return res.json({ success: false, message: NO_EMAIL_MESSAGES.gmail });
+                    console.error('Automation fallback failed for gmail:', e.message);
+                    return res.json({ success: false, message: 'No Gmail emails available in pool and fallback failed.' });
                 }
             } else {
                 emailData = {
@@ -4490,8 +3676,7 @@ app.post('/api/mail/generate', async (req, res) => {
             }
         } else if (requestedService === 'student') {
             const { createStudentEmailAccount } = require('../services/providers');
-            const generated = await createStudentEmailAccount();
-            if (isRealEmailAccount(generated)) emailData = generated;
+            emailData = await createStudentEmailAccount();
         } else {
             const tempMail = require('../services/tempmail-providers');
             emailData = await tempMail.createAccount();
@@ -4500,12 +3685,9 @@ app.post('/api/mail/generate', async (req, res) => {
         console.error('Mail createAccount error:', e.message);
     }
 
-    if (!isRealEmailAccount(emailData)) {
+    if (!emailData || !emailData.email) {
         console.error('❌ Mail generation failed for:', requestedService);
-        return res.json({
-            success: false,
-            message: NO_EMAIL_MESSAGES[requestedService] || '❌ Email not available. Please try again later or contact admin.'
-        });
+        return res.json({ success: false, message: 'Email not available. Please try again later or contact admin.' });
     }
 
     if (currency === 'Gems' || currency === 'gem') {
@@ -4515,13 +3697,13 @@ app.post('/api/mail/generate', async (req, res) => {
     } else {
         db.setTokenBalance(user, db.getTokenBalance(user) - tokenCost);
     }
-
+    
     if (!user.history) user.history = [];
 
     let historyType = 'temp_mail';
-    if (requestedService === 'student') historyType = 'student_email';
-    else if (requestedService === 'hotmail' || requestedService === 'hot') historyType = 'hotmail_email';
-    else if (requestedService === 'gmail' || requestedService === 'premium') historyType = 'gmail_email';
+    if(requestedService === 'student') historyType = 'student_email';
+    else if(requestedService === 'hotmail' || requestedService === 'hot') historyType = 'hotmail_email';
+    else if(requestedService === 'gmail' || requestedService === 'premium') historyType = 'gmail_email';
 
     const curLabel = (currency === 'Gems' || currency === 'gem') ? 'Gems' : ((currency === 'usd' || currency === 'USD') ? 'USD' : 'Tokens');
 
@@ -4629,19 +3811,19 @@ app.post('/api/mail/renew-custom', async (req, res) => {
 app.get('/api/mail/active', async (req, res) => {
     const userId = req.query.userId || req.headers['x-user-id'];
     if (!userId) return res.json({ success: false, message: 'User ID required' });
-
+    
     // 24-hour retention for gmail and hotmail (premium)
     const activeSessions = {};
     const now = Date.now();
     const RETENTION_PERIOD = 24 * 60 * 60 * 1000; // 24 hours
-
+    
     if (db.data.mailSessions) {
         // Collect latest active session per service type
         for (const [sessionId, session] of Object.entries(db.data.mailSessions)) {
             if (String(session.userId) === String(userId)) {
                 if (now - session.createdAt < RETENTION_PERIOD) {
                     const type = session.service || session.provider || 'temp';
-
+                    
                     // For premium mails, pick the most recent session
                     if (type === 'gmail' || type === 'hotmail' || type === 'premium' || type.startsWith('admin_pool_')) {
                         if (!activeSessions[type] || session.createdAt > activeSessions[type].createdAt) {
@@ -4658,7 +3840,7 @@ app.get('/api/mail/active', async (req, res) => {
             }
         }
     }
-
+    
     res.json({ success: true, activeSessions });
 });
 
@@ -4694,22 +3876,14 @@ app.get('/api/mail/inbox', async (req, res) => {
         // ─── ADMIN POOL EMAILS → use Mother Email IMAP ───
         if (providerStr.startsWith('admin_pool_') || activeService === 'hotmail' || activeService === 'hot' || activeService === 'gmail') {
             const targetType = (activeService === 'hotmail' || activeService === 'hot') ? 'hotmail' : 'gmail';
-            // Check cache first for instant response
-            const cached = getCachedImapInbox(targetType, session.email);
-            if (cached) {
-                messages = cached;
-            } else if (session.email && imapService.isConnected(targetType)) {
+            if (session.email && imapService.isConnected(targetType)) {
                 messages = await imapService.fetchMessagesForEmail(targetType, session.email, 120);
-                setCachedImapInbox(targetType, session.email, messages);
             } else if (session.email) {
                 // Try reconnect
                 const saved = db.data.settings?.motherEmails?.[targetType];
                 if (saved) {
                     const ok = await imapService.connect(targetType, saved);
-                    if (ok) {
-                        messages = await imapService.fetchMessagesForEmail(targetType, session.email, 120);
-                        setCachedImapInbox(targetType, session.email, messages);
-                    }
+                    if (ok) messages = await imapService.fetchMessagesForEmail(targetType, session.email, 120);
                 }
                 if (messages.length === 0) {
                     return res.json({
@@ -4734,7 +3908,7 @@ app.get('/api/mail/inbox', async (req, res) => {
             preview: (m.body || m.snippet || m.preview || '').substring(0, 100),
             body: m.body || m.snippet || m.preview || '',
             time: m.date ? new Date(m.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
-            otp: m.otp || (function (text) {
+            otp: m.otp || (function(text) {
                 if (!text) return null;
                 const blacklist = ['98052', '94043', '98034', '94040', '95014'];
                 const contextRegex = /(?:code|otp|verification|verify|pin|passcode|security)\D*(\d{4,8})\b/i;
@@ -4785,9 +3959,7 @@ app.get('/api/admin/users', (req, res) => {
             leftFrom: u.leftFrom || null,
             banned: u.banned || u.blocked || false,
             joinDate: u.joinDate || u.joinedAt || null,
-            lastActive: u.lastActive || null,
-            supportMessages: u.supportMessages || [],
-            pendingWebMessages: u.pendingWebMessages || []
+            lastActive: u.lastActive || null
         }));
         res.json({ success: true, users: list, total: list.length });
     } catch (err) {
@@ -4948,7 +4120,7 @@ app.post('/api/exchange/convert', (req, res) => {
 
     // History record (Two transactions for minus and plus)
     if (!user.history) user.history = [];
-
+    
     // 1. Transaction for Deduction (-)
     user.history.unshift({
         type: 'exchange',
@@ -4957,7 +4129,7 @@ app.post('/api/exchange/convert', (req, res) => {
         date: Date.now(),
         detail: `Exchanged ${amt} ${from.toUpperCase()} to ${to.toUpperCase()}`
     });
-
+    
     // 2. Transaction for Addition (+)
     user.history.unshift({
         type: 'exchange',
@@ -5211,20 +4383,13 @@ app.post('/api/deposit/submit', (req, res) => {
         txnId,
         screenshot: req.body.screenshot || null,
         date: Date.now(),
-        status: 'Submitted'
+        status: 'pending'
     };
 
     db.data.pendingDeposits.unshift(deposit);
     db.save();
 
     res.json({ success: true, message: 'Deposit submitted successfully! Admin will review it.' });
-});
-
-// API: User - Get Their Own Deposits (Pending & History)
-app.get('/api/user/deposits/:userId', (req, res) => {
-    const { userId } = req.params;
-    const deposits = (db.data.pendingDeposits || []).filter(d => d.userId === userId.toString());
-    res.json({ success: true, deposits });
 });
 
 // API: Deposit - Get Config (QR/Addresses)
@@ -5234,8 +4399,8 @@ app.get('/api/deposit/config', (req, res) => {
 
 // API: Admin - Get All Deposits (Pending & History)
 app.get('/api/admin/deposits', (req, res) => {
-    const pending = (db.data.pendingDeposits || []).filter(d => d.status === 'Submitted');
-    const history = (db.data.pendingDeposits || []).filter(d => d.status !== 'Submitted').slice(0, 50);
+    const pending = (db.data.pendingDeposits || []).filter(d => d.status === 'pending');
+    const history = (db.data.pendingDeposits || []).filter(d => d.status !== 'pending').slice(0, 50);
     res.json({ success: true, pending, history });
 });
 
@@ -5248,7 +4413,7 @@ app.post('/api/admin/deposits/action', (req, res) => {
     if (depositIndex === -1) return res.json({ success: false, message: 'Deposit not found' });
 
     const deposit = deposits[depositIndex];
-    if (deposit.status !== 'Submitted') return res.json({ success: false, message: 'Deposit already processed' });
+    if (deposit.status !== 'pending') return res.json({ success: false, message: 'Deposit already processed' });
 
     if (action === 'approve') {
         const users = getUsersObj();
@@ -5274,23 +4439,13 @@ app.post('/api/admin/deposits/action', (req, res) => {
         }
 
         // Credit user with USD balance
-        let creditAmount = deposit.amount;
-
-        // Check if it's a local payment (BDT) and convert to USD
-        const isLocal = db.data.cryptoMethods && db.data.cryptoMethods[deposit.method] && db.data.cryptoMethods[deposit.method].type === 'local';
-        if (isLocal) {
-            const bdtRate = parseFloat(db.data.adminSettings?.bdtUsdRate || 125);
-            creditAmount = deposit.amount / bdtRate;
-            console.log(`[DEPOSIT] Converting ${deposit.amount} BDT to ${creditAmount.toFixed(3)} USD (Rate: ${bdtRate})`);
-        }
-
-        user.usd = parseFloat(((user.usd || 0) + creditAmount).toFixed(3));
+        user.usd = parseFloat(((user.usd || 0) + deposit.amount).toFixed(3));
 
         // Add to history
         if (!user.history) user.history = [];
         user.history.unshift({
             type: 'deposit',
-            amount: creditAmount,
+            amount: deposit.amount,
             currency: 'usd',
             method: deposit.method,
             txnId: deposit.txnId,
@@ -5299,9 +4454,9 @@ app.post('/api/admin/deposits/action', (req, res) => {
         });
 
         saveUsersObj(users);
-        deposit.status = 'Approved';
+        deposit.status = 'approved';
     } else {
-        deposit.status = 'Rejected';
+        deposit.status = 'rejected';
         deposit.adminNote = note;
     }
 
@@ -5313,10 +4468,10 @@ app.post('/api/admin/deposits/action', (req, res) => {
 app.post('/api/admin/deposits/delete-all', (req, res) => {
     try {
         if (!db.data.pendingDeposits) db.data.pendingDeposits = [];
-        // Only keep the Submitted ones
-        db.data.pendingDeposits = db.data.pendingDeposits.filter(d => d.status === 'Submitted');
+        // Only keep the pending ones
+        db.data.pendingDeposits = db.data.pendingDeposits.filter(d => d.status === 'pending');
         db.save();
-        res.json({ success: true, message: 'Deposit history cleared (Submitted requests preserved)' });
+        res.json({ success: true, message: 'Deposit history cleared (Pending requests preserved)' });
     } catch (e) {
         res.json({ success: false, message: e.message });
     }
@@ -5334,7 +4489,7 @@ app.post('/api/admin/deposits/auto-approve', (req, res) => {
     let approvedCount = 0;
 
     idsArray.forEach(tid => {
-        const deposit = deposits.find(d => d.txnId === tid && d.status === 'Submitted');
+        const deposit = deposits.find(d => d.txnId === tid && d.status === 'pending');
         if (deposit) {
             const user = users[deposit.userId];
             if (user) {
@@ -5350,7 +4505,7 @@ app.post('/api/admin/deposits/auto-approve', (req, res) => {
                     status: 'completed',
                     autoApproved: true
                 });
-                deposit.status = 'Approved';
+                deposit.status = 'approved';
                 deposit.autoApproved = true;
                 approvedCount++;
             }
@@ -5440,15 +4595,15 @@ app.get('/api/admin/stats', async (req, res) => {
     // Count ALL Emails from Pool (Enhanced to include all categories)
     const pool = db.data.emailPool || {};
     const history = db.data.emailPoolHistory || [];
-
+    
     let gmailTotal = 0;
     let gmailUsed = 0;
-
+    
     ['gmail', 'hotmail', 'student'].forEach(t => {
         const typePool = pool[t] || [];
         const available = typePool.filter(e => !e.status || e.status === 'available').length;
         const used = history.filter(h => h.type === t).length;
-
+        
         gmailTotal += (available + used);
         gmailUsed += used;
     });
@@ -5822,43 +4977,8 @@ app.put('/api/admin/tasks/:id', (req, res) => {
     if (url !== undefined) db.data.tasks[id].url = url;
     if (icon !== undefined) db.data.tasks[id].icon = icon;
     db.save();
-});
 
-// API: Admin - Payment Platforms Management
-app.get('/api/admin/payment-platforms', (req, res) => {
-    try {
-        const platforms = db.data.paymentPlatforms || [];
-        res.json({ success: true, platforms });
-    } catch (error) {
-        console.error('Error fetching payment platforms:', error);
-        res.status(500).json({ success: false, message: 'Failed to fetch payment platforms', platforms: [] });
-    }
-});
-
-app.post('/api/admin/payment-platforms', (req, res) => {
-    try {
-        const { platforms } = req.body;
-        if (!Array.isArray(platforms)) {
-            return res.json({ success: false, message: 'Invalid platforms data' });
-        }
-        db.data.paymentPlatforms = platforms;
-        db.save();
-        res.json({ success: true, message: 'Payment platforms saved successfully' });
-    } catch (error) {
-        console.error('Error saving payment platforms:', error);
-        res.status(500).json({ success: false, message: 'Failed to save payment platforms' });
-    }
-});
-
-// API: Public - Get Payment Platforms (for user panel)
-app.get('/api/payment-platforms', (req, res) => {
-    try {
-        const platforms = db.data.paymentPlatforms || [];
-        res.json({ success: true, platforms });
-    } catch (error) {
-        console.error('Error fetching payment platforms:', error);
-        res.status(500).json({ success: false, message: 'Failed to fetch payment platforms', platforms: [] });
-    }
+    res.json({ success: true, message: 'Task updated successfully' });
 });
 
 // Reset task for all users (remove from completedTasks)
@@ -5949,7 +5069,7 @@ app.post('/api/admin/tasks/seed-defaults', (req, res) => {
     // Reset all tasks for all users so they can do them again
     const allTaskIds = Object.keys(db.data.tasks || {});
     let affectedUsers = 0;
-
+    
     Object.values(db.data.users || {}).forEach(user => {
         if (user.completedTasks) {
             const initialLength = user.completedTasks.length;
@@ -6122,14 +5242,6 @@ app.get('/api/admin/costs', (req, res) => {
             bkashRate: creditRates.bkash || 1,
             nagadRate: creditRates.nagad || 1,
 
-            // Local Payment Platforms
-            bkashName: settings.bkashName || 'bKash Personal',
-            bkashNumber: settings.bkashNumber || '',
-            bkashType: settings.bkashType || 'Personal',
-            nagadName: settings.nagadName || 'Nagad Personal',
-            nagadNumber: settings.nagadNumber || '',
-            nagadType: settings.nagadType || 'Personal',
-
             // Exchange Rates (USD/Tokens/Gems)
             usdToToken: settings.usdToToken || 100,
             gemToToken: settings.gemToToken || 100,
@@ -6188,17 +5300,6 @@ app.get('/api/public/costs', (req, res) => {
             liveTiktokCurrency: costs.liveTiktokCurrency || 'token',
             liveTwitterCurrency: costs.liveTwitterCurrency || 'token',
             liveThreadsCurrency: costs.liveThreadsCurrency || 'token',
-            mailCost: costs.tempmail || settings.tempMailCost || 10,
-            premiumMailCost: settings.premiumEmailCost || costs.gmail || 20,
-            hotMailCost: costs.hotmail || 25,
-            studentMailCost: costs.student || 50,
-            tempMailCost: costs.tempmail || 10,
-            gmailCost: costs.gmail || 20,
-            hotmailCost: costs.hotmail || 25,
-            gmailCurrency: costs.gmailCurrency || 'token',
-            hotmailCurrency: costs.hotmailCurrency || 'token',
-            studentCurrency: costs.studentCurrency || 'token',
-            tempmailCurrency: costs.tempmailCurrency || 'token',
             usdToToken: settings.usdToToken || 100,
             gemToToken: settings.gemToToken || 100,
             tokenToGem: settings.tokenToGem || 1,
@@ -6243,14 +5344,6 @@ app.post('/api/admin/costs', (req, res) => {
     if (payload.cryptoRate !== undefined) db.data.adminSettings.creditRates.crypto = parseFloat(payload.cryptoRate);
     if (payload.bkashRate !== undefined) db.data.adminSettings.creditRates.bkash = parseFloat(payload.bkashRate);
     if (payload.nagadRate !== undefined) db.data.adminSettings.creditRates.nagad = parseFloat(payload.nagadRate);
-
-    // Local Payment Platforms
-    if (payload.bkashName !== undefined) db.data.settings.bkashName = payload.bkashName;
-    if (payload.bkashNumber !== undefined) db.data.settings.bkashNumber = payload.bkashNumber;
-    if (payload.bkashType !== undefined) db.data.settings.bkashType = payload.bkashType;
-    if (payload.nagadName !== undefined) db.data.settings.nagadName = payload.nagadName;
-    if (payload.nagadNumber !== undefined) db.data.settings.nagadNumber = payload.nagadNumber;
-    if (payload.nagadType !== undefined) db.data.settings.nagadType = payload.nagadType;
 
     // Exchange Rates (USD/Tokens/Gems)
     if (payload.usdToToken !== undefined) db.data.settings.usdToToken = parseInt(payload.usdToToken) || 100;
@@ -6313,9 +5406,6 @@ app.post('/api/admin/costs', (req, res) => {
     }
 
     db.save(true);
-    try {
-        realtimeUpdater.broadcast({ type: 'settings_updated', costs: db.data.settings?.costs || {}, settings: db.getSettings() });
-    } catch (e) { /* optional */ }
     res.json({ success: true, message: 'All cost configurations saved successfully' });
 });
 
@@ -6334,8 +5424,6 @@ app.post('/api/user/send-message', async (req, res) => {
         message: message,
         timestamp: new Date().toISOString()
     });
-
-    await db.updateUser(user);
 
     // Notify Admin via Telegram if available
     const config = db.data.apiKeys || {};
@@ -6470,7 +5558,7 @@ app.get('/api/user/notifications', async (req, res) => {
         console.log(`[GET_NOTIFICATIONS] User not found: ${userId}`);
         return res.json({ success: false, notifications: [] });
     }
-
+    
     console.log(`[GET_NOTIFICATIONS] Found ${user.notifications ? user.notifications.length : 0} notifications for user: ${userId}`);
 
     // Mark gift notifications with claimed state
@@ -6744,7 +5832,7 @@ app.get('/api/admin/stats', async (req, res) => {
     try {
         const users = typeof getUsersObj === 'function' ? getUsersObj() : {};
         const totalUsers = Object.keys(users).length;
-
+        
         res.json({
             success: true,
             totalUsers: totalUsers,
@@ -6824,36 +5912,29 @@ app.post('/api/admin/manual-numbers/bulk', (req, res) => {
 
     if (!db.data.manualNumbers) db.data.manualNumbers = [];
 
-    const existingSet = new Set(
-        db.data.manualNumbers
-            .filter(n => n.platform === platform.toLowerCase() && n.countryCode === countryCode)
-            .map(n => n.number)
-    );
-
     let added = 0;
-    const now = Date.now();
-    const newItems = [];
-
     numbers.forEach(num => {
-        const cleanNum = String(num).trim();
-        if (cleanNum && !existingSet.has(cleanNum)) {
-            newItems.push({
-                id: now + Math.random().toString(36).substr(2, 9),
-                number: cleanNum,
+        // Prevent duplicate numbers in the same platform/country
+        const exists = db.data.manualNumbers.find(n => n.number === num && n.platform === platform && n.countryCode === countryCode);
+        if (!exists) {
+            db.data.manualNumbers.push({
+                id: Date.now() + Math.random().toString(36).substr(2, 9),
+                number: num,
                 platform: platform.toLowerCase(),
                 countryCode,
                 otpApi: otpApi || null,
                 status: 'available',
                 otp: null,
-                createdAt: now,
-                updatedAt: now
+                createdAt: Date.now(),
+                updatedAt: Date.now()
             });
-            existingSet.add(cleanNum);
             added++;
+        } else if (otpApi) {
+            // Update OTP API if it already exists
+            exists.otpApi = otpApi;
+            exists.updatedAt = Date.now();
         }
     });
-
-    if (newItems.length > 0) db.data.manualNumbers.push(...newItems);
 
     db.save();
     res.json({ success: true, added });
@@ -6921,9 +6002,9 @@ app.get('/api/admin/manual-numbers/summary', (req, res) => {
         if (n.status === 'available') {
             const key = n.platform;
             if (!summary[key]) {
-                summary[key] = {
-                    total: 0,
-                    countries: {},
+                summary[key] = { 
+                    total: 0, 
+                    countries: {}, 
                     hasOtpApi: false,
                     isPopular: (db.data.popularPlatforms || []).includes(key)
                 };
@@ -7116,22 +6197,6 @@ app.post('/api/admin/group-management', (req, res) => {
 });
 
 // =============================================
-// AI ASSISTANT API
-// =============================================
-
-app.get('/api/admin/ai-assistant', (req, res) => {
-    const settings = db.data?.adminSettings?.aiAssistant || {};
-    res.json(settings);
-});
-
-app.post('/api/admin/ai-assistant', (req, res) => {
-    if (!db.data.adminSettings) db.data.adminSettings = {};
-    db.data.adminSettings.aiAssistant = req.body;
-    db.save();
-    res.json({ success: true });
-});
-
-// =============================================
 
 // API: Detailed System Info
 app.get('/api/admin/system/info', (req, res) => {
@@ -7182,12 +6247,12 @@ app.post('/api/admin/mass-gift', async (req, res) => {
 
             // Create a notification
             if (!user.notifications) user.notifications = [];
-
+            
             const assetLabel = asset === 'tokens' ? 'TC' : (asset === 'usd' ? '$' : 'Gems');
             const amtStr = asset === 'usd' ? amount.toFixed(3) : amount;
             let finalMsg = messageFormat || `🎁 You received a gift of {AMOUNT} {ASSET} from Admin!`;
             finalMsg = finalMsg.replace(/\{AMOUNT\}/g, asset === 'usd' ? '$' + amtStr : amtStr)
-                .replace(/\{ASSET\}/g, assetLabel);
+                               .replace(/\{ASSET\}/g, assetLabel);
 
             user.notifications.unshift({
                 id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
@@ -7228,19 +6293,19 @@ app.delete('/api/admin/broadcasts/:id', async (req, res) => {
         const { id } = req.params;
         const broadcasts = db.data.broadcasts || [];
         const index = broadcasts.findIndex(b => b.id === id);
-
+        
         if (index === -1) {
             return res.json({ success: false, message: 'Broadcast not found' });
         }
-
+        
         const broadcast = broadcasts[index];
-
+        
         // Delete from Telegram if messages tracked
         if (broadcast.telegramMessages && Array.isArray(broadcast.telegramMessages)) {
             const TelegramBot = require('node-telegram-bot-api');
             const config = require('../config');
             const botToken = config.TELEGRAM_BOT_TOKEN;
-
+            
             let activeBot = bot;
             if (!activeBot && botToken) {
                 try {
@@ -7249,7 +6314,7 @@ app.delete('/api/admin/broadcasts/:id', async (req, res) => {
                     console.error('[BROADCAST_DELETE] Failed to create bot:', e.message);
                 }
             }
-
+            
             if (activeBot) {
                 for (const msg of broadcast.telegramMessages) {
                     try {
@@ -7262,12 +6327,12 @@ app.delete('/api/admin/broadcasts/:id', async (req, res) => {
                 }
             }
         }
-
+        
         // Remove from history
         broadcasts.splice(index, 1);
         db.data.broadcasts = broadcasts;
         db.save();
-
+        
         res.json({ success: true, message: 'Broadcast deleted from history and Telegram (if possible)' });
     } catch (e) {
         console.error('[BROADCAST_DELETE] Error:', e);
@@ -7278,7 +6343,7 @@ app.delete('/api/admin/broadcasts/:id', async (req, res) => {
 // API: Admin - Advanced Broadcast
 app.post('/api/admin/broadcast', async (req, res) => {
     const { message, mediaType, mediaUrl, buttons, target } = req.body;
-
+    
     // Track if requested by helper admin
     const adminUserId = req.headers['x-user-id'];
     const adminUser = adminUserId ? db.getUser(adminUserId) : null;
@@ -7308,19 +6373,19 @@ app.post('/api/admin/broadcast', async (req, res) => {
         console.log(`[BROADCAST] Found ${userArray.length} users for web broadcast.`);
         let successCount = 0;
         for (let u of userArray) {
-            u.notifications = u.notifications || [];
-            u.notifications.unshift({
-                id: Date.now().toString() + Math.random().toString(36).substring(7),
-                type: 'broadcast',
-                title: 'System Announcement',
-                message: message || (mediaUrl ? '[Media Attached]' : ''),
-                timestamp: new Date().toISOString(),
-                read: false
-            });
-            await db.updateUser(u, null, true);
-            successCount++;
+             u.notifications = u.notifications || [];
+             u.notifications.unshift({
+                 id: Date.now().toString() + Math.random().toString(36).substring(7),
+                 type: 'broadcast',
+                 title: 'System Announcement',
+                 message: message || (mediaUrl ? '[Media Attached]' : ''),
+                 timestamp: new Date().toISOString(),
+                 read: false
+             });
+             await db.updateUser(u, null, true);
+             successCount++;
         }
-
+        
         // Save to broadcast history
         if (!db.data.broadcasts) db.data.broadcasts = [];
         db.data.broadcasts.push({
@@ -7330,7 +6395,7 @@ app.post('/api/admin/broadcast', async (req, res) => {
             createdAt: Date.now()
         });
         db.save();
-
+        
         return res.json({ success: true, sent: successCount, failed: 0, total: userArray.length, channelSuccess: false, mainChannel: null, note: 'Sent exclusively to Web Panel notifications' });
     }
 
@@ -7478,7 +6543,7 @@ app.post('/api/admin/broadcast', async (req, res) => {
             }
         }
 
-        // Verify bot is working by getting bot info
+    // Verify bot is working by getting bot info
         try {
             const botInfo = await activeBot.getMe();
             console.log(`[BROADCAST] Bot verified: @${botInfo.username} (${botInfo.id})`);
@@ -7554,7 +6619,7 @@ app.post('/api/admin/broadcast', async (req, res) => {
         }
 
         console.log(`[BROADCAST] Complete: ${successCount} sent, ${failCount} failed out of ${targetIds.length}`);
-
+        
         // Save to broadcast history
         if (!db.data.broadcasts) db.data.broadcasts = [];
         db.data.broadcasts.push({
@@ -7568,7 +6633,7 @@ app.post('/api/admin/broadcast', async (req, res) => {
             createdAt: Date.now(),
             telegramMessages: telegramMessages
         });
-
+        
         // Save any web notification updates
         db.save();
 
@@ -8019,7 +7084,7 @@ function getFeatureFlags() {
 // Public endpoint: mini app fetches enabled/disabled features
 app.get('/api/features', (req, res) => {
     const flags = getFeatureFlags();
-
+    
     // Provide dynamic join requirements info
     const apiKeys = db.data.apiKeys || {};
     const requiredJoins = {
@@ -8036,8 +7101,8 @@ app.get('/api/features', (req, res) => {
     };
 
     res.set('Cache-Control', 'no-store');
-    res.json({
-        success: true,
+    res.json({ 
+        success: true, 
         features: flags,
         requiredJoins: requiredJoins
     });
@@ -8223,62 +7288,15 @@ app.delete('/api/admin/ads/:network', (req, res) => {
 
 // API: Admin - Services (UNIFIED FOR COST MANAGEMENT)
 app.get('/api/admin/services', (req, res) => {
-    try {
-        const services = db.getServices();
-        res.json({
-            success: true,
-            services: services
-        });
-    } catch (err) {
-        console.error('Admin services API error:', err);
-        res.status(500).json({ success: false, message: 'Failed to load services' });
-    }
-});
-
-// Public API: Get Services (for user panel) - Filters out 0 stock items
-app.get('/api/public/services', (req, res) => {
-    try {
-        // Get all services using unified method
-        const services = db.getServices();
-        
-        // Filter out items with 0 stock for public view
-        const availableServices = services.filter(s => s.stock > 0 || s.stock === undefined);
-
-        res.json({
-            success: true,
-            services: availableServices,
-            categories: db.getServiceCategories()
-        });
-    } catch (err) {
-        console.error('Public services API error:', err);
-        res.status(500).json({ success: false, message: 'Failed to load services' });
-    }
-});
-
-app.post('/api/admin/services', (req, res) => {
-    const { id, name, price, cost, section, desc, icon, imageUrl, color } = req.body;
-    if (!id || !name) {
-        return res.status(400).json({ success: false, message: 'Missing required fields' });
-    }
-    
-    // cost can be passed as 'cost' or 'price'
-    const finalPrice = price || cost || 0;
-    const finalIcon = imageUrl || icon || '';
-
-    db.createService(id, name, finalPrice, section, desc, finalIcon, color);
-    res.json({ success: true, message: 'Service created/updated successfully' });
-});
-
-app.post('/api/admin/cleanup-services', (req, res) => {
     const services = db.data.services || {};
     const toDelete = [];
     const normalizedNames = new Set();
-
+    
     // Find duplicates and demo data
     Object.keys(services).forEach(id => {
         const s = services[id];
         const nameLower = s.name ? s.name.toLowerCase() : id.toLowerCase();
-
+        
         // Criteria 1: Zero price (likely demo)
         // Criteria 2: Specific junk names
         // Criteria 3: Duplicate names (case insensitive)
@@ -8290,12 +7308,12 @@ app.post('/api/admin/cleanup-services', (req, res) => {
             normalizedNames.add(nameLower);
         }
     });
-
+    
     // Delete them
     toDelete.forEach(id => {
         db.deleteService(id);
     });
-
+    
     // Also check legacy items in cardPrices
     if (db.data.cardPrices) {
         Object.keys(db.data.cardPrices).forEach(id => {
@@ -8304,16 +7322,192 @@ app.post('/api/admin/cleanup-services', (req, res) => {
             }
         });
     }
-
+    
     // Update VPN sections for known VPNs
     Object.keys(services).forEach(id => {
         if (id.toLowerCase().includes('vpn') || ['cyberghost', 'nordvpn', 'expressvpn', 'surfshark', 'protonvpn'].includes(id.toLowerCase())) {
             db.updateServiceSection(id, 'vpn');
         }
     });
+    
+    db.save();
+    
+    // Proceed with loaded services after cleanup
+    const updatedServices = db.data.services || {};
+    const shopItems = db.data.shopItems || {};
+
+    // Convert services to array
+    const servicesList = Object.values(updatedServices).map(s => {
+        const cardStock = db.data.cards?.[s.id]?.length || 0;
+        const vpnStock = db.data.vpnAccounts?.[s.id]?.length || 0;
+        return {
+            ...s,
+            section: db.getServiceSection(s.id),
+            imageUrl: db.data.serviceIcons?.[s.id] || s.imageUrl || '',
+            stock: cardStock || vpnStock || 0
+        };
+    });
+
+    // Convert shopItems to array (if they haven't been merged into services yet)
+    const shopItemsList = Object.values(shopItems).map(i => {
+        const cardStock = db.data.cards?.[i.id]?.length || 0;
+        const vpnStock = db.data.vpnAccounts?.[i.id]?.length || 0;
+        return {
+            id: i.id,
+            name: i.name,
+            price: i.price || 0,
+            section: i.section || 'shop',
+            imageUrl: db.data.serviceIcons?.[i.id] || i.imageUrl || '',
+            stock: cardStock || vpnStock || 0
+        };
+    });
+
+    // Add legacy items if they are missing
+    const legacyItems = [];
+    if (db.data.cardPrices) {
+        Object.entries(db.data.cardPrices).forEach(([id, price]) => {
+            if (!services[id] && !shopItems[id]) {
+                legacyItems.push({ 
+                    id, 
+                    name: db.data.serviceNames?.[id] || id.toUpperCase(), 
+                    price, 
+                    section: 'cards',
+                    imageUrl: db.data.serviceIcons?.[id] || '',
+                    stock: db.data.cards?.[id]?.length || 0
+                });
+            }
+        });
+    }
+    if (db.data.vpnPrices) {
+        Object.entries(db.data.vpnPrices).forEach(([id, price]) => {
+            if (!services[id] && !shopItems[id]) {
+                legacyItems.push({ 
+                    id, 
+                    name: db.data.vpnServiceNames?.[id] || id.toUpperCase(), 
+                    price, 
+                    section: 'vpn',
+                    stock: db.data.vpnAccounts?.[id]?.length || 0
+                });
+            }
+        });
+    }
+
+    // Add items from settings.costs (gemini, gpt, etc.)
+    const settingCosts = [];
+    if (db.data.settings && db.data.settings.costs) {
+        Object.entries(db.data.settings.costs).forEach(([id, price]) => {
+            settingCosts.push({
+                id,
+                name: id.charAt(0).toUpperCase() + id.slice(1) + " (Bot Access)",
+                price,
+                section: 'settings',
+                stock: 0 // Settings costs usually don't have stock
+            });
+        });
+    }
+
+    res.json({
+        success: true,
+        services: [...servicesList, ...shopItemsList, ...legacyItems]
+    });
+});
+
+// Public API: Get Services (for user panel) - Filters out 0 stock items
+app.get('/api/public/services', (req, res) => {
+    // Get service items with stock
+    const serviceItems = db.data.serviceItems || {};
+    const availableItems = Object.entries(serviceItems)
+        .filter(([id, item]) => (item.stock || 0) > 0) // Only items with stock > 0
+        .map(([id, item]) => ({
+            id,
+            ...item,
+            section: item.categoryId,
+            imageUrl: db.data.serviceIcons?.[id] || item.imageUrl || ''
+        }));
+
+    // Also get legacy services (if still using old system)
+    const services = db.data.services || {};
+    const servicesWithSections = Object.values(services)
+        .map(s => {
+            const cardStock = db.data.cards?.[s.id]?.length || 0;
+            const vpnStock = db.data.vpnAccounts?.[s.id]?.length || 0;
+            const realStock = cardStock || vpnStock || s.stock || 0;
+            return {
+                ...s,
+                section: db.getServiceSection(s.id),
+                imageUrl: db.data.serviceIcons?.[s.id] || s.imageUrl || '',
+                stock: realStock
+            };
+        })
+        .filter(s => s.stock > 0 || s.stock === undefined);
+
+    // Combine both systems
+    res.json({
+        success: true,
+        services: [...availableItems, ...servicesWithSections],
+        categories: db.getServiceCategories()
+    });
+});
+
+app.post('/api/admin/services', (req, res) => {
+    const item = req.body;
+    db.data.services = db.data.services || {};
+    db.data.services[item.id] = item;
+
+    // Save section assignment
+    if (item.section) {
+        db.updateServiceSection(item.id, item.section);
+    }
 
     db.save();
+    res.json({ success: true });
+});
 
+app.post('/api/admin/cleanup-services', (req, res) => {
+    const services = db.data.services || {};
+    const toDelete = [];
+    const normalizedNames = new Set();
+    
+    // Find duplicates and demo data
+    Object.keys(services).forEach(id => {
+        const s = services[id];
+        const nameLower = s.name ? s.name.toLowerCase() : id.toLowerCase();
+        
+        // Criteria 1: Zero price (likely demo)
+        // Criteria 2: Specific junk names
+        // Criteria 3: Duplicate names (case insensitive)
+        if (s.price === 0 || nameLower === 'mamun islam' || id.toLowerCase().includes('demo')) {
+            toDelete.push(id);
+        } else if (normalizedNames.has(nameLower)) {
+            toDelete.push(id); // Duplicate!
+        } else {
+            normalizedNames.add(nameLower);
+        }
+    });
+    
+    // Delete them
+    toDelete.forEach(id => {
+        db.deleteService(id);
+    });
+    
+    // Also check legacy items in cardPrices
+    if (db.data.cardPrices) {
+        Object.keys(db.data.cardPrices).forEach(id => {
+            if (id.toLowerCase().includes('demo') || id.toLowerCase() === 'mamun islam') {
+                delete db.data.cardPrices[id];
+            }
+        });
+    }
+    
+    // Update VPN sections for known VPNs
+    Object.keys(services).forEach(id => {
+        if (id.toLowerCase().includes('vpn') || ['cyberghost', 'nordvpn', 'expressvpn', 'surfshark', 'protonvpn'].includes(id.toLowerCase())) {
+            db.updateServiceSection(id, 'vpn');
+        }
+    });
+    
+    db.save();
+    
     res.json({ success: true, deleted: toDelete });
 });
 
@@ -8330,23 +7524,13 @@ app.delete('/api/admin/services/:id', (req, res) => {
 // API: Admin - Shop Items
 app.get('/api/admin/shop', (req, res) => {
     const items = db.data.shopItems || {};
-    const itemsWithStock = Object.values(items).map(item => {
-        const stock = db.data.shopStock?.[item.id] || [];
-        const available = stock.filter(s => !s.sold).length;
-        return { ...item, stockCount: available };
-    });
-    res.json({ success: true, shopItems: itemsWithStock });
+    res.json({ success: true, shopItems: Object.values(items) });
 });
 
 // Public API: Get Shop Items (for user panel)
 app.get('/api/shop', (req, res) => {
     const items = db.data.shopItems || {};
-    const itemsWithStock = Object.values(items).map(item => {
-        const stock = db.data.shopStock?.[item.id] || [];
-        const available = stock.filter(s => !s.sold).length;
-        return { ...item, stockCount: available };
-    });
-    res.json({ success: true, shopItems: itemsWithStock });
+    res.json({ success: true, shopItems: Object.values(items) });
 });
 
 app.post('/api/admin/shop', (req, res) => {
@@ -8361,64 +7545,6 @@ app.delete('/api/admin/shop/:id', (req, res) => {
     const { id } = req.params;
     if (db.data.shopItems && db.data.shopItems[id]) {
         delete db.data.shopItems[id];
-        db.save();
-        res.json({ success: true });
-    } else {
-        res.json({ success: false });
-    }
-});
-
-// =============================================
-// SHOP STOCK API
-// =============================================
-
-app.get('/api/admin/shop-stock/:shopId', (req, res) => {
-    const { shopId } = req.params;
-    const stock = db.data.shopStock?.[shopId] || [];
-    // Return only unsold stock for admin to view
-    const unsold = stock.filter(s => !s.sold);
-    res.json({ success: true, stock: unsold });
-});
-
-app.post('/api/admin/shop-stock', (req, res) => {
-    const { shopId, type, email, password, twoFactor, key } = req.body;
-    if (!shopId) return res.json({ success: false, message: 'Shop ID required' });
-    
-    if (!db.data.shopStock) db.data.shopStock = {};
-    if (!db.data.shopStock[shopId]) db.data.shopStock[shopId] = [];
-
-    const newItem = {
-        id: 'stock_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-        type,
-        email,
-        password,
-        twoFactor,
-        key,
-        sold: false,
-        addedAt: Date.now()
-    };
-
-    db.data.shopStock[shopId].push(newItem);
-    db.save();
-    res.json({ success: true, item: newItem });
-});
-
-app.delete('/api/admin/shop-stock/:shopId/:stockId', (req, res) => {
-    const { shopId, stockId } = req.params;
-    if (db.data.shopStock && db.data.shopStock[shopId]) {
-        db.data.shopStock[shopId] = db.data.shopStock[shopId].filter(s => s.id !== stockId);
-        db.save();
-        res.json({ success: true });
-    } else {
-        res.json({ success: false });
-    }
-});
-
-app.delete('/api/admin/shop-stock/:shopId/clear', (req, res) => {
-    const { shopId } = req.params;
-    if (db.data.shopStock && db.data.shopStock[shopId]) {
-        // Only keep sold stock, delete unsold
-        db.data.shopStock[shopId] = db.data.shopStock[shopId].filter(s => s.sold);
         db.save();
         res.json({ success: true });
     } else {
@@ -8478,7 +7604,7 @@ app.post('/api/admin/services/items', (req, res) => {
                         email: item.value,
                         password: item.info,
                         addedAt: Date.now()
-                    }, true);
+                    });
                     addedCount++;
                 } else {
                     // Fallback if addVPN doesn't exist
@@ -8511,7 +7637,7 @@ app.post('/api/admin/services/items', (req, res) => {
                 };
 
                 if (db.addCard) {
-                    db.addCard(serviceId, cardDetails, true);
+                    db.addCard(serviceId, cardDetails);
                     addedCount++;
                 }
             });
@@ -8706,7 +7832,7 @@ app.delete('/api/admin/service-items/:id', (req, res) => {
 app.delete('/api/admin/service-items/:id/clear', (req, res) => {
     const { id } = req.params;
     let cleared = false;
-
+    
     if (db.data.cards && db.data.cards[id]) {
         db.data.cards[id] = [];
         cleared = true;
@@ -8722,7 +7848,7 @@ app.delete('/api/admin/service-items/:id/clear', (req, res) => {
             cleared = true;
         }
     }
-
+    
     if (cleared) {
         db.save();
         res.json({ success: true, message: 'All stock cleared' });
@@ -9142,7 +8268,7 @@ app.post('/api/check-required-joins', async (req, res) => {
         if (user) {
             user.joinedChannel = channelJoined;
             user.joinedGroup = groupJoined;
-
+            
             // Auto revoke if they left
             if (!channelJoined || !groupJoined) {
                 user.verified = false;
@@ -9153,7 +8279,7 @@ app.post('/api/check-required-joins', async (req, res) => {
 
     // 4. Verification Check (optional, separate from join requirement)
     const vStatus = await checkUserVerificationRequirements(userId);
-
+    
     // Auto-verify if they meet full criteria and have joined chats
     if (vStatus.met && channelJoined && groupJoined && user && !user.verified) {
         user.verified = true;
@@ -9484,26 +8610,26 @@ app.get('/api/referrals/:userId', async (req, res) => {
 app.get('/api/proxy-avatar', async (req, res) => {
     const { userId } = req.query;
     if (!userId) return res.status(400).send('userId required');
-
+    
     try {
         const botToken = process.env.TELEGRAM_BOT_TOKEN;
         if (!botToken) return res.status(500).send('Bot token not configured');
-
+        
         // Fetch user profile photos
         const photosRes = await fetch(`https://api.telegram.org/bot${botToken}/getUserProfilePhotos?user_id=${userId}&limit=1`);
         const photosData = await photosRes.json();
-
+        
         if (photosData.ok && photosData.result.total_count > 0) {
             const fileId = photosData.result.photos[0][0].file_id;
-
+            
             // Get file path
             const fileRes = await fetch(`https://api.telegram.org/bot${botToken}/getFile?file_id=${fileId}`);
             const fileData = await fileRes.json();
-
+            
             if (fileData.ok) {
                 const filePath = fileData.result.file_path;
                 const photoUrl = `https://api.telegram.org/file/bot${botToken}/${filePath}`;
-
+                
                 // Fetch image and send
                 const imgRes = await fetch(photoUrl);
                 const buffer = await imgRes.buffer();
@@ -9515,7 +8641,7 @@ app.get('/api/proxy-avatar', async (req, res) => {
     } catch (e) {
         console.error('Failed to proxy avatar:', e.message);
     }
-
+    
     // Fallback to 404 so frontend can use letter avatar
     res.status(404).send('Not found');
 });
@@ -9815,11 +8941,7 @@ app.post('/api/user/item-sales/buy', async (req, res) => {
             twoFA: sale.twoFA,
             cardNumber: sale.cardNumber,
             cardExpiry: sale.cardExpiry,
-            cardCVV: sale.cardCVV,
-            cardHolder: sale.cardHolder,
-            cardCountry: sale.cardCountry,
-            cardBillingAddress: sale.cardBillingAddress,
-            vpnName: sale.vpnName
+            cardCVV: sale.cardCVV
         },
         boughtAt: Date.now()
     });
@@ -9835,11 +8957,7 @@ app.post('/api/user/item-sales/buy', async (req, res) => {
             twoFA: sale.twoFA,
             cardNumber: sale.cardNumber,
             cardExpiry: sale.cardExpiry,
-            cardCVV: sale.cardCVV,
-            cardHolder: sale.cardHolder,
-            cardCountry: sale.cardCountry,
-            cardBillingAddress: sale.cardBillingAddress,
-            vpnName: sale.vpnName
+            cardCVV: sale.cardCVV
         }
     });
 });
@@ -10002,66 +9120,6 @@ app.post('/api/video-downloader/info', async (req, res) => {
         console.error('[Video Downloader Error]', e.message);
         res.status(500).json({ success: false, message: e.message || 'Failed to fetch video info' });
     }
-});
-
-// ==================== PERFORMANCE MONITORING ENDPOINTS ====================
-
-// API: Get Cache Statistics
-app.get('/api/admin/stats/cache', (req, res) => {
-    const stats = cache.getStats();
-    res.json({ success: true, cache: stats });
-});
-
-// API: Get Performance Statistics
-app.get('/api/admin/stats/performance', (req, res) => {
-    const stats = performanceMonitor.getStats();
-    res.json({ success: true, performance: stats });
-});
-
-// API: Get Database Query Statistics
-app.get('/api/admin/stats/database', (req, res) => {
-    const stats = dbOptimizer.getStats();
-    res.json({ success: true, database: stats });
-});
-
-// API: Get Task Queue Statistics
-app.get('/api/admin/stats/queue', (req, res) => {
-    const stats = taskQueue.getStats();
-    res.json({ success: true, queue: stats });
-});
-
-// API: Get All Performance Stats
-app.get('/api/admin/stats/all', (req, res) => {
-    res.json({
-        success: true,
-        stats: {
-            cache: cache.getStats(),
-            performance: performanceMonitor.getStats(),
-            database: dbOptimizer.getStats(),
-            queue: taskQueue.getStats(),
-            timestamp: new Date().toISOString()
-        }
-    });
-});
-
-// API: Clear Cache (Admin Only)
-app.post('/api/admin/cache/clear', (req, res) => {
-    const { pattern } = req.body;
-    
-    if (pattern) {
-        const count = cache.invalidateByPattern(pattern);
-        res.json({ success: true, message: `Cleared ${count} cache entries matching pattern: ${pattern}` });
-    } else {
-        cache.clear();
-        res.json({ success: true, message: 'Cache cleared successfully' });
-    }
-});
-
-// API: Reset Performance Stats (Admin Only)
-app.post('/api/admin/stats/reset', (req, res) => {
-    performanceMonitor.resetStats();
-    dbOptimizer.resetStats();
-    res.json({ success: true, message: 'Performance stats reset successfully' });
 });
 
 async function startServer() {
@@ -10831,7 +9889,7 @@ app.post('/api/bg-remover/remove', upload.single('image'), async (req, res) => {
             if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
             return res.json({
                 success: false,
-                message: 'Service Not Available'
+                message: '⚠️ Background Remover requires a Remove.bg API key. Go to Admin Panel → BG Remover → Add API Key to enable this feature.'
             });
         }
 
@@ -10932,6 +9990,75 @@ app.get('/api/admin/removebg-status', (req, res) => {
 });
 
 // ==========================================
+// EMAIL POOL ROUTES
+// ==========================================
+
+app.get('/api/admin/email-pool/list', (req, res) => {
+    const { type } = req.query;
+    if (!db.data.emailPool) db.data.emailPool = { gmail: [], hotmail: [] };
+
+    if (type) {
+        const emails = db.data.emailPool[type] || [];
+        const available = emails.filter(e => !e.assignedTo).length;
+        const totalUsed = emails.filter(e => e.assignedTo).length;
+        res.json({ success: true, emails: emails.filter(e => !e.assignedTo), stats: { available, totalUsed, recentHistory: emails.filter(e => e.assignedTo).slice(-50) } });
+    } else {
+        const stats = {};
+        ['gmail', 'hotmail'].forEach(t => {
+            const list = db.data.emailPool[t] || [];
+            stats[t] = {
+                available: list.filter(e => !e.assignedTo).length,
+                totalUsed: list.filter(e => e.assignedTo).length
+            };
+        });
+        res.json({ success: true, stats });
+    }
+});
+
+app.post('/api/admin/email-pool/add', (req, res) => {
+    const { type, email, password, note } = req.body;
+    if (!db.data.emailPool) db.data.emailPool = { gmail: [], hotmail: [] };
+    if (!db.data.emailPool[type]) db.data.emailPool[type] = [];
+
+    // Duplicate check
+    if (db.data.emailPool[type].some(e => e.email === email)) {
+        return res.json({ success: false, message: 'Email already exists in pool' });
+    }
+
+    db.data.emailPool[type].push({
+        email,
+        password,
+        note,
+        addedAt: new Date().toISOString(),
+        assignedTo: null,
+        assignedAt: null
+    });
+    db.save();
+    res.json({ success: true, message: 'Email added to pool' });
+});
+
+app.delete('/api/admin/email-pool/delete', (req, res) => {
+    const { type, email } = req.body;
+    if (db.data.emailPool && db.data.emailPool[type]) {
+        db.data.emailPool[type] = db.data.emailPool[type].filter(e => e.email !== email);
+        db.save();
+    }
+    res.json({ success: true, message: 'Email deleted from pool' });
+});
+
+app.post('/api/admin/email-pool/clear-assigned', (req, res) => {
+    const { type } = req.body;
+    if (db.data.emailPool && db.data.emailPool[type]) {
+        const count = db.data.emailPool[type].filter(e => e.assignedTo).length;
+        db.data.emailPool[type] = db.data.emailPool[type].filter(e => !e.assignedTo);
+        db.save();
+        res.json({ success: true, message: `Cleared ${count} assigned emails` });
+    } else {
+        res.json({ success: false, message: 'Pool not found' });
+    }
+});
+
+// ==========================================
 // MANUAL NUMBERS ROUTES
 // ==========================================
 
@@ -10943,36 +10070,20 @@ app.post('/api/admin/manual-numbers/add', (req, res) => {
     const { platform, values, otpApi } = req.body;
     if (!db.data.manualNumbers) db.data.manualNumbers = [];
 
-    const existingSet = new Set(
-        db.data.manualNumbers
-            .filter(n => n.platform === platform.toLowerCase())
-            .map(n => n.number)
-    );
-
     const lines = values.split('\n').filter(l => l.trim());
-    const now = Date.now();
-    const newItems = [];
-
     lines.forEach(num => {
-        const clean = num.trim();
-        if (clean && !existingSet.has(clean)) {
-            newItems.push({
-                id: 'MN' + now + Math.random().toString(36).substr(2, 5),
-                platform: platform.toLowerCase(),
-                number: clean,
+        db.data.manualNumbers.push({
+            id: 'MN' + Date.now() + Math.random().toString(36).substr(2, 5),
+            platform,
+            number: num.trim(),
             otp: null,
             otpApi: otpApi || null,
             status: 'available',
-                addedAt: now
+            addedAt: new Date().toISOString()
         });
-            existingSet.add(clean);
-        }
     });
-
-    if (newItems.length > 0) db.data.manualNumbers.push(...newItems);
-
     db.save();
-    res.json({ success: true, message: `Added ${newItems.length} numbers` });
+    res.json({ success: true, message: `Added ${lines.length} numbers` });
 });
 
 app.delete('/api/admin/manual-numbers/:id', (req, res) => {
@@ -11004,32 +10115,6 @@ app.delete('/api/admin/manual-numbers/group/:platform', (req, res) => {
     }
     res.json({ success: true });
 });
-
-// ============================================
-// INTEGRATION: OPTIMIZED ROUTES
-// Token Management + Performance + Real-time Updates
-// ============================================
-const optimizedRoutes = createOptimizedRoutes(app, db, PerformanceOptimizer);
-app.use('/api/optimization', optimizedRoutes);
-
-// ============================================
-// INTEGRATION: FIREBASE SYNC ROUTES
-// Monitor and manage Firebase synchronization
-// ============================================
-const firebaseSyncRoutes = createFirebaseSyncRoutes();
-app.use('/api/firebase-sync', firebaseSyncRoutes);
-
-// Initialize Token Manager cleanup
-tokenManager.startCleanupInterval();
-
-// Initialize Firebase Sync
-firebaseSync.initialize();
-
-// Log optimization services
-console.log('✅ Token Manager initialized');
-console.log('✅ Performance Optimizer active');
-console.log('✅ Real-time Updater ready');
-console.log('✅ Firebase Sync ready');
 
 // Global Error Handler for Express
 app.use((err, req, res, next) => {
