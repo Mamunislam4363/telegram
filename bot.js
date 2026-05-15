@@ -27,7 +27,7 @@ const db = require('./db.js');
 const { languages, getText, getUserLanguage } = require('./languages.js');
 const fs = require('fs');
 const path = require('path');
-const apiGateway = require('./services/api-gateway.js');
+const { apiGateway } = require('./services/core');
 
 // Store original console.log for internal logging
 const originalConsoleLog = console.log.bind(console);

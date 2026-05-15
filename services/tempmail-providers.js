@@ -78,7 +78,7 @@ async function trySmtpLabs() {
 // LEVEL 0.5: ApiGateway Failover (Database Providers)
 async function tryApiGateway() {
     try {
-        const apiGateway = require('./api-gateway');
+        const { apiGateway } = require('./core');
         const db = require('../db');
 
         return await apiGateway.executeWithFailover('email', async (provider) => {

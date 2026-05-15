@@ -4670,8 +4670,8 @@ async function smartSync(force = false) {
     return Promise.allSettled(adminSyncPromises).catch(() => { });
 }
 
-// Start auto-syncer (every 5 seconds – balanced for real-time feel without hammering server)
-setInterval(() => smartSync(), 5000);
+// Start auto-syncer (every 15 seconds – optimized to reduce network congestion)
+setInterval(() => smartSync(), 15000);
 
 
 // Load cost config early so UI shows correct costs (email/ad reward, etc.)
@@ -6913,10 +6913,19 @@ window._currentMailType = 'temp'; // helper to know context
 
 function startInboxPolling(type) {
     if (mailRefreshInterval) clearInterval(mailRefreshInterval);
-    refreshInbox(type); // Initial refresh
+    // Show cached messages instantly from localStorage first
+    const cacheKey = 'inboxCache_' + type + '_' + (userData.id || 0);
+    try {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+            const { messages } = JSON.parse(cached);
+            if (messages && messages.length > 0) renderInbox(messages, type);
+        }
+    } catch(e) {}
+    refreshInbox(type); // Then fetch fresh from server
     mailRefreshInterval = setInterval(() => {
         refreshInbox(type);
-    }, 5000);
+    }, 15000); // Reduced polling to 15s to avoid server overload
 }
 
 function stopInboxPolling() {
@@ -7246,10 +7255,27 @@ function refreshInbox(type) {
                 renderBalances();
                 updateMailBalance(type);
             }
-            renderInbox(data.messages || [], type, data.message || data.note);
+            const msgs = data.messages || [];
+            renderInbox(msgs, type, data.message || data.note);
+            // Cache messages in localStorage for instant next load
+            if (msgs.length > 0) {
+                try {
+                    const cacheKey = 'inboxCache_' + type + '_' + (userData.id || 0);
+                    localStorage.setItem(cacheKey, JSON.stringify({ messages: msgs, ts: Date.now() }));
+                } catch(e) {}
+            }
         })
         .catch((err) => {
             if (refreshIcon) refreshIcon.classList.remove("fa-spin");
+            // On error, keep showing cached messages (don't clear inbox)
+            const cacheKey = 'inboxCache_' + type + '_' + (userData.id || 0);
+            try {
+                const cached = localStorage.getItem(cacheKey);
+                if (cached) {
+                    const { messages } = JSON.parse(cached);
+                    if (messages && messages.length > 0) { renderInbox(messages, type); return; }
+                }
+            } catch(e) {}
             renderInbox([], type, "Connection error: " + (err.message || "Unknown"));
         });
 }
@@ -7583,7 +7609,7 @@ function checkEmailServicesAndNavigate() {
 // Fetch config on load (fetchEmailServiceConfig is defined below)
 if (typeof fetchEmailServiceConfig === 'function') fetchEmailServiceConfig();
 // Refresh config periodically
-setInterval(function () { if (typeof fetchEmailServiceConfig === 'function') fetchEmailServiceConfig(); }, 5000);
+setInterval(function () { if (typeof fetchEmailServiceConfig === 'function') fetchEmailServiceConfig(); }, 30000);
 
 // --------------------------------------------------------
 // CHECKOUT PAGE FUNCTIONS
@@ -7856,8 +7882,28 @@ window.switchPremiumTab = switchPremiumTab;
 
 async function loadPremiumEmailsFromAdmin() {
     const addrEl = document.getElementById('premiumMailAddr');
-    if (addrEl) {
-        addrEl.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>searching...';
+
+    // Show cached email instantly from localStorage (no spinner delay)
+    const cacheKey = 'premiumEmail_' + (currentPremiumTab || 'gmail') + '_' + (userData.id || 0);
+    try {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+            const c = JSON.parse(cached);
+            if (c.email && addrEl) {
+                addrEl.textContent = c.email;
+                addrEl.style.fontStyle = 'normal';
+                addrEl.style.opacity = '1';
+            }
+            if (c.session) {
+                if (!mailSessions) mailSessions = { temp: null, premium: null };
+                mailSessions.premium = c.session;
+                loadPremiumEmailMessages(c.session.id);
+            }
+        } else if (addrEl) {
+            addrEl.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>searching...';
+        }
+    } catch(e) {
+        if (addrEl) addrEl.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>searching...';
     }
 
     // Try to fetch active emails from server if local is not set
@@ -7905,6 +7951,10 @@ async function loadPremiumEmailsFromAdmin() {
                 addrEl.innerHTML = '<span style="color:#94a3b8;">No Active Email</span>';
             }
         }
+        // Cache for instant next load
+        try {
+            localStorage.setItem(cacheKey, JSON.stringify({ email: emailStr, session: assignedPremiumEmail }));
+        } catch(e) {}
         loadPremiumEmailMessages(assignedPremiumEmail.id);
         return;
     }

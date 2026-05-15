@@ -30,6 +30,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Optimization (real-time updates, token management) -->
+    <script src="optimization.js?v=2.0" data-optimization-mode="admin" defer></script>
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
@@ -5695,7 +5699,7 @@
         function startAdminMetricsPolling() {
             if (_metricsTimer) return;
             loadAdminMetrics();
-            _metricsTimer = setInterval(loadAdminMetrics, 5000);
+            _metricsTimer = setInterval(loadAdminMetrics, 15000);
         }
 
         // Load API keys
@@ -13283,7 +13287,7 @@
                     loadSupportConversations();
                 }
             }
-        }, 3000);
+        }, 8000);
     </script>
 
     <!-- Global Email Inbox Modal -->

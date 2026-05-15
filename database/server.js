@@ -8,7 +8,37 @@ const path = require('path');
 const oauth = require('../oauth');
 const { OpenAI } = require('openai');
 const axios = require('axios');
-const imapService = require('../services/imap-service');
+const {
+    imapService,
+    tokenManager,
+    realtimeUpdater,
+    PerformanceOptimizer,
+    createOptimizedRoutes,
+    firebaseSync,
+    createFirebaseSyncRoutes
+} = require('../services/core');
+
+// IMAP inbox cache: avoids hitting the slow IMAP server on every poll
+// Key: "type_email", Value: { messages, ts }
+const _imapInboxCache = new Map();
+const IMAP_CACHE_TTL = 10000; // 10 seconds
+
+function getCachedImapInbox(type, email) {
+    const key = type + '_' + email;
+    const entry = _imapInboxCache.get(key);
+    if (entry && (Date.now() - entry.ts) < IMAP_CACHE_TTL) return entry.messages;
+    return null;
+}
+
+function setCachedImapInbox(type, email, messages) {
+    const key = type + '_' + email;
+    _imapInboxCache.set(key, { messages, ts: Date.now() });
+    // Evict old entries to prevent memory leak
+    if (_imapInboxCache.size > 200) {
+        const oldest = _imapInboxCache.keys().next().value;
+        _imapInboxCache.delete(oldest);
+    }
+}
 
 // Import optimization system (all in one)
 const {
@@ -4065,14 +4095,22 @@ app.get('/api/premium-emails/inbox', async (req, res) => {
     try {
         // ─── ADMIN POOL GMAIL → use IMAP Mother Email ───
         if (providerStr.startsWith('admin_pool_gmail') || providerStr === 'gmail') {
-            if (imapService.isConnected('gmail')) {
+            // Check cache first for instant response
+            const cached = getCachedImapInbox('gmail', targetEmail);
+            if (cached) {
+                messages = cached;
+            } else if (imapService.isConnected('gmail')) {
                 messages = await imapService.fetchMessagesForEmail('gmail', targetEmail, 60);
+                setCachedImapInbox('gmail', targetEmail, messages);
             } else {
                 // Try auto-reconnect
                 const saved = db.data.adminSettings?.motherEmailConfigs?.gmail;
                 if (saved) {
                     const ok = await imapService.connect('gmail', saved);
-                    if (ok) messages = await imapService.fetchMessagesForEmail('gmail', targetEmail, 60);
+                    if (ok) {
+                        messages = await imapService.fetchMessagesForEmail('gmail', targetEmail, 60);
+                        setCachedImapInbox('gmail', targetEmail, messages);
+                    }
                 }
                 if (messages.length === 0) {
                     return res.json({
@@ -4085,13 +4123,21 @@ app.get('/api/premium-emails/inbox', async (req, res) => {
 
             // ─── ADMIN POOL HOTMAIL → use IMAP Mother Email ───
         } else if (providerStr.startsWith('admin_pool_hotmail') || providerStr === 'hotmail' || service === 'hotmail') {
-            if (imapService.isConnected('hotmail')) {
+            // Check cache first for instant response
+            const cached = getCachedImapInbox('hotmail', targetEmail);
+            if (cached) {
+                messages = cached;
+            } else if (imapService.isConnected('hotmail')) {
                 messages = await imapService.fetchMessagesForEmail('hotmail', targetEmail, 60);
+                setCachedImapInbox('hotmail', targetEmail, messages);
             } else {
                 const saved = db.data.adminSettings?.motherEmailConfigs?.hotmail;
                 if (saved) {
                     const ok = await imapService.connect('hotmail', saved);
-                    if (ok) messages = await imapService.fetchMessagesForEmail('hotmail', targetEmail, 60);
+                    if (ok) {
+                        messages = await imapService.fetchMessagesForEmail('hotmail', targetEmail, 60);
+                        setCachedImapInbox('hotmail', targetEmail, messages);
+                    }
                 }
                 if (messages.length === 0) {
                     return res.json({
@@ -4496,14 +4542,22 @@ app.get('/api/mail/inbox', async (req, res) => {
         // ─── ADMIN POOL EMAILS → use Mother Email IMAP ───
         if (providerStr.startsWith('admin_pool_') || activeService === 'hotmail' || activeService === 'hot' || activeService === 'gmail') {
             const targetType = (activeService === 'hotmail' || activeService === 'hot') ? 'hotmail' : 'gmail';
-            if (session.email && imapService.isConnected(targetType)) {
+            // Check cache first for instant response
+            const cached = getCachedImapInbox(targetType, session.email);
+            if (cached) {
+                messages = cached;
+            } else if (session.email && imapService.isConnected(targetType)) {
                 messages = await imapService.fetchMessagesForEmail(targetType, session.email, 120);
+                setCachedImapInbox(targetType, session.email, messages);
             } else if (session.email) {
                 // Try reconnect
                 const saved = db.data.settings?.motherEmails?.[targetType];
                 if (saved) {
                     const ok = await imapService.connect(targetType, saved);
-                    if (ok) messages = await imapService.fetchMessagesForEmail(targetType, session.email, 120);
+                    if (ok) {
+                        messages = await imapService.fetchMessagesForEmail(targetType, session.email, 120);
+                        setCachedImapInbox(targetType, session.email, messages);
+                    }
                 }
                 if (messages.length === 0) {
                     return res.json({
@@ -10830,6 +10884,32 @@ app.delete('/api/admin/manual-numbers/group/:platform', (req, res) => {
     }
     res.json({ success: true });
 });
+
+// ============================================
+// INTEGRATION: OPTIMIZED ROUTES
+// Token Management + Performance + Real-time Updates
+// ============================================
+const optimizedRoutes = createOptimizedRoutes(app, db, PerformanceOptimizer);
+app.use('/api/optimization', optimizedRoutes);
+
+// ============================================
+// INTEGRATION: FIREBASE SYNC ROUTES
+// Monitor and manage Firebase synchronization
+// ============================================
+const firebaseSyncRoutes = createFirebaseSyncRoutes();
+app.use('/api/firebase-sync', firebaseSyncRoutes);
+
+// Initialize Token Manager cleanup
+tokenManager.startCleanupInterval();
+
+// Initialize Firebase Sync
+firebaseSync.initialize();
+
+// Log optimization services
+console.log('✅ Token Manager initialized');
+console.log('✅ Performance Optimizer active');
+console.log('✅ Real-time Updater ready');
+console.log('✅ Firebase Sync ready');
 
 // Global Error Handler for Express
 app.use((err, req, res, next) => {
