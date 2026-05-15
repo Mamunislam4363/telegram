@@ -2432,6 +2432,27 @@
                                     class="w-full bg-black/40 border border-white/10 focus:border-orange-500 rounded-lg p-2.5">
                             </div>
                         </div>
+                        <!-- ✅ NEW: BDT to USD Rate -->
+                        <div class="mt-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-4">
+                            <h5 class="text-sm font-bold text-emerald-400 mb-3 flex items-center">
+                                <i class="fas fa-bangladeshi-taka-sign mr-2"></i> Bangladesh Local Payment (bKash/Nagad)
+                            </h5>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="text-xs text-gray-400 uppercase font-bold block mb-2">1 USD = ? BDT</label>
+                                    <input type="number" id="conf-usd-to-bdt" placeholder="120" step="0.01"
+                                        class="w-full bg-black/40 border border-white/10 focus:border-emerald-500 rounded-lg p-2.5">
+                                    <p class="text-[10px] text-gray-500 mt-1">Current market rate (e.g., 120 BDT = 1 USD)</p>
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-400 uppercase font-bold block mb-2">Example Conversion</label>
+                                    <div class="bg-black/40 border border-white/10 rounded-lg p-2.5 text-sm text-gray-300">
+                                        <span id="bdt-example">1000 BDT = $8.33 USD</span>
+                                    </div>
+                                    <p class="text-[10px] text-gray-500 mt-1">Users will see BDT amount converted to USD</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Rewards & Bonuses Section -->
@@ -5473,6 +5494,18 @@
                         document.getElementById('conf-taka-to-gem').value = c.takaToGem || 100;
                     if (document.getElementById('conf-platform-fee'))
                         document.getElementById('conf-platform-fee').value = c.platformFee || 20;
+                    
+                    // ✅ NEW: BDT to USD Rate
+                    if (document.getElementById('conf-usd-to-bdt')) {
+                        const bdtRate = c.usdToBdt || 120;
+                        document.getElementById('conf-usd-to-bdt').value = bdtRate;
+                        updateBdtExample(bdtRate);
+                        
+                        // Add input listener for real-time update
+                        document.getElementById('conf-usd-to-bdt').addEventListener('input', function() {
+                            updateBdtExample(parseFloat(this.value) || 120);
+                        });
+                    }
                     // Card Prices
                     if (document.getElementById('conf-card-gemini'))
                         document.getElementById('conf-card-gemini').value = c.geminiCardPrice || 150;
@@ -5597,6 +5630,9 @@
                 tokenToGem: getFloatValue('conf-token-to-gem', 1),
                 takaToGem: getValue('conf-taka-to-gem', 100),
                 platformFee: getValue('conf-platform-fee', 20),
+                
+                // ✅ NEW: BDT to USD Rate
+                usdToBdt: getFloatValue('conf-usd-to-bdt', 120),
 
                 // Card Prices
                 geminiCardPrice: getValue('conf-card-gemini'),
@@ -5657,6 +5693,16 @@
                 alert('⚠ Network error saving costs');
                 btn.innerHTML = originalHtml;
                 btn.disabled = false;
+            }
+        }
+
+        // ✅ NEW: Update BDT Example Conversion
+        function updateBdtExample(bdtRate) {
+            const exampleBdt = 1000;
+            const usdAmount = (exampleBdt / bdtRate).toFixed(2);
+            const exampleEl = document.getElementById('bdt-example');
+            if (exampleEl) {
+                exampleEl.textContent = `${exampleBdt} BDT = $${usdAmount} USD`;
             }
         }
 

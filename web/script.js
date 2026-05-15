@@ -737,6 +737,15 @@ function showPage(targetId) {
     if (targetId === 'quizLeaderboard') renderQuizLeaderboard();
     if (targetId === 'apiKey') loadApiKey();
     if (targetId === 'notifications') loadNotifications();
+    
+    // ✅ NEW: Initialize deposit page
+    if (targetId === 'deposit') {
+        loadBdtRate();
+        loadRecentDeposits();
+    }
+    if (targetId === 'localPayment') {
+        loadBdtRate();
+    }
 
     // Reset card pages to initial state when shown
     if (targetId === 'chatgpt') {
@@ -1648,11 +1657,14 @@ function selectLocalMethod(method) {
 }
 
 async function submitFaucetDeposit() {
-    const amount = document.getElementById('fpAmountInput').value;
+    const amountBDT = document.getElementById('fpAmountInputBDT').value;
     const txnId = document.getElementById('fpTxnIdInput').value;
 
-    if (!amount || amount <= 0) return window.showToast('Please enter a valid amount.');
+    if (!amountBDT || amountBDT <= 0) return window.showToast('Please enter a valid BDT amount.');
     if (!txnId) return window.showToast(`Please enter your ${activeLocalPayMethod.toUpperCase()} Transaction ID.`);
+
+    // Get USD amount from conversion display
+    const usdAmount = document.getElementById('usdConversionDisplay').textContent.replace('$', '').replace(' USD', '').trim();
 
     try {
         const res = await fetch('/api/deposit/submit', {
@@ -1661,18 +1673,23 @@ async function submitFaucetDeposit() {
             body: JSON.stringify({
                 userId: userData.id,
                 method: activeLocalPayMethod,
-                amount: amount,
+                amount: parseFloat(usdAmount), // Send USD amount
+                amountBDT: parseFloat(amountBDT), // Also send BDT for reference
                 txnId: txnId,
                 screenshot: document.getElementById('fpScreenshotUrl').value
             })
         });
         const data = await res.json();
         if (data.success) {
-            window.showToast(data.message);
+            window.showToast(data.message || '✅ Deposit submitted! Pending admin approval.');
             nav('deposit');
-            document.getElementById('fpAmountInput').value = '';
+            document.getElementById('fpAmountInputBDT').value = '';
             document.getElementById('fpTxnIdInput').value = '';
             document.getElementById('fpScreenshotUrl').value = '';
+            document.getElementById('usdConversionDisplay').textContent = '$0.00 USD';
+            
+            // Reload deposit history
+            loadRecentDeposits();
         } else {
             window.showToast(data.message || 'Error submitting deposit.');
         }
@@ -1680,6 +1697,87 @@ async function submitFaucetDeposit() {
         window.showToast('Network error.');
     }
 }
+
+// ✅ NEW: Convert BDT to USD
+let bdtToUsdRate = 120; // Default rate, will be loaded from server
+
+async function convertBdtToUsd() {
+    const bdtInput = document.getElementById('fpAmountInputBDT');
+    const usdDisplay = document.getElementById('usdConversionDisplay');
+    
+    if (!bdtInput || !usdDisplay) return;
+    
+    const bdtAmount = parseFloat(bdtInput.value) || 0;
+    const usdAmount = (bdtAmount / bdtToUsdRate).toFixed(2);
+    
+    usdDisplay.textContent = `$${usdAmount} USD`;
+}
+
+// ✅ NEW: Load BDT rate from server
+async function loadBdtRate() {
+    try {
+        const res = await fetch('/api/admin/costs');
+        const data = await res.json();
+        if (data.success && data.costs) {
+            bdtToUsdRate = data.costs.usdToBdt || 120;
+            const rateDisplay = document.getElementById('bdtRateDisplay');
+            if (rateDisplay) {
+                rateDisplay.textContent = bdtToUsdRate;
+            }
+        }
+    } catch (e) {
+        console.error('Failed to load BDT rate:', e);
+    }
+}
+
+// ✅ NEW: Load recent deposits with status
+async function loadRecentDeposits() {
+    const container = document.getElementById('recentDepositsContainer');
+    if (!container || !userData || !userData.id) return;
+    
+    try {
+        const res = await fetch(`/api/deposits/history?userId=${userData.id}`);
+        const data = await res.json();
+        
+        if (!data.success || !data.deposits || data.deposits.length === 0) {
+            container.innerHTML = `
+                <div style="text-align:center; padding:40px 20px; background:rgba(255,255,255,0.03); border-radius:20px; border:1px solid rgba(255,255,255,0.1);">
+                    <div style="font-size:40px; color:#666; margin-bottom:12px;">
+                        <i class="fas fa-hourglass-half"></i>
+                    </div>
+                    <div style="font-size:16px; color:#666; font-weight:600;">No deposits yet</div>
+                </div>`;
+            return;
+        }
+        
+        // Render deposits
+        container.innerHTML = data.deposits.slice(0, 5).map(dep => {
+            const statusColor = dep.status === 'approved' ? '#22c55e' : (dep.status === 'rejected' ? '#ef4444' : '#f59e0b');
+            const statusIcon = dep.status === 'approved' ? 'fa-check-circle' : (dep.status === 'rejected' ? 'fa-times-circle' : 'fa-clock');
+            const statusText = dep.status === 'approved' ? 'Approved' : (dep.status === 'rejected' ? 'Rejected' : 'Pending');
+            
+            return `
+                <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:16px; margin-bottom:12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:8px;">
+                        <div>
+                            <div style="font-size:14px; font-weight:700; color:#fff; margin-bottom:4px;">$${parseFloat(dep.amount || 0).toFixed(2)} USD</div>
+                            <div style="font-size:11px; color:#888;">${dep.method.toUpperCase()} • ${new Date(dep.timestamp).toLocaleDateString()}</div>
+                            ${dep.amountBDT ? `<div style="font-size:10px; color:#666; margin-top:2px;">${dep.amountBDT} BDT</div>` : ''}
+                        </div>
+                        <div style="display:flex; align-items:center; gap:6px; padding:4px 10px; background:rgba(${statusColor === '#22c55e' ? '34,197,94' : (statusColor === '#ef4444' ? '239,68,68' : '245,158,11')},0.1); border:1px solid rgba(${statusColor === '#22c55e' ? '34,197,94' : (statusColor === '#ef4444' ? '239,68,68' : '245,158,11')},0.3); border-radius:8px;">
+                            <i class="fas ${statusIcon}" style="color:${statusColor}; font-size:12px;"></i>
+                            <span style="font-size:11px; font-weight:700; color:${statusColor};">${statusText}</span>
+                        </div>
+                    </div>
+                    ${dep.txnId ? `<div style="font-size:10px; color:#666;">TXN: ${dep.txnId}</div>` : ''}
+                </div>`;
+        }).join('');
+        
+    } catch (e) {
+        console.error('Failed to load deposits:', e);
+    }
+}
+window.loadRecentDeposits = loadRecentDeposits;
 
 function submitPayment() {
     const txnId = document.getElementById('txnIdInput')?.value || document.getElementById('fpTxnIdInput')?.value;
@@ -4785,8 +4883,13 @@ function renderShopItems() {
         let priceDisp = '$' + parseFloat(price).toFixed(2);
         // if (item.itemType === 'Card') priceDisp = price + ' TC'; // User wants dollars now
 
+        // ✅ FIX: Add purchase confirmation for user items
+        const itemPrice = parseFloat(price) || 0;
+        const itemCurrency = 'USD'; // User items use USD
+        const onclickHandler = `showPurchaseConfirmation('${displayName.replace(/'/g, "\\'")}', ${itemPrice}, '${itemCurrency}', () => buyUserItemConfirmed('${item.id}'))`;
+        
         const cardHtml = `
-        <div onclick="viewUserItem('${item.id}')"
+        <div onclick="${onclickHandler}"
             style="background:var(--bg-card); border-radius:16px; overflow:hidden; border:1px solid var(--border-color); cursor:pointer; transition:0.2s; position:relative;"
             onmousedown="this.style.transform='scale(0.97)'" onmouseup="this.style.transform='scale(1)'">
             ${has2fa ? `<div style="position:absolute; top:8px; right:8px; background:rgba(16,185,129,0.9); color:#fff; font-size:9px; font-weight:800; padding:2px 6px; border-radius:6px; z-index:2;">2FA</div>` : ''}
@@ -4804,7 +4907,7 @@ function renderShopItems() {
         </div>`;
 
         const listStyleCardHtml = `
-        <div class="service-card" onclick="viewUserItem('${item.id}')" style="margin-bottom:12px; cursor:pointer;">
+        <div class="service-card" onclick="showPurchaseConfirmation('${displayName.replace(/'/g, "\\'")}', ${parseFloat(price) || 0}, 'USD', () => buyUserItemConfirmed('${item.id}'))" style="margin-bottom:12px; cursor:pointer;">
             <div class="sc-icon" style="background:#111;">${iconHtml.replace('60px', '40px')}</div>
             <div class="sc-info" style="flex:1;">
                 <h3 style="font-size:14px;">${displayName}</h3>
@@ -4858,6 +4961,75 @@ function renderShopItems() {
 
 window.renderShopItems = renderShopItems;
 
+// ✅ NEW: Buy user-submitted item after confirmation
+async function buyUserItemConfirmed(itemId) {
+    const userId = userData.id;
+    const approvedUserItems = JSON.parse(localStorage.getItem('approvedUserItems') || '[]');
+    const item = approvedUserItems.find(i => i.id === itemId);
+    
+    if (!item) {
+        window.showToast('❌ Item not found!');
+        return;
+    }
+    
+    const price = parseFloat(item.price || item.sellingPrice || 0);
+    const balance = userData.usd || 0;
+
+    if (balance < price) {
+        window.showToast('❌ Insufficient balance!');
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/user/item-sales/buy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId, cardId: itemId })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            userData.usd = data.newBalance;
+            renderBalances();
+            window.showToast('✅ Item purchased successfully!');
+            loadRecentActivity();
+
+            // Show item details based on type
+            if (item.itemType === 'Account') {
+                const details = item.accounts && item.accounts[0] ? item.accounts[0] : {};
+                window.showToast(`✅ Account purchased!\n\nEmail: ${details.email || 'N/A'}\nPassword: ${details.password || 'N/A'}${details.twoFA ? '\n2FA: ' + details.twoFA : ''}`);
+            } else if (item.itemType === 'Card') {
+                const cardData = item.cards && item.cards[0] ? item.cards[0] : {};
+                const cardNumber = cardData.number ? '**** ' + cardData.number.slice(-4) : '**** ****';
+                showCardDetail({
+                    cardName: item.cardName || 'Virtual Card',
+                    holderName: cardData.holderName || 'CARD HOLDER',
+                    number: cardData.displayNumber || cardNumber,
+                    month: cardData.month || 'MM',
+                    year: cardData.year || 'YYYY',
+                    cvv: cardData.cvv || '***',
+                    country: (item.cardBillingAddress && item.cardBillingAddress.Country) || 'N/A'
+                });
+            } else if (item.itemType === 'VPN') {
+                window.showToast(`✅ VPN purchased!\n\nDetails: ${item.vpnDetails || 'Check your purchases'}`);
+            }
+
+            if (window.Telegram?.WebApp?.HapticFeedback) {
+                window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+            }
+            
+            // Refresh shop items
+            renderShopItems();
+        } else {
+            window.showToast('❌ ' + data.message);
+        }
+    } catch (e) {
+        console.error('Purchase error:', e);
+        window.showToast('❌ Error purchasing item');
+    }
+}
+window.buyUserItemConfirmed = buyUserItemConfirmed;
+
 
 
 
@@ -4885,7 +5057,7 @@ function renderCards() {
             }
 
             return `
-        <div class="service-card" onclick="openAndBuyCard('${c.id}', 'card', ${c.price}, '${c.name}')" style="margin-bottom:12px; cursor:pointer; padding:16px;">
+        <div class="service-card" onclick="showPurchaseConfirmation('${c.name.replace(/'/g, "\\'")}', ${c.price}, 'TC', () => openAndBuyCard('${c.id}', 'card', ${c.price}, '${c.name.replace(/'/g, "\\'")}'))" style="margin-bottom:12px; cursor:pointer; padding:16px;">
             <div class="sc-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706); width:50px; height:50px; border-radius:16px; flex-shrink:0; display:flex; align-items:center; justify-content:center; overflow:hidden;">
                 ${iconHtml}
             </div>
@@ -4895,7 +5067,7 @@ function renderCards() {
             </div>
             <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
                 <div style="font-weight:900; color:#22c55e; font-size:15px; letter-spacing:0.5px;">${c.price} TC</div>
-                <button onclick="event.stopPropagation(); openAndBuyCard('${c.id}', 'card', ${c.price}, '${c.name}')" 
+                <button onclick="event.stopPropagation(); showPurchaseConfirmation('${c.name.replace(/'/g, "\\'")}', ${c.price}, 'TC', () => openAndBuyCard('${c.id}', 'card', ${c.price}, '${c.name.replace(/'/g, "\\'")}')); " 
                     style="padding:6px 16px; border-radius:12px; background:#fbbf24; color:#000; font-weight:800; font-size:11px; border:none; cursor:pointer; box-shadow:0 4px 10px rgba(251,191,36,0.2);">
                     BUY
                 </button>
@@ -4944,58 +5116,61 @@ window.renderCards = renderCards;
 
 // Buy user-submitted card
 async function buyUserCard(cardId, price) {
-    const userId = userData.id;
-    const balance = userData.tokens || 0;
+    // ✅ Add confirmation before purchase
+    showPurchaseConfirmation('Virtual Card', price, 'TC', async () => {
+        const userId = userData.id;
+        const balance = userData.tokens || 0;
 
-    if (balance < price) {
-        window.showToast('❌ Insufficient balance!');
-        return;
-    }
+        if (balance < price) {
+            window.showToast('❌ Insufficient balance!');
+            return;
+        }
 
-    try {
-        const res = await fetch('/api/user/item-sales/buy', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId, cardId })
-        });
-        const data = await res.json();
+        try {
+            const res = await fetch('/api/user/item-sales/buy', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, cardId })
+            });
+            const data = await res.json();
 
-        if (data.success) {
-            userData.tokens = data.newBalance;
-            renderBalances();
-            window.showToast('✅ Card purchased successfully!');
-            loadRecentActivity();
+            if (data.success) {
+                userData.tokens = data.newBalance;
+                renderBalances();
+                window.showToast('✅ Card purchased successfully!');
+                loadRecentActivity();
 
-            // Show details if it's a card
-            if (data.details && (data.details.cardNumber || data.details.email)) {
-                // Parse expiry
-                let month = 'MM', year = 'YYYY';
-                if (data.details.cardExpiry && data.details.cardExpiry.includes('/')) {
-                    const parts = data.details.cardExpiry.split('/');
-                    month = parts[0];
-                    year = parts[1].length === 2 ? '20' + parts[1] : parts[1];
+                // Show details if it's a card
+                if (data.details && (data.details.cardNumber || data.details.email)) {
+                    // Parse expiry
+                    let month = 'MM', year = 'YYYY';
+                    if (data.details.cardExpiry && data.details.cardExpiry.includes('/')) {
+                        const parts = data.details.cardExpiry.split('/');
+                        month = parts[0];
+                        year = parts[1].length === 2 ? '20' + parts[1] : parts[1];
+                    }
+
+                    showCardDetail({
+                        cardName: 'MARKETPLACE CARD',
+                        holderName: 'CARD HOLDER',
+                        number: data.details.cardNumber || data.details.email || '**** **** **** ****',
+                        cvv: data.details.cardCVV || data.details.password || '***',
+                        month: month,
+                        year: year,
+                        country: 'Marketplace'
+                    });
                 }
 
-                showCardDetail({
-                    cardName: 'MARKETPLACE CARD',
-                    holderName: 'CARD HOLDER',
-                    number: data.details.cardNumber || data.details.email || '**** **** **** ****',
-                    cvv: data.details.cardCVV || data.details.password || '***',
-                    month: month,
-                    year: year,
-                    country: 'Marketplace'
-                });
+                if (window.Telegram?.WebApp?.HapticFeedback) {
+                    window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+                }
+            } else {
+                window.showToast('❌ ' + data.message);
             }
-
-            if (window.Telegram?.WebApp?.HapticFeedback) {
-                window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
-            }
-        } else {
-            window.showToast('❌ ' + data.message);
+        } catch (e) {
+            window.showToast('Error purchasing card');
         }
-    } catch (e) {
-        window.showToast('Error purchasing card');
-    }
+    });
 }
 window.buyUserCard = buyUserCard;
 
@@ -5159,7 +5334,7 @@ function renderVPN() {
             </div>
             <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
                 <div style="font-weight:900; color:#22c55e; font-size:15px; letter-spacing:0.5px;">${v.price} TC</div>
-                <button onclick="buyAccount('vpn', ${v.price}, '${v.id}')" 
+                <button onclick="showPurchaseConfirmation('${v.name.replace(/'/g, "\\'")}', ${v.price}, 'TC', () => buyAccount('vpn', ${v.price}, '${v.id}'))" 
                     style="padding:6px 16px; border-radius:12px; background:#3b82f6; color:#fff; font-weight:800; font-size:11px; border:none; cursor:pointer; box-shadow:0 4px 10px rgba(59,130,246,0.2);">
                     BUY
                 </button>
@@ -5215,7 +5390,7 @@ function renderAccounts() {
                     </div>
                     <div style="text-align:right; flex-shrink:0;">
                         <div style="font-weight:800; color:#22c55e; font-size:14px;">${acc.price} TC</div>
-                        <button onclick="buyPremiumAccount('${acc.id}', '${acc.type}', ${acc.price})" style="margin-top:4px; padding:5px 14px; border-radius:8px; background:linear-gradient(135deg,#ef4444,#dc2626); color:#fff; font-weight:700; font-size:10px; border:none; cursor:pointer;">BUY</button>
+                        <button onclick="showPurchaseConfirmation('${acc.type}', ${acc.price}, 'TC', () => buyPremiumAccount('${acc.id}', '${acc.type}', ${acc.price}))" style="margin-top:4px; padding:5px 14px; border-radius:8px; background:linear-gradient(135deg,#ef4444,#dc2626); color:#fff; font-weight:700; font-size:10px; border:none; cursor:pointer;">BUY</button>
                     </div>
                 </div>`;
             }).join('');
@@ -5231,14 +5406,7 @@ function buyPremiumAccount(accountId, type, price) {
         return;
     }
 
-    if (checkZeroBalanceAdTrigger(price)) return;
-
-    if (userTokens < price) {
-        nav('earn');
-        return;
-    }
-
-    // Purchase directly without confirmation
+    // Purchase directly - confirmation already done
     fetch('/api/accounts/buy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -4176,7 +4176,7 @@
                             Deposits</span>
                     </div>
 
-                    <div
+                    <div id="recentDepositsContainer"
                         style="text-align:center; padding:40px 20px; background:rgba(255,255,255,0.03); border-radius:20px; border:1px solid rgba(255,255,255,0.1);">
                         <div style="font-size:40px; color:#666; margin-bottom:12px;">
                             <i class="fas fa-hourglass-half"></i>
@@ -4246,8 +4246,21 @@
                     </div>
 
                     <div class="gv-input-box" style="margin-top:20px; margin-bottom:8px;">
-                        <i class="fas fa-dollar-sign" style="color:var(--text-sub)"></i>
-                        <input type="number" class="gv-input" id="fpAmountInput" placeholder="Enter Amount (USD)">
+                        <i class="fas fa-bangladeshi-taka-sign" style="color:var(--text-sub)"></i>
+                        <input type="number" class="gv-input" id="fpAmountInputBDT" placeholder="Enter Amount (BDT)" oninput="convertBdtToUsd()">
+                    </div>
+                    
+                    <!-- ✅ NEW: USD Conversion Display -->
+                    <div style="background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.2); border-radius:10px; padding:12px; margin-bottom:12px;">
+                        <div style="display:flex; align-items:center; justify-content:space-between;">
+                            <div>
+                                <div style="font-size:10px; color:rgba(34,197,94,0.8); font-weight:700; text-transform:uppercase; margin-bottom:2px;">You will receive</div>
+                                <div id="usdConversionDisplay" style="font-size:18px; font-weight:800; color:#22c55e;">$0.00 USD</div>
+                            </div>
+                            <div style="font-size:10px; color:rgba(34,197,94,0.6); text-align:right;">
+                                <div>Rate: <span id="bdtRateDisplay">120</span> BDT = $1</div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="gv-input-box" style="margin-bottom:8px;">
