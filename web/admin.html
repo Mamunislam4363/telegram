@@ -12767,9 +12767,15 @@
                 closeAddEmailModal();
                 if (data.success) {
                     alert(`✅ Result: ${data.message}`);
+                    if (data.added > 0 && data.failed > 0) {
+                        alert(`✅ Added: ${data.added} emails\n❌ Failed/Duplicate: ${data.failed}`);
+                    }
                 } else {
                     alert('❌ Error: ' + (data.message || 'Unknown error'));
                 }
+                
+                loadEmailPool(type);
+                loadEmailPoolStats();
             } catch (e) {
                 alert('❌ Network error during bulk add');
             } finally {
@@ -12778,12 +12784,6 @@
                     saveBtn.textContent = originalText;
                 }
             }
-
-            closeAddEmailModal();
-            alert(`✅ Added: ${added} emails\n❌ Failed/Duplicate: ${failed}`);
-            loadEmailPool(type);
-            // Also refresh stats for both
-            loadEmailPoolStats();
         }
 
         async function clearEmailPoolAssigned() {

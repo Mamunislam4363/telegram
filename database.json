@@ -2,8 +2,8 @@
   "users": {
     "123": {
       "id": 123,
-      "balance": 379,
-      "balance_tokens": 379,
+      "balance": 299,
+      "balance_tokens": 299,
       "joinedAt": 1778752749664,
       "referrer": null,
       "lastDaily": 1778757984655,
@@ -17,11 +17,82 @@
       "blocked": false,
       "adminVerified": false,
       "language": "en",
-      "lastActive": 1778836230555,
+      "lastActive": 1778844081305,
       "dailyStreak": 1,
-      "usd": 0,
+      "usd": 1621,
       "apiStatus": "allow",
       "history": [
+        {
+          "type": "gmail_email",
+          "amount": -20,
+          "date": "2026-05-15T11:24:34.450Z",
+          "reward": "-20 Tokens",
+          "detail": "mamunislam4363.892@gmail.com"
+        },
+        {
+          "type": "deposit",
+          "amount": 1600,
+          "currency": "usd",
+          "method": "platform_1778591991763",
+          "txnId": "hfjh",
+          "date": 1778844221291,
+          "status": "completed"
+        },
+        {
+          "type": "account_purchase",
+          "amount": 50,
+          "currency": "tokens",
+          "category": "adobeexpress",
+          "date": 1778844122900
+        },
+        {
+          "id": "ORD-MQ4UBUQXF",
+          "type": "shop_item_purchase",
+          "amount": 3,
+          "currency": "usd",
+          "shopId": "esfv",
+          "itemName": "fdvd",
+          "date": 1778844054517,
+          "itemData": {
+            "type": "account",
+            "email": "vcb vb",
+            "password": "vb vgb",
+            "twoFactor": ""
+          }
+        },
+        {
+          "type": "deposit",
+          "amount": 16,
+          "currency": "usd",
+          "method": "platform_1778589848304",
+          "txnId": "nxjakshjkehck",
+          "date": 1778844013494,
+          "status": "completed"
+        },
+        {
+          "type": "deposit",
+          "amount": 8,
+          "currency": "usd",
+          "method": "platform_1778589848304",
+          "txnId": "jhjkh",
+          "date": 1778842707405,
+          "status": "completed"
+        },
+        {
+          "type": "gmail_email",
+          "amount": -20,
+          "date": "2026-05-15T10:46:42.334Z",
+          "reward": "-20 Tokens",
+          "detail": "mamunislam4363892@gmail.com"
+        },
+        {
+          "type": "mission_reward",
+          "amount": 10,
+          "reward": "+10 TC",
+          "asset": "TC",
+          "date": 1778841419679,
+          "detail": "Completed task: mazajx"
+        },
         {
           "type": "temp_mail",
           "amount": -10,
@@ -634,15 +705,25 @@
       "country": "USA",
       "firstName": "Test",
       "lastName": "",
-      "tokens": 379,
+      "tokens": 299,
       "joinedChannel": true,
       "joinedGroup": true,
-      "Gems": 1,
+      "Gems": 2,
       "balance_Gems": 1,
       "verified": false,
       "role": "off",
       "completedTasks": [
-        "task_youtube"
+        "task_youtube",
+        "task_1778841390913"
+      ],
+      "purchasedAccounts": [
+        {
+          "email": "xcdxcdc",
+          "password": "",
+          "category": "adobeexpress",
+          "purchasedAt": 1778844122900,
+          "instructions": ""
+        }
       ]
     }
   },
@@ -762,6 +843,13 @@
       "name": "Youtube Channel",
       "reward": 10,
       "url": "https://www.youtube.com/@MamunIslamyts"
+    },
+    "task_1778841390913": {
+      "name": "mazajx",
+      "url": "http://localhost:3000/",
+      "reward": 10,
+      "gems": 0,
+      "icon": null
     }
   },
   "cards": {
@@ -776,14 +864,18 @@
     "chatgpt": 0,
     "chatgptplus": 50,
     "spotify": 50,
-    "youtube": 50
+    "youtube": 50,
+    "adobeexpress_vpn": 10,
+    "cyberghost": 10
   },
   "serviceNames": {
     "adobeexpress": "Adobeexpress",
     "chatgpt": "Chatgpt",
     "ma": "Ma",
     "spotify": "Spotify",
-    "chatgptplus": "Chatgptplus"
+    "chatgptplus": "Chatgptplus",
+    "adobeexpress_vpn": "ADOBEEXPRESS",
+    "cyberghost": "👻 CyberGhost"
   },
   "scheduledBroadcasts": [],
   "tickets": [],
@@ -795,16 +887,18 @@
     "expressvpn": [],
     "surfshark": [],
     "cyberghost": [],
-    "protonvpn": []
+    "protonvpn": [],
+    "adobeexpress_vpn": []
   },
   "vpnPrices": {
     "adobeexpress": 0,
-    "cyberghost": 70,
+    "cyberghost": 10,
     "expressvpn": 120,
     "nordvpn": 100,
     "protonvpn": 90,
     "surfshark": 80,
-    "chatgpt": 0
+    "chatgpt": 0,
+    "adobeexpress_vpn": 10
   },
   "vpnServiceNames": {
     "cyberghost": "👻 CyberGhost",
@@ -835,13 +929,15 @@
   },
   "serviceCategories": [
     {
-      "color": "from-orange-500 to-red-600",
+      "color": "purple",
       "description": "API Keys & Accounts",
       "icon": "fa-credit-card",
       "id": "virtual-cards",
-      "name": "Virtual Cards",
+      "name": "Virtual Card",
       "order": 1,
-      "type": "card"
+      "type": "card",
+      "categoryId": "virtual-cards",
+      "desc": "API Keys & Accounts"
     },
     {
       "color": "from-cyan-500 to-blue-600",
@@ -940,8 +1036,8 @@
       "enabled": true,
       "intervalHours": 6,
       "keep": 30,
-      "lastBackupAt": 1778818148036,
-      "lastBackupFile": "auto_backup_1778818148036.json",
+      "lastBackupAt": 1778841352070,
+      "lastBackupFile": "manual_backup_1778841352070.json",
       "nextBackupAt": 1778901360000
     },
     "gems": {
@@ -1142,7 +1238,17 @@
       "stock": 0
     }
   },
-  "shopItems": {},
+  "shopItems": {
+    "esfv": {
+      "id": "esfv",
+      "name": "fdvd",
+      "price": 3,
+      "imageUrl": "",
+      "bgColor": "#0d0d0d",
+      "btnColor": "#f59e0b",
+      "page": "deposit"
+    }
+  },
   "itemSales": {
     "sale_1773483150972_m90bd": {
       "accountLogo": "",
@@ -1231,77 +1337,24 @@
   "broadcasts": [],
   "pendingDeposits": [
     {
-      "id": "dep_1778737415791m3atb",
+      "id": "dep_1778842773832je47r",
       "userId": "123",
-      "method": "platform_1778589848304",
-      "amount": 97,
-      "txnId": "axs",
+      "method": "platform_1778591991763",
+      "amount": 200000,
+      "txnId": "hfjh",
       "screenshot": null,
-      "date": 1778737415791,
+      "date": 1778842773832,
       "status": "Approved"
     },
     {
-      "id": "dep_1778737170085z8o4g",
+      "id": "dep_1778842738083m00mn",
       "userId": "123",
       "method": "platform_1778589848304",
-      "amount": 1000,
-      "txnId": "kjh",
+      "amount": 2000,
+      "txnId": "nxjakshjkehck",
       "screenshot": null,
-      "date": 1778737170085,
+      "date": 1778842738083,
       "status": "Approved"
-    },
-    {
-      "id": "dep_1778735691627m02l4",
-      "userId": "123",
-      "method": "platform_1778589848304",
-      "amount": 100,
-      "txnId": "vbf",
-      "screenshot": null,
-      "date": 1778735691627,
-      "status": "Approved"
-    },
-    {
-      "id": "dep_1778732000501bm8za",
-      "userId": "123",
-      "method": "platform_1778589848304",
-      "amount": 997,
-      "txnId": "hgug",
-      "screenshot": null,
-      "date": 1778732000501,
-      "status": "Rejected",
-      "adminNote": "f"
-    },
-    {
-      "id": "dep_1778686254172txnye",
-      "userId": "123",
-      "method": "platform_1778589848304",
-      "amount": 1204,
-      "txnId": "vbgfvc",
-      "screenshot": null,
-      "date": 1778686254172,
-      "status": "Approved"
-    },
-    {
-      "id": "dep_1778684624691o6ool",
-      "userId": "123",
-      "method": "platform_1778589848304",
-      "amount": 1000,
-      "txnId": "bnvjhvhjv",
-      "screenshot": null,
-      "date": 1778684624691,
-      "status": "Rejected",
-      "adminNote": "f"
-    },
-    {
-      "id": "dep_1778658901165dgulq",
-      "userId": "123",
-      "method": "platform_1778589848304",
-      "amount": 1000,
-      "txnId": "hjghf",
-      "screenshot": null,
-      "date": 1778658901166,
-      "status": "Rejected",
-      "adminNote": "f"
     }
   ],
   "cryptoMethods": {
@@ -1376,7 +1429,14 @@
       "enabled": true
     }
   },
-  "emailPoolHistory": [],
+  "emailPoolHistory": [
+    {
+      "email": "mamunislam4363.892@gmail.com",
+      "type": "gmail",
+      "assignedTo": "123",
+      "assignedAt": "2026-05-15T11:24:34.450Z"
+    }
+  ],
   "groupWarnings": {
     "-1002516230551_7672601379": 1
   },
@@ -2247,6 +2307,24 @@
       "userId": "123",
       "createdAt": 1778833114587,
       "service": "temp"
+    },
+    "premium_gmail_1778842002334_123": {
+      "email": "mamunislam4363892@gmail.com",
+      "password": null,
+      "provider": "gmail",
+      "sessionId": "mamunislam4363892@gmail.com",
+      "token": "mamunislam4363892@gmail.com",
+      "userId": "123",
+      "createdAt": 1778842002334
+    },
+    "premium_gmail_1778844274450_123": {
+      "email": "mamunislam4363.892@gmail.com",
+      "password": null,
+      "provider": "gmail",
+      "sessionId": "mamunislam4363.892@gmail.com",
+      "token": "mamunislam4363.892@gmail.com",
+      "userId": "123",
+      "createdAt": 1778844274450
     }
   },
   "premiumMailSettings": {
@@ -2322,7 +2400,9 @@
   },
   "serviceDescriptions": {
     "adobeexpress": "No description",
-    "chatgpt": "No description"
+    "chatgpt": "No description",
+    "adobeexpress_vpn": "No description",
+    "cyberghost": "No description"
   },
   "virtualNumberSettings": {
     "Facebook": {
@@ -2395,6 +2475,28 @@
         "twoFactor": "",
         "sold": false,
         "addedAt": 1778832164057
+      }
+    ],
+    "esfv": [
+      {
+        "id": "stock_1778841315441_j4qje",
+        "type": "account",
+        "email": "vcb vb",
+        "password": "vb vgb",
+        "twoFactor": "",
+        "sold": true,
+        "addedAt": 1778841315441,
+        "soldTo": "123",
+        "soldAt": 1778844054517
+      },
+      {
+        "id": "stock_1778841326993_f60d1",
+        "type": "account",
+        "email": "cdzx vfc",
+        "password": "f bvg bn",
+        "twoFactor": "",
+        "sold": false,
+        "addedAt": 1778841326993
       }
     ]
   },

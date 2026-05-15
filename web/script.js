@@ -1795,6 +1795,20 @@ async function loadUserTasks(silent = false) {
         const taskCountBadge = document.getElementById('taskCountBadge');
         if (taskCountBadge) taskCountBadge.textContent = `${data.tasks.length} tasks`;
 
+        // Sync completedTasks from server (get fresh data)
+        try {
+            const userRes = await fetch(`/api/user/${userData?.id}`);
+            if (userRes.ok) {
+                const userData_fresh = await userRes.json();
+                if (userData_fresh.user && Array.isArray(userData_fresh.user.completedTasks)) {
+                    userData.completedTasks = userData_fresh.user.completedTasks;
+                    localStorage.setItem(`userData_${userData.id}`, JSON.stringify(userData));
+                }
+            }
+        } catch (e) {
+            console.log('Could not sync completedTasks from server, using local:', e.message);
+        }
+
         // Render tasks
         const completedSet = new Set(userData.completedTasks || []);
 
@@ -1885,11 +1899,27 @@ function startTask(button, taskId, url, reward) {
     activeTaskButton = button;
     if (button) {
         button.dataset.originalText = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-external-link-alt"></i> OPENING...';
+        button.disabled = true;
+        button.style.background = '#f59e0b';
     }
     activeTaskData = { taskId, url, reward };
 
-    // Run Ad first as requested by user
-    showAdAndEarn('task_verification');
+    // Open URL in new tab
+    setTimeout(() => {
+        window.open(url, '_blank');
+        
+        // After URL opens, update button to VERIFY
+        if (button) {
+            button.innerHTML = '<i class="fas fa-check-square"></i> VERIFY';
+            button.style.background = '#22c55e';
+            button.disabled = false;
+            button.onclick = () => completeTask(taskId, reward, button, url);
+        }
+        
+        // Mark as in progress
+        IN_PROGRESS_TASKS[taskId] = 'VERIFY';
+    }, 300);
 }
 
 // Complete task and claim reward
@@ -1924,7 +1954,7 @@ async function completeTask(taskId, reward, button, url) {
                 userData.tokens += parseInt(reward) || 0;
             }
 
-            showToast(`âœ… Task completed! +${reward} tokens`);
+            showToast(`✔ Task completed! +${reward} tokens`);
             renderBalances();
 
             if (!userData.completedTasks) userData.completedTasks = [];
@@ -1934,6 +1964,11 @@ async function completeTask(taskId, reward, button, url) {
             localStorage.setItem(`userData_${userData.id}`, JSON.stringify(userData));
 
             if (window.confetti) confetti({ particleCount: 50, spread: 60 });
+
+            // Reload task list after 1 second to show updated state
+            setTimeout(() => {
+                loadUserTasks(true); // Silent reload
+            }, 1000);
         } else if (data.message === 'Task already completed') {
             button.textContent = 'DONE';
             button.style.background = '#666';
@@ -1944,6 +1979,11 @@ async function completeTask(taskId, reward, button, url) {
             if (!userData.completedTasks.includes(taskId)) {
                 userData.completedTasks.push(taskId);
             }
+
+            // Reload task list after 1 second
+            setTimeout(() => {
+                loadUserTasks(true); // Silent reload
+            }, 1000);
         } else {
             showToast(data.message || 'Verification failed');
             button.disabled = false;
@@ -7418,33 +7458,26 @@ function renderInbox(emails, type, serverMsg = null) {
         }
     }
 
-    const useTableLayout = (type === 'premium' || type === 'hot' || type === 'student');
+    // Box layout for all email types (including premium)
     const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/'/g, '&#39;');
 
     // Render Inbox List
     listEl.innerHTML = emails.map(email => {
-        if (useTableLayout) {
-            return `<div class="inbox-item" onclick="openEmailMessage('${esc(email.id)}', '${type}')" style="cursor:pointer;display:grid;grid-template-columns:1fr 1fr 60px;gap:8px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border-color);">
-                <div style="font-weight:700;color:#fff;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(email.from || email.sender || 'Unknown')}</div>
-                <div style="font-size:11px;color:var(--text-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(email.subject)}</div>
-                <div style="text-align:center;"><i class="fas fa-chevron-right" style="font-size:10px;color:var(--text-sub);"></i></div>
-            </div>`;
-        }
-        return `<div class="inbox-item" onclick="openEmailMessage('${esc(email.id)}', '${type}')" style="cursor:pointer; transition:all 0.2s; border-left: 3px solid transparent;">
-            <div class="ii-icon" style="background:rgba(245,158,11,0.1);"><i class="fas fa-envelope" style="color:#f59e0b;"></i></div>
-            <div class="ii-body" style="flex:1; min-width:0;">
-                <div class="ii-top" style="margin-bottom:2px; display:flex; justify-content:space-between; align-items:center;">
-                    <div class="ii-sender" style="font-weight:800; color:#fff; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; min-width:0; padding-right:10px;">${email.from || email.sender || 'Unknown'}</div>
-                    <div class="ii-time" style="font-size:10px; opacity:0.6; flex-shrink:0;">${email.time || getTimeAgo(email.date) || ''}</div>
+        return `<div class="inbox-item" onclick="openEmailMessage('${esc(email.id)}', '${type}')" style="cursor:pointer; transition:all 0.2s; border-left: 3px solid transparent; display:flex; align-items:center; gap:12px; padding:12px 14px; margin-bottom:8px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:10px;" onmouseover="this.style.borderColor='#f59e0b'; this.style.transform='translateX(2px)'" onmouseout="this.style.borderColor='var(--border-color)'; this.style.transform='translateX(0)';">
+            <div class="ii-icon" style="background:rgba(245,158,11,0.1); padding:10px; border-radius:8px; flex-shrink:0;"><i class="fas fa-envelope" style="color:#f59e0b; font-size:16px;"></i></div>
+            <div class="ii-body" style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px;">
+                <div class="ii-top" style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div class="ii-sender" style="font-weight:700; color:#fff; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; min-width:0; padding-right:10px;">${email.from || email.sender || 'Unknown'}</div>
+                    <div class="ii-time" style="font-size:10px; opacity:0.6; flex-shrink:0; min-width:fit-content;">${email.time || getTimeAgo(email.date) || ''}</div>
                 </div>
-                <div class="ii-subject" style="font-size:11px; color:var(--text-sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; min-width:0;">${email.subject}</div>
+                <div class="ii-subject" style="font-size:12px; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; min-width:0;">${email.subject}</div>
+                <div class="ii-preview" style="font-size:11px; color:var(--text-sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${(email.preview || email.body || 'No preview').substring(0, 60)}...</div>
             </div>
-            <div style="display:flex; align-items:center; gap:8px;">
+            <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
                 <button class="ii-quick-copy" onclick="event.stopPropagation(); quickCopyEmailContent('${email.id}', '${type}', this)" 
-                    style="width:30px; height:30px; border-radius:50%; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; color:var(--text-sub);">
+                    style="width:32px; height:32px; border-radius:8px; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.2); display:flex; align-items:center; justify-content:center; color:#f59e0b; cursor:pointer; transition:all 0.2s;">
                     <i class="fas fa-copy" style="font-size:12px;"></i>
                 </button>
-                <i class="fas fa-chevron-right" style="font-size:10px; color:var(--text-sub); opacity:0.5;"></i>
             </div>
         </div>`;
     }).join("");

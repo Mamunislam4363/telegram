@@ -2868,8 +2868,12 @@ app.post('/api/complete-task', async (req, res) => {
         const user = users[userId];
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
+        // Initialize both arrays to keep them in sync
         if (!user.completedTasks) user.completedTasks = [];
-        if (user.completedTasks.includes(finalTaskId)) {
+        if (!user.tasksDone) user.tasksDone = [];
+
+        // Check if already completed (check both arrays)
+        if (user.completedTasks.includes(finalTaskId) || user.tasksDone.includes(finalTaskId)) {
             return res.json({ success: false, message: 'Task already completed' });
         }
 
@@ -2887,8 +2891,9 @@ app.post('/api/complete-task', async (req, res) => {
             }
         }
 
-        // Mark as completed
+        // Mark as completed - add to BOTH arrays to keep sync
         user.completedTasks.push(finalTaskId);
+        user.tasksDone.push(finalTaskId);
 
         // Add rewards
         db.setTokenBalance(user, db.getTokenBalance(user) + finalReward);
@@ -2909,6 +2914,13 @@ app.post('/api/complete-task', async (req, res) => {
 
         saveUsersObj(users);
         db.save();
+
+        // Invalidate user cache so next request gets fresh data
+        try {
+            cache.del(`api:user:${userId}`);
+        } catch (e) {
+            console.log('Cache invalidation error (non-critical):', e.message);
+        }
 
         res.json({
             success: true,
@@ -3787,6 +3799,70 @@ app.post('/api/admin/email-pool/add', (req, res) => {
         db.save();
         res.json({ success: true, message: 'Email added to pool', total: db.data.emailPool[type].length });
     } catch (e) {
+        res.json({ success: false, message: e.message });
+    }
+});
+
+// API: Admin - Bulk Add Emails to Pool
+app.post('/api/admin/email-pool/bulk', (req, res) => {
+    try {
+        const { type, emails } = req.body;
+        if (!type || !Array.isArray(emails) || emails.length === 0) {
+            return res.json({ success: false, message: 'type and emails array required' });
+        }
+
+        if (!db.data.emailPool) db.data.emailPool = {};
+        if (!db.data.emailPool[type]) db.data.emailPool[type] = [];
+
+        let added = 0;
+        let failed = 0;
+        const duplicates = [];
+
+        for (const emailData of emails) {
+            const { email, password, note } = emailData;
+            
+            // Validate email
+            if (!email || !email.includes('@')) {
+                failed++;
+                continue;
+            }
+
+            // Check if already exists
+            const exists = db.data.emailPool[type].find(e => e.email.toLowerCase() === email.toLowerCase());
+            if (exists) {
+                failed++;
+                duplicates.push(email);
+                continue;
+            }
+
+            // Add to pool
+            db.data.emailPool[type].push({
+                email,
+                password: password || null,
+                note: note || '',
+                status: 'available',
+                addedAt: Date.now(),
+                assignedTo: null,
+                sessionId: null
+            });
+            added++;
+        }
+
+        db.save();
+
+        const message = added > 0 ? `✅ Added ${added} emails` : 'No emails added';
+        const details = failed > 0 ? ` (${failed} duplicates/invalid)` : '';
+        
+        res.json({ 
+            success: true, 
+            message: message + details,
+            added,
+            failed,
+            duplicates: duplicates.length > 0 ? duplicates : undefined,
+            total: db.data.emailPool[type].length 
+        });
+    } catch (e) {
+        console.error('Bulk add error:', e.message);
         res.json({ success: false, message: e.message });
     }
 });
@@ -10755,7 +10831,7 @@ app.post('/api/bg-remover/remove', upload.single('image'), async (req, res) => {
             if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
             return res.json({
                 success: false,
-                message: '⚠️ Background Remover requires a Remove.bg API key. Go to Admin Panel → BG Remover → Add API Key to enable this feature.'
+                message: 'Service Not Available'
             });
         }
 
