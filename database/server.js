@@ -866,7 +866,7 @@ async function deleteHelperAdminMessages(userId) {
     
     const TelegramBot = require('node-telegram-bot-api');
     const config = require('../config');
-    const botToken = config.TELEGRAM_BOT_TOKEN;
+    const botToken = (bot && bot.token) || config.TELEGRAM_BOT_TOKEN || (db.data.apiKeys && db.data.apiKeys.botToken);
     
     if (!botToken) {
         console.error('[HELPER ADMIN] Cannot delete messages: Bot token missing');
@@ -4571,6 +4571,19 @@ app.post('/api/deposit/submit', (req, res) => {
     res.json({ success: true, message: 'Deposit submitted successfully! Admin will review it.' });
 });
 
+// API: User - Get Deposit History
+app.get('/api/deposits/history', (req, res) => {
+    const { userId } = req.query;
+    if (!userId) return res.json({ success: false, message: 'Missing user ID' });
+    
+    const allDeposits = db.data.pendingDeposits || [];
+    let userDeposits = allDeposits.filter(d => d.userId === userId.toString());
+    
+    userDeposits.sort((a, b) => b.date - a.date);
+    
+    res.json({ success: true, deposits: userDeposits });
+});
+
 // API: Deposit - Get Config (QR/Addresses)
 app.get('/api/deposit/config', (req, res) => {
     const settings = db.data.settings || {};
@@ -6527,7 +6540,7 @@ app.delete('/api/admin/broadcasts/:id', async (req, res) => {
         if (broadcast.telegramMessages && Array.isArray(broadcast.telegramMessages)) {
             const TelegramBot = require('node-telegram-bot-api');
             const config = require('../config');
-            const botToken = config.TELEGRAM_BOT_TOKEN;
+            const botToken = (bot && bot.token) || config.TELEGRAM_BOT_TOKEN || (db.data.apiKeys && db.data.apiKeys.botToken);
             
             let activeBot = bot;
             if (!activeBot && botToken) {
@@ -6744,12 +6757,12 @@ app.post('/api/admin/broadcast', async (req, res) => {
         const config = require('../config');
 
         // Validate bot token
-        const botToken = config.TELEGRAM_BOT_TOKEN;
+        const botToken = (bot && bot.token) || config.TELEGRAM_BOT_TOKEN || (db.data.apiKeys && db.data.apiKeys.botToken);
         if (!botToken || botToken === 'YOUR_TELEGRAM_BOT_TOKEN_HERE' || botToken === 'undefined') {
-            console.error('[BROADCAST] ERROR: TELEGRAM_BOT_TOKEN is not set in environment variables');
+            console.error('[BROADCAST] ERROR: Bot token is not configured');
             return res.json({
                 success: false,
-                message: 'Bot token not configured. Please set TELEGRAM_BOT_TOKEN in environment variables.'
+                message: 'Bot token not configured. Please set it in Admin Dashboard API Keys.'
             });
         }
 
@@ -8840,7 +8853,7 @@ app.get('/api/proxy-avatar', async (req, res) => {
     if (!userId) return res.status(400).send('userId required');
     
     try {
-        const botToken = process.env.TELEGRAM_BOT_TOKEN;
+        const botToken = (bot && bot.token) || process.env.TELEGRAM_BOT_TOKEN || (db.data.apiKeys && db.data.apiKeys.botToken);
         if (!botToken) return res.status(500).send('Bot token not configured');
         
         // Fetch user profile photos
@@ -10354,4 +10367,4 @@ app.use((err, req, res, next) => {
     });
 });
 
-module.exports = { app, startServer, setBot, monitorSystemWithAI };
+module.exports = { app, startServer, setBot, monitorSystemWithAI };  

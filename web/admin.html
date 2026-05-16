@@ -1736,8 +1736,8 @@
                             <tr>
                                 <th>Code</th>
                                 <th>Amount</th>
-                                <th>Used</th>
-                                <th>Remaining</th>
+                                <th>Users (Used)</th>
+                                <th>Available</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
@@ -4317,7 +4317,8 @@
                                 </label>
                             </div>
                         </div>
-
+                        </div>
+                        
                         <!-- Video Chat -->
                         <div class="glass-card p-4 md:p-6 rounded-2xl">
                             <h4 class="font-bold mb-4 flex items-center gap-2">
@@ -4427,40 +4428,8 @@
                         </div>
                     </div>
 
-                        </div>
-                    </div>
 
-                    <!-- Manual Channel Configuration -->
-                    <div class="glass-card p-4 md:p-6 rounded-2xl">
-                        <h4 class="font-bold mb-4 flex items-center gap-2">
-                            <i class="fas fa-bullhorn text-orange-400"></i> Manual Channel Control
-                        </h4>
-                        <div class="space-y-4">
-                            <div>
-                                <label class="text-xs text-gray-400 uppercase font-bold block mb-2">Channel Username/ID</label>
-                                <input id="manual_channel_id" type="text" placeholder="@yourchannel"
-                                    class="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white text-sm focus:border-orange-500 outline-none">
-                            </div>
-                            <div>
-                                <label class="text-xs text-gray-400 uppercase font-bold block mb-2">Join Link</label>
-                                <input id="manual_channel_link" type="text" placeholder="https://t.me/..."
-                                    class="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white text-sm focus:border-orange-500 outline-none">
-                            </div>
-                            <div class="flex items-center justify-between p-3 bg-black/20 rounded-lg">
-                                <div class="text-sm">Force Join Required</div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="gm_forceJoin" class="sr-only peer">
-                                    <div
-                                        class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500">
-                                    </div>
-                                </label>
-                            </div>
-                            <button onclick="saveManualChannelSettings()" class="w-full bg-orange-500/20 text-orange-400 border border-orange-500/30 py-3 rounded-xl font-bold text-sm hover:bg-orange-500/30 transition-all">
-                                UPDATE CHANNEL
-                            </button>
-                        </div>
-                    </div>
-                </div>
+
 
                 <!-- Active Groups Table at Bottom -->
                 <div class="glass-card p-4 md:p-6 rounded-2xl mt-6">
@@ -4989,7 +4958,7 @@
             const id = document.getElementById('shop-id').value.trim();
             const name = document.getElementById('shop-name').value.trim();
             const price = document.getElementById('shop-price').value.trim();
-            const imageUrl = document.getElementById('shop-image').value.trim();
+            const imageUrl = document.getElementById('shop-img').value.trim();
             const bgColor = document.getElementById('shop-bg').value.trim();
             const btnColor = document.getElementById('shop-btn').value.trim();
             const stock = parseInt(document.getElementById('shop-stock').value) || 0;
@@ -5004,7 +4973,7 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    clearShopForm();
+                    if (typeof clearShopForm === 'function') clearShopForm();
                     renderAdminShop();
                 } else {
                     alert(data.message);
@@ -5048,11 +5017,26 @@
                     document.getElementById('shop-id').value = item.id;
                     document.getElementById('shop-name').value = item.name;
                     document.getElementById('shop-price').value = item.price;
-                    document.getElementById('shop-image').value = item.imageUrl || '';
+                    document.getElementById('shop-img').value = item.imageUrl || '';
                     document.getElementById('shop-bg').value = item.bgColor || '';
                     document.getElementById('shop-btn').value = item.btnColor || '';
-                alert('❌ Error loading item data');
+                    document.getElementById('shop-stock').value = item.stock !== undefined ? item.stock : 0;
+                } else {
+                    alert('❌ Error loading item data');
+                }
+            } catch (e) {
+                alert('❌ Connection error');
             }
+        }
+        
+        function clearShopForm() {
+            document.getElementById('shop-id').value = '';
+            document.getElementById('shop-name').value = '';
+            document.getElementById('shop-price').value = '';
+            document.getElementById('shop-img').value = '';
+            document.getElementById('shop-bg').value = '';
+            document.getElementById('shop-btn').value = '';
+            document.getElementById('shop-stock').value = '';
         }
 
         // Delete shop item completely
@@ -5066,7 +5050,7 @@
                 const data = await res.json();
                 if (data.success) {
                     showToast('Item deleted from shop!');
-                    loadShopItems();
+                    renderAdminShop();
                 } else {
                     alert('❌ Failed: ' + data.message);
                 }
@@ -11852,8 +11836,8 @@
                         <td class="py-4 font-medium text-gray-400 capitalize">${n.platform}</td>
                         <td class="py-4">
                             <div class="flex items-center gap-2">
-                                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${n.status === 'available' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">
-                                    ${n.status.toUpperCase()}
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${(n.status || '').toLowerCase() === 'available' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">
+                                    ${(n.status || 'unknown').toUpperCase()}
                                 </span>
                                 ${n.otp ? `<span class="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded font-mono font-bold">OTP: ${n.otp}</span>` : ''}
                             </div>

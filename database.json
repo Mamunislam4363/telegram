@@ -32,6 +32,15 @@
       "groupJoined": false,
       "history": [
         {
+          "type": "deposit",
+          "amount": 8.33,
+          "currency": "usd",
+          "method": "bkash",
+          "txnId": "nbj",
+          "date": 1778890189775,
+          "status": "completed"
+        },
+        {
           "type": "account_purchase",
           "amount": 100,
           "currency": "tokens",
@@ -158,14 +167,14 @@
       "joinedChannel": true,
       "joinedGroup": true,
       "language": "en",
-      "lastActive": 1778882302062,
+      "lastActive": 1778890193358,
       "lastDaily": 1778864675126,
       "lastName": "",
       "referralCode": "ref_95CMCD",
       "referralCount": 0,
       "successfulVerifications": 0,
       "tokens": 7155,
-      "usd": 100,
+      "usd": 108.33,
       "username": "TestUser",
       "verified": false,
       "supportLoan": 0,
@@ -8926,13 +8935,13 @@
     "task_telegram_channel": {
       "gems": 1,
       "name": "Telegram Channel",
-      "reward": 100,
+      "reward": 10,
       "url": "https://t.me/AutosVerify"
     },
     "task_telegram_group": {
       "gems": 1,
       "name": "Telegram Group",
-      "reward": 100,
+      "reward": 10,
       "url": "https://t.me/AutosVerifyCh"
     },
     "task_youtube": {
@@ -11010,6 +11019,16 @@
   "providers": {},
   "broadcasts": [],
   "pendingDeposits": [
+    {
+      "id": "dep_17788901836428tbzi",
+      "userId": "123",
+      "method": "bkash",
+      "amount": 8.33,
+      "txnId": "nbj",
+      "screenshot": null,
+      "date": 1778890183642,
+      "status": "approved"
+    },
     {
       "id": "dep_1778879603930b7nmt",
       "userId": "123",
